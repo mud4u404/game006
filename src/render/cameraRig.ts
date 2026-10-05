@@ -19,7 +19,7 @@ export class CameraRig {
   target = new THREE.Vector3();
   yaw = 0;
   pitch = 0.92;
-  distance = 17;
+  distance = 15;
   fov = 32;
   /** 目标值 */
   goal: CameraPose;
@@ -31,7 +31,7 @@ export class CameraRig {
 
   constructor(camera: THREE.PerspectiveCamera) {
     this.camera = camera;
-    this.goal = { target: new THREE.Vector3(), yaw: 0, pitch: 0.92, distance: 17, fov: 32 };
+    this.goal = { target: new THREE.Vector3(), yaw: 0, pitch: 0.92, distance: 15, fov: 32 };
   }
 
   setBounds(w: number, h: number) {

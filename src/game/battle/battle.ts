@@ -24,6 +24,7 @@ import type {
 } from '@/data/types';
 import type { TerrainId } from '@/render/contracts';
 import {
+  canEquip,
   createCharacterUnit,
   createGenericUnit,
   createUnitFromSave,
@@ -638,6 +639,21 @@ export class Battle {
     }
     this.finishAction(u);
     return out;
+  }
+
+  /** 战斗中换装：背包里的装备与当前装备交换（不消耗行动） */
+  equipFromBag(u: Unit, bagIndex: number): boolean {
+    const id = u.items[bagIndex];
+    const it = id ? ITEMS[id] : undefined;
+    if (!it || !canEquip(u, it)) return false;
+    const slot = it.weapon ? 'weapon' : it.armor ? 'armor' : 'accessory';
+    const old = u.equipment[slot];
+    u.equipment[slot] = id;
+    u.items.splice(bagIndex, 1);
+    if (old) u.items.push(old);
+    // 体力上限可能因装备变化，保持比例
+    u.hp = Math.min(u.hp, maxHp(u));
+    return true;
   }
 
   /** 单位撤离战场（敌方盗贼逃脱等） */

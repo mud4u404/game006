@@ -16,7 +16,7 @@ import { decide } from '@/game/battle/ai';
 import { forecast } from '@/game/battle/combat';
 import { isFriend, stopTiles, threatTiles, tilesInArea, tilesInRange } from '@/game/battle/grid';
 import { bondKey } from '@/game/state';
-import { maxHp, stats, weaponOf, type Unit } from '@/game/unit';
+import { canEquip, maxHp, stats, weaponOf, type Unit } from '@/game/unit';
 import { BattleHud, type MenuItem } from '@/ui/battleHud';
 import { h, sleep } from '@/ui/dom';
 import type { App } from './app';
@@ -405,7 +405,7 @@ export class BattleScene {
       if (b.outcome) return 'done';
       const targets = b.weaponTargets(u);
       const skills = b.skillsOf(u);
-      const usableItems = u.items.filter((i) => ITEMS[i]?.consumable && ITEMS[i]?.consumable?.effect !== 'key');
+      const usableItems = u.items.filter((i) => (ITEMS[i]?.consumable && ITEMS[i]?.consumable?.effect !== 'key') || (ITEMS[i] && canEquip(u, ITEMS[i])));
       const items: MenuItem[] = [];
       if (targets.length) items.push({ id: 'attack', label: '攻击', icon: '⚔', key: 'A' });
       if (skills.length) items.push({ id: 'skill', label: getClass(u.classId).tags.includes('mage') || getClass(u.classId).tags.includes('healer') ? '魔法' : '技能', icon: '✦', key: 'S', disabled: !skills.some((s) => b.canUseSkill(u, s).ok && b.skillTargetTiles(u, s).length) });
@@ -589,16 +589,32 @@ export class BattleScene {
 
   private async itemFlow(u: Unit): Promise<boolean> {
     const b = this.battle;
-    const entries = u.items.map((id, i) => ({ id, i })).filter((e) => ITEMS[e.id]?.consumable && ITEMS[e.id].consumable!.effect !== 'key');
+    const entries = u.items
+      .map((id, i) => ({ id, i }))
+      .filter((e) => (ITEMS[e.id]?.consumable && ITEMS[e.id].consumable!.effect !== 'key') || (ITEMS[e.id] && canEquip(u, ITEMS[e.id])));
     const scr = this.world.project(this.world.anchor(u.uid));
     const pick = await this.menuAsync(
-      entries.map((e) => ({ id: String(e.i), label: ITEMS[e.id].name, icon: '❖', sub: ITEMS[e.id].desc })),
+      entries.map((e) => {
+        const it = ITEMS[e.id];
+        const equip = !it.consumable;
+        return { id: String(e.i), label: equip ? `装备 ${it.name}` : it.name, icon: equip ? '⚙' : '❖', sub: it.desc };
+      }),
       scr,
-      '使用道具',
+      '道具',
     );
     if (pick === null) return false;
     const idx = Number(pick);
     const it = ITEMS[u.items[idx]];
+    if (!it.consumable) {
+      // 换装不消耗行动
+      if (b.equipFromBag(u, idx)) {
+        audio.sfx('item');
+        this.hud.toast(`${u.name} 装备了「${it.name}」`);
+        this.hud.showUnit(u);
+        this.refreshView(u);
+      }
+      return false;
+    }
     let target: Unit = u;
     if (it.consumable!.range > 0) {
       const cands = [u, ...b.adjacent(u).filter((t) => t.team === u.team)];

@@ -186,3 +186,19 @@ describe('胜利条件变更', () => {
     expect(b.victory).toEqual({ type: 'boss', unit: 'boss2' });
   });
 });
+
+describe('战斗中换装', () => {
+  it('背包中的武器可以与当前武器交换', async () => {
+    const { Battle } = await import('@/game/battle/battle');
+    const { testChapter } = await import('./helpers');
+    const ch = testChapter(['.....'], [{ id: 'gren', character: 'gren', team: 'player', x: 0, y: 0, items: ['steel_axe', 'herb'] }]);
+    const b = new Battle(ch, [], [], {}, 1);
+    const g = b.unit('gren')!;
+    const before = g.equipment.weapon;
+    expect(b.equipFromBag(g, 0)).toBe(true);
+    expect(g.equipment.weapon).toBe('steel_axe');
+    expect(g.items).toContain(before);
+    // 不能装备的道具
+    expect(b.equipFromBag(g, g.items.indexOf('herb'))).toBe(false);
+  });
+});
