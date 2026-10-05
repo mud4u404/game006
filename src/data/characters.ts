@@ -211,7 +211,7 @@ const list: CharacterDef[] = [
     items: [],
     skills: ['dragon_wing', 'dragon_roar'],
     portrait: 'igna',
-    model: { face: { slit: true, shape: 'round' }, eyes: '#e8b030', primary: '#b5242a', secondary: '#e8b84a', hair: '#e04a2a', hairStyle: 'long', skin: '#f6dccb', gender: 'f' },
+    model: { face: { slit: true, shape: 'round' }, eyes: '#e8b030', primary: '#efe2c8', secondary: '#b5242a', hair: '#d8402a', hairStyle: 'long', skin: '#f6dccb', gender: 'f' },
     bio: '以少女之姿现身的古老赤龙。三百年来以自身封印黑龙，对人类的一切都充满好奇。',
   },
 ];

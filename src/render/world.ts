@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { TERRAIN_CHARS, type Battlefield, type Environment, type MapData, type Quality, type ThemeId, type UnitAnim, type UnitModel, type UnitModelSpec, type VfxId, type VfxSystem } from './contracts';
 import { buildBattlefield, createEnvironment } from './battlefield';
 import { createUnitModel } from './units';
+import { setSpriteCamera } from './sprites/spriteUnit';
 import { createVfxSystem, type VfxImpl } from './vfx';
 import { CameraRig } from './cameraRig';
 import { TileOverlay } from './overlay';
@@ -282,6 +283,7 @@ export class BattleWorld {
   /* -------------------- 帧更新 -------------------- */
 
   update(dt: number, time: number) {
+    setSpriteCamera(this.engine.camera);
     if (this.follow) {
       const v = this.views.get(this.follow);
       if (v) this.rig.lookAt(v.model.object.position.x, v.model.object.position.y, v.model.object.position.z);

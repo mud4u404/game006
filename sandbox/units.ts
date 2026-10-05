@@ -7,6 +7,7 @@ import type { MapData, Quality, UnitAnim, UnitModelSpec } from '@/render/contrac
 import { CLASSES } from '@/data/classes';
 import { CHARACTERS } from '@/data/characters';
 import { buildModelSpec } from '@/game/unit';
+import { setSpriteCamera } from '@/render/sprites/spriteUnit';
 
 const q = new URLSearchParams(location.search);
 const quality = (q.get('q') ?? 'medium') as Quality;
@@ -54,6 +55,7 @@ rig.goal.pitch = Number(q.get('pitch') ?? 0.75);
 rig.lookAt(Number(q.get('cx') ?? 5.2), 0, Number(q.get('cz') ?? 3.6), true);
 
 engine.onUpdate((dt, t) => {
+  setSpriteCamera(engine.camera);
   rig.update(dt);
   bf.update(dt, t);
   env.update(dt, t, engine.camera);
