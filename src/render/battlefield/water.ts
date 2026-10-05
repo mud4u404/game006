@@ -161,15 +161,19 @@ ${GLSL_NOISE}`,
           '#include <emissivemap_fragment>',
           `#include <emissivemap_fragment>
 {
-  vec2 p = vWPos.xz * 1.4;
-  vec2 flow = vec2(uTime * 0.06, uTime * 0.04);
-  float n = eo_fbm(p + flow + eo_fbm(p * 0.7 - flow) * 1.5);
-  float cracks = smoothstep(0.42, 0.62, n);
-  float hot = pow(1.0 - abs(n - 0.52) * 2.2, 3.0);
-  vec3 glow = mix(uLava * 0.55, vec3(1.0, 0.62, 0.22), hot);
-  float crust = smoothstep(0.35, 0.2, n) + smoothstep(0.72, 0.85, n);
-  totalEmissiveRadiance += glow * (0.55 + hot * 1.4) * (1.0 - crust * 0.85) * (0.9 + 0.1 * sin(uTime * 3.0 + n * 10.0));
-  diffuseColor.rgb *= 0.4 + crust * 0.6;
+  vec2 p = vWPos.xz * 1.15;
+  vec2 flow = vec2(uTime * 0.05, uTime * 0.03);
+  float n = eo_fbm(p + flow + eo_fbm(p * 0.8 - flow) * 1.4);
+  // 暗色熔岩壳 + 细而亮的熔流裂纹 + 偶尔的熔池
+  float v = clamp(1.0 - abs(n - 0.5) * 2.0, 0.0, 1.0);
+  float vein = pow(v, 7.0);
+  float pool = smoothstep(0.6, 0.78, eo_fbm(p * 0.45 + flow * 0.4 + 3.1));
+  float heat = clamp(vein + pool * 0.85, 0.0, 1.0);
+  vec3 hotCol = mix(uLava * vec3(0.75, 0.12, 0.02), vec3(1.0, 0.42, 0.04), smoothstep(0.1, 0.6, heat));
+  hotCol = mix(hotCol, vec3(1.0, 0.82, 0.35), pow(heat, 5.0));
+  float pulse = 0.82 + 0.18 * sin(uTime * 2.2 + n * 12.0);
+  totalEmissiveRadiance += hotCol * heat * 2.4 * pulse + uLava * 0.035;
+  diffuseColor.rgb = mix(vec3(0.045, 0.028, 0.026), vec3(0.11, 0.05, 0.035), n);
 }`,
         );
     };
