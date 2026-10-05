@@ -27,6 +27,19 @@ export interface StrikeCalc {
   hits: number;
   status?: { id: StatusId; chance: number; turns: number };
   drain: boolean;
+  /** 羁绊加成是否生效（界面显示用） */
+  bond?: boolean;
+}
+
+/** 羁绊加成：由当前战斗提供（相邻且羁绊等级已解锁的同伴） */
+export interface BondBonus {
+  hit: number;
+  ev: number;
+  dmg: number;
+}
+let bondProvider: ((u: Unit) => BondBonus | null) | null = null;
+export function setBondProvider(fn: ((u: Unit) => BondBonus | null) | null) {
+  bondProvider = fn;
 }
 
 export interface Forecast {
@@ -111,6 +124,13 @@ export function calcStrike(map: BattleMap, att: Unit, def: Unit, skill?: SkillDe
     hit = clamp(ad.hit + (skill?.hitBonus ?? 0) - dd.ev, 5, 100);
     crit = clamp(ad.crit + (skill?.critBonus ?? 0) - Math.floor(ds.agi / 4), 0, 100);
   }
+  // 羁绊：攻方加命中与伤害，守方加回避
+  const ab = bondProvider?.(att) ?? null;
+  const db = bondProvider?.(def) ?? null;
+  if (ab && dmg > 0 && skill?.kind !== 'debuff') dmg += ab.dmg;
+  if (ab) hit += ab.hit;
+  if (db) hit -= db.ev;
+  hit = clamp(hit, spellMagic ? 30 : 5, 100);
   if (!w && !skill) {
     dmg = 0;
     hit = 0;
@@ -128,6 +148,7 @@ export function calcStrike(map: BattleMap, att: Unit, def: Unit, skill?: SkillDe
     hits: skill?.hits ?? 1,
     status: skill?.status ?? w?.status,
     drain: !!w?.drain && !skill && !magic ? true : !!(w?.drain && skill?.kind === 'tech'),
+    bond: !!ab || !!db,
   };
 }
 

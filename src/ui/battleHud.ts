@@ -146,6 +146,7 @@ export class BattleHud {
       const dmgTxt = c ? (c.dmg <= 0 ? '无效' : c.dmgMin === c.dmgMax ? `${c.dmg}` : `${c.dmgMin}~${c.dmgMax}`) : '—';
       const tags: HTMLElement[] = [];
       if (c?.effective) tags.push(h('span.tag', null, '特效'));
+      if (c?.bond) tags.push(h('span.tag', null, '羁绊'));
       if (c && c.hits > 1) tags.push(h('span.tag', null, `×${c.hits}`));
       if (!c && isCounter) tags.push(h('span.tag.warn', null, '无法反击'));
       if (c && c.dmg <= 0) tags.push(h('span.tag.warn', null, '打不动'));

@@ -95,6 +95,18 @@ export const CAMP_TALKS: CampTalk[] = [
     reward: { gold: 300 },
   },
   {
+    id: 'c4_secret',
+    chapter: 4,
+    title: '奥托的暗格',
+    requires: ['gren', 'kia'],
+    lines: [
+      { s: 'kia', t: '大叔，那个奥托的店里，柜台底下是不是藏着什么好东西？我闻得出来。', e: 'smile' },
+      { s: 'gren', t: '……你这鼻子比猎犬还灵。他有个暗格，专放不能摆上台面的珍藏。', e: 'thinking' },
+      { s: 'gren', t: '老规矩：在柜台前连敲三下，他就会装作没听见地把暗格打开。价钱嘛……贵得要命。', e: 'smile' },
+      { s: '', t: '【提示】在营地的商店里连按三次 K 键（或连点三下商店面板）。' },
+    ],
+  },
+  {
     id: 'c5_lesson',
     chapter: 5,
     title: '最后的剑术课',

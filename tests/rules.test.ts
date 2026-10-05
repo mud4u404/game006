@@ -224,3 +224,26 @@ describe('中断存档', () => {
     expect(r.units.length).toBe(b.units.length);
   });
 });
+
+describe('羁绊加成', () => {
+  it('相邻的羁绊同伴提高命中与伤害', async () => {
+    const { Battle } = await import('@/game/battle/battle');
+    const { forecast } = await import('@/game/battle/combat');
+    const { testChapter } = await import('./helpers');
+    const ch = testChapter(['......', '......'], [
+      { id: 'rein', character: 'rein', team: 'player', x: 1, y: 0 },
+      { id: 'alicia', character: 'alicia', team: 'player', x: 0, y: 0 },
+      { id: 'e', classId: 'soldier', level: 1, team: 'enemy', x: 2, y: 0 },
+    ]);
+    const b = new Battle(ch, [], [], {}, 1);
+    const before = forecast(b.map, b.unit('rein')!, b.unit('e')!);
+    b.bondRanks = { 'alicia|rein': 2 };
+    const after = forecast(b.map, b.unit('rein')!, b.unit('e')!);
+    expect(after.atk.dmg).toBe(before.atk.dmg + 2);
+    expect(after.atk.hit).toBeGreaterThanOrEqual(Math.min(100, before.atk.hit));
+    expect(after.atk.bond).toBe(true);
+    // 敌方攻击雷恩时，雷恩获得回避
+    const counter = forecast(b.map, b.unit('e')!, b.unit('rein')!);
+    expect(counter.atk.bond).toBe(true);
+  });
+});

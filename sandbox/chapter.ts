@@ -1,0 +1,38 @@
+import '@/ui/ui.css';
+import { Engine } from '@/render/engine';
+import { BattleWorld } from '@/render/world';
+import { CHAPTERS } from '@/data/chapters';
+import { Battle } from '@/game/battle/battle';
+import { maxHp } from '@/game/unit';
+import { buildDevState } from '@/scenes/dev';
+import type { Quality } from '@/render/contracts';
+
+const q = new URLSearchParams(location.search);
+const idx = Number(q.get('ch') ?? 0);
+const quality = (q.get('q') ?? 'medium') as Quality;
+const ch = CHAPTERS[idx];
+const engine = new Engine(document.getElementById('app')!, { quality, resolution: 'auto' });
+const ui = document.createElement('div');
+ui.id = 'ui';
+document.getElementById('app')!.appendChild(ui);
+const s = buildDevState(idx);
+const fixed = new Set(ch.units.filter((u) => u.team === 'player' && u.character).map((u) => u.character));
+const pool = s.party.filter((p) => !fixed.has(p.id));
+const deployed = pool.slice(0, Math.min(ch.deploy.max, ch.deploy.slots.length)).map((save, i) => ({ save, x: ch.deploy.slots[i][0], y: ch.deploy.slots[i][1] }));
+const b = new Battle(ch, deployed, s.party, {}, 1);
+const map = BattleWorld.mapFromRows(ch.map.rows, ch.map.theme, ch.map.seed ?? idx + 1, b.chests.map((c) => ({ x: c.x, y: c.y, opened: false })));
+const world = new BattleWorld(engine, ui, { map, quality, hpBars: true });
+for (const u of b.active()) world.addUnit(u.uid, { ...u.model, team: u.team }, u.x, u.y, u.facing, { hp: u.hp, maxHp: maxHp(u), team: u.team, boss: u.boss });
+const W = map.width;
+const H = map.height;
+world.focusTile((W - 1) / 2, (H - 1) / 2, true);
+world.rig.goal.distance = Number(q.get('dist') ?? Math.max(W, H) * 1.25);
+world.rig.goal.pitch = Number(q.get('pitch') ?? 0.95);
+world.rig.snap();
+document.getElementById('lbl')!.textContent = `${ch.label} ${ch.title} (${ch.map.theme}, ${W}×${H})`;
+engine.setFade(0);
+const w = window as unknown as { __frame: (n: number) => void; __ready: boolean };
+w.__frame = (n: number) => {
+  for (let i = 0; i < n; i++) engine.frame(1 / 30);
+};
+w.__ready = true;

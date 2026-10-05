@@ -57,6 +57,7 @@ engine.start();
 async function main() {
   const dev = devState();
   if (dev) {
+    (window as unknown as { __app: App }).__app = app;
     app.state = dev;
     await runGame(app);
   }

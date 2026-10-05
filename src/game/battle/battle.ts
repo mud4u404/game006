@@ -51,7 +51,7 @@ import {
   type Occupancy,
   type ReachNode,
 } from './grid';
-import { healAmount, resolveCombat, resolveSpellOn, type StrikeResult } from './combat';
+import { healAmount, resolveCombat, resolveSpellOn, setBondProvider, type BondBonus, type StrikeResult } from './combat';
 
 export type Phase = Team;
 
@@ -126,6 +126,7 @@ export interface BattleSnapshot {
   joined: string[];
   fallen: string[];
   tiles: TerrainId[][];
+  bondRanks?: Record<string, number>;
 }
 
 export interface DeployEntry {
@@ -159,6 +160,8 @@ export class Battle {
   joined: string[] = [];
   /** 本场阵亡的我方角色 */
   fallen: string[] = [];
+  /** 已解锁的羁绊等级：bondKey → 1(C)/2(B)/3(A) */
+  bondRanks: Record<string, number> = {};
   /** 再动/撤销用 */
   private tileChanges: { x: number; y: number; t: TerrainId }[] = [];
 
@@ -174,6 +177,7 @@ export class Battle {
     this.villages = (chapter.villages ?? []).map((v) => ({ x: v.x, y: v.y, def: v, visited: false, destroyed: false }));
     this.hidden = (chapter.hidden ?? []).map((h) => ({ ...h, found: false }));
 
+    setBondProvider((u) => this.bondBonus(u));
     const partyById = new Map(partySaves.map((s) => [s.id, s]));
     // 章节内固定的单位
     for (const p of chapter.units) {
@@ -189,6 +193,20 @@ export class Battle {
       u.facing = 'n';
       this.units.push(u);
     }
+  }
+
+  /** 相邻且已解锁羁绊的同伴提供的加成（每级：命中/回避 +5，伤害 +1；上限 +20/+20/+3） */
+  bondBonus(u: Unit): BondBonus | null {
+    if (!u.charId || !u.alive) return null;
+    let r = 0;
+    for (const [dx, dy] of DIRS) {
+      const o = this.unitAt(u.x + dx, u.y + dy);
+      if (!o || o.team !== u.team || !o.charId) continue;
+      const key = u.charId < o.charId ? `${u.charId}|${o.charId}` : `${o.charId}|${u.charId}`;
+      r += this.bondRanks[key] ?? 0;
+    }
+    if (!r) return null;
+    return { hit: Math.min(20, r * 5), ev: Math.min(20, r * 5), dmg: Math.min(3, r) };
   }
 
   /** 生成中断存档 */
@@ -212,6 +230,7 @@ export class Battle {
         joined: this.joined,
         fallen: this.fallen,
         tiles: this.map.tiles,
+        bondRanks: this.bondRanks,
       }),
     ) as BattleSnapshot;
   }
@@ -234,6 +253,7 @@ export class Battle {
     b.joined = snap.joined;
     b.fallen = snap.fallen;
     snap.tiles.forEach((row, y) => row.forEach((t, x) => (b.map.tiles[y][x] = t)));
+    b.bondRanks = snap.bondRanks ?? {};
     return b;
   }
 

@@ -111,6 +111,7 @@ async function runBattle(app: App, ch: ChapterDef): Promise<'ok' | 'title'> {
     }
     const seed = (Date.now() & 0xffffff) ^ (ch.index * 7919);
     const battle = new Battle(ch, deployed, s.party, s.flags, seed);
+    battle.bondRanks = bondRanksOf(s);
     // 难度：敌人能力修正
     if (s.difficulty !== 'normal') {
       const k = s.difficulty === 'hard' ? 1 : -1;
@@ -126,6 +127,18 @@ async function runBattle(app: App, ch: ChapterDef): Promise<'ok' | 'title'> {
     if (r === 'retry') continue;
     return r;
   }
+}
+
+/** 已观看的羁绊对话 → 羁绊等级 */
+function bondRanksOf(s: App['state']): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const k of s.supportsSeen) {
+    const [a, b, r] = k.split('|');
+    const lv = r === 'A' ? 3 : r === 'B' ? 2 : 1;
+    const key = `${a}|${b}`;
+    out[key] = Math.max(out[key] ?? 0, lv);
+  }
+  return out;
 }
 
 async function fight(app: App, ch: ChapterDef, battle: Battle, resumed: boolean): Promise<'ok' | 'title' | 'retry'> {

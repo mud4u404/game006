@@ -279,5 +279,5 @@ export const ch10: ChapterDef = {
   music: { player: 'battle_player', enemy: 'final' },
   reward: { gold: 0 },
   shop: [],
-  camp: 'full',
+  camp: 'march',
 };

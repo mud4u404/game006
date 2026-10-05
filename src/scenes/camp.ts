@@ -39,6 +39,19 @@ const CAMP_MAP = ['TTTTTTTTTTTT', 'TT........TT', 'T..........T', 'T..........T'
 
 const RARITY_CLASS = ['', 'r1', 'r2', 'r3', 'r4'];
 
+/** 秘密商店的商品与价格 */
+const SECRET_SHOP: Record<string, number> = {
+  power_tonic: 3000,
+  guard_tonic: 3000,
+  speed_tonic: 3000,
+  wisdom_tonic: 3000,
+  spirit_tonic: 3000,
+  life_fruit: 4000,
+  mana_crystal: 3500,
+  elixir: 1200,
+  chest_key: 400,
+};
+
 function itemLabel(id: string): string {
   return ITEMS[id]?.name ?? id;
 }
@@ -343,11 +356,38 @@ async function shopScreen(app: App, ch: ChapterDef, content: HTMLElement, render
     clear(content);
     const box = h('div.panel.list-box');
     content.appendChild(box);
-    const tab = await menuList(box, [
+    // 秘密商店：在柜台前连敲三下（K 键三次，或连点三下面板）
+    let knocks: number[] = [];
+    let knocked: () => void = () => {};
+    const knock = () => {
+      if (s.secretShop) return;
+      const now = performance.now();
+      knocks = [...knocks.filter((t) => now - t < 1500), now];
+      audio.sfx('door', { volume: 0.4, pitch: 1.6 });
+      if (knocks.length >= 3) {
+        s.secretShop = true;
+        audio.sfx('chest');
+        toast(app.ui, '柜台底下传来「咔哒」一声……暗格打开了！');
+        knocked();
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'k' || e.key === 'K') knock();
+    };
+    window.addEventListener('keydown', onKey);
+    box.addEventListener('click', (e) => {
+      if (e.target === box) knock();
+    });
+    const tabMenu = menuList(box, [
       { id: 'buy', label: '购买' },
       { id: 'sell', label: '出售', disabled: s.convoy.every((i) => sellPrice(i) <= 0) },
+      ...(s.secretShop ? [{ id: 'secret', label: '暗格', sub: '奥托的珍藏' }] : []),
       { id: 'back', label: '离开' },
-    ], { cancellable: true }).result;
+    ], { cancellable: true });
+    knocked = () => tabMenu.close();
+    const tab = await tabMenu.result;
+    window.removeEventListener('keydown', onKey);
+    if (!tab && s.secretShop && knocks.length >= 3) continue;
     if (!tab || tab === 'back') return;
     for (;;) {
       clear(content);
@@ -362,13 +402,17 @@ async function shopScreen(app: App, ch: ChapterDef, content: HTMLElement, render
         info.append(h('div.title-serif.big', null, def.name), h('div.muted', null, describeItem(def)), h('p', null, def.desc), h('div.muted', null, `持有 ${owned}`));
       };
       let items: ListItem[];
-      if (tab === 'buy') items = ch.shop.map((id) => ({ id, label: itemLabel(id), right: `${ITEMS[id].price} G`, disabled: ITEMS[id].price > s.gold }));
+      const priceOf = (id: string) => (tab === 'secret' ? SECRET_SHOP[id] : ITEMS[id].price);
+      if (tab === 'buy' || tab === 'secret') {
+        const list = tab === 'secret' ? Object.keys(SECRET_SHOP) : ch.shop;
+        items = list.map((id) => ({ id, label: itemLabel(id), right: `${priceOf(id)} G`, disabled: priceOf(id) > s.gold }));
+      }
       else items = s.convoy.map((id, i) => ({ id: `${i}`, label: itemLabel(id), right: sellPrice(id) > 0 ? `${sellPrice(id)} G` : '不可出售', disabled: sellPrice(id) <= 0 }));
       items.push({ id: 'back', label: '返回' });
-      const r = await menuList(listBox, items, { cancellable: true, onFocus: (id) => showInfo(tab === 'buy' ? id : s.convoy[Number(id)] ?? '') }).result;
+      const r = await menuList(listBox, items, { cancellable: true, onFocus: (id) => showInfo(tab !== 'sell' ? id : s.convoy[Number(id)] ?? '') }).result;
       if (!r || r === 'back') break;
-      if (tab === 'buy') {
-        if (buy(s, r)) {
+      if (tab !== 'sell') {
+        if (buy(s, r, priceOf(r))) {
           audio.sfx('buy');
           toast(app.ui, `购买了「${itemLabel(r)}」（已放入仓库）`);
         }
