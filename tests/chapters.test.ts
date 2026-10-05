@@ -152,3 +152,27 @@ describe('收集要素', () => {
     for (const id of Object.keys(CHARACTERS)) expect(joinable.has(id), id).toBe(true);
   });
 });
+
+describe('营地对话与羁绊', async () => {
+  const { CAMP_TALKS } = await import('@/data/campTalks');
+  const { SUPPORTS } = await import('@/data/supports');
+  it('营地对话引用有效', () => {
+    const ids = new Set<string>();
+    for (const t of CAMP_TALKS) {
+      expect(ids.has(t.id), t.id).toBe(false);
+      ids.add(t.id);
+      expect(t.chapter >= 0 && t.chapter < CHAPTERS.length).toBe(true);
+      for (const r of t.requires) expect(CHARACTERS[r], r).toBeDefined();
+      if (t.reward?.item) expect(ITEMS[t.reward.item]).toBeDefined();
+      for (const l of t.lines) if (!('cmd' in l) && l.s) expect(portraitLook(l.s), l.s).not.toBeNull();
+    }
+  });
+  it('羁绊对话引用有效、阈值递增', () => {
+    for (const d of SUPPORTS) {
+      expect(CHARACTERS[d.a]).toBeDefined();
+      expect(CHARACTERS[d.b]).toBeDefined();
+      for (let i = 1; i < d.ranks.length; i++) expect(d.ranks[i].points).toBeGreaterThan(d.ranks[i - 1].points);
+      for (const r of d.ranks) for (const l of r.lines) if (!('cmd' in l) && l.s) expect(portraitLook(l.s), l.s).not.toBeNull();
+    }
+  });
+});
