@@ -238,4 +238,6 @@ export const NPC_NAMES: Record<string, string> = {
   cultist: '教团信徒',
   bandit: '山贼',
   knight: '骑士团骑士',
+  noble: '贵族',
+  child: '孤儿',
 };

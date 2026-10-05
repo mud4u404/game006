@@ -139,6 +139,10 @@ export const NPC_LOOKS: Record<string, PortraitLook> = {
   cultist: npc('m', '#d8c4b8', '#3a3438', '#ff8a3a', 'short', 'cultist', '#4a4448', '#d86a2a', { headwear: 'cowl', glowEyes: '#ff8a3a' }),
   bandit: npc('m', '#c8946a', '#3a2418', '#3a2a22', 'spiky', 'leather', '#6a4a2e', '#8a3a2a', { headwear: 'bandana', beard: 'stubble', eyeShape: 'narrow', scar: 'right' }),
   knight: npc('m', '#f0cfb0', '#5a3a28', '#4a5a7a', 'short', 'knight', '#a8262c', '#e8dcc0', { metal: '#c9ccd4' }),
+  // 白鸥港的领主：肥胖、卷曲的棕发、小胡子
+  noble: npc('m', '#f0d0b8', '#6a4a2a', '#5a4a3a', 'bob', 'noble', '#6a2a4a', '#d8b860', { beard: 'mustache', eyeShape: 'narrow', age: 'adult' }),
+  // 港城的孤儿
+  child: npc('f', '#f2d2b8', '#c88a4a', '#4a6a8a', 'twin', 'villager', '#8a6a4a', '#e8dcc0', { blush: true, eyeShape: 'round', accessories: ['freckles'] }),
 };
 
 export function portraitLook(id: string): PortraitLook | null {

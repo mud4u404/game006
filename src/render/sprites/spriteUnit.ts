@@ -229,6 +229,10 @@ export class SpriteUnit implements UnitModel {
     this.highlighted = on;
   }
 
+  setRing(on: boolean) {
+    this.ring.visible = on;
+  }
+
   update(dt: number, time: number) {
     // 公告板：只绕 Y 轴朝向镜头
     const cam = activeCamera;

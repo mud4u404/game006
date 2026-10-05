@@ -335,6 +335,8 @@ export interface UnitModel {
   flash(color: string, duration?: number): void;
   /** 选中高亮（轮廓/光晕） */
   setHighlighted(on: boolean): void;
+  /** 显示/隐藏脚下的阵营光环（剧情演出时隐藏） */
+  setRing?(on: boolean): void;
   /** 每帧调用：待机呼吸、披风摆动、坐骑动作、行走循环等 */
   update(dt: number, time: number): void;
   dispose(): void;

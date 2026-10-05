@@ -3,6 +3,7 @@
  */
 import { CHARACTERS } from '@/data/characters';
 import { CLASSES } from '@/data/classes';
+import { NPCS } from '@/data/npcs';
 import type { ActorPlacement, SceneCommand, Team } from '@/data/types';
 import type { UnitModelSpec } from '@/render/contracts';
 import type { BattleWorld } from '@/render/world';
@@ -16,23 +17,9 @@ export function lookSpec(look: string, team: Team = 'player'): UnitModelSpec {
   const ch = CHARACTERS[look];
   if (ch) return buildModelSpec(ch.classId, team, undefined, ch.model);
   if (CLASSES[look]) return buildModelSpec(look, team);
-  // 具名 NPC：用职业近似
-  const npc: Record<string, [string, Partial<UnitModelSpec>]> = {
-    mordis: ['high_priest', { hair: '#e8e4dc', hairStyle: 'long', face: { glow: true, old: true }, eyes: '#ff8a3a' }],
-    vesper: ['witch', { hair: '#1a1420', hairStyle: 'long', eyes: '#a070e0' }],
-    gregor: ['general', { hair: '#5a3a24', hairStyle: 'short', eyes: '#5a4030' }],
-    edmund: ['knight_captain', { hair: '#d8d8dc', hairStyle: 'slick', eyes: '#7a8a9a', primary: '#8e1f23', secondary: '#d8b060', face: { old: true } }],
-    otto: ['knight_captain', { helmet: 'crown', hair: '#f0d890', hairStyle: 'short', primary: '#f2eee4', secondary: '#d8a840', mount: 'none', eyes: '#5a8ad8' }],
-    alberic: ['bishop', { helmet: 'crown', hair: '#f2f2f2', beard: true, primary: '#8e1f23', secondary: '#e0b040', face: { old: true } }],
-    elder: ['cleric', { helmet: 'none', hair: '#e8e8e8', hairStyle: 'bald', beard: true, primary: '#7a6a52', secondary: '#c8b890', gender: 'm', face: { old: true } }],
-    villager: ['cleric', { helmet: 'none', hair: '#6a4a30', hairStyle: 'bob', primary: '#9a7a5a', secondary: '#e8dcc0', gender: 'f', weapon: 'none' }],
-    knight: ['cavalier', { mount: 'none', primary: '#a8262c', secondary: '#e8dcc0' }],
-    soldier: ['soldier', {}],
-    cultist: ['cult_priest', {}],
-    bandit: ['brigand', {}],
-  };
-  const n = npc[look];
-  if (n) return buildModelSpec(n[0], team, n[1]);
+  // 具名 NPC
+  const n = NPCS[look];
+  if (n) return buildModelSpec(n.classId, team, n.model);
   return buildModelSpec('soldier', team);
 }
 
@@ -48,7 +35,10 @@ export class WorldStage implements Stage {
   spawnActor(a: ActorPlacement) {
     this.world.addUnit(a.id, lookSpec(a.look, a.team ?? 'player'), a.x, a.y, a.face ?? 's', { hp: 1, maxHp: 1, team: a.team ?? 'player' });
     const v = this.world.view(a.id);
-    if (v) v.visible = false; // 剧情演员不显示血条
+    if (v) {
+      v.visible = false; // 剧情演员不显示血条与光环
+      v.model.setRing?.(false);
+    }
   }
 
   async run(cmd: SceneCommand): Promise<void> {

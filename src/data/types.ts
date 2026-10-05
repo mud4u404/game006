@@ -293,6 +293,8 @@ export interface StoryScene {
   music?: MusicId;
   actors?: ActorPlacement[];
   lines: StoryLine[];
+  /** 仅当旗标为真时播放；以 ! 开头表示旗标为假时播放 */
+  if?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -449,6 +451,8 @@ export interface ChapterDef {
   joins?: string[];
   /** 战后离队的角色 */
   leaves?: string[];
+  /** 战斗中未能说服时，战后仍会加入的角色 */
+  recruitAfter?: string[];
   /** 章节通关奖励 */
   reward: { gold: number; items?: string[] };
   /** 本章前营地商店的商品 */
