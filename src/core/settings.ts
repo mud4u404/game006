@@ -20,6 +20,8 @@ export interface Settings {
   grid: boolean;
   /** 敌方行动速度倍率 */
   enemySpeed: number;
+  /** 立绘：手绘（有素材时）或像素 */
+  portraitStyle: 'art' | 'pixel';
 }
 
 const KEY = 'emberoath.settings';
@@ -36,6 +38,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hpBars: true,
   grid: true,
   enemySpeed: 1.5,
+  portraitStyle: 'art',
 };
 
 export function loadSettings(): Settings {

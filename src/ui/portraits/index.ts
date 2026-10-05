@@ -5,6 +5,7 @@
 import type { Emotion } from '../portraitContracts';
 import { drawPortrait, PORTRAIT_H, PORTRAIT_W } from '@/art/portrait';
 import { portraitLook } from '@/data/portraits';
+import { portraitArt } from '@/art/assets';
 
 type Renderer = (id: string, emotion: Emotion, mirrored: boolean) => string | null;
 
@@ -28,6 +29,8 @@ export function pixelPortraitUrl(id: string, emotion: Emotion = 'normal'): strin
 }
 
 let renderer: Renderer = (id, emotion, mirrored) => {
+  const art = portraitArt(id, emotion);
+  if (art) return `<img class="art-portrait${mirrored ? ' mirrored' : ''}" src="${art}" alt="" draggable="false">`;
   const url = pixelPortraitUrl(id, emotion);
   if (!url) return null;
   return `<img class="px-portrait${mirrored ? ' mirrored' : ''}" src="${url}" alt="" draggable="false">`;

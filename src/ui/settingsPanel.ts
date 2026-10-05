@@ -5,6 +5,7 @@ import { audio } from '@/audio';
 import { saveSettings, type Settings } from '@/core/settings';
 import type { Engine } from '@/render/engine';
 import { h } from './dom';
+import { hasPortraitArt, setUseArt } from '@/art/assets';
 
 type Opt<T> = { v: T; label: string };
 
@@ -18,6 +19,7 @@ export function openSettings(parent: HTMLElement, settings: Settings, engine: En
     box.appendChild(grid);
 
     const apply = () => {
+      setUseArt(settings.portraitStyle === 'art');
       engine.setSettings({ quality: settings.quality, resolution: settings.resolution });
       audio.setVolume('master', settings.master);
       audio.setVolume('music', settings.music);
@@ -80,6 +82,11 @@ export function openSettings(parent: HTMLElement, settings: Settings, engine: En
       { v: 90, label: '快' },
       { v: 0, label: '瞬间' },
     ]);
+    if (hasPortraitArt())
+      seg('立绘风格', 'portraitStyle', [
+        { v: 'art', label: '手绘' },
+        { v: 'pixel', label: '像素' },
+      ]);
     seg('敌方行动速度', 'enemySpeed', [
       { v: 1, label: '×1' },
       { v: 1.5, label: '×1.5' },

@@ -10,6 +10,7 @@ import { h, sleep } from '@/ui/dom';
 import { menuList, modal } from '@/ui/widgets';
 import type { App } from './app';
 import { lookSpec } from './stage';
+import { keyArt } from '@/art/assets';
 
 const TITLE_MAP = [
   'aaaaMMMaaaaaaaa',
@@ -62,6 +63,8 @@ export async function runTitle(app: App): Promise<TitleChoice> {
   audio.playMusic('title');
 
   const root = h('div.title-screen');
+  const art = keyArt();
+  if (art) root.appendChild(h('div.title-keyart', { style: `background-image:url(${art})` }));
   const logo = h(
     'div.title-logo',
     null,

@@ -8,6 +8,7 @@ import { BattleWorld } from '@/render/world';
 import { h, sleep } from '@/ui/dom';
 import type { App } from './app';
 import { WorldStage } from './stage';
+import { chapterCg } from '@/art/assets';
 
 function sceneEnabled(app: App, s: StoryScene): boolean {
   if (!s.if) return true;
@@ -69,9 +70,10 @@ export async function playScene(app: App, scene: StoryScene, chapter: ChapterDef
 /** 章节标题卡 */
 export async function chapterCard(app: App, ch: ChapterDef): Promise<void> {
   app.engine.setFade(1);
+  const cg = chapterCg(ch.id);
   const el = h(
-    'div.chapter-card.big',
-    null,
+    `div.chapter-card.big${cg ? '.with-cg' : ''}`,
+    cg ? { style: `--cg:url(${cg})` } : null,
     h('div.label', null, ch.label),
     h('div.ttl', null, ch.title),
     h('div.rule'),

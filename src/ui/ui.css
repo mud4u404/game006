@@ -1627,3 +1627,60 @@ canvas.gl {
     transform: translateX(2rem);
   }
 }
+
+/* ===================================================================== */
+/* 手绘素材（与 ChatGPT 共创）                                            */
+/* ===================================================================== */
+
+.art-portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+}
+.art-portrait.mirrored {
+  transform: scaleX(-1);
+}
+.dialogue-portrait:has(.art-portrait) {
+  width: calc(64vh * 0.75);
+  height: 64vh;
+  bottom: 13rem;
+}
+.portrait-frame .art-portrait,
+.uc-portrait .art-portrait,
+.md-portrait .art-portrait,
+.cr-portrait .art-portrait {
+  object-fit: cover;
+  object-position: center 8%;
+}
+.levelup .lv-portrait:has(.art-portrait) {
+  width: calc(46vh * 0.75);
+  height: 46vh;
+}
+.title-keyart {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  animation: kenburns 40s ease-in-out infinite alternate;
+}
+.title-keyart::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 55%, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.7) 100%);
+}
+@keyframes kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08) translate(-1%, -1%);
+  }
+}
+.chapter-card.with-cg {
+  background:
+    radial-gradient(ellipse at center, rgba(20, 8, 4, 0.35), rgba(0, 0, 0, 0.88)),
+    var(--cg) center / cover no-repeat;
+}

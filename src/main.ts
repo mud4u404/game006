@@ -15,6 +15,7 @@ import { runTitle } from '@/scenes/title';
 import { runGame } from '@/scenes/flow';
 import { devState } from '@/scenes/dev';
 import { setClassResolver } from '@/scenes/stage';
+import { loadArtManifest, setUseArt } from '@/art/assets';
 
 const root = document.getElementById('app')!;
 const settings = loadSettings();
@@ -55,6 +56,8 @@ window.addEventListener('keydown', unlock);
 engine.start();
 
 async function main() {
+  await loadArtManifest();
+  setUseArt(settings.portraitStyle === 'art');
   const dev = devState();
   if (dev) {
     (window as unknown as { __app: App }).__app = app;
