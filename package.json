@@ -10,7 +10,6 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "art:refs": "tsx scripts/export-refs.ts",
     "art:ingest": "tsx scripts/ingest-art.ts"
   },
   "dependencies": {

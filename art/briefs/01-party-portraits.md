@@ -4,9 +4,7 @@
 
 ## 每次的固定做法
 1. 在 ChatGPT 项目里**新开一个对话**（一个角色一个对话，避免串角色）。
-2. 附上两张图：
-   - **风格参考**：已通过的雷恩表情表 A（`art/processed/portrait_rein_a.webp`，上传入库后会自动出现在这里）
-   - **角色参考**：`art/refs/<角色id>.png`
+2. 附上一张图作为**风格参考**：已通过的雷恩表情表 A（就是你之前上传的那张原图）。不要附像素参考图，角色外观完全按文字设定来画。
 3. 发送下面的「A 表模板」，把 `{角色描述}` 换成该角色的英文描述。
 4. A 表满意后，在**同一个对话**里发「B 表模板」。
 5. 文件名分别改成 `portrait_<角色id>_a.png`、`portrait_<角色id>_b.png` 上传。
@@ -19,8 +17,7 @@ Panels (left to right, top to bottom): neutral, gentle smile, angry, sad.
 
 {角色描述}
 
-First attachment: an approved illustration of another character. Match its art style, line quality, shading, rendering and level of detail exactly (do not copy that character).
-Second attachment: this character's in-game pixel sprite. Match the hair, eye and outfit colors.
+The attachment is an approved illustration of another character. Match its art style, line quality, shading, rendering and level of detail exactly (do not copy that character).
 ```
 
 ### B 表模板（同一个对话里发）
