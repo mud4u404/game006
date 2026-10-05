@@ -233,6 +233,12 @@ export class SpriteUnit implements UnitModel {
     this.ring.visible = on;
   }
 
+  private fadeGoal = 1;
+  private fadeNow = 1;
+  setFade(alpha: number) {
+    this.fadeGoal = alpha;
+  }
+
   update(dt: number, time: number) {
     // 公告板：只绕 Y 轴朝向镜头
     const cam = activeCamera;
@@ -258,6 +264,10 @@ export class SpriteUnit implements UnitModel {
     this.ringMat.uniforms.uTime.value = time;
     this.ringMat.uniforms.uHi.value += ((this.highlighted ? 1 : 0) - this.ringMat.uniforms.uHi.value) * Math.min(1, dt * 8);
     this.ringMat.uniforms.uAlpha.value = (this.dead ? 0 : 1) * (1 - this.actedT * 0.55);
+    // 旁观淡化（抖动透明）
+    this.fadeNow += (this.fadeGoal - this.fadeNow) * Math.min(1, dt * 10);
+    if (!this.dead) this.uniforms.uOpacity.value = this.fadeNow;
+    this.ringMat.uniforms.uAlpha.value *= this.fadeNow;
     // 受击后退
     this.kick.multiplyScalar(Math.max(0, 1 - dt * 8));
     this.plane.position.copy(this.kick);

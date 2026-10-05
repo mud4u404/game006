@@ -337,6 +337,8 @@ export interface UnitModel {
   setHighlighted(on: boolean): void;
   /** 显示/隐藏脚下的阵营光环（剧情演出时隐藏） */
   setRing?(on: boolean): void;
+  /** 淡化（特写时让旁观单位退到背景）：1 = 正常 */
+  setFade?(alpha: number): void;
   /** 每帧调用：待机呼吸、披风摆动、坐骑动作、行走循环等 */
   update(dt: number, time: number): void;
   dispose(): void;

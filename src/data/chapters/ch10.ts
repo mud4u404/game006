@@ -1,0 +1,283 @@
+/**
+ * 终章 誓约之焰
+ * 日蚀之下，摩尔迪斯与苏醒的黑龙冥烬融为一体。
+ * 集齐六片龙鳞残片时进入真结局：誓约以「人与龙并肩」的形式重新缔结。
+ */
+import type { ChapterDef } from '../types';
+import { npcUnit } from '../npcs';
+
+export const ch10: ChapterDef = {
+  id: 'ch10',
+  index: 10,
+  label: '终章',
+  title: '誓约之焰',
+  quote: '「三百年前，有人独自背负。三百年后，我们一起。」',
+  map: {
+    theme: 'eclipse',
+    seed: 1010,
+    rows: [
+      'MMMaaaLLLLLLLLLaaaMMM',
+      'MMaa..aLLLLLLLa..aaMM',
+      'Maa...aa_____aa...aaM',
+      'Ma..r...__K__...r..aM',
+      'a....aa._____.aa....a',
+      'a...a.....S.....a...a',
+      'L.........=.........L',
+      'LL..r.a...=...a.r..LL',
+      'LLa.......=.......aLL',
+      'La...aa..===..aa...aL',
+      'a........=.=........a',
+      'a..r...a.=.=.a...r..a',
+      'aa.......=.=.......aa',
+      'Ma..aa...=.=...aa..aM',
+      'MMa......=.=......aMM',
+      'MMMa.....===.....aMMM',
+      'MMMMa.....=.....aMMMM',
+    ],
+  },
+  victory: { type: 'boss', unit: 'mordis' },
+  objectiveText: '击败大主教 摩尔迪斯',
+  deploy: {
+    max: 13,
+    slots: [
+      [10, 16],
+      [9, 15],
+      [10, 15],
+      [11, 15],
+      [8, 15],
+      [12, 15],
+      [7, 15],
+      [13, 15],
+      [6, 16],
+      [7, 16],
+      [8, 16],
+      [9, 16],
+      [11, 16],
+      [12, 16],
+    ],
+    forced: ['rein', 'alicia', 'igna'],
+  },
+  units: [
+    { id: 'hp1', classId: 'high_priest', level: 6, team: 'enemy', x: 8, y: 3, ai: { type: 'hold' }, portrait: 'cultist' },
+    { id: 'hp2', classId: 'high_priest', level: 6, team: 'enemy', x: 12, y: 3, ai: { type: 'hold' }, portrait: 'cultist' },
+    { id: 'so1', classId: 'sorcerer', level: 12, team: 'enemy', x: 6, y: 5, ai: { type: 'aggressive' }, portrait: 'cultist' },
+    { id: 'so2', classId: 'sorcerer', level: 12, team: 'enemy', x: 14, y: 5, ai: { type: 'aggressive' }, portrait: 'cultist' },
+    { id: 'gl1', classId: 'golem', level: 13, team: 'enemy', x: 10, y: 7, ai: { type: 'hold' } },
+    { id: 'gl2', classId: 'golem', level: 13, team: 'enemy', x: 9, y: 10, ai: { type: 'aggressive' } },
+    { id: 'wr1', classId: 'wraith', level: 12, team: 'enemy', x: 4, y: 7, ai: { type: 'aggressive' } },
+    { id: 'wr2', classId: 'wraith', level: 12, team: 'enemy', x: 16, y: 7, ai: { type: 'aggressive' } },
+    { id: 'sa1', classId: 'salamander', level: 13, team: 'enemy', x: 3, y: 11, ai: { type: 'aggressive' } },
+    { id: 'sa2', classId: 'salamander', level: 13, team: 'enemy', x: 17, y: 11, ai: { type: 'aggressive' } },
+    { id: 'ww1', classId: 'wild_wyvern', level: 12, team: 'enemy', x: 2, y: 4, ai: { type: 'aggressive' } },
+    { id: 'ww2', classId: 'wild_wyvern', level: 12, team: 'enemy', x: 18, y: 4, ai: { type: 'aggressive' } },
+    npcUnit('mordis', {
+      id: 'mordis',
+      team: 'enemy',
+      x: 10,
+      y: 3,
+      level: 8,
+      boss: true,
+      ai: { type: 'stationary' },
+      statMod: { hp: 25, mag: 4, res: 4, def: 3 },
+    }),
+  ],
+  events: [
+    {
+      id: 'start',
+      when: { on: 'start' },
+      do: [
+        { do: 'camera', x: 10, y: 3 },
+        {
+          do: 'say',
+          lines: [
+            { s: 'mordis', t: '日蚀开始了。三百年的封印，今天就要结束。', e: 'normal' },
+            { s: 'igna', t: '我在里面待了三百年，老头子。冥烬是什么样的东西，你根本不知道。', e: 'angry' },
+            { s: 'mordis', t: '我知道。它是终结。而终结，是唯一平等的东西。', e: 'determined' },
+            { s: 'rein', t: '平等地烧掉所有人？那不是救赎，是放弃！', e: 'angry' },
+            { s: 'lucas', t: '老师。您教过我：魔法的意义，是在不可能里找到可能。……今天，我来交作业了。', e: 'determined' },
+            { s: 'mordis', t: '……很好，卢卡斯。那就让我看看吧。', e: 'smile' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'r3',
+      when: { on: 'turn', turn: 3, phase: 'enemy' },
+      do: [
+        {
+          do: 'spawn',
+          units: [
+            { id: 'rw1', classId: 'wraith', level: 12, team: 'enemy', x: 0, y: 10, ai: { type: 'aggressive' } },
+            { id: 'rw2', classId: 'wraith', level: 12, team: 'enemy', x: 20, y: 10, ai: { type: 'aggressive' } },
+          ],
+        },
+        { do: 'say', lines: [{ s: 'mordis', t: '起来吧，被冥烬焚尽的亡魂们。', e: 'normal' }] },
+      ],
+    },
+    {
+      id: 'mordis_hp',
+      when: { on: 'hp', unit: 'mordis', below: 40 },
+      do: [
+        {
+          do: 'say',
+          lines: [
+            { s: 'mordis', t: '……原来如此。这就是你们的「可能」吗。', e: 'hurt' },
+            { s: 'lucas', t: '老师，住手吧！现在还来得及！', e: 'sad' },
+            { s: 'mordis', t: '来不及了，卢卡斯。封印……已经打开了。', e: 'smile' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'phase2',
+      when: { on: 'defeat', unit: 'mordis' },
+      do: [
+        {
+          do: 'say',
+          lines: [
+            { s: 'mordis', t: '卢卡斯……你的星辉……很美……', e: 'hurt' },
+            { s: 'mordis', t: '可是……灰烬……已经……', e: 'hurt' },
+            { cmd: 'sfx', id: 'roar' },
+            { cmd: 'shake', strength: 1.5 },
+            { cmd: 'flash', color: '#8a40ff' },
+            { s: 'igna', t: '不好——冥烬在吞噬他的魂魄！它要出来了！', e: 'surprised' },
+          ],
+        },
+        { do: 'camera', x: 10, y: 1 },
+        {
+          do: 'spawn',
+          units: [
+            {
+              id: 'nox',
+              classId: 'ash_dragon',
+              level: 15,
+              team: 'enemy',
+              x: 10,
+              y: 2,
+              name: '灭世黑龙 冥烬',
+              boss: true,
+              ai: { type: 'aggressive' },
+              statMod: { hp: 40, atk: 4, def: 4, res: 4 },
+            },
+          ],
+        },
+        {
+          do: 'say',
+          lines: [
+            { s: '', t: '—— 渺小的……誓约之子。三百年的囚禁……今日……以火偿还。' },
+            { s: 'alicia', t: '好可怕的力量……可是，我不会再退缩了！', e: 'determined' },
+            { s: 'rein', t: '所有人！这是最后一战——守护我们想守护的一切！', e: 'determined' },
+          ],
+        },
+        { do: 'objective', text: '击败灭世黑龙 冥烬', victory: { type: 'boss', unit: 'nox' } },
+      ],
+    },
+    {
+      id: 'nox_hp',
+      when: { on: 'hp', unit: 'nox', below: 50 },
+      do: [
+        {
+          do: 'say',
+          lines: [
+            { s: 'igna', t: '冥烬的鳞在剥落！雷恩，就是现在——誓约之剑能斩断它！', e: 'determined' },
+            { s: 'rein', t: '团长、副团长……看着吧！', e: 'determined' },
+          ],
+        },
+      ],
+    },
+  ],
+  intro: [
+    {
+      backdrop: { type: 'black' },
+      music: 'story_hope',
+      lines: [
+        { cmd: 'caption', text: '烬火山 · 火口', sub: '日蚀之刻' },
+        { s: 'igna', t: '小骑士，把剑给我。', e: 'normal' },
+        { s: 'rein', t: '赤鳞剑？', e: 'surprised' },
+        { s: 'igna', t: '这把剑，是用我的鳞片打造的。三百年前它斩不断冥烬，因为那时只有一个人握着它。', e: 'normal' },
+        { s: 'igna', t: '现在不一样了。你身后有那么多人。……把你们的手，都放在剑上吧。', e: 'smile' },
+        { s: 'alicia', t: '……嗯。', e: 'determined' },
+        { s: 'loy', t: '算我一个！', e: 'determined' },
+        { s: 'sieg', t: '……父亲的徒弟，就是我的徒弟。算我一个。', e: 'normal' },
+        { s: 'kia', t: '哼，我才不是为了你们……算了，算我一个！', e: 'smile' },
+        { cmd: 'flash', color: '#ffd080' },
+        { cmd: 'sfx', id: 'promote' },
+        { s: '', t: '赤鳞剑在众人的手中重铸为「誓约圣剑」。雷恩转职为「龙誓骑士」！' },
+        { s: 'igna', t: '去吧，龙誓骑士。这一次，我们一起。', e: 'smile' },
+      ],
+    },
+  ],
+  outro: [
+    {
+      backdrop: { type: 'map', focus: [10, 4], zoom: 1.2 },
+      music: 'story_sad',
+      actors: [
+        { id: 'rein', look: 'rein', x: 10, y: 5, face: 'n' },
+        { id: 'igna', look: 'igna', x: 11, y: 5, face: 'n' },
+        { id: 'alicia', look: 'alicia', x: 9, y: 5, face: 'n' },
+        { id: 'lucas', look: 'lucas', x: 10, y: 6, face: 'n' },
+      ],
+      lines: [
+        { s: 'lucas', t: '……老师。您的作业，我交了。', e: 'sad' },
+        { s: 'igna', t: '冥烬的身体消散了。可是它的核心还在火山的心脏里……总得有人把它重新锁起来。', e: 'sad' },
+        { s: 'rein', t: '伊格娜……你又要一个人回去吗？', e: 'surprised' },
+      ],
+    },
+    {
+      if: '!true_ending',
+      backdrop: { type: 'map', focus: [10, 4], zoom: 1.3 },
+      music: 'story_sad',
+      actors: [
+        { id: 'rein', look: 'rein', x: 10, y: 5, face: 'n' },
+        { id: 'igna', look: 'igna', x: 10, y: 3, face: 's' },
+        { id: 'alicia', look: 'alicia', x: 9, y: 5, face: 'n' },
+      ],
+      lines: [
+        { s: 'igna', t: '没关系的。我睡了三百年，不差再睡三百年。', e: 'smile' },
+        { s: 'alicia', t: '我的血可以加固封印！让我来——', e: 'determined' },
+        { s: 'igna', t: '傻孩子。巫女的血只能当钥匙，不能当锁。锁，只能是我。', e: 'smile' },
+        { s: 'igna', t: '小骑士。能和你们一起战斗，这三百年，值了。', e: 'smile' },
+        { s: 'igna', t: '……偶尔，来火山上看看我吧。带点甜的东西来。', e: 'sad' },
+        { cmd: 'flash', color: '#ff8040' },
+        { cmd: 'remove', actor: 'igna', fx: 'promote' },
+        { s: 'rein', t: '伊格娜————！！', e: 'sad' },
+        { s: '', t: '赤龙再一次化作了锁。烬火山的火光，渐渐平息。' },
+        { s: '', t: '日蚀结束了。阳光，重新照在了瑟兰迪亚的大地上。' },
+      ],
+    },
+    {
+      if: 'true_ending',
+      backdrop: { type: 'map', focus: [10, 4], zoom: 1.3 },
+      music: 'story_hope',
+      actors: [
+        { id: 'rein', look: 'rein', x: 10, y: 5, face: 'n' },
+        { id: 'igna', look: 'igna', x: 10, y: 3, face: 's' },
+        { id: 'alicia', look: 'alicia', x: 9, y: 5, face: 'n' },
+        { id: 'kia', look: 'kia', x: 11, y: 6, face: 'n' },
+      ],
+      lines: [
+        { s: 'igna', t: '没关系的，我睡了三百年，不差再——', e: 'smile' },
+        { s: 'rein', t: '等一下！伊格娜，你看这个。', e: 'determined' },
+        { s: 'igna', t: '这是……我的鳞片？六片……全部都在？', e: 'surprised' },
+        { s: 'alicia', t: '一路上，大家一片一片找回来的。路碑下、村子里、宅邸的宝箱、沉船、神殿、王城……', e: 'smile' },
+        { s: 'kia', t: '那个王城的宝库可难撬了，你得好好谢谢我！', e: 'smile' },
+        { s: 'igna', t: '六片龙鳞……当年我交给七位骑士的信物。有了它们，锁就不必是我一个人。', e: 'sad' },
+        { s: 'igna', t: '小骑士，巫女，还有大家——把手放在鳞片上。我们一起，重新缔结誓约。', e: 'determined' },
+        { cmd: 'flash', color: '#ffe0a0' },
+        { cmd: 'vfx', id: 'holy', at: [10, 4] },
+        { cmd: 'sfx', id: 'promote' },
+        { s: '', t: '六片龙鳞化作六道光柱，沉入火山的心脏。冥烬的核心，在光芒中化为了真正的灰烬。' },
+        { s: 'igna', t: '……结束了。三百年来第一次，火山的心跳这么安静。', e: 'smile' },
+        { s: 'rein', t: '伊格娜，你自由了。', e: 'smile' },
+        { s: 'igna', t: '自由啊……那，我想先去尝尝三百年来人类做出的所有甜点。小骑士，你请客！', e: 'smile' },
+        { s: '', t: '日蚀结束了。誓约以「人与龙并肩」的形式，重新缔结。' },
+      ],
+    },
+  ],
+  storyPromotions: { rein: 'oath_knight' },
+  storyEquip: { rein: 'oath_sword' },
+  music: { player: 'battle_player', enemy: 'final' },
+  reward: { gold: 0 },
+  shop: [],
+  camp: 'full',
+};

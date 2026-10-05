@@ -156,3 +156,33 @@ describe('以逸待劳', () => {
     void derived;
   });
 });
+
+describe('胜利条件变更', () => {
+  it('Boss 击破事件改变胜利条件时不会提前胜利', async () => {
+    const { Battle } = await import('@/game/battle/battle');
+    const { testChapter } = await import('./helpers');
+    const ch = testChapter(['.....', '.....', '.....'], [
+      { id: 'rein', character: 'rein', team: 'player', x: 0, y: 0 },
+      { id: 'boss', classId: 'soldier', level: 1, team: 'enemy', x: 4, y: 2 },
+    ], {
+      victory: { type: 'boss', unit: 'boss' },
+      events: [
+        {
+          id: 'phase2',
+          when: { on: 'defeat', unit: 'boss' },
+          do: [
+            { do: 'spawn', units: [{ id: 'boss2', classId: 'soldier', level: 1, team: 'enemy', x: 4, y: 0 }] },
+            { do: 'objective', text: '击败第二形态', victory: { type: 'boss', unit: 'boss2' } },
+          ],
+        },
+      ],
+    });
+    const b = new Battle(ch, [], [], {}, 1);
+    const boss = b.unit('boss')!;
+    boss.hp = 0;
+    const priv = b as unknown as { onDeath(u: unknown, out: unknown): void; emptyOutcome(k: string, u: unknown): unknown };
+    priv.onDeath(boss, priv.emptyOutcome('attack', b.unit('rein')));
+    expect(b.outcome).toBeNull();
+    expect(b.victory).toEqual({ type: 'boss', unit: 'boss2' });
+  });
+});

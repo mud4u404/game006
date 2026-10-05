@@ -55,6 +55,16 @@ export async function runGame(app: App): Promise<void> {
             fixEquipment(s, id);
           }
         }
+        for (const [id, item] of Object.entries(ch.storyEquip ?? {})) {
+          const m = member(s, id);
+          if (!m) continue;
+          if (m.equipment.weapon && m.equipment.weapon !== item) {
+            const old = m.equipment.weapon;
+            // 被重铸的专属武器不再保留
+            if (!(old === 'crimson_blade' && item === 'oath_sword')) s.convoy.push(old);
+          }
+          m.equipment.weapon = item;
+        }
         s.stage = 'battle';
         autosave(app);
       }

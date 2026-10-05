@@ -269,6 +269,11 @@ export class BattleWorld {
     await this.vfx.play(id, from, to, { onImpact, scale });
   }
 
+  /** 特写：除指定单位外全部淡化；传 null 恢复 */
+  spotlight(ids: string[] | null) {
+    for (const [id, v] of this.views) v.model.setFade?.(!ids || ids.includes(id) ? 1 : 0.18);
+  }
+
   focusTile(x: number, y: number, immediate = false) {
     const p = this.bf.tileToWorld(x, y);
     this.rig.lookAt(p.x, p.y, p.z, immediate);

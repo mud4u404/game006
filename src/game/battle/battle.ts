@@ -730,6 +730,8 @@ export class Battle {
     }
     // hold 型的同组单位被惊动
     this.wakeGroup(u);
+    // 击破事件若改变了胜利条件（如 Boss 第二形态），须在判定胜负之前生效
+    for (const a of this.eventQueue) if (a.do === 'objective' && a.victory) this.victory = a.victory;
     this.checkOutcome();
   }
 

@@ -461,6 +461,8 @@ export interface ChapterDef {
   camp?: 'full' | 'march' | 'none';
   /** 剧情转职，如 { rein: 'crimson_knight' } */
   storyPromotions?: Record<string, string>;
+  /** 剧情装备：战前直接为角色装备武器（旧武器进仓库），如 { rein: 'oath_sword' } */
+  storyEquip?: Record<string, string>;
 }
 
 /* ------------------------------------------------------------------ */

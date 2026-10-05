@@ -627,6 +627,7 @@ export class BattleScene {
     const cine = mode === 'full' && firstTarget && firstTarget !== actor.uid && out.kind !== 'item';
     if (cine) {
       this.world.rig.cinematic(this.world.anchor(actor.uid), this.world.anchor(firstTarget!));
+      this.world.spotlight([actor.uid, ...out.strikes.map((s) => s.defender), ...out.effects.map((e) => e.uid)]);
       void this.app.engine.letterbox(0.085);
       await sleep(380);
     } else if (firstTarget) {
@@ -650,6 +651,7 @@ export class BattleScene {
     if (cine) {
       await sleep(250);
       this.world.rig.restore();
+      this.world.spotlight(null);
       void this.app.engine.letterbox(0);
     }
     for (const u of [actor, ...out.strikes.map((s) => b.unit(s.defender)!)]) if (u) this.refreshView(u);

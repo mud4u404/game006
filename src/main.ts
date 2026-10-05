@@ -13,6 +13,7 @@ import type { App } from '@/scenes/app';
 import { runTitle } from '@/scenes/title';
 import { runGame } from '@/scenes/flow';
 import { devState } from '@/scenes/dev';
+import { setClassResolver } from '@/scenes/stage';
 
 const root = document.getElementById('app')!;
 const settings = loadSettings();
@@ -41,6 +42,8 @@ const app: App = {
   dialogue: new DialoguePlayer(ui, () => settings.textSpeed),
   openSettings: () => openSettings(ui, settings, engine),
 };
+
+setClassResolver((id) => app.state.party.find((p) => p.id === id)?.classId);
 
 // 首次交互时解锁音频
 const unlock = () => audio.unlock();

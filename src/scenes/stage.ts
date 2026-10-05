@@ -12,10 +12,16 @@ import { buildModelSpec } from '@/game/unit';
 import type { Stage } from '@/ui/dialogue';
 import { audio } from '@/audio';
 
+/** 角色当前职业（转职后外观随之变化）；由主程序根据存档设置 */
+let currentClassOf: (id: string) => string | undefined = () => undefined;
+export function setClassResolver(fn: (id: string) => string | undefined) {
+  currentClassOf = fn;
+}
+
 /** 由「外观」（角色 id 或职业 id）得到模型规格 */
 export function lookSpec(look: string, team: Team = 'player'): UnitModelSpec {
   const ch = CHARACTERS[look];
-  if (ch) return buildModelSpec(ch.classId, team, undefined, ch.model);
+  if (ch) return buildModelSpec(currentClassOf(look) ?? ch.classId, team, undefined, ch.model);
   if (CLASSES[look]) return buildModelSpec(look, team);
   // 具名 NPC
   const n = NPCS[look];

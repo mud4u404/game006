@@ -131,3 +131,24 @@ describe('章节数据', () => {
     });
   }
 });
+
+describe('收集要素', () => {
+  it('全篇恰好有 6 片龙鳞残片（真结局条件）', () => {
+    let n = 0;
+    for (const c of CHAPTERS) {
+      for (const x of [...(c.chests ?? []), ...(c.hidden ?? []), ...(c.villages ?? [])]) if (x.item === 'dragon_scale') n++;
+      for (const it of c.reward.items ?? []) if (it === 'dragon_scale') n++;
+    }
+    expect(n).toBe(6);
+  });
+
+  it('每个可加入的角色都有加入的途径', () => {
+    const joinable = new Set<string>();
+    for (const c of CHAPTERS) {
+      for (const u of c.units) if (u.team === 'player' && u.character) joinable.add(u.character);
+      for (const e of c.events) for (const a of e.do) if (a.do === 'join') joinable.add(a.unit);
+      for (const id of [...(c.joins ?? []), ...(c.recruitAfter ?? [])]) joinable.add(id);
+    }
+    for (const id of Object.keys(CHARACTERS)) expect(joinable.has(id), id).toBe(true);
+  });
+});
