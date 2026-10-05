@@ -47,8 +47,8 @@ export const ch00: ChapterDef = {
     { id: 'e1', classId: 'soldier', level: 1, team: 'enemy', x: 6, y: 3, ai: { type: 'aggressive' } },
     { id: 'e2', classId: 'soldier', level: 2, team: 'enemy', x: 3, y: 9, ai: { type: 'aggressive' } },
     { id: 'e3', classId: 'archer', level: 1, team: 'enemy', x: 7, y: 1, ai: { type: 'hold' } },
-    { id: 'e4', classId: 'dark_mage', level: 1, team: 'enemy', x: 6, y: 11, ai: { type: 'aggressive' }, portrait: 'cultist' },
-    { id: 'e5', classId: 'soldier', level: 1, team: 'enemy', x: 14, y: 3, ai: { type: 'aggressive' } },
+    { id: 'e4', classId: 'dark_mage', level: 1, team: 'enemy', x: 6, y: 11, ai: { type: 'hold' }, portrait: 'cultist' },
+    { id: 'e5', classId: 'soldier', level: 1, team: 'enemy', x: 14, y: 3, ai: { type: 'hold' } },
     {
       id: 'heck',
       classId: 'dark_mage',
