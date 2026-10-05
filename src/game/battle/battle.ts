@@ -107,6 +107,27 @@ export interface PhaseEffect {
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
+/** 中断存档：战斗的完整状态（纯数据，可 JSON 序列化） */
+export interface BattleSnapshot {
+  chapterId: string;
+  units: Unit[];
+  turn: number;
+  phase: Phase;
+  rng: number;
+  flags: Record<string, boolean | number>;
+  fired: string[];
+  chests: ChestState[];
+  villages: { visited: boolean; destroyed: boolean }[];
+  hidden: HiddenState[];
+  victory: VictoryCond;
+  objectiveText: string;
+  goldGained: number;
+  convoyGained: string[];
+  joined: string[];
+  fallen: string[];
+  tiles: TerrainId[][];
+}
+
 export interface DeployEntry {
   save: UnitSave;
   x: number;
@@ -168,6 +189,52 @@ export class Battle {
       u.facing = 'n';
       this.units.push(u);
     }
+  }
+
+  /** 生成中断存档 */
+  snapshot(): BattleSnapshot {
+    return JSON.parse(
+      JSON.stringify({
+        chapterId: this.chapter.id,
+        units: this.units,
+        turn: this.turn,
+        phase: this.phase,
+        rng: this.rng.state,
+        flags: this.flags,
+        fired: [...this.fired],
+        chests: this.chests,
+        villages: this.villages.map((v) => ({ visited: v.visited, destroyed: v.destroyed })),
+        hidden: this.hidden,
+        victory: this.victory,
+        objectiveText: this.objectiveText,
+        goldGained: this.goldGained,
+        convoyGained: this.convoyGained,
+        joined: this.joined,
+        fallen: this.fallen,
+        tiles: this.map.tiles,
+      }),
+    ) as BattleSnapshot;
+  }
+
+  /** 从中断存档恢复 */
+  static restore(chapter: ChapterDef, snap: BattleSnapshot): Battle {
+    const b = new Battle(chapter, [], [], snap.flags, 1);
+    b.units = snap.units;
+    b.turn = snap.turn;
+    b.phase = snap.phase;
+    b.rng.state = snap.rng;
+    b.fired = new Set(snap.fired);
+    b.chests = snap.chests;
+    b.villages.forEach((v, i) => Object.assign(v, snap.villages[i] ?? {}));
+    b.hidden = snap.hidden;
+    b.victory = snap.victory;
+    b.objectiveText = snap.objectiveText;
+    b.goldGained = snap.goldGained;
+    b.convoyGained = snap.convoyGained;
+    b.joined = snap.joined;
+    b.fallen = snap.fallen;
+    snap.tiles.forEach((row, y) => row.forEach((t, x) => (b.map.tiles[y][x] = t)));
+    return b;
   }
 
   /* ================================================================ */

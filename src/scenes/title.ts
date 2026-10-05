@@ -3,7 +3,8 @@
  */
 import { audio } from '@/audio';
 import { CHAPTERS } from '@/data/chapters';
-import { listSaves, loadGame, newGame, type Difficulty, type GameState } from '@/game/state';
+import { clearSuspend, listSaves, loadGame, loadSuspend, newGame, type Difficulty, type GameState } from '@/game/state';
+import type { BattleSnapshot } from '@/game/battle/battle';
 import { BattleWorld } from '@/render/world';
 import { h, sleep } from '@/ui/dom';
 import { menuList, modal } from '@/ui/widgets';
@@ -31,7 +32,7 @@ const TITLE_MAP = [
   '...............',
 ];
 
-export type TitleChoice = { kind: 'new'; state: GameState } | { kind: 'load'; state: GameState };
+export type TitleChoice = { kind: 'new'; state: GameState } | { kind: 'load'; state: GameState; resume?: BattleSnapshot };
 
 export async function runTitle(app: App): Promise<TitleChoice> {
   const { engine } = app;
@@ -78,13 +79,14 @@ export async function runTitle(app: App): Promise<TitleChoice> {
   try {
     for (;;) {
       const saves = listSaves();
-      const any = saves.some(Boolean);
+      const suspend = loadSuspend();
+      const any = saves.some(Boolean) || !!suspend;
       const m = menuList(
         menuHolder,
         [
           { id: 'new', label: '新的旅程' },
-          { id: 'continue', label: '继续旅程', disabled: !any },
-          { id: 'load', label: '读取进度', disabled: !any },
+          { id: 'continue', label: suspend ? '继续中断的战斗' : '继续旅程', disabled: !any },
+          { id: 'load', label: '读取进度', disabled: !saves.some(Boolean) },
           { id: 'settings', label: '设置' },
         ],
         { className: 'title' },
@@ -101,6 +103,10 @@ export async function runTitle(app: App): Promise<TitleChoice> {
         ]);
         if (d === 'back') continue;
         return { kind: 'new', state: newGame(d as Difficulty) };
+      }
+      if (pick === 'continue' && suspend) {
+        clearSuspend();
+        return { kind: 'load', state: suspend.state, resume: suspend.battle };
       }
       if (pick === 'continue') {
         // 最近的存档

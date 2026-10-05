@@ -63,6 +63,7 @@ async function main() {
   for (;;) {
     const choice = await runTitle(app);
     app.state = choice.state;
+    app.resumeBattle = choice.kind === 'load' ? choice.resume ?? null : null;
     await runGame(app);
   }
 }

@@ -202,3 +202,25 @@ describe('战斗中换装', () => {
     expect(b.equipFromBag(g, g.items.indexOf('herb'))).toBe(false);
   });
 });
+
+describe('中断存档', () => {
+  it('快照可序列化并完整恢复', async () => {
+    const { Battle } = await import('@/game/battle/battle');
+    const { CHAPTERS } = await import('@/data/chapters');
+    const ch = CHAPTERS[0];
+    const b = new Battle(ch, [], [], {}, 42);
+    const rein = b.unit('rein')!;
+    b.move(rein, 9, 7);
+    b.wait(rein);
+    b.turn = 3;
+    b.fired.add('start');
+    const json = JSON.stringify(b.snapshot());
+    const r = Battle.restore(ch, JSON.parse(json));
+    expect(r.turn).toBe(3);
+    expect(r.unit('rein')!.x).toBe(9);
+    expect(r.unit('rein')!.done).toBe(true);
+    expect(r.fired.has('start')).toBe(true);
+    expect(r.rng.state).toBe(b.rng.state);
+    expect(r.units.length).toBe(b.units.length);
+  });
+});

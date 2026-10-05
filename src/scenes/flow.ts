@@ -8,9 +8,9 @@ import { ITEMS } from '@/data/items';
 import type { ChapterDef } from '@/data/types';
 import { Battle } from '@/game/battle/battle';
 import { promoteSave } from '@/game/progression';
-import { applyBattleResult, dragonScales, fixEquipment, joinParty, leaveParty, member, saveGame, type BattleReport } from '@/game/state';
+import { applyBattleResult, dragonScales, fixEquipment, joinParty, leaveParty, member, saveGame, saveSuspend, type BattleReport } from '@/game/state';
 import { h, sleep, waitForConfirm } from '@/ui/dom';
-import { modal } from '@/ui/widgets';
+import { modal, toast } from '@/ui/widgets';
 import type { App } from './app';
 import { BattleScene } from './battleScene';
 import { runCamp } from './camp';
@@ -93,6 +93,15 @@ export async function runGame(app: App): Promise<void> {
 async function runBattle(app: App, ch: ChapterDef): Promise<'ok' | 'title'> {
   const s = app.state;
   for (;;) {
+    // 恢复中断的战斗
+    const snap = app.resumeBattle && app.resumeBattle.chapterId === ch.id ? app.resumeBattle : null;
+    app.resumeBattle = null;
+    if (snap) {
+      const battle = Battle.restore(ch, snap);
+      const r = await fight(app, ch, battle, true);
+      if (r === 'retry') continue;
+      return r;
+    }
     const deployed = await runDeploy(app, ch);
     if (deployed === null) {
       // 返回营地
@@ -113,17 +122,34 @@ async function runBattle(app: App, ch: ChapterDef): Promise<'ok' | 'title'> {
         u.hp = u.base.hp;
       }
     }
-    const scene = new BattleScene(app, ch, battle);
+    const r = await fight(app, ch, battle, false);
+    if (r === 'retry') continue;
+    return r;
+  }
+}
+
+async function fight(app: App, ch: ChapterDef, battle: Battle, resumed: boolean): Promise<'ok' | 'title' | 'retry'> {
+  const s = app.state;
+  {
+    const scene = new BattleScene(app, ch, battle, resumed);
     let res;
     try {
       res = await scene.run();
     } finally {
       scene.dispose();
     }
+    if (res.outcome === 'suspend') {
+      saveSuspend(s, res.battle.snapshot());
+      toast(app.ui, '已中断。可以从「继续旅程」接着进行。');
+      return 'title';
+    }
     if (res.outcome === 'win') {
       const report = applyBattleResult(s, res.battle, res.bonds);
       s.gold += ch.reward.gold;
       s.convoy.push(...(ch.reward.items ?? []));
+      // 本章开场就在我方的角色不算「新的伙伴」（序章的初始队伍）
+      const preset = new Set(ch.units.filter((u) => u.team === 'player' && u.character).map((u) => u.character));
+      report.joined = report.joined.filter((id) => !preset.has(id));
       for (const id of ch.recruitAfter ?? []) {
         if (!member(s, id)) {
           joinParty(s, id);
@@ -137,7 +163,7 @@ async function runBattle(app: App, ch: ChapterDef): Promise<'ok' | 'title'> {
       { id: 'retry', label: '重新挑战' },
       { id: 'title', label: '返回标题' },
     ]);
-    if (pick === 'title') return 'title';
+    return pick === 'title' ? 'title' : 'retry';
   }
 }
 

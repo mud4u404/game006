@@ -333,3 +333,41 @@ export function deleteSave(slot: number) {
     /* 忽略 */
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* 中断存档（战斗中途，读取后即删除）                                    */
+/* ------------------------------------------------------------------ */
+
+const SUSPEND_KEY = 'emberoath.suspend';
+
+export interface SuspendData {
+  state: GameState;
+  battle: import('./battle/battle').BattleSnapshot;
+  savedAt: number;
+}
+
+export function saveSuspend(state: GameState, battle: SuspendData['battle']): boolean {
+  try {
+    storage()?.setItem(SUSPEND_KEY, JSON.stringify({ state, battle, savedAt: Date.now() }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function loadSuspend(): SuspendData | null {
+  try {
+    const raw = storage()?.getItem(SUSPEND_KEY);
+    return raw ? (JSON.parse(raw) as SuspendData) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSuspend() {
+  try {
+    storage()?.removeItem(SUSPEND_KEY);
+  } catch {
+    /* 忽略 */
+  }
+}

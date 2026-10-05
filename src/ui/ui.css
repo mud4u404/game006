@@ -1612,3 +1612,18 @@ canvas.gl {
   bottom: -40vh;
   right: -12rem;
 }
+.levelup .lv-portrait {
+  position: absolute;
+  right: calc(100% + 1rem);
+  bottom: 0;
+  width: calc(var(--pp, 4px) * 80);
+  height: calc(var(--pp, 4px) * 96);
+  filter: drop-shadow(0 0 1.4rem rgba(255, 190, 90, 0.45));
+  animation: lvIn 0.4s ease;
+}
+@keyframes lvIn {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+}

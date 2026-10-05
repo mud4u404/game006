@@ -307,6 +307,7 @@ export class BattleHud {
   /** 升级面板，点击或按键关闭 */
   async levelUp(u: Unit, r: LevelUpResult, prevStats: Record<StatKey, number>) {
     const el = h('div.panel.levelup');
+    if (u.charId || u.portrait) el.appendChild(h('div.lv-portrait', { html: portraitHtml(u.portrait ?? u.charId ?? '', u.name, 'smile') }));
     el.append(h('h3', null, `LEVEL UP!　Lv ${r.level}`), h('div.muted', { style: 'margin-bottom:0.8rem' }, `${u.name} · ${getClass(u.classId).name}`));
     const keys: GrowthKey[] = ['hp', 'mp', 'atk', 'def', 'mag', 'res', 'agi'];
     this.root.appendChild(el);

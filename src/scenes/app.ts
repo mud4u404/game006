@@ -15,4 +15,6 @@ export interface App {
   dialogue: DialoguePlayer;
   /** 打开设置面板 */
   openSettings(): Promise<void>;
+  /** 待恢复的中断战斗 */
+  resumeBattle?: import('@/game/battle/battle').BattleSnapshot | null;
 }

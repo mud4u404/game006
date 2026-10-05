@@ -23,7 +23,7 @@ import type { App } from './app';
 import { WorldStage } from './stage';
 
 export interface BattleResult {
-  outcome: 'win' | 'lose';
+  outcome: 'win' | 'lose' | 'suspend';
   battle: Battle;
   bonds: Record<string, number>;
 }
@@ -64,10 +64,15 @@ export class BattleScene {
   private listeners: [EventTarget, string, EventListener][] = [];
   private dragging: { x: number; y: number } | null = null;
 
-  constructor(app: App, chapter: ChapterDef, battle: Battle) {
+  /** 从中断存档恢复：第一个阶段不重复结算阶段开始效果 */
+  private resumed: boolean;
+  private suspended = false;
+
+  constructor(app: App, chapter: ChapterDef, battle: Battle, resumed = false) {
     this.app = app;
     this.chapter = chapter;
     this.battle = battle;
+    this.resumed = resumed;
   }
 
   /* ================================================================ */
@@ -104,19 +109,24 @@ export class BattleScene {
     try {
       while (!b.outcome) {
         const phase = b.phase;
-        await this.phaseStart(phase);
+        await this.phaseStart(phase, this.resumed);
+        this.resumed = false;
         if (b.outcome) break;
         if (phase === 'player') await this.playerPhase();
         else await this.aiPhase(phase);
+        if (this.suspended) break;
         if (b.outcome) break;
         const next = b.nextPhase();
         b.phase = next;
       }
-      await this.finish();
+      if (this.suspended) {
+        this.clearOverlay();
+        await this.app.engine.fadeTo(1, 500);
+      } else await this.finish();
     } finally {
       this.unbindInput();
     }
-    return { outcome: b.outcome ?? 'lose', battle: b, bonds: this.bonds };
+    return { outcome: this.suspended ? 'suspend' : b.outcome ?? 'lose', battle: b, bonds: this.bonds };
   }
 
   private async finish() {
@@ -176,13 +186,18 @@ export class BattleScene {
   /* 阶段                                                              */
   /* ================================================================ */
 
-  private async phaseStart(phase: 'player' | 'enemy' | 'ally') {
+  private async phaseStart(phase: 'player' | 'enemy' | 'ally', resumed = false) {
     const b = this.battle;
     this.updateObjective();
     audio.playMusic(phase === 'player' ? this.chapter.music.player : this.chapter.music.enemy, 1.2);
     audio.sfx('phase');
     this.hud.setHints('none');
     await this.hud.banner(phase, b.turn);
+    if (resumed) {
+      this.refreshAll();
+      this.updateDanger();
+      return;
+    }
     const fx = b.startPhase(phase);
     for (const u of b.units) this.world.view(u.uid)?.model.setActed(false);
     if (fx.length) {
@@ -205,6 +220,10 @@ export class BattleScene {
       const ready = b.active('player').filter((u) => !u.done);
       if (!ready.length && this.app.settings.autoEnd) break;
       const pick = await this.idle();
+      if (pick === 'suspend') {
+        this.suspended = true;
+        return;
+      }
       if (pick === 'end') {
         if (ready.length && !(await this.hud.confirm(`还有 ${ready.length} 名单位未行动，确定结束回合吗？`))) continue;
         break;
@@ -301,7 +320,7 @@ export class BattleScene {
   /* ================================================================ */
 
   /** 空闲：等待玩家选中一个可行动的单位，或结束回合 */
-  private idle(): Promise<Unit | 'end'> {
+  private idle(): Promise<Unit | 'end' | 'suspend'> {
     this.hud.setHints('idle');
     this.clearOverlay();
     this.world.overlay.moveCursor(...this.cursor);
@@ -310,6 +329,11 @@ export class BattleScene {
       this.endTurnResolver = () => {
         this.mode = null;
         resolve('end');
+      };
+      this.suspendResolver = () => {
+        this.mode = null;
+        this.endTurnResolver = null;
+        resolve('suspend');
       };
       this.mode = {
         hover: (t) => this.showHover(t),
@@ -346,6 +370,7 @@ export class BattleScene {
   }
 
   private endTurnResolver: (() => void) | null = null;
+  private suspendResolver: (() => void) | null = null;
 
   /** 指挥一个单位：选择移动位置 → 指令菜单 → 执行 */
   private async command(u: Unit): Promise<void> {
@@ -1106,7 +1131,20 @@ export class BattleScene {
     const end = h('button.btn', { on: { click: () => this.endTurnResolver?.() } }, '结束回合');
     const danger = h('button.btn', { on: { click: () => { this.dangerOn = !this.dangerOn; this.updateDanger(); } } }, '危险范围');
     const settings = h('button.btn', { on: { click: () => void this.app.openSettings() } }, '设置');
-    this.hud.buttons.append(settings, danger, end);
+    const suspend = h(
+      'button.btn',
+      {
+        on: {
+          click: async () => {
+            if (!this.endTurnResolver || this.battle.phase !== 'player') return;
+            const ok = await this.hud.confirm('中断战斗并返回标题？下次可以从「继续旅程」接着这一回合进行。');
+            if (ok) this.suspendResolver?.();
+          },
+        },
+      },
+      '中断',
+    );
+    this.hud.buttons.append(suspend, settings, danger, end);
   }
 }
 
