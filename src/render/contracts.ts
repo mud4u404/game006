@@ -9,15 +9,15 @@
  *  - Three.js 使用 Y 轴向上。
  *  - 地图格子 (x, y)：x 为列（0..width-1，向右），y 为行（0..height-1，向下/向镜头）。
  *  - 格子 (x, y) 的中心在世界坐标 (x + 0.5, h, y + 0.5)，h 为该格可站立表面高度。
- *  - 1 格 = 1 个世界单位。人形单位总高约 1.0；骑乘单位约 1.3。
+ *  - 1 格 = 1 个世界单位。人形单位总高约 0.95；骑乘单位约 1.3。
  *  - 地图原点在 (0,0,0) 角落，整张地图覆盖 [0,width] × [0,height] 的 XZ 区域。
  *
  * 画面风格（所有模块统一遵守）：
  *  「精致微缩沙盘」——像一张被暖光照亮的桌面战棋模型：
  *  PBR 材质（MeshStandardMaterial / MeshPhysicalMaterial）、柔和投影、
  *  饱和但自然的色彩、圆润的造型（倒角/低多边形但平滑着色）、ACES 色调映射 + Bloom。
- *  人物是原创的「微缩人偶」造型（头身比约 1:4.5），卡通着色 + 细描边，
- *  靠轮廓、阵营配色与装备区分角色。
+ *  人物为原创的日系三头身造型：动画风格的大眼睛（脸部贴图）、发束式头发、
+ *  冷紫阴影的赛璐璐着色与细描边。
  */
 import type * as THREE from 'three';
 
@@ -264,6 +264,18 @@ export interface UnitModelSpec {
   hair?: string;
   /** 瞳色 */
   eyes?: string;
+  /** 脸部细节（日系脸部贴图） */
+  face?: {
+    shape?: 'gentle' | 'sharp' | 'round';
+    slit?: boolean;
+    glow?: boolean;
+    scar?: 'left' | 'right';
+    eyepatch?: 'left' | 'right';
+    old?: boolean;
+    blush?: boolean;
+  };
+  /** 头顶呆毛 */
+  ahoge?: boolean;
   hairStyle?: HairModel;
   beard?: boolean;
   /** 主色（衣服/罩袍） */
@@ -283,9 +295,9 @@ export interface UnitModelSpec {
   /** 光环/魔力辉光颜色（Boss、龙、亡灵） */
   glow?: string;
   /**
-   * 比例：mini = 本作原创的微缩人偶（头身比约 1:4.5，默认）；real = 更高大的写实比例（约 1:6.5）。
+   * 比例：anime = 日系三头身（默认）；mini = 修长人偶（约 1:4.5）；real = 写实比例（约 1:6.5）。
    */
-  proportion?: 'mini' | 'real';
+  proportion?: 'anime' | 'mini' | 'real';
 }
 
 export type UnitAnim =

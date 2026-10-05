@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { jitter, paint, xf } from '../battlefield/geom';
 import type { HairModel, HelmetModel, UnitModelSpec, WeaponModel } from '../contracts';
+import { hairstyle } from './hair';
 
 export interface Proportions {
   headR: number;
@@ -27,7 +28,28 @@ export interface Proportions {
   k: number;
 }
 
-/** 地图上的微缩人偶（总高约 1.0） */
+/** 日系三头身（默认，总高约 0.95） */
+export const ANIME: Proportions = {
+  headR: 0.185,
+  headY: 0.7,
+  torsoY: 0.28,
+  torsoH: 0.21,
+  torsoW: 0.19,
+  torsoD: 0.13,
+  hipY: 0.3,
+  legLen: 0.3,
+  legR: 0.034,
+  armLen: 0.22,
+  armR: 0.028,
+  shoulderX: 0.112,
+  shoulderY: 0.47,
+  handR: 0.03,
+  weapon: 0.78,
+  eye: 1,
+  k: 0.85,
+};
+
+/** 修长人偶（总高约 1.0） */
 export const MINI: Proportions = {
   headR: 0.112,
   headY: 0.875,
@@ -75,6 +97,63 @@ const darker = (c: THREE.ColorRepresentation, k: number) => C(c).multiplyScalar(
 /* ================================================================== */
 /* 头部                                                                */
 /* ================================================================== */
+
+/** 日系头型：下巴收窄、后脑饱满 */
+export function deformHead(g: THREE.BufferGeometry, r: number) {
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i);
+    const y = pos.getY(i);
+    let z = pos.getZ(i);
+    if (y < 0) {
+      const t = Math.min(1, -y / r);
+      const k = 1 - 0.28 * t * t;
+      x *= k;
+      z = z > 0 ? z * (1 - 0.12 * t * t) : z * k;
+    }
+    pos.setXYZ(i, x * 1.04, y * 0.98, z * 0.96);
+  }
+  g.computeVertexNormals();
+}
+
+export interface AnimeHead {
+  skull: Geo[];
+  hair: Geo[];
+  /** 脸部贴图用的球面片（含 uv） */
+  faceDecal: THREE.BufferGeometry | null;
+  glow: Geo[];
+}
+
+/** 日系头部：头骨 + 发束头发 + 脸部贴图片 + 头盔 */
+export function buildAnimeHead(spec: UnitModelSpec, P: Proportions, faceRange: { phi: number; thetaStart: number; thetaLen: number }): AnimeHead {
+  const r = P.headR;
+  const skin = spec.skin ?? '#f6dcc6';
+  const hairCol = spec.hair ?? '#5a3a24';
+  const skull: Geo[] = [];
+  const glow: Geo[] = [];
+  const head = new THREE.SphereGeometry(r, 32, 24);
+  deformHead(head, r);
+  skull.push(paint(head, skin));
+  // 颈
+  skull.push(paint(xf(new THREE.CylinderGeometry(r * 0.22, r * 0.26, r * 0.5, 10), 0, -r * 0.95, -r * 0.05), C(skin).multiplyScalar(0.9)));
+  const full = spec.helmet === 'full';
+  let faceDecal: THREE.BufferGeometry | null = null;
+  if (!full) {
+    const g = new THREE.SphereGeometry(r * 1.004, 40, 28, Math.PI / 2 - faceRange.phi / 2, faceRange.phi, faceRange.thetaStart * Math.PI, faceRange.thetaLen * Math.PI);
+    deformHead(g, r * 1.004);
+    faceDecal = g;
+  }
+  if (spec.beard) {
+    skull.push(paint(xf(new THREE.SphereGeometry(r * 0.6, 16, 12), 0, -r * 0.62, r * 0.38, 0, 1, 0.75, 0.75), hairCol));
+    skull.push(paint(xf(new THREE.CapsuleGeometry(r * 0.06, r * 0.28, 4, 8), 0, -r * 0.38, r * 0.86, 0, 1, 1, 1, 0, Math.PI / 2), darker(hairCol, 0.9)));
+  }
+  const hooded = spec.helmet === 'hood' || spec.helmet === 'veil';
+  const hair = full ? [] : hairstyle(spec.hairStyle ?? 'short', r, hairCol, { hooded, ahoge: spec.ahoge });
+  const h = buildHelmet(spec.helmet ?? 'none', r, spec);
+  skull.push(...h.solid);
+  glow.push(...h.glow);
+  return { skull, hair, faceDecal, glow };
+}
 
 export function buildHead(spec: UnitModelSpec, P: Proportions): { solid: Geo[]; glow: Geo[]; face: Geo[] } {
   const r = P.headR;

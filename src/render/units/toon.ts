@@ -6,12 +6,17 @@ import * as THREE from 'three';
 
 let gradientTex: THREE.DataTexture | null = null;
 
-/** 三阶明暗的渐变贴图 */
+/** 日系赛璐璐：带冷紫色调的阴影 + 明亮受光面 */
 export function toonGradient(): THREE.DataTexture {
   if (gradientTex) return gradientTex;
-  const steps = [70, 150, 215, 255];
+  const steps: [number, number, number][] = [
+    [150, 138, 182],
+    [196, 184, 220],
+    [255, 252, 248],
+    [255, 255, 255],
+  ];
   const data = new Uint8Array(steps.length * 4);
-  steps.forEach((v, i) => data.set([v, v, v, 255], i * 4));
+  steps.forEach((v, i) => data.set([...v, 255], i * 4));
   gradientTex = new THREE.DataTexture(data, steps.length, 1, THREE.RGBAFormat);
   gradientTex.minFilter = THREE.NearestFilter;
   gradientTex.magFilter = THREE.NearestFilter;
@@ -38,11 +43,25 @@ export function createUnitUniforms(rim: THREE.ColorRepresentation): UnitUniforms
   };
 }
 
-/** 卡通材质：顶点色 + 三阶明暗 + 轮廓光 + 变灰 + 闪光 */
-export function createToonMaterial(u: UnitUniforms, opts: { metal?: boolean; emissive?: boolean } = {}): THREE.MeshToonMaterial {
-  const m = new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: toonGradient() });
+/** 卡通材质：顶点色 + 赛璐璐明暗 + 轮廓光 + 变灰 + 闪光；hair 时附加「天使环」高光 */
+export function createToonMaterial(u: UnitUniforms, opts: { metal?: boolean; hair?: boolean; map?: THREE.Texture } = {}): THREE.MeshToonMaterial {
+  const m = new THREE.MeshToonMaterial({ vertexColors: !opts.map, gradientMap: toonGradient(), map: opts.map ?? null });
+  if (opts.map) {
+    m.transparent = true;
+    m.alphaTest = 0.05;
+    m.depthWrite = false;
+  }
   m.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, u);
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <gradientmap_pars_fragment>',
+      `uniform sampler2D gradientMap;
+vec3 getGradientIrradiance( vec3 normal, vec3 lightDirection ) {
+  float dotNL = dot( normal, lightDirection );
+  vec2 coord = vec2( dotNL * 0.5 + 0.5, 0.0 );
+  return texture2D( gradientMap, coord ).rgb;
+}`,
+    );
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\nvarying vec3 vViewN;`)
       .replace('#include <defaultnormal_vertex>', `#include <defaultnormal_vertex>\nvViewN = normalize(transformedNormal);`);
@@ -71,10 +90,11 @@ varying vec3 vViewN;`,
   totalEmissiveRadiance += uRim * rim * 0.35 * (1.0 - uDesat * 0.7);
   totalEmissiveRadiance += uFlash * uFlashAmt;
   ${opts.metal ? 'totalEmissiveRadiance += diffuseColor.rgb * pow(rim, 0.5) * 0.15;' : ''}
+  ${opts.hair ? 'float ny = normalize(vViewN).y; float band = smoothstep(0.38, 0.5, ny) * smoothstep(0.78, 0.6, ny); totalEmissiveRadiance += diffuseColor.rgb * band * 0.55;' : ''}
 }`,
       );
   };
-  m.customProgramCacheKey = () => `unit_toon_${opts.metal ? 1 : 0}`;
+  m.customProgramCacheKey = () => `unit_toon_${opts.metal ? 1 : 0}_${opts.hair ? 1 : 0}_${opts.map ? 1 : 0}`;
   return m;
 }
 

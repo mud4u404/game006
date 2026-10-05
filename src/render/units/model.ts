@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { merge } from '../battlefield/geom';
 import type { PlayOptions, Quality, UnitAnim, UnitModel, UnitModelSpec } from '../contracts';
-import { buildArm, buildCape, buildHead, buildLeg, buildQuiver, buildShield, buildTorso, buildWeapon, MINI, REAL, type Geo, type Proportions } from './parts';
+import { ANIME, buildAnimeHead, buildArm, buildCape, buildHead, buildLeg, buildQuiver, buildShield, buildTorso, buildWeapon, MINI, REAL, type Geo, type Proportions } from './parts';
+import { FACE_PHI, FACE_THETA_LEN, FACE_THETA_START, faceTexture } from './face';
 import { dragon, golem, horse, salamander, scaleCreature, skullHead, wolf, wraith, wyvern, type CreatureSpec } from './creatures';
 import { addSmoothNormals, createOutlineMaterial, createToonMaterial, createUnitUniforms, type UnitUniforms } from './toon';
 
@@ -129,17 +130,21 @@ export class ProceduralUnit implements UnitModel {
   private seed = Math.random() * 100;
   private glowMat: THREE.MeshBasicMaterial;
   private hover = 0;
+  private quality: Quality = 'medium';
+  private outlineMat!: THREE.ShaderMaterial;
 
   constructor(spec: UnitModelSpec, quality: Quality) {
     this.spec = spec;
-    this.P = spec.proportion === 'real' ? REAL : MINI;
+    this.P = spec.proportion === 'real' ? REAL : spec.proportion === 'mini' ? MINI : ANIME;
+    this.quality = quality;
     const [teamCol, teamAccent] = TEAM_COLORS[spec.team];
     this.uniforms = createUnitUniforms(teamCol);
     const toon = createToonMaterial(this.uniforms);
-    const outline = createOutlineMaterial(this.uniforms, this.P === MINI ? 0.0075 : 0.006);
+    const outline = createOutlineMaterial(this.uniforms, this.P === ANIME ? 0.0085 : this.P === MINI ? 0.0075 : 0.006);
     this.glowMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, toneMapped: true });
     this.glowMat.color.setScalar(3);
     this.mats.push(toon, outline, this.glowMat);
+    this.outlineMat = outline;
     const useOutline = quality !== 'low';
 
     // 构建零件的工具
@@ -177,7 +182,7 @@ export class ProceduralUnit implements UnitModel {
     const body = spec.body;
     let mountSpec: CreatureSpec | null = null;
     if (body === 'humanoid' || body === 'skeleton') {
-      const k = this.P === MINI ? 1.6 : 2.6;
+      const k = this.P === ANIME ? 1.4 : this.P === MINI ? 1.6 : 2.6;
       if (spec.mount === 'horse') mountSpec = scaleCreature(horse(spec.team === 'enemy' ? '#3a3230' : '#7a5434', '#2e2018', spec.primary, spec.secondary, false), k);
       else if (spec.mount === 'pegasus') mountSpec = scaleCreature(horse('#f4f2ee', '#dfe6f2', null, spec.secondary, true), k);
       else if (spec.mount === 'wyvern') mountSpec = scaleCreature(wyvern(1, '#3e4a3a', '#8a8a62', '#5a3a3a', '#ffd040'), k * 0.85);
@@ -293,8 +298,37 @@ export class ProceduralUnit implements UnitModel {
     // 头
     const headPivot = new THREE.Group();
     headPivot.position.set(0, P.headY, 0);
-    const head = skeleton ? skullHead(P.headR) : buildHead(spec, P);
-    headPivot.add(makePart(head.solid, head.glow, head.face));
+    if (skeleton || P !== ANIME) {
+      const head = skeleton ? skullHead(P.headR) : buildHead(spec, P);
+      headPivot.add(makePart(head.solid, head.glow, head.face));
+    } else {
+      const ah = buildAnimeHead(spec, P, { phi: FACE_PHI, thetaStart: FACE_THETA_START, thetaLen: FACE_THETA_LEN });
+      headPivot.add(makePart(ah.skull, ah.glow));
+      if (ah.hair.length) {
+        const hairGeo = addSmoothNormals(merge(ah.hair));
+        this.geos.push(hairGeo);
+        const hairMat = createToonMaterial(this.uniforms, { hair: true });
+        this.mats.push(hairMat);
+        const hm = new THREE.Mesh(hairGeo, hairMat);
+        hm.castShadow = true;
+        headPivot.add(hm);
+        if (this.quality !== 'low') headPivot.add(new THREE.Mesh(hairGeo, this.outlineMat));
+      }
+      if (ah.faceDecal) {
+        const f = spec.face ?? {};
+        const tex = faceTexture(
+          { eyes: spec.eyes ?? '#6a4a3a', hair: spec.hair ?? '#3a2a20', female: spec.gender === 'f', shape: f.shape, slit: f.slit, glow: f.glow, scar: f.scar, eyepatch: f.eyepatch, old: f.old, blush: f.blush, beard: spec.beard },
+          'normal',
+          this.quality === 'high' || this.quality === 'ultra' ? 512 : 256,
+        );
+        const fm = createToonMaterial(this.uniforms, { map: tex });
+        this.mats.push(fm);
+        this.geos.push(ah.faceDecal);
+        const face = new THREE.Mesh(ah.faceDecal, fm);
+        face.renderOrder = 1;
+        headPivot.add(face);
+      }
+    }
     this.rider.add(headPivot);
     this.j.head = headPivot;
     // 手臂
@@ -442,7 +476,7 @@ export class ProceduralUnit implements UnitModel {
     pose.armLZ = -0.16;
     pose.weapon = -0.25;
     pose.cape = Math.sin(ph * 0.7) * 0.05;
-    pose.headX = -0.06 + Math.sin(ph * 0.5) * 0.03;
+    pose.headX = (this.P === ANIME ? -0.14 : -0.06) + Math.sin(ph * 0.5) * 0.03;
 
     // 行走
     if (this.moving) {
