@@ -87,11 +87,8 @@ export class BattleHud {
     this.terrain.classList.remove('hidden');
     const d = TERRAIN[t];
     const fmt = (v: number) => h(`b.${v > 0 ? 'pos' : v < 0 ? 'neg' : 'muted'}`, null, `${v > 0 ? '+' : ''}${v}%`);
-    this.terrain.append(
-      h('div.name', null, d.name),
-      h('div.mods', null, h('span', null, '攻 ', fmt(d.atk)), h('span', null, '防 ', fmt(d.def))),
-      d.heal ? h('div.muted', { style: 'font-size:1.3rem;margin-top:0.3rem' }, `每回合回复 ${d.heal}%`) : null,
-    );
+    this.terrain.append(h('div.name', null, d.name), h('div.mods', null, h('span', null, '攻 ', fmt(d.atk)), h('span', null, '防 ', fmt(d.def))));
+    if (d.heal) this.terrain.append(h('div.muted', { style: 'font-size:1.3rem;margin-top:0.3rem' }, `每回合回复 ${d.heal}%`));
   }
 
   /* -------------------- 单位 -------------------- */
