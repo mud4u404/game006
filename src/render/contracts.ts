@@ -9,14 +9,15 @@
  *  - Three.js 使用 Y 轴向上。
  *  - 地图格子 (x, y)：x 为列（0..width-1，向右），y 为行（0..height-1，向下/向镜头）。
  *  - 格子 (x, y) 的中心在世界坐标 (x + 0.5, h, y + 0.5)，h 为该格可站立表面高度。
- *  - 1 格 = 1 个世界单位。人形单位（Q 版比例）总高约 0.9。
+ *  - 1 格 = 1 个世界单位。地图上的人形单位（Q 版）总高约 0.9；骑乘单位约 1.2。
  *  - 地图原点在 (0,0,0) 角落，整张地图覆盖 [0,width] × [0,height] 的 XZ 区域。
  *
  * 画面风格（所有模块统一遵守）：
  *  「精致微缩沙盘」——像一张被暖光照亮的桌面战棋模型：
  *  PBR 材质（MeshStandardMaterial / MeshPhysicalMaterial）、柔和投影、
  *  饱和但自然的色彩、圆润的造型（倒角/低多边形但平滑着色）、ACES 色调映射 + Bloom。
- *  人物为 Q 版比例（头身比约 1:2.5），像精美的手办/桌游棋子。
+ *  地图上的人物为大头 Q 版（头身比约 1:1.5），卡通着色 + 深色描边；
+ *  战斗特写舞台中使用写实比例（proportion = 'real'）。
  */
 import type * as THREE from 'three';
 
@@ -261,6 +262,8 @@ export interface UnitModelSpec {
   /** CSS 颜色字符串，如 '#f2d3b5' */
   skin?: string;
   hair?: string;
+  /** 瞳色 */
+  eyes?: string;
   hairStyle?: HairModel;
   beard?: boolean;
   /** 主色（衣服/罩袍） */
@@ -279,6 +282,11 @@ export interface UnitModelSpec {
   scale?: number;
   /** 光环/魔力辉光颜色（Boss、龙、亡灵） */
   glow?: string;
+  /**
+   * 比例：sd = 地图上的大头 Q 版（头身比约 1:1.5，呼应经典战棋的地图小人）；
+   * real = 战斗特写舞台中的写实比例（约 1:6.5）。默认 sd。
+   */
+  proportion?: 'sd' | 'real';
 }
 
 export type UnitAnim =

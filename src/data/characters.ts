@@ -36,7 +36,7 @@ const list: CharacterDef[] = [
     items: ['herb', 'herb'],
     portrait: 'rein',
     lord: true,
-    model: { primary: '#a8262c', secondary: '#d9d4c8', metal: '#c9ccd4', hair: '#7a2a1c', hairStyle: 'spiky', skin: '#f3d2b4', gender: 'm' },
+    model: { eyes: '#c8862a', primary: '#b02a30', secondary: '#e8dcc0', metal: '#c9ccd4', hair: '#4e2e20', hairStyle: 'spiky', skin: '#f3d2b4', gender: 'm' },
     bio: '十七岁，边境赤鳞要塞的见习骑士，自幼被骑士团收养。沉稳而认真，总担心自己配不上骑士之名。颈侧有一块天生的鳞状胎记。',
   },
   {
@@ -51,7 +51,7 @@ const list: CharacterDef[] = [
     items: ['herb'],
     skills: ['heal'],
     portrait: 'alicia',
-    model: { primary: '#f2f0ea', secondary: '#3c6fb6', hair: '#efe2b8', hairStyle: 'long', skin: '#f6dcc6', gender: 'f' },
+    model: { eyes: '#3a7ad8', primary: '#f2f0ea', secondary: '#3c6fb6', hair: '#efe2b8', hairStyle: 'long', skin: '#f6dcc6', gender: 'f' },
     bio: '十七岁，要塞礼拜堂的见习修女。温柔却意外地固执，认定的事绝不退让。对自己的身世一无所知。',
   },
   {
@@ -66,7 +66,7 @@ const list: CharacterDef[] = [
     items: ['potion'],
     skills: ['lance_charge', 'war_cry'],
     portrait: 'balder',
-    model: { primary: '#8e1f23', secondary: '#d4a64a', metal: '#b8bcc6', hair: '#8a8580', hairStyle: 'short', beard: true, skin: '#e2b896', gender: 'm' },
+    model: { eyes: '#6a4a2a', primary: '#8e1f23', secondary: '#d4a64a', metal: '#b8bcc6', hair: '#8a8580', hairStyle: 'short', beard: true, skin: '#e2b896', gender: 'm' },
     bio: '五十二岁，骑士团副团长，雷恩的师父。不苟言笑，说话总带着几分冷幽默。年轻时与儿子决裂，至今未能释怀。',
   },
   {
@@ -80,7 +80,7 @@ const list: CharacterDef[] = [
     equipment: { weapon: 'iron_lance', armor: 'leather_armor' },
     items: ['herb'],
     portrait: 'loy',
-    model: { primary: '#a8262c', secondary: '#3f8a4a', metal: '#c9ccd4', hair: '#e0b45c', hairStyle: 'short', skin: '#f3d2b4', gender: 'm' },
+    model: { eyes: '#3a9a4a', primary: '#a8262c', secondary: '#3f8a4a', metal: '#c9ccd4', hair: '#e0b45c', hairStyle: 'short', skin: '#f3d2b4', gender: 'm' },
     bio: '十八岁，雷恩的挚友，与他一同在要塞长大。乐天开朗，嘴上从不服输，梦想是成为大陆第一的骑士。',
   },
   {
@@ -94,7 +94,7 @@ const list: CharacterDef[] = [
     equipment: { weapon: 'steel_axe', armor: 'studded_leather' },
     items: ['herb'],
     portrait: 'gren',
-    model: { primary: '#6b4a2e', secondary: '#c8b089', metal: '#8f949c', hair: '#1c1c22', hairStyle: 'spiky', beard: false, skin: '#c9946a', gender: 'm' },
+    model: { eyes: '#4a3a2a', primary: '#6b4a2e', secondary: '#c8b089', metal: '#8f949c', hair: '#1c1c22', hairStyle: 'spiky', beard: false, skin: '#c9946a', gender: 'm' },
     bio: '三十岁，只认金币的佣兵，左眼在一场旧战中失去。嘴上刻薄，却从不对弱者出手。',
   },
   {
@@ -108,7 +108,7 @@ const list: CharacterDef[] = [
     equipment: { weapon: 'iron_bow', armor: 'leather_armor' },
     items: ['herb'],
     portrait: 'fina',
-    model: { primary: '#3f6f3a', secondary: '#c49a5a', hair: '#8a4f2a', hairStyle: 'ponytail', skin: '#f1cfae', gender: 'f' },
+    model: { eyes: '#3a8a3a', primary: '#3f6f3a', secondary: '#c49a5a', hair: '#8a4f2a', hairStyle: 'ponytail', skin: '#f1cfae', gender: 'f' },
     bio: '十六岁，林边猎户的女儿，箭术是父亲手把手教的。活泼冲动，心直口快。',
   },
   {
@@ -123,7 +123,7 @@ const list: CharacterDef[] = [
     items: ['ether'],
     skills: ['fire', 'thunder'],
     portrait: 'lucas',
-    model: { primary: '#5b3a8c', secondary: '#d7b65a', hair: '#2a3a6a', hairStyle: 'short', skin: '#f2d6bd', gender: 'm' },
+    model: { eyes: '#7a4ab0', primary: '#5b3a8c', secondary: '#d7b65a', hair: '#2a3a6a', hairStyle: 'short', skin: '#f2d6bd', gender: 'm' },
     bio: '十九岁，王立魔导学院的学生，因追查恩师的失踪来到港城。博学又啰嗦，紧张时会背诵魔导公式。',
   },
   {
@@ -137,7 +137,7 @@ const list: CharacterDef[] = [
     equipment: { weapon: 'knife', armor: 'leather_armor' },
     items: ['chest_key'],
     portrait: 'kia',
-    model: { primary: '#2f5f63', secondary: '#9c8a6a', hair: '#b8b4b0', hairStyle: 'bob', skin: '#efd0b3', gender: 'f' },
+    model: { eyes: '#d8a830', primary: '#2f5f63', secondary: '#9c8a6a', hair: '#b8b4b0', hairStyle: 'bob', skin: '#efd0b3', gender: 'f' },
     bio: '十五岁，港城贫民窟的小偷，偷来的钱大多拿去养活一群孤儿。嘴硬心软，最讨厌贵族。',
   },
   {
@@ -151,7 +151,7 @@ const list: CharacterDef[] = [
     equipment: { weapon: 'sky_lance', armor: 'leather_armor' },
     items: ['herb'],
     portrait: 'sera',
-    model: { primary: '#e9eef5', secondary: '#5c8fd1', metal: '#d4dbe6', hair: '#1f2a4a', hairStyle: 'braid', skin: '#f4dccb', gender: 'f' },
+    model: { eyes: '#7a8494', primary: '#e9eef5', secondary: '#5c8fd1', metal: '#d4dbe6', hair: '#1f2a4a', hairStyle: 'braid', skin: '#f4dccb', gender: 'f' },
     bio: '二十二岁，北方诺斯加德王国天马骑士团的骑士，整个中队只有她一人生还。端庄而克制，从不在人前流泪。',
   },
   {
@@ -166,7 +166,7 @@ const list: CharacterDef[] = [
     items: ['potion'],
     skills: ['iron_wall'],
     portrait: 'hagen',
-    model: { primary: '#7c8796', secondary: '#e8e4dc', metal: '#9aa3ae', hair: '#b8442a', hairStyle: 'bald', beard: true, skin: '#e6b99a', gender: 'm' },
+    model: { eyes: '#3a6ab0', primary: '#7c8796', secondary: '#e8e4dc', metal: '#9aa3ae', hair: '#b8442a', hairStyle: 'bald', beard: true, skin: '#e6b99a', gender: 'm' },
     bio: '四十岁，雪山氏族的战士，守护山口的桥已二十年。寡言少语，说话爱引用氏族的古谚。',
   },
   {
@@ -181,7 +181,7 @@ const list: CharacterDef[] = [
     items: [],
     skills: ['moon_flash'],
     portrait: 'raven',
-    model: { primary: '#2e2f36', secondary: '#7a6a8a', metal: '#b4b8c2', hair: '#121216', hairStyle: 'ponytail', skin: '#ecc9a8', gender: 'm' },
+    model: { eyes: '#4a4a52', primary: '#2e2f36', secondary: '#7a6a8a', metal: '#b4b8c2', hair: '#121216', hairStyle: 'ponytail', skin: '#ecc9a8', gender: 'm' },
     bio: '二十七岁，来自东方的流浪剑客，受雇于出价最高者。沉默寡言，对琪雅似乎格外在意。',
   },
   {
@@ -196,7 +196,7 @@ const list: CharacterDef[] = [
     items: ['potion'],
     skills: ['black_flame'],
     portrait: 'sieg',
-    model: { primary: '#1b1b22', secondary: '#8e1f2a', metal: '#3a3d48', hair: '#d6d8de', hairStyle: 'slick', skin: '#ecd0b8', gender: 'm' },
+    model: { eyes: '#8a5ab0', primary: '#1b1b22', secondary: '#8e1f2a', metal: '#3a3d48', hair: '#d6d8de', hairStyle: 'slick', skin: '#ecd0b8', gender: 'm' },
     bio: '二十六岁，维尔加帝国的「黑骑士」，巴尔德的儿子。十年前母亲病逝后与父亲决裂，投身帝国。',
   },
   {
@@ -211,7 +211,7 @@ const list: CharacterDef[] = [
     items: [],
     skills: ['dragon_wing', 'dragon_roar'],
     portrait: 'igna',
-    model: { primary: '#b5242a', secondary: '#e8b84a', hair: '#e04a2a', hairStyle: 'long', skin: '#f6dccb', gender: 'f' },
+    model: { eyes: '#e8b030', primary: '#b5242a', secondary: '#e8b84a', hair: '#e04a2a', hairStyle: 'long', skin: '#f6dccb', gender: 'f' },
     bio: '以少女之姿现身的古老赤龙。三百年来以自身封印黑龙，对人类的一切都充满好奇。',
   },
 ];
