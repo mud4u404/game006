@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { merge } from '../battlefield/geom';
 import type { PlayOptions, Quality, UnitAnim, UnitModel, UnitModelSpec } from '../contracts';
-import { buildArm, buildCape, buildHead, buildLeg, buildQuiver, buildShield, buildTorso, buildWeapon, REAL, SD, type Geo, type Proportions } from './parts';
+import { buildArm, buildCape, buildHead, buildLeg, buildQuiver, buildShield, buildTorso, buildWeapon, MINI, REAL, type Geo, type Proportions } from './parts';
 import { dragon, golem, horse, salamander, scaleCreature, skullHead, wolf, wraith, wyvern, type CreatureSpec } from './creatures';
 import { addSmoothNormals, createOutlineMaterial, createToonMaterial, createUnitUniforms, type UnitUniforms } from './toon';
 
@@ -132,11 +132,11 @@ export class ProceduralUnit implements UnitModel {
 
   constructor(spec: UnitModelSpec, quality: Quality) {
     this.spec = spec;
-    this.P = spec.proportion === 'real' ? REAL : SD;
+    this.P = spec.proportion === 'real' ? REAL : MINI;
     const [teamCol, teamAccent] = TEAM_COLORS[spec.team];
     this.uniforms = createUnitUniforms(teamCol);
     const toon = createToonMaterial(this.uniforms);
-    const outline = createOutlineMaterial(this.uniforms, this.P === SD ? 0.011 : 0.006);
+    const outline = createOutlineMaterial(this.uniforms, this.P === MINI ? 0.0075 : 0.006);
     this.glowMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, toneMapped: true });
     this.glowMat.color.setScalar(3);
     this.mats.push(toon, outline, this.glowMat);
@@ -177,7 +177,7 @@ export class ProceduralUnit implements UnitModel {
     const body = spec.body;
     let mountSpec: CreatureSpec | null = null;
     if (body === 'humanoid' || body === 'skeleton') {
-      const k = this.P === SD ? 1.35 : 2.6;
+      const k = this.P === MINI ? 1.6 : 2.6;
       if (spec.mount === 'horse') mountSpec = scaleCreature(horse(spec.team === 'enemy' ? '#3a3230' : '#7a5434', '#2e2018', spec.primary, spec.secondary, false), k);
       else if (spec.mount === 'pegasus') mountSpec = scaleCreature(horse('#f4f2ee', '#dfe6f2', null, spec.secondary, true), k);
       else if (spec.mount === 'wyvern') mountSpec = scaleCreature(wyvern(1, '#3e4a3a', '#8a8a62', '#5a3a3a', '#ffd040'), k * 0.85);
@@ -336,7 +336,7 @@ export class ProceduralUnit implements UnitModel {
     // 箭袋
     if (spec.weapon === 'bow') {
       const q = makePart(buildQuiver(P));
-      q.position.set(0.06 * (P === SD ? 1 : 2), P.torsoY + P.torsoH * 0.6, -P.torsoD * 0.6);
+      q.position.set(0.05 * P.k, P.torsoY + P.torsoH * 0.6, -P.torsoD * 0.7);
       q.rotation.z = -0.4;
       this.rider.add(q);
     }
@@ -438,11 +438,11 @@ export class ProceduralUnit implements UnitModel {
     pose.squash = Math.sin(ph) * 0.012;
     pose.armRX = -0.18 + Math.sin(ph) * 0.03;
     pose.armLX = -0.1 + Math.sin(ph + 0.5) * 0.03;
-    pose.armRZ = 0.32;
-    pose.armLZ = -0.22;
+    pose.armRZ = 0.22;
+    pose.armLZ = -0.16;
     pose.weapon = -0.25;
     pose.cape = Math.sin(ph * 0.7) * 0.05;
-    pose.headX = -0.22 + Math.sin(ph * 0.5) * 0.03;
+    pose.headX = -0.06 + Math.sin(ph * 0.5) * 0.03;
 
     // 行走
     if (this.moving) {

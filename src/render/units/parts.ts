@@ -1,6 +1,6 @@
 /**
  * 人形单位的部件几何体（全部程序化构建，带顶点色）
- * 两种比例：sd（地图上的大头 Q 版）与 real（战斗特写的写实比例）。
+ * 本作原创的「微缩人偶」比例：头身比约 1:4.5，修长而有轮廓感。
  */
 import * as THREE from 'three';
 import { jitter, paint, xf } from '../battlefield/geom';
@@ -23,25 +23,29 @@ export interface Proportions {
   handR: number;
   weapon: number; // 武器缩放
   eye: number; // 眼睛大小
+  /** 配件（盾、箭袋、披风等）缩放 */
+  k: number;
 }
 
-export const SD: Proportions = {
-  headR: 0.235,
-  headY: 0.64,
-  torsoY: 0.17,
-  torsoH: 0.24,
-  torsoW: 0.26,
-  torsoD: 0.19,
-  hipY: 0.2,
-  legLen: 0.2,
-  legR: 0.052,
-  armLen: 0.2,
-  armR: 0.046,
-  shoulderX: 0.155,
-  shoulderY: 0.37,
-  handR: 0.048,
-  weapon: 0.78,
-  eye: 1,
+/** 地图上的微缩人偶（总高约 1.0） */
+export const MINI: Proportions = {
+  headR: 0.112,
+  headY: 0.875,
+  torsoY: 0.44,
+  torsoH: 0.33,
+  torsoW: 0.24,
+  torsoD: 0.15,
+  hipY: 0.46,
+  legLen: 0.46,
+  legR: 0.044,
+  armLen: 0.37,
+  armR: 0.035,
+  shoulderX: 0.148,
+  shoulderY: 0.74,
+  handR: 0.033,
+  weapon: 0.95,
+  eye: 0.62,
+  k: 1,
 };
 
 export const REAL: Proportions = {
@@ -61,6 +65,7 @@ export const REAL: Proportions = {
   handR: 0.05,
   weapon: 1.2,
   eye: 0.5,
+  k: 1.9,
 };
 
 export type Geo = THREE.BufferGeometry;
@@ -78,13 +83,12 @@ export function buildHead(spec: UnitModelSpec, P: Proportions): { solid: Geo[]; 
   const solid: Geo[] = [];
   const glow: Geo[] = [];
   const face: Geo[] = [];
-  const sd = P === SD;
   // 头颅（中心在原点，外部再平移到 headY）
   solid.push(paint(xf(new THREE.SphereGeometry(r, 28, 20), 0, 0, 0, 0, 1, 0.97, 0.95), skin));
   // 耳朵
   for (const s of [-1, 1]) solid.push(paint(xf(new THREE.SphereGeometry(r * 0.14, 10, 8), s * r * 0.93, -r * 0.08, 0, 0, 0.6, 1, 0.9), skin));
-  if (!sd) {
-    // 写实比例：脖子、鼻子、下颌
+  {
+    // 脖子、鼻子
     solid.push(paint(xf(new THREE.CylinderGeometry(r * 0.38, r * 0.45, r * 0.7, 12), 0, -r * 1.05, -r * 0.05), darker(skin, 0.92)));
     solid.push(paint(xf(new THREE.ConeGeometry(r * 0.09, r * 0.25, 6), 0, -r * 0.15, r * 0.93, 0, 1, 1, 1, Math.PI / 2 - 0.3), darker(skin, 0.96)));
   }
@@ -92,9 +96,9 @@ export function buildHead(spec: UnitModelSpec, P: Proportions): { solid: Geo[]; 
   if (!fullFace) {
     // 眼睛：深色椭圆 + 高光
     const iris = C(spec.eyes ?? '#3a2a22').lerp(C('#140c10'), 0.45);
-    const ex = r * (sd ? 0.36 : 0.34);
-    const ey = -r * (sd ? 0.06 : 0.02);
-    const es = r * 0.15 * P.eye * (sd ? 1 : 1.3);
+    const ex = r * 0.34;
+    const ey = -r * 0.04;
+    const es = r * 0.15 * P.eye * 1.3;
     // 眼睛贴着脸的曲面
     const ez = (x: number) => Math.sqrt(Math.max(0, r * r * 0.9 - x * x - ey * ey)) * 0.98;
     for (const s of [-1, 1]) {
@@ -315,7 +319,7 @@ export function buildTorso(spec: UnitModelSpec, P: Proportions, robe: boolean, a
     const robeG = new THREE.CylinderGeometry(w * 0.45, w * 0.8, y0 + h * 0.2, 18, 2, false);
     xf(robeG, 0, (y0 + h * 0.2) / 2, 0, 0, 1, 1, (d / w) * 1.05);
     solid.push(paint(robeG, prim, 0, 0.25, y0));
-    solid.push(paint(xf(new THREE.CylinderGeometry(w * 0.81, w * 0.82, 0.03 * (P === SD ? 1 : 2), 18), 0, 0.02, 0, 0, 1, 1, (d / w) * 1.05), sec));
+    solid.push(paint(xf(new THREE.CylinderGeometry(w * 0.81, w * 0.82, 0.03 * P.k, 18), 0, 0.02, 0, 0, 1, 1, (d / w) * 1.05), sec));
     solid.push(paint(xf(new THREE.BoxGeometry(w * 0.16, y0 + h * 0.5, 0.01), 0, (y0 + h * 0.5) / 2, d * 0.5), sec));
   }
   // 腰带
@@ -374,7 +378,7 @@ export function buildLeg(spec: UnitModelSpec, P: Proportions, armored: boolean):
 
 /** 披风：以后颈为原点向下 */
 export function buildCape(spec: UnitModelSpec, P: Proportions): Geo[] {
-  const len = P.shoulderY - 0.04 * (P === SD ? 1 : 2);
+  const len = P.shoulderY - 0.04 * P.k;
   const w = P.torsoW * 1.25;
   const out: Geo[] = [];
   const mk = (col: THREE.ColorRepresentation, off: number) => {
@@ -505,7 +509,7 @@ export function buildWeapon(type: WeaponModel, spec: UnitModelSpec, P: Proportio
 
 /** 盾：挂在左臂外侧，面朝 +Z（正面） */
 export function buildShield(type: 'round' | 'kite' | 'tower', spec: UnitModelSpec, P: Proportions): Geo[] {
-  const s = P === SD ? 1 : 1.9;
+  const s = P.k;
   const out: Geo[] = [];
   const face = spec.secondary;
   const rim = spec.metal ?? '#c7ccd6';
@@ -539,7 +543,7 @@ export function buildShield(type: 'round' | 'kite' | 'tower', spec: UnitModelSpe
 
 /** 箭袋（弓手背后） */
 export function buildQuiver(P: Proportions): Geo[] {
-  const s = P === SD ? 1 : 1.9;
+  const s = P.k;
   const out: Geo[] = [];
   out.push(paint(xf(new THREE.CylinderGeometry(0.035 * s, 0.03 * s, 0.2 * s, 8), 0, 0, 0), '#6a4428'));
   for (let i = 0; i < 3; i++) out.push(paint(xf(new THREE.ConeGeometry(0.012 * s, 0.05 * s, 4), (i - 1) * 0.018 * s, 0.13 * s, 0), '#f2f2f2'));

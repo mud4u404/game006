@@ -559,7 +559,7 @@ const list: ClassDef[] = [
     base: S(22, 0, 8, 3, 0, 0, 4, 5),
     growth: G(90, 0, 50, 20, 0, 5, 30),
     caps: CAP1,
-    model: { body: 'humanoid', weapon: 'axe', hairStyle: 'spiky', build: 'heavy' },
+    model: { body: 'humanoid', weapon: 'axe', hairStyle: 'spiky', build: 'heavy', primary: '#6a4a30', secondary: '#a89070', hair: '#3a2a1e', beard: true },
   },
   {
     id: 'dark_mage',
@@ -574,7 +574,7 @@ const list: ClassDef[] = [
     growth: G(55, 60, 0, 15, 55, 40, 30),
     caps: CAP1,
     learn: [{ level: 1, skill: 'shadow_bolt' }, { level: 8, skill: 'sleep' }],
-    model: { body: 'humanoid', weapon: 'tome', helmet: 'hood' },
+    model: { body: 'humanoid', weapon: 'tome', helmet: 'hood', primary: '#57524e', secondary: '#d8642a', glow: '#ff8a3a' },
   },
   {
     id: 'sorcerer',
@@ -589,7 +589,7 @@ const list: ClassDef[] = [
     growth: G(60, 60, 5, 20, 60, 45, 35),
     caps: CAP2,
     learn: [{ level: 1, skill: 'shadow_bolt' }, { level: 1, skill: 'ash_flame' }, { level: 1, skill: 'sleep' }],
-    model: { body: 'humanoid', weapon: 'tome', helmet: 'hood', cape: true },
+    model: { body: 'humanoid', weapon: 'tome', helmet: 'hood', cape: true, primary: '#4a4642', secondary: '#e0702a', glow: '#ff8a3a' },
   },
   {
     id: 'cult_priest',
@@ -604,7 +604,7 @@ const list: ClassDef[] = [
     growth: G(55, 60, 5, 15, 50, 50, 30),
     caps: CAP1,
     learn: [{ level: 1, skill: 'heal' }, { level: 8, skill: 'silence' }],
-    model: { body: 'humanoid', weapon: 'staff', helmet: 'hood' },
+    model: { body: 'humanoid', weapon: 'staff', helmet: 'hood', primary: '#6a6560', secondary: '#d8642a', glow: '#ffb060' },
   },
   {
     id: 'wyvern_rider',
@@ -662,7 +662,7 @@ const list: ClassDef[] = [
     growth: G(60, 60, 5, 20, 60, 50, 30),
     caps: S(99, 99, 30, 40, 50, 50, 40, 6),
     learn: [{ level: 1, skill: 'ash_flame' }, { level: 1, skill: 'shadow_bolt' }, { level: 1, skill: 'meteor' }],
-    model: { body: 'humanoid', weapon: 'staff', helmet: 'mitre', cape: true, glow: '#ff7a2a' },
+    model: { body: 'humanoid', weapon: 'staff', helmet: 'mitre', cape: true, glow: '#ff7a2a', primary: '#3a3634', secondary: '#e0702a' },
   },
   {
     id: 'witch',
@@ -677,7 +677,7 @@ const list: ClassDef[] = [
     growth: G(60, 60, 5, 20, 60, 50, 40),
     caps: CAP2,
     learn: [{ level: 1, skill: 'shadow_bolt' }, { level: 1, skill: 'sleep' }, { level: 1, skill: 'ash_flame' }],
-    model: { body: 'humanoid', weapon: 'tome', helmet: 'veil', gender: 'f', glow: '#b06cff' },
+    model: { body: 'humanoid', weapon: 'tome', helmet: 'veil', gender: 'f', glow: '#b06cff', primary: '#3a2a4a', secondary: '#9a6ad8' },
   },
 
   /* ---------------- 魔物 ---------------- */

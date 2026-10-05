@@ -243,7 +243,8 @@ export function skillsForLevel(classId: string, level: number, charId?: string):
 /* 创建                                                                */
 /* ------------------------------------------------------------------ */
 
-const ENEMY_PALETTE: Partial<UnitModelSpec> = { primary: '#5b1d22', secondary: '#2a2a31', metal: '#6f727c' };
+/** 维尔加帝国：熏黑钢甲 + 暗红 */
+const ENEMY_PALETTE: Partial<UnitModelSpec> = { primary: '#6a1c22', secondary: '#24242a', metal: '#5a5d66' };
 const ALLY_PALETTE: Partial<UnitModelSpec> = { primary: '#3c6b45', secondary: '#c9b98e', metal: '#a7acb5' };
 
 export function buildModelSpec(classId: string, team: Team, override?: Partial<UnitModelSpec>, charModel?: Partial<UnitModelSpec>): UnitModelSpec {
