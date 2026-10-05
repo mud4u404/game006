@@ -77,9 +77,13 @@ export function ramp(base: string, opts: { contrast?: number; warm?: boolean } =
     return rgba(Math.round(rr), Math.round(gg), Math.round(bb));
   };
   const cool = 255;
+  // 暖色（红橙黄）阴影的色相偏移减半，否则浅黄会偏成粉红；浅色底的暗部降饱和得到棕色
+  const warm = h < 95 || h > 330;
+  const shift = warm ? 0.13 : 0.28;
+  const desat = 1 - Math.max(0, l - 0.55) * 0.9;
   return [
-    mk(towards(h, cool, 0.28), s * 1.05 + 0.05, l - 0.3 * k),
-    mk(towards(h, cool, 0.14), s * 1.05 + 0.03, l - 0.15 * k),
+    mk(towards(h, cool, shift), s * desat + 0.04, l - 0.3 * k),
+    mk(towards(h, cool, shift / 2), s * (0.5 + desat * 0.5) + 0.03, l - 0.15 * k),
     mk(h, s, l),
     mk(towards(h, opts.warm === false ? h : 55, 0.12), s * 0.95, l + 0.13 * k),
   ];
