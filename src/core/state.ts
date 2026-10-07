@@ -27,6 +27,8 @@ export interface GameState {
   rel: Record<string, string>;
   title: string;
   xia: number;
+  /** 恶名，与侠义互不抵消 */
+  eming: number;
   attr: Record<AttrKey, number>;
   skills: Partial<Record<SkillId, SkillProg>>;
   feed: FeedEntry[];
@@ -46,7 +48,7 @@ export function newGame(): GameState {
     hp: 1000, hpMax: 1000, mp: 600, mpMax: 800,
     silver: 30, items: { jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
-    flags: {}, rel: { jiangbo: '相依为命' }, title: '', xia: 0,
+    flags: {}, rel: { jiangbo: '相依为命' }, title: '', xia: 0, eming: 0,
     attr: { 体魄: 13, 根骨: 11, 身法: 14, 悟性: 13, 胆魄: 10 },
     skills: { hanjiang: { r: 1, p: 200 }, xinfa: { r: 1, p: 150 }, taxue: { r: 2, p: 0 } },
     feed: [{ t: '传闻', x: '江上这两天来了几条生船，不打鱼，专打听人。', n: 0 }],
@@ -61,7 +63,7 @@ export function skipToYangzhou(): GameState {
     hp: 820, hpMax: 1000, mp: 460, mpMax: 800,
     silver: 120, items: { jcy: 3, fhs: 5, jade: 1, scroll: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
-    flags: { skipped: true }, rel: { liu: '素不相识' }, title: '', xia: 12,
+    flags: { skipped: true }, rel: { liu: '素不相识' }, title: '', xia: 12, eming: 0,
     attr: { ...ATTR0 },
     skills: { hanjiang: { r: 1, p: 340 }, jinghong: { r: 0, p: 80 }, taxue: { r: 2, p: 120 }, xinfa: { r: 1, p: 260 }, duanshui: { r: 0, p: 10 } },
     feed: [
@@ -86,7 +88,9 @@ export function load(): GameState | null {
     const t = localStorage.getItem(KEY);
     if (!t) return null;
     const o = JSON.parse(t) as GameState;
-    return o && o.v === 2 ? o : null;
+    if (!o || o.v !== 2) return null;
+    o.eming ??= 0;
+    return o;
   } catch { return null; }
 }
 

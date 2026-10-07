@@ -31,6 +31,15 @@ export function test(c?: Cond): boolean {
   }
   if (c.learned && !S.skills[c.learned]) return false;
   if (c.notLearned && S.skills[c.notLearned]) return false;
+  if (c.attr && S.attr[c.attr.key] < c.attr.atLeast) return false;
+  if (c.xia !== undefined && S.xia < c.xia) return false;
+  if (c.eming !== undefined && S.eming < c.eming) return false;
+  if (c.hour) {
+    const h = Math.floor(S.min / 60);
+    const { from, to } = c.hour;
+    const inside = from <= to ? h >= from && h < to : h >= from || h < to;
+    if (!inside) return false;
+  }
   if (c.any && !c.any.some(x => test(x))) return false;
   return true;
 }
@@ -69,6 +78,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0)); break;
       case 'attr': S.attr[e.key] += e.delta; break;
       case 'xia': S.xia += e.delta; break;
+      case 'eming': S.eming = Math.max(0, S.eming + e.delta); break;
       case 'title': S.title = e.value; break;
       case 'chapter': S.chapter = e.value; break;
       case 'move': S.loc = e.to; S.sel = null; S.reply = null; out.moved = true; break;

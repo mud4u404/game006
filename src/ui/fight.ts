@@ -725,6 +725,7 @@ function rewardChips(effects: Effect[] | undefined): string[] {
     if (e.type === 'prof') chips.push(`<span class="tag accent">${skillById(e.skill)?.name} 熟练 +${e.amount}</span>`);
     else if (e.type === 'learn') chips.push(`<span class="tag accent">习得 ${skillById(e.skill)?.name}</span>`);
     else if (e.type === 'xia') chips.push(`<span class="tag accent">侠义 +${e.delta}</span>`);
+    else if (e.type === 'eming') chips.push(`<span class="tag danger">恶名 +${e.delta}</span>`);
     else if (e.type === 'silver') chips.push(e.delta > 0 ? `<span class="tag accent">银两 +${e.delta} 文</span>` : `<span class="tag danger">银两 −${-e.delta} 文</span>`);
     else if (e.type === 'item' && e.delta > 0) chips.push(`<span class="tag accent">获得 ${itemById(e.id)?.name}</span>`);
     else if (e.type === 'title') chips.push(`<span class="tag purple">名号「${e.value}」</span>`);

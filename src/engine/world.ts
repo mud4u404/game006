@@ -67,7 +67,7 @@ export function act(id: string, verb: Verb): { text: string; out: Outcome } {
   const n = npc(id);
   if (!n) return { text: '', out: newOutcome() };
   if (verb === '观察') return { text: fmt(n.look, textVars()), out: newOutcome() };
-  const b = pickBranch(n.actions[verb]);
+  const b = pickBranch(n.actions[verb as keyof typeof n.actions]);
   if (b) {
     const out = run(b.do);
     return { text: fmt(b.text ?? '', { ...textVars(), ...out.vars }), out };

@@ -93,6 +93,20 @@ describe('条件与效果', () => {
     run([{ type: 'rel', npc: 'liu', value: '相谈甚欢', from: ['素不相识'] }]);
     expect(S.rel.liu).toBe('点头之交');
   });
+  it('属性、侠义、恶名、时辰条件', () => {
+    expect(cond({ attr: { key: '体魄', atLeast: 13 } })).toBe(true);
+    expect(cond({ attr: { key: '体魄', atLeast: 14 } })).toBe(false);
+    run([{ type: 'eming', delta: 5 }]);
+    expect(cond({ eming: 5 })).toBe(true);
+    expect(cond({ xia: 1 })).toBe(false);
+    S.min = 22 * 60;
+    expect(cond({ hour: { from: 19, to: 5 } })).toBe(true);
+    S.min = 3 * 60;
+    expect(cond({ hour: { from: 19, to: 5 } })).toBe(true);
+    S.min = 12 * 60;
+    expect(cond({ hour: { from: 19, to: 5 } })).toBe(false);
+    expect(cond({ hour: { from: 9, to: 17 } })).toBe(true);
+  });
   it('序章：江伯 → 抓药 → 入夜', () => {
     act('jiangbo', '交谈');
     expect(S.quests.prologue).toBe(1);

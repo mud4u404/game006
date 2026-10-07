@@ -17,7 +17,8 @@ export function viewRenwu(): string {
   <section class="card"><div class="kv">
     <div><span>气血</span><b>${S.hp} / ${S.hpMax}</b></div><div><span>内力</span><b>${S.mp} / ${S.mpMax}</b></div>
     <div><span>身份</span><b>${S.chapter === 0 ? '渔家' : '游侠'}</b></div><div><span>门派</span><b>无门无派</b></div>
-    <div><span>侠义</span><b>${S.xia}</b></div><div><span>银两</span><b>${S.silver} 文</b></div>
+    <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
+    <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
   </div></section>
   <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${Object.keys(S.rel).length}</span></div><div class="rows">${rels}</div></section>
   <section class="card here"><div class="sec-h"><h2>存档</h2></div>

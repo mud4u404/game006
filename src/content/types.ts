@@ -11,8 +11,11 @@ export type SkillId = 'hanjiang' | 'jinghong' | 'taxue' | 'xinfa' | 'duanshui';
 export type AttrKey = '体魄' | '根骨' | '身法' | '悟性' | '胆魄';
 export type FeedTag = '传闻' | '出关' | '主线' | '江湖' | '突破' | '收获';
 export type Tone = 'red' | 'jade' | 'amber' | 'gray' | 'blue' | 'purple';
-/** 人物身上可以点的动作。「观察」由引擎读取 look 字段，「赠礼」有默认处理 */
-export type Verb = '交谈' | '观察' | '请教' | '切磋' | '赠礼' | '偷窃' | '购买' | '打赏' | '动手' | '细看' | '抓药' | '推门';
+/**
+ * 人物身上可以点的动作。常用的列在这里，也可以自拟两个字的动作名（例如「斗酒」「打听」）。
+ * 「观察」由引擎读取 look 字段；「赠礼」「请教」「切磋」「偷窃」不写 actions 时有默认回应。
+ */
+export type Verb = '交谈' | '观察' | '请教' | '切磋' | '赠礼' | '偷窃' | '购买' | '打赏' | '动手' | '细看' | '抓药' | '推门' | (string & {});
 
 /** 条件：列出的所有字段同时满足才成立；不写 if 的分支总是成立 */
 export interface Cond {
@@ -28,6 +31,13 @@ export interface Cond {
   rel?: { npc: string; is?: string[]; not?: string[] };
   learned?: SkillId;
   notLearned?: SkillId;
+  /** 属性不低于 */
+  attr?: { key: AttrKey; atLeast: number };
+  /** 侠义、恶名不低于 */
+  xia?: number;
+  eming?: number;
+  /** 时辰：from 到 to 点之间（24 小时制，可跨午夜，例如 from: 19, to: 5 表示入夜到天亮） */
+  hour?: { from: number; to: number };
   any?: Cond[];
 }
 
@@ -46,6 +56,8 @@ export type Effect =
   | { type: 'learn'; skill: SkillId; realm?: number; prof?: number }
   | { type: 'attr'; key: AttrKey; delta: number }
   | { type: 'xia'; delta: number }
+  /** 恶名：与侠义是两条独立的值，不互相抵消 */
+  | { type: 'eming'; delta: number }
   | { type: 'title'; value: string }
   | { type: 'chapter'; value: number }
   | { type: 'move'; to: string }

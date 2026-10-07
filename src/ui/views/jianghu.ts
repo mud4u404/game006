@@ -1,12 +1,11 @@
 import { S, fullName } from '../../core/state';
 import { minLabel } from '../../core/time';
 import { npc, room } from '../../content';
-import type { Verb } from '../../content/types';
 import { curQuest, hopMin, npcName, pathMin, roomDesc, roomNpcs, roomObjs } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 
-const VERB_CLS: Partial<Record<Verb, string>> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
+const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
 
 export function viewJianghu(): string {
   const r = room(S.loc);
