@@ -4,12 +4,13 @@
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { advanceDays, dateStr } from '../core/time';
 import { $, reduceMotion } from '../core/util';
-import { NEWS, room, skillById } from '../content';
+import { NEWS, questById, room, skillById } from '../content';
 import type { SkillId, Verb } from '../content/types';
 import { test } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
 import { act, curQuest, enter, hopMin, pathTo, roadText } from '../engine/world';
 import { afterOutcome, closeSheet, openSheet, registerHandlers, render, toast } from './shell';
+import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
 import { showTitle } from './story';
 
@@ -106,6 +107,19 @@ registerHandlers({
     const q = curQuest();
     if (q?.to && q.to !== S.loc) travelTo(q.to);
     else toast('就在此处');
+  },
+  questbook: () => { openQuestbook(); },
+  qtrack: v => { if (v) trackQuest(v); },
+  qgo: v => {
+    if (!v) return;
+    const def = questById(v);
+    if (!def) return;
+    const stageIdx = Math.min(S.quests[v] ?? 0, def.stages.length - 1);
+    const to = def.stages[stageIdx].to;
+    if (!to) { toast('此阶段无目的地'); return; }
+    if (to === S.loc) { toast('就在此处'); return; }
+    closeSheet();
+    travelTo(to);
   },
   use: v => {
     if (v !== 'jcy' || (S.items.jcy || 0) < 1 || S.hp >= S.hpMax) return;

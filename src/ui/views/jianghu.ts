@@ -18,6 +18,7 @@ export function viewJianghu(): string {
   const quest = !q ? '' : q.to
     ? `<button class="card quest" data-act="quest"><span class="tag info">${S.chapter === 0 ? '序章' : '主线'}</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(pathMin(S.loc, q.to))}</span>${IC.chev}</button>`
     : `<div class="card quest"><span class="tag accent">主线</span><span class="qt">${q.title}</span></div>`;
+  const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="任务簿" title="任务簿">${IC.quest}</button></div>`;
   const who = S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : '游侠 · ' + xiuwei(S).rank;
   return `
   <section class="card status">
@@ -25,7 +26,7 @@ export function viewJianghu(): string {
     <div class="who"><b>${fullName()}</b><small>${who}</small></div>
     <div class="minibars">${mb('气血', S.hp, S.hpMax, 'hp')}${mb('内力', S.mp, S.mpMax, 'mp')}</div>
   </section>
-  ${quest}
+  ${questBar}
   <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${feed ? `<div class="feed">${feed}</div>` : ''}</section>
   ${all.length ? `<section class="card here">
     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
