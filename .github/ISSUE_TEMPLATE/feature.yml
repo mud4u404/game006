@@ -1,0 +1,35 @@
+name: 功能任务
+description: 范围明确的界面或玩法功能
+title: "【功能】"
+labels: ["功能"]
+body:
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: 要做什么
+      description: 界面、交互、数据，尽量具体
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 允许修改的文件
+      description: 功能任务必须写明允许修改哪些文件
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      value: |
+        - [ ] `npm run check` 与 `npm run build` 通过
+        - [ ] 新增逻辑有测试
+        - [ ] 手机竖屏 390 宽下排版正常，深色与浅色主题都正常
+    validations:
+      required: true
