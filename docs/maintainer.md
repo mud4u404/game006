@@ -80,6 +80,10 @@ scripts/smoke.mjs  冒烟测试（npm run smoke）
   - 宪章、决策记录、开发全景图、质量体系（`docs/charter.md`、`decisions.md`、`roadmap.md`、`quality.md`）。
   - 自动接力：协作者用 `scripts/wait-for-work.mjs` 等任务。
   - 第一次每日审查（Issue #16），精修 PR #34；三处「需要维护者先做」的遗留已修：任务进度只升不降、花雕给实物、瘦西湖佩刀汉子记得画舫。
+- **存档与账号**（负责人要求最优先，朋友已经在玩）：
+  - 存档规则在 `src/core/save.ts`。改存档格式时，要把 `SAVE_VERSION` 加一、写一步迁移，并在 `tests/fixtures/saves/` 放一份旧版样本。
+  - 内容 id 只增不删，由 `tests/ids.test.ts` 把关。每日审查时运行 `npm run ids`，把新 id 记进登记表。
+  - 云存档：`src/net/`，后台是 Supabase，设置见 `docs/cloud-setup.md`。体检和防休眠由 `.github/workflows/keepalive.yml` 每三天跑一次。
 - **协作者**：Trae 质量评为「差」，有虚报和致命错误，负责人改用 zcode，分支名 `zcode/`。#21 丐帮、#22 少林由 Trae 完成。
 - **进行中**：`docs/design.md` 第八节的第 6 步「武学库」，设计卡见 `docs/wuxue.md`。
   - A 地基：武功数据化、搭配槽位、火候与修为、克制、校验。已完成。
