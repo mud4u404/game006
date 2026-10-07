@@ -62,7 +62,8 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
   for (const e of effects || []) {
     switch (e.type) {
       case 'flag': S.flags[e.flag] = e.value ?? true; break;
-      case 'quest': S.quests[e.id] = e.stage; break;
+      // 只升不降：开启任务的效果常写在交谈或进门时，重复触发不能把已有进度打回去
+      case 'quest': S.quests[e.id] = Math.max(S.quests[e.id] ?? -1, e.stage); break;
       case 'track': S.track = e.id; break;
       case 'feed': pushFeed(e.tag, e.text); break;
       case 'feedReset': S.feed = []; break;
