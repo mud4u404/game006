@@ -1,0 +1,1390 @@
+<title>扬州试玩版</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Noto+Serif+SC:wght@600;900&amp;family=Zhi+Mang+Xing&amp;display=swap">
+<style>
+/* Layout: one phone-width column — app bar, a scrolling stack of white cards, bottom tabs; combat is a full-height layer inside the same column */
+:root{
+  --bg:#F1F3F4; --card:#FFFFFF; --fg:#14171A; --muted:#5B636A; --line:#E2E5E8; --chip:#EEF1F3;
+  --accent:#0F7A63; --accent-soft:#E1F1EC; --on-accent:#FFFFFF;
+  --danger:#B8321C; --danger-fill:#D2462E; --danger-soft:#FBE8E3; --on-danger:#FFFFFF; --opp:#F3C6BC;
+  --hp:#D2462E; --hp-soft:#F6DDD8;
+  --info:#2E5BCE; --info-soft:#DCE5F8;
+  --warn:#8A5A06; --warn-soft:#FFF5E1; --warn-line:#E8BE72; --warn-dot:#C98A12;
+  --t-red-bg:#FBE7E3; --t-red:#B4432B; --t-jade-bg:#E1F1EC; --t-jade:#0F7A63; --t-amber-bg:#FDEBD3; --t-amber:#94560E;
+  --t-gray-bg:#ECEEF1; --t-gray:#5B636A; --t-blue-bg:#DCE5F8; --t-blue:#2E5BCE; --t-purple-bg:#ECE5F8; --t-purple:#6B4FB8;
+  --g-fan:#6B7177; --g-liang:#2F8A4C; --g-shang:#2E5BCE; --g-jue:#7A4BC2; --g-shen:#A06D08; --g-jin:#A3261A;
+  --shadow:0 -6px 20px rgba(20,23,26,.06); --lift:0 8px 24px rgba(20,23,26,.16); --scrim:rgba(20,23,26,.42);
+  --ult-bg:rgba(241,243,244,.95); --ult-ink:#14171A;
+  --f-sans:'Noto Sans SC','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  --f-serif:'Noto Serif SC','Songti SC','STSong',serif;
+  --f-brush:'Zhi Mang Xing','STXingkai','KaiTi',cursive;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1113; --card:#191D20; --fg:#ECEFF1; --muted:#9AA3AB; --line:#2A3035; --chip:#232A2E;
+    --accent:#38C29F; --accent-soft:#143A31; --on-accent:#04201A;
+    --danger:#FF8A73; --danger-fill:#E5553C; --danger-soft:#3B1E18; --on-danger:#FFFFFF; --opp:#6A2A20;
+    --hp:#E5553C; --hp-soft:#3B1E18;
+    --info:#86A6FF; --info-soft:#1D2949;
+    --warn:#F2C46B; --warn-soft:#30260F; --warn-line:#6E5622; --warn-dot:#E0A63A;
+    --t-red-bg:#3B1E18; --t-red:#FF9A85; --t-jade-bg:#143A31; --t-jade:#5FD3B2; --t-amber-bg:#33260E; --t-amber:#F2C46B;
+    --t-gray-bg:#262C30; --t-gray:#AEB6BD; --t-blue-bg:#1D2949; --t-blue:#93B0FF; --t-purple-bg:#2B2140; --t-purple:#C3A6F5;
+    --g-fan:#9AA0A6; --g-liang:#5CC27E; --g-shang:#86A6FF; --g-jue:#B592F0; --g-shen:#E5B64A; --g-jin:#FF7A66;
+    --shadow:0 -6px 20px rgba(0,0,0,.35); --lift:0 8px 24px rgba(0,0,0,.5); --scrim:rgba(0,0,0,.6);
+    --ult-bg:rgba(14,17,19,.95); --ult-ink:#ECEFF1;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1113; --card:#191D20; --fg:#ECEFF1; --muted:#9AA3AB; --line:#2A3035; --chip:#232A2E;
+  --accent:#38C29F; --accent-soft:#143A31; --on-accent:#04201A;
+  --danger:#FF8A73; --danger-fill:#E5553C; --danger-soft:#3B1E18; --on-danger:#FFFFFF; --opp:#6A2A20;
+  --hp:#E5553C; --hp-soft:#3B1E18;
+  --info:#86A6FF; --info-soft:#1D2949;
+  --warn:#F2C46B; --warn-soft:#30260F; --warn-line:#6E5622; --warn-dot:#E0A63A;
+  --t-red-bg:#3B1E18; --t-red:#FF9A85; --t-jade-bg:#143A31; --t-jade:#5FD3B2; --t-amber-bg:#33260E; --t-amber:#F2C46B;
+  --t-gray-bg:#262C30; --t-gray:#AEB6BD; --t-blue-bg:#1D2949; --t-blue:#93B0FF; --t-purple-bg:#2B2140; --t-purple:#C3A6F5;
+  --g-fan:#9AA0A6; --g-liang:#5CC27E; --g-shang:#86A6FF; --g-jue:#B592F0; --g-shen:#E5B64A; --g-jin:#FF7A66;
+  --shadow:0 -6px 20px rgba(0,0,0,.35); --lift:0 8px 24px rgba(0,0,0,.5); --scrim:rgba(0,0,0,.6);
+  --ult-bg:rgba(14,17,19,.95); --ult-ink:#ECEFF1;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-sans);font-size:15px;line-height:1.5;overflow:hidden;-webkit-tap-highlight-color:transparent}
+#app{position:relative;max-width:440px;height:100%;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+@media (min-width:480px){#app{box-shadow:0 0 0 1px var(--line)}}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{cursor:default}
+h1,h2,p{margin:0}
+svg{display:block}
+
+.appbar{flex-shrink:0;padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.appbar h1{font-size:22px;font-weight:700;line-height:1.3;text-wrap:balance}
+.appbar .sub{font-size:12px;color:var(--muted)}
+.timepill{flex-shrink:0;height:32px;padding:0 12px;border-radius:16px;background:var(--card);display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;white-space:nowrap}
+.timepill svg{color:var(--muted)}
+#main{flex:1;min-height:0;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;overscroll-behavior:contain}
+
+.card{background:var(--card);border-radius:16px;padding:14px 16px}
+.status{display:flex;align-items:center;gap:12px;padding:10px 14px}
+.ava{position:relative;flex-shrink:0;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700}
+.ava.sq{border-radius:12px}
+.ava .badge{position:absolute;right:-4px;bottom:-2px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;border:2px solid var(--card);background:var(--fg);color:var(--card);font-size:10px;display:flex;align-items:center;justify-content:center}
+.t-accent{background:var(--accent);color:var(--on-accent)}
+.t-red{background:var(--t-red-bg);color:var(--t-red)} .t-jade{background:var(--t-jade-bg);color:var(--t-jade)}
+.t-amber{background:var(--t-amber-bg);color:var(--t-amber)} .t-gray{background:var(--t-gray-bg);color:var(--t-gray)}
+.t-blue{background:var(--t-blue-bg);color:var(--t-blue)} .t-purple{background:var(--t-purple-bg);color:var(--t-purple)}
+.who{display:flex;flex-direction:column;flex-shrink:0}
+.who b{font-size:15px} .who small{font-size:12px;color:var(--muted)}
+.minibars{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--muted)}
+.mb{display:flex;align-items:center;gap:6px}
+.mb .tr{flex:1;height:5px;border-radius:3px;overflow:hidden;background:var(--hp-soft)}
+.mb .tr i{display:block;height:100%;border-radius:3px;background:var(--hp);transition:width .35s}
+.mb.mp .tr{background:var(--info-soft)} .mb.mp .tr i{background:var(--info)}
+.mb.rage .tr{background:var(--accent-soft)} .mb.rage .tr i{background:var(--accent)}
+.mb .v{min-width:28px;text-align:right;color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
+
+.tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:6px;font-size:11px;font-weight:700;line-height:1.6;background:var(--chip);color:var(--muted);white-space:nowrap}
+.tag.info{background:var(--info-soft);color:var(--info)} .tag.accent{background:var(--accent-soft);color:var(--accent)}
+.tag.danger{background:var(--danger-soft);color:var(--danger)} .tag.warn{background:var(--warn-soft);color:var(--warn)}
+.tag.purple{background:var(--t-purple-bg);color:var(--t-purple)}
+.tag.g-fan{color:var(--g-fan);background:color-mix(in srgb,var(--g-fan) 14%,transparent)}
+.tag.g-liang{color:var(--g-liang);background:color-mix(in srgb,var(--g-liang) 14%,transparent)}
+.tag.g-shang{color:var(--g-shang);background:color-mix(in srgb,var(--g-shang) 14%,transparent)}
+.tag.g-jue{color:var(--g-jue);background:color-mix(in srgb,var(--g-jue) 14%,transparent)}
+.tag.g-shen{color:var(--g-shen);background:color-mix(in srgb,var(--g-shen) 16%,transparent)}
+.tag.g-jin{color:var(--g-jin);background:color-mix(in srgb,var(--g-jin) 14%,transparent)}
+
+.quest{display:flex;align-items:center;gap:10px;min-height:44px;padding:10px 12px;border-radius:14px;text-align:left;width:100%}
+.quest .qt{flex:1;min-width:0;font-size:14px;font-weight:500}
+.quest .qd{font-size:12px;color:var(--muted);white-space:nowrap}
+.quest svg{color:var(--muted);flex-shrink:0}
+
+.scene{display:flex;flex-direction:column;gap:10px}
+.desc{font-size:15px;line-height:1.75}
+.feed{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.fr{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--muted);line-height:1.6}
+.fr .tag{margin-top:1px}
+.fr.new{animation:fin .45s ease-out}
+
+.here{display:flex;flex-direction:column;gap:12px}
+.sec-h{display:flex;align-items:baseline;gap:6px}
+.sec-h h2{font-size:15px;font-weight:700}
+.sec-h .count{font-size:13px;color:var(--muted)}
+.avas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.avab{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0;min-height:44px;min-width:0}
+.avab .nm{font-size:12px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.avab[aria-pressed="true"] .ava{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent)}
+.avab[aria-pressed="true"] .nm{color:var(--accent);font-weight:700}
+.detail{display:flex;flex-direction:column;gap:10px}
+.d-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.d-h b{font-size:15px}
+.d-h small{margin-left:auto;font-size:12px;color:var(--muted)}
+.acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.act{height:44px;border-radius:12px;background:var(--chip);font-size:14px;font-weight:500}
+.act.danger{background:var(--danger-soft);color:var(--danger)}
+.act.fight{background:var(--danger-fill);color:var(--on-danger);font-weight:700}
+.act.spar{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.reply{padding:10px 12px;border-radius:12px;background:var(--bg);font-size:14px;line-height:1.75;animation:fin .3s ease-out}
+
+.go{display:flex;flex-direction:column;gap:8px;padding-top:4px}
+.go h2{font-size:15px;font-weight:700}
+.exits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.exit{min-height:52px;padding:8px 12px;border-radius:14px;background:var(--card);display:flex;align-items:center;gap:10px;text-align:left;min-width:0}
+.exit.solo{grid-column:1 / -1}
+.dir{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.exit .en{display:flex;flex-direction:column;min-width:0}
+.exit .en b{font-size:14px;font-weight:500}
+.exit .en small{font-size:11px;color:var(--muted)}
+.exit .tag{margin-left:auto}
+
+.tabs{flex-shrink:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border-top:1px solid var(--line);background:var(--card)}
+.tab{height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--muted)}
+.tab[aria-current="page"]{color:var(--accent);font-weight:700}
+
+.muted{color:var(--muted);font-size:13px;line-height:1.7}
+.attrs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.attr{display:flex;flex-direction:column;align-items:center;gap:1px;padding:10px 0;border-radius:12px;background:var(--chip);min-width:0}
+.attr b{font-size:20px;font-variant-numeric:tabular-nums;line-height:1.3}
+.attr span{font-size:12px;font-weight:500}
+.attr small{font-size:10px;color:var(--muted);white-space:nowrap}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}
+.kv div{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.kv span{color:var(--muted)}
+.kv b{font-weight:500;font-variant-numeric:tabular-nums}
+.rows{display:flex;flex-direction:column}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.row:first-child{border-top:0;padding-top:2px}
+.item{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0;padding-top:2px}
+.item .ii{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.item .ii b{font-size:15px}
+.item .ii p{font-size:13px;color:var(--muted);line-height:1.6}
+.item .cnt{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.use{height:44px;padding:0 16px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:14px;flex-shrink:0}
+.use:disabled{opacity:.45}
+.sk-card{display:flex;flex-direction:column;gap:8px}
+.sk-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sk-h b{font-size:16px;margin-right:2px}
+.realm{display:flex;justify-content:space-between;align-items:baseline}
+.realm span{font-weight:700;color:var(--accent);font-size:14px}
+.realm small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tr2{height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
+.tr2 i{display:block;height:100%;width:0;background:var(--accent);border-radius:3px;transition:width .4s}
+.sk-d{font-size:14px;line-height:1.75}
+.moves,.grades{display:flex;flex-wrap:wrap;gap:6px}
+.btnrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+
+.map{position:relative;height:330px;border-radius:16px;background:var(--card);overflow:hidden}
+.map .ln{position:absolute;background:var(--line)}
+.node{position:absolute;transform:translate(-50%,-50%);min-height:44px;padding:0 14px;border-radius:22px;background:var(--chip);font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.node.here{background:var(--accent);color:var(--on-accent);font-weight:700}
+.node .qdot{width:8px;height:8px;border-radius:50%;background:var(--info)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+.travel{position:absolute;left:16px;right:16px;bottom:72px;z-index:15;padding:12px 14px;border-radius:14px;background:var(--fg);color:var(--bg);display:flex;flex-direction:column;gap:6px;box-shadow:var(--lift);animation:fin .2s ease-out}
+.travel b{font-size:14px}
+.travel small{font-size:13px;opacity:.8}
+.travel .tb{height:3px;border-radius:2px;background:color-mix(in srgb,var(--bg) 25%,transparent);overflow:hidden}
+.travel .tb i{display:block;height:100%;background:var(--bg);animation:grow .75s linear forwards}
+.toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:60;max-width:calc(100% - 32px);padding:10px 16px;border-radius:12px;background:var(--fg);color:var(--bg);font-size:14px;font-weight:500;box-shadow:var(--lift);animation:tin .2s ease-out;text-align:center}
+
+#sheetLayer{position:absolute;inset:0;z-index:45}
+.scrim{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:flex-end;animation:fade .2s}
+.panel{width:100%;max-height:90%;overflow-y:auto;background:var(--card);border-radius:20px 20px 0 0;padding:22px 16px 18px;display:flex;flex-direction:column;gap:14px;animation:up .3s cubic-bezier(.2,.8,.2,1)}
+.r-h{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.r-h h2{font-size:22px;font-weight:900;line-height:1.3}
+.r-sub{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:2px}
+.story{font-family:var(--f-serif);font-weight:600;font-size:16px;line-height:1.95;text-indent:2em}
+.statline{font-size:12px;color:var(--muted)}
+.rewards{display:flex;flex-wrap:wrap;gap:6px}
+.news{display:flex;flex-direction:column;gap:8px}
+.news div{display:flex;align-items:flex-start;gap:8px;font-size:14px;line-height:1.7}
+.news .tag{margin-top:2px}
+.btn{height:48px;border-radius:14px;background:var(--accent);color:var(--on-accent);font-size:15px;font-weight:700;width:100%}
+.btn.ghost{background:var(--chip);color:var(--fg)}
+.btn.warn{background:var(--danger-fill);color:var(--on-danger)}
+
+#fightLayer{position:absolute;inset:0;z-index:20}
+.fight{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;animation:fade .25s}
+.f-top{flex-shrink:0;padding:8px 8px 4px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.f-where{display:flex;align-items:center;gap:8px}
+.f-where .pl{font-size:15px;font-weight:700}
+.f-r{display:flex;align-items:center;gap:2px}
+.pill{height:26px;padding:0 10px;border-radius:13px;background:var(--card);font-size:12px;font-weight:500;display:flex;align-items:center;font-variant-numeric:tabular-nums}
+.iconbtn{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.foecard{flex-shrink:0;margin:0 16px;display:flex;align-items:center;gap:12px;padding:12px 14px}
+.foecard .ava{width:48px;height:48px;font-size:18px}
+.foe-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.foe-n{display:flex;align-items:baseline;gap:8px}
+.foe-n b{font-size:17px}
+.foe-n small{font-size:12px;color:var(--muted)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;min-height:20px}
+.hpbar{display:flex;align-items:center;gap:8px}
+.hpbar .tr{flex:1;height:6px;border-radius:3px;background:var(--hp-soft);overflow:hidden}
+.hpbar i{display:block;height:100%;background:var(--hp);border-radius:3px;transition:width .4s}
+.hpbar span{font-size:12px;font-weight:700;min-width:34px;text-align:right;font-variant-numeric:tabular-nums}
+.hpbar.flash .tr{animation:flash .3s}
+.body{color:var(--muted);flex-shrink:0}
+.body .wd{fill:var(--hp);stroke:none}
+.mom{flex-shrink:0;padding:10px 16px 6px;display:flex;flex-direction:column;gap:6px}
+.mom-l{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px}
+.mom-l .me{color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums}
+.mom-l .op{color:var(--danger);font-weight:700;font-variant-numeric:tabular-nums}
+.mom-l .st{color:var(--muted)}
+.mom-b{display:flex;gap:2px;height:8px}
+.mom-b i{display:block;flex-basis:0;transition:flex-grow .4s}
+.mom-b .m1{background:var(--accent);border-radius:4px 0 0 4px}
+.mom-b .m2{background:var(--opp);border-radius:0 4px 4px 0}
+.flog-wrap{position:relative;flex:1;min-height:0}
+.flog{position:absolute;inset:0;overflow-y:auto;padding:8px 16px 12px;display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+.flog::before{content:'';margin-top:auto}
+.b{max-width:86%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.65;animation:bin .22s ease-out}
+.b.foe{align-self:flex-start;background:var(--card);border-bottom-left-radius:4px}
+.b.me{align-self:flex-end;background:var(--accent-soft);border-bottom-right-radius:4px}
+.b.old{color:var(--muted)}
+.b.crit{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.b.tell{align-self:flex-start;background:var(--warn-soft);box-shadow:inset 0 0 0 1px var(--warn-line);border-bottom-left-radius:4px;font-weight:700}
+.b.sys{align-self:center;max-width:92%;text-align:center;background:var(--chip);color:var(--muted);font-size:12.5px;border-radius:10px}
+.b.aside{align-self:center;max-width:92%;background:none;padding:0 8px;font-size:12px;color:var(--muted);text-align:center}
+.tl{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--warn)}
+.tl i{width:8px;height:8px;border-radius:50%;background:var(--warn-dot);animation:pulse 1s ease-in-out infinite}
+.mv{color:var(--accent);font-weight:700}
+.mv.op{color:var(--danger)}
+.hurt{color:var(--danger);font-weight:700}
+.dmg,.note{display:inline-block;margin-left:6px;padding:0 6px;border-radius:6px;font-size:11px;font-weight:700;line-height:1.6;vertical-align:1px;font-variant-numeric:tabular-nums}
+.dmg.out,.dmg.heal,.note{background:var(--card);color:var(--accent)}
+.b.foe .dmg.out,.b.sys .dmg.heal{background:var(--accent-soft)}
+.dmg.in{background:var(--danger-soft);color:var(--danger)}
+.opstrip{position:relative;height:44px;padding:0 14px;border-radius:12px;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:space-between;gap:10px;overflow:hidden;text-align:left;animation:fin .18s ease-out}
+.ops-t{display:flex;align-items:baseline;gap:8px;min-width:0}
+.ops-t b{font-size:16px;font-weight:900;letter-spacing:1px;white-space:nowrap}
+.ops-t small{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ops-k{font-size:12px;font-weight:700;opacity:.85;white-space:nowrap}
+.opstrip i{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--on-accent);opacity:.5;animation:drain 1.3s linear forwards}
+.fsheet{flex-shrink:0;padding:14px 16px 16px;border-radius:20px 20px 0 0;background:var(--card);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.rh{min-height:44px;display:flex;justify-content:space-between;align-items:center}
+.rh b{font-size:15px}
+.rh span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fsheet.alert .rh span{color:var(--danger);font-weight:700;font-size:13px}
+.rbar{height:4px;border-radius:2px;background:var(--chip);overflow:hidden}
+.rbar i{display:block;height:100%;width:0;background:var(--danger-fill)}
+.rbody,.idlebody{display:flex;flex-direction:column;gap:10px}
+.rtell{font-size:16px;font-weight:700;line-height:1.6}
+.rjudge{font-size:13px;color:var(--muted);margin-top:-6px}
+.ropts{display:flex;flex-direction:column;gap:6px}
+.ropt{min-height:48px;padding:0 12px;border-radius:12px;background:var(--chip);display:grid;grid-template-columns:minmax(0,1fr) auto 5.6em;column-gap:10px;align-items:center;text-align:left;animation:fin .2s ease-out}
+.ropt .rn{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ropt .rn b{font-size:15px}
+.ropt .rn span{color:var(--muted)}
+.ropt .ro{font-size:13px;font-weight:700;padding:1px 8px;border-radius:6px;white-space:nowrap}
+.ro.hi{background:var(--accent-soft);color:var(--accent)}
+.ro.mid{background:var(--warn-soft);color:var(--warn)}
+.ro.low{background:var(--danger-soft);color:var(--danger)}
+.ropt .rx{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+.ropt:disabled{opacity:.45}
+.pb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.skb{position:relative;height:50px;border-radius:12px;background:var(--chip);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;overflow:hidden;padding:0 2px;min-width:0}
+.skb b{font-size:13px;white-space:nowrap}
+.skb small{font-size:10px;color:var(--muted);white-space:nowrap}
+.skb:disabled{opacity:.42}
+.skb.ult.ready{background:var(--accent);color:var(--on-accent)}
+.skb.ult.ready small{color:inherit}
+.skb.minor{height:44px;background:transparent;box-shadow:inset 0 0 0 1px var(--line);font-size:13px}
+.skb.charging::after{content:'';position:absolute;left:0;bottom:0;height:4px;width:100%;background:var(--accent);transform-origin:left;animation:fillx 1.5s linear forwards}
+.skb.charged{box-shadow:inset 0 0 0 2px var(--accent)}
+.skb.charged small{color:var(--accent);font-weight:700}
+.ult-layer{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--ult-bg);overflow:hidden}
+.ult-layer small{font-size:13px;letter-spacing:6px;color:var(--muted);font-weight:700}
+.ult-w{position:relative}
+.ult-word{font-family:var(--f-brush);font-size:min(44vw,180px);line-height:1;color:var(--ult-ink)}
+.ult-seal{position:absolute;right:-14px;bottom:-4px;padding:4px 3px;border:2px solid var(--danger-fill);border-radius:3px;color:var(--danger-fill);font-family:var(--f-serif);font-weight:900;font-size:15px;line-height:1.1;writing-mode:vertical-rl;opacity:0}
+.ult-slash{position:absolute;left:-10%;right:-10%;top:54%;height:3px;background:var(--danger-fill);transform:scaleX(0) rotate(-5deg);transform-origin:left center}
+.ult-layer.go small{animation:fade .3s both}
+.ult-layer.go .ult-word{animation:brush .8s cubic-bezier(.2,.7,.2,1) both}
+.ult-layer.go .ult-seal{animation:seal .25s .7s ease-out forwards}
+.ult-layer.go .ult-slash{animation:slash .3s .95s ease-out forwards}
+.pause-layer{position:absolute;inset:0;z-index:25;background:var(--scrim);display:flex;align-items:center;justify-content:center;animation:fade .15s}
+.pause-layer .box{width:min(300px,80%);background:var(--card);border-radius:20px;padding:22px 18px 18px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pause-layer .box b{font-size:18px}
+.pause-layer .box small{font-size:13px;color:var(--muted);margin-bottom:8px}
+#app.shake{animation:shake .35s}
+
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fin{from{transform:translateY(6px);opacity:0}to{transform:none;opacity:1}}
+@keyframes tin{from{transform:translate(-50%,6px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+@keyframes bin{from{transform:translateY(8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@keyframes drain{from{width:100%}to{width:0}}
+@keyframes grow{from{width:0}to{width:100%}}
+@keyframes fillx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+@keyframes brush{from{clip-path:inset(0 100% 0 0);transform:scale(1.12)}to{clip-path:inset(0 0 0 0);transform:scale(1)}}
+@keyframes seal{from{opacity:0;transform:scale(1.7)}to{opacity:1;transform:scale(1)}}
+@keyframes slash{to{transform:scaleX(1) rotate(-5deg)}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+
+<div id="app"></div>
+
+<script>
+(function () {
+'use strict';
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const M = s => `<b class="mv">「${s}」</b>`;
+const MO = s => `<b class="mv op">「${s}」</b>`;
+const H = s => `<b class="hurt">${s}</b>`;
+const reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
+const CN = '零一二三四五六七八九';
+const liang = n => (n === 2 ? '两' : cn(n));
+function cn(n) {
+  n = Math.floor(n);
+  if (n < 10) return CN[n];
+  if (n < 20) return '十' + (n % 10 ? CN[n % 10] : '');
+  if (n < 100) return CN[Math.floor(n / 10)] + '十' + (n % 10 ? CN[n % 10] : '');
+  return String(n);
+}
+
+/* ---------- time ---------- */
+const SHICHEN = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+const MONTHS = ['正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '腊'];
+function shichen(min) { const h = Math.floor(min / 60) % 24; return SHICHEN[Math.floor(((h + 1) % 24) / 2)] + '时'; }
+function dayName(d) {
+  if (d <= 10) return '初' + (d === 10 ? '十' : CN[d]);
+  if (d < 20) return '十' + CN[d - 10];
+  if (d === 20) return '二十';
+  if (d < 30) return '廿' + CN[d - 20];
+  return '三十';
+}
+function dateStr() { return MONTHS[S.month - 1] + '月' + dayName(S.day); }
+function advanceDays(n) { S.day += n; while (S.day > 30) { S.day -= 30; S.month = S.month % 12 + 1; } }
+function advanceMin(m) { S.min += m; while (S.min >= 1440) { S.min -= 1440; advanceDays(1); } }
+
+/* ---------- icons ---------- */
+const sv = (body, extra) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra || ''}>${body}</svg>`;
+const IC = {
+  jianghu: sv('<path d="M2 20 L9 8 L13 14 L16 10 L22 20 Z"/>'),
+  renwu: sv('<circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16.5 7.6 14 12 14 C16.4 14 20 16.5 20 21"/>'),
+  wugong: sv('<path d="M20 4 L10 14"/><path d="M20 4 L16 4 M20 4 L20 8"/><path d="M7 11 L13 17"/><path d="M10 14 L5 19"/>'),
+  xingnang: sv('<path d="M5 9 H19 L18 21 H6 Z"/><path d="M9 9 V7 A3 3 0 0 1 15 7 V9"/>'),
+  ditu: sv('<path d="M3 6 L9 4 L15 6 L21 4 V18 L15 20 L9 18 L3 20 Z"/><path d="M9 4 V18 M15 6 V20"/>'),
+  chev: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6 L15 12 L9 18"/></svg>',
+  rain: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15 A4.5 4.5 0 0 1 7.5 6 A5.5 5.5 0 0 1 18 8 A3.5 3.5 0 0 1 17.5 15 Z"/><path d="M9 18 L8 20 M13 18 L12 20 M17 18 L16 20"/></svg>',
+  pause: sv('<path d="M9 5 V19 M15 5 V19"/>', ' stroke-width="2.2"'),
+  stele: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 21 V6 A5 5 0 0 1 17 6 V21 Z"/><path d="M5 21 H19 M10 9 H14 M10 13 H14"/></svg>',
+  go: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12 H20 M12 4 V20"/><circle cx="8" cy="8" r="1.8" fill="currentColor"/><circle cx="16" cy="16" r="1.8"/></svg>'
+};
+
+/* ---------- world ---------- */
+const ROOMS = {
+  hu: { name: '瘦西湖畔', area: '扬州 · 瘦西湖',
+    desc: '垂柳如烟，画舫在细雨中缓缓靠岸。茶棚里三个佩刀汉子压低声音说着什么；石桥那头，一个青衫书生撑伞而立，似在等人。',
+    objs: ['bei'], exits: [['北', 'daming'], ['东', 'dukou'], ['南', 'cheng'], ['西', 'jinshan']] },
+  daming: { name: '大明寺', area: '扬州 · 蜀冈',
+    desc: '古寺依冈而建，晨钟初歇，香烟缭绕。平山堂前古木参天，一位白眉老僧正不疾不徐地扫着石阶上的落花。',
+    objs: [], exits: [['南', 'hu']] },
+  dukou: { name: '运河渡口', area: '扬州 · 东关',
+    desc: () => (S.quest === 1 && !S.flags.boss)
+      ? '运河上帆樯林立，三条漕船被几艘黑篷快船团团围住。一个虬髯大汉立在码头当中，手按鬼头刀，正吆喝喽啰往岸上搬盐包。'
+      : S.flags.boss
+        ? '码头上又热闹起来，脚夫们扛着盐包来来往往。几个船夫蹲在缆桩边，一见你便笑着招手。'
+        : '运河上帆樯林立，漕船首尾相接。码头上脚夫扛着盐包来来往往，几个船夫蹲在缆桩边，不时朝江面张望。',
+    objs: [], exits: [['西', 'hu']] },
+  cheng: { name: '东关街', area: '扬州城',
+    desc: '青石长街两旁店铺林立，绸缎庄、药铺、酒楼的幌子在细雨里轻轻摇晃。街角一个说书人正讲到精彩处，引得众人连声叫好。',
+    objs: [], exits: [['北', 'hu']] },
+  jinshan: { name: '小金山', area: '瘦西湖 · 湖心',
+    desc: '湖心小岛上亭台错落，风亭立在山顶，凭栏可望尽一湖烟雨。亭中石桌上摆着一局残棋，一个老人对着棋盘出神。',
+    objs: ['canqi'], exits: [['东', 'hu']] }
+};
+const HOP_MIN = { daming: 30, dukou: 15, cheng: 15, jinshan: 10 };
+const ROAD = {
+  daming: '你沿着湖堤向北，拾级登上蜀冈……',
+  dukou: '你穿过几条小巷，河风里带着咸腥的盐味……',
+  cheng: '你穿过高高的城门洞，市声渐渐近了……',
+  jinshan: '你搭上一条小船，橹声欸乃，向湖心划去……',
+  hu: '你折回湖畔，柳丝拂过肩头……'
+};
+function roomNpcs(id) {
+  switch (id) {
+    case 'hu': return ['caobang', 'liu', 'huagu'];
+    case 'daming': return ['liaochen', 'zhike'];
+    case 'dukou': return (S.quest === 1 && !S.flags.boss) ? ['tu', 'chuanfu', 'guanshi'] : ['chuanfu', 'guanshi'];
+    case 'cheng': return ['shuoshu', 'yaopu', 'xiaoer'];
+    case 'jinshan': return ['qichi'];
+  }
+  return [];
+}
+function hopMin(a, b) { return HOP_MIN[a === 'hu' ? b : a] || 15; }
+function pathTo(from, to) { if (from === to) return []; if (from === 'hu') return [to]; if (to === 'hu') return ['hu']; return ['hu', to]; }
+function pathMin(from, to) { let cur = from, t = 0; pathTo(from, to).forEach(n => { t += hopMin(cur, n); cur = n; }); return t; }
+function minLabel(m) { if (m <= 10) return '片刻'; const n = Math.max(1, Math.round(m / 15)); return (n === 2 ? '两' : cn(n)) + '刻'; }
+
+const QUEST = [
+  { title: '寻访大明寺了尘大师', to: 'daming' },
+  { title: '前往运河渡口，截住黑风寨主', to: 'dukou' },
+  { title: '去东关街听听江湖怎么说', to: 'cheng' },
+  { title: '寒江旧案 · 第一回完', to: null }
+];
+
+const NPCS = {
+  caobang: { name: '佩刀汉子', count: 3, ini: '佩', tone: 'red', brief: '神色警惕',
+    look: '三人腰牌上都刻着一个「漕」字，刀鞘磨得发亮，显然常年刀口舔血。',
+    actList: ['交谈', '观察', '请教', '切磋', '赠礼', '偷窃'],
+    acts: {
+      交谈: () => S.flags.boss
+        ? '三人一见是你，连忙起身抱拳：「原来是渡口那位少侠！先前多有得罪。」'
+        : '其中一人瞪了你一眼：「漕帮的事，少打听。」另一人低声嘀咕：「三船盐啊……帮主非剥了我们的皮不可。」',
+      请教: '「请教？」那汉子嗤笑一声，「老子只会砍人。」',
+      切磋: '三人对视一眼，手按刀柄：「今天没空陪你玩。」',
+      偷窃: '你还没靠近，三人已同时转过头来，目光像刀子一样。你讪讪地走开了。'
+    } },
+  liu: { name: '青衫书生', ini: '书', tone: 'jade', brief: '撑伞而立', hint: '似身负武功',
+    look: '步履轻盈，伞沿滴水不沾衣。伞柄比寻常的长了半尺，像是藏着什么。',
+    actList: ['交谈', '观察', '请教', '切磋', '赠礼', '偷窃'],
+    gift: '柳寒舟一怔，接过杏花，轻声道：「……多谢。」',
+    acts: {
+      交谈: () => { S.flags.liuName = true; if (S.rel.liu === '素不相识') S.rel.liu = '点头之交';
+        return S.flags.boss
+          ? '柳寒舟收了伞，笑道：「渡口那一剑，扬州城都传遍了。改日再请兄台喝酒。」'
+          : '书生收了伞，拱手道：「在下柳寒舟。听闻黑风寨近日在运河上屡屡劫船，兄台若要去渡口，千万小心。」'; },
+      请教: '柳寒舟微微一笑：「剑法讲究以静制动。对手招式用老之时，便是破绽所在——到时莫要犹豫。」',
+      切磋: 'fight:liu',
+      偷窃: () => { S.rel.liu = '心存芥蒂'; return '你的手刚探向他的钱袋，柳寒舟手腕一翻，已轻轻扣住你的脉门：「兄台，这可不是君子所为。」'; }
+    } },
+  huagu: { name: '卖花姑娘', ini: '花', tone: 'amber', brief: '挎着花篮',
+    look: '十五六岁年纪，篮里是新折的杏花，还带着雨水。',
+    actList: ['交谈', '观察', '购买', '赠礼'],
+    gift: '姑娘扑哧一笑：「公子，这本来就是我的花呀。」',
+    acts: {
+      交谈: '「公子，买枝杏花吧？三文钱一枝，送人最好不过。」',
+      购买: () => { if (S.silver < 3) return '你摸了摸钱袋，空空如也。';
+        S.silver -= 3; S.items.flower++; toast('杏花 +1'); return '姑娘挑了枝开得最好的递给你：「公子拿好。」（银两 −3 文）'; }
+    } },
+  bei: { obj: true, name: '石碑', icon: 'stele', brief: '字迹斑驳',
+    look: '碑上刻着「寒江」二字，笔力雄健，像是以剑代笔刻成。落款处被人用利器划去了。',
+    actList: ['观察', '细看'],
+    acts: {
+      细看: () => { if (!S.flags.bei) { S.flags.bei = true; pushFeed('江湖', '湖畔石碑的落款下，竟刻着一个「沈」字。'); }
+        return '你凑近细看，划痕之下隐约还能辨出一个「沈」字……你心头一跳。'; }
+    } },
+  liaochen: { name: '了尘大师', ini: '尘', tone: 'gray', brief: '白眉老僧',
+    look: '须眉皆白，扫地时步子不疾不徐，落叶却都自己往簸箕里飘。',
+    actList: ['交谈', '观察', '请教', '赠礼'],
+    gift: '了尘大师合十一笑：「阿弥陀佛，拈花一笑，施主有心了。」',
+    acts: {
+      交谈: () => {
+        if (!S.rel.liaochen) S.rel.liaochen = '初识';
+        if (S.quest === 0) {
+          S.quest = 1; pushFeed('主线', '了尘大师托你：前往运河渡口，截住黑风寨主屠千山。'); toast('主线更新');
+          return '了尘大师放下扫帚，双手合十：「施主来得正好。黑风寨主屠千山今日午时在运河渡口卸货，那三船盐是漕帮兄弟半年的血汗……老衲出家人，不便动手。」';
+        }
+        if (S.quest === 1) return '「屠千山刀法刚猛，施主千万小心。他出重手之前，必有征兆。」';
+        return '「阿弥陀佛。施主仗义出手，漕帮兄弟会记住的。至于湖畔那块石碑……日后再说吧。」';
+      },
+      请教: '「对敌之时，莫问他用的是什么招，要问自己练成了什么。轻功好，便避其锋芒；内力足，便硬碰硬；剑法精，便以巧破拙。修为到了，自然看得出哪一条路最稳。」'
+    } },
+  zhike: { name: '知客僧', ini: '僧', tone: 'gray', brief: '双手合十',
+    look: '年纪尚轻，眉目和善，袈裟洗得发白。',
+    actList: ['交谈', '观察'],
+    acts: { 交谈: '「施主请随意参拜。了尘师叔在平山堂前扫地呢。」' } },
+  tu: { name: '屠千山', ini: '屠', tone: 'red', brief: '黑风寨主', hint: '黑风寨主 · 首领',
+    look: '身高八尺，虬髯如戟，鬼头刀背上九个铁环叮当作响。左臂缠着旧伤的布条。',
+    actList: ['交谈', '观察', '动手'],
+    acts: { 交谈: '屠千山斜眼打量你：「哪来的雏儿？滚远点，别耽误老子卸货！」', 动手: 'fight:tu' } },
+  chuanfu: { name: '船夫', ini: '船', tone: 'blue', brief: '蹲在缆桩边',
+    look: '黝黑的脸膛，一双手全是老茧，正闷头抽着旱烟。',
+    actList: ['交谈', '观察'],
+    acts: { 交谈: () => S.flags.boss ? '「托您的福，码头又能开船了！客官要坐船，不收钱！」' : '「客官要过江？今日不行喽，黑风寨的船霸着码头呢。」' } },
+  guanshi: { name: '漕帮管事', ini: '漕', tone: 'blue', brief: '愁眉不展',
+    look: '四十来岁，算盘别在腰后，袖口沾着盐粒。',
+    actList: ['交谈', '观察'],
+    acts: { 交谈: () => {
+      if (S.flags.boss) {
+        if (!S.flags.paid) { S.flags.paid = true; S.silver += 100; S.rel.guanshi = '感恩戴德'; toast('银两 +100 文');
+          return '管事一揖到地：「恩公！这是漕帮的一点心意，万望收下。」（银两 +100 文）'; }
+        return '「恩公以后在运河上行船，报漕帮的名号便是。」';
+      }
+      return S.quest === 1 ? '「那姓屠的就在码头上……三船盐，是兄弟们半年的血汗啊。」' : '「黑风寨劫了我们三船盐，帮主正发愁呢。」';
+    } } },
+  shuoshu: { name: '说书人', ini: '说', tone: 'purple', brief: '醒木一拍',
+    look: '一袭旧长衫，折扇上题着「江湖夜雨」四个字。',
+    actList: ['交谈', '观察', '打赏'],
+    acts: {
+      交谈: () => {
+        if (S.quest === 2) {
+          S.quest = 3; pushFeed('主线', '「寒江旧案」第一回完。湖畔石碑上的「沈」字，又是怎么回事？'); toast('第一回 · 完');
+          return `说书人醒木一拍：「列位看官！${S.story || '话说运河渡口，有一位少年侠客……'}」满堂喝彩，有人朝你这边张望——竟没人认出，说的正是你。`;
+        }
+        if (S.flags.boss) return '说书人冲你挤挤眼：「少侠的段子，小老儿每天要讲三场。」';
+        return '说书人醒木一拍：「上回说到，华山派两位长老为争掌门之位，在玉女峰上斗了三天三夜……」';
+      },
+      打赏: () => { if (S.silver < 5) return '你摸了摸钱袋，空空如也。';
+        S.silver -= 5; const n = pick(newsPool()); pushFeed('传闻', n); return '说书人眉开眼笑，凑过来压低声音：「' + n + '」（银两 −5 文）'; }
+    } },
+  yaopu: { name: '药铺掌柜', ini: '药', tone: 'jade', brief: '拨着算盘',
+    look: '精瘦的老头，药柜上百个抽屉，他闭着眼也能抓对。',
+    actList: ['交谈', '观察', '购买'],
+    acts: {
+      交谈: '「金疮药，二十文一包，止血生肌，童叟无欺。」',
+      购买: () => { if (S.silver < 20) return '「客官，二十文，一文都不能少。」';
+        S.silver -= 20; S.items.jcy++; toast('金疮药 +1'); return '掌柜麻利地包好一包金疮药递过来。（银两 −20 文）'; }
+    } },
+  xiaoer: { name: '酒楼小二', ini: '二', tone: 'amber', brief: '肩搭白巾',
+    look: '手脚麻利，眼睛滴溜溜地转，什么消息都瞒不过他。',
+    actList: ['交谈', '观察'],
+    acts: { 交谈: () => S.flags.boss ? '「哎哟，这不是渡口那位少侠嘛！今儿个的醉蟹，算小店请的！」' : '「客官里边请！今儿个有新到的醉蟹，配上一壶花雕，美得很！」' } },
+  qichi: { name: '棋痴', ini: '棋', tone: 'amber', brief: '对着残棋发呆',
+    look: '鹤发童颜，手里捏着一枚白子，半个时辰没落下去。',
+    actList: ['交谈', '观察', '请教'],
+    acts: {
+      交谈: '老人头也不抬：「这局『雁回』残谱，三十年没人解得开。」',
+      请教: () => {
+        if (S.flags.qichi) return '「去去去，别挡着我的光。」';
+        S.flags.qichi = true; gainProf('jinghong', 120);
+        return '老人指着棋盘：「这一子，退一步，海阔天空。」你望着那局残棋，忽觉「惊鸿照影」的第三剑，原来可以先退后进。';
+      }
+    } },
+  canqi: { obj: true, name: '残棋', icon: 'go', brief: '黑白交错',
+    look: '黑子大龙被困，却在角上留着一手「倒脱靴」的余味。看得久了，竟像是三道剑光。',
+    actList: ['观察'], acts: {} }
+};
+const ACT_CLS = { 偷窃: 'danger', 动手: 'fight', 切磋: 'spar' };
+const FEED_TONE = { 传闻: 'warn', 出关: 'accent', 主线: 'info', 江湖: 'purple', 突破: 'accent' };
+function nm(id) { return id === 'liu' && S.flags.liuName ? '柳寒舟' : NPCS[id].name; }
+
+/* ---------- martial arts ---------- */
+const REALMS = ['初窥门径', '略有小成', '融会贯通', '炉火纯青', '登堂入室', '出神入化', '一代宗师', '返璞归真', '大乘'];
+const REALM_NEED = [200, 600, 1200, 2000, 3200, 4800, 7000, 10000, 99999];
+const GRADES = [['凡品', 'fan'], ['良品', 'liang'], ['上品', 'shang'], ['绝品', 'jue'], ['神品', 'shen'], ['禁品', 'jin']];
+const GRADE_CLS = Object.fromEntries(GRADES);
+const SKILLS = [
+  { id: 'hanjiang', name: '寒江剑法', grade: '良品', type: '外功 · 剑法', desc: '寒江一脉的入门剑法。剑势如江上寒风，轻灵迅疾，练到深处，一剑可断流水。', moves: ['孤帆远影', '江枫渔火', '寒潭映月', '烟波钓叟', '寒江孤影'], use: '普通攻击 · 主动招式「寒江孤影」', resp: 'parry' },
+  { id: 'jinghong', name: '惊鸿剑', grade: '上品', type: '外功 · 剑法', desc: '三剑连环，剑影如惊鸿掠水。起点高，修炼也慢。', moves: ['惊鸿照影'], use: '主动招式 · 三连击 · 调息三合', resp: 'rush' },
+  { id: 'taxue', name: '踏雪无痕', grade: '良品', type: '轻功', desc: '身轻如燕，踏雪无痕。境界越高，越容易闪开对手的攻击。', use: '被动 · 闪避', resp: 'dodge' },
+  { id: 'xinfa', name: '寒江心法', grade: '良品', type: '内功', desc: '寒江一脉的内功根基，内力绵长，运功蓄力时尤见功效。', use: '被动 · 内力 · 运功', resp: 'block' },
+  { id: 'duanshui', name: '断水', grade: '绝品', type: '绝技', desc: '寒江剑法的终极一式。传说练至化境，一剑横江，流水为之一断。', use: '绝招 · 怒气满时可用' }
+];
+function gainProf(id, n) {
+  const s = S.skills[id], sk = SKILLS.find(x => x.id === id), out = [];
+  s.p += n;
+  while (s.r < REALMS.length - 1 && s.p >= REALM_NEED[s.r]) { s.p -= REALM_NEED[s.r]; s.r++; out.push(`「${sk.name}」突破至「${REALMS[s.r]}」`); }
+  out.forEach(x => { pushFeed('突破', x + '！'); toast(x + '！'); });
+  return out;
+}
+
+/* ---------- foes ---------- */
+const PARTS = ['左肩', '右肩', '左臂', '右臂', '胸口', '右肋', '左肋', '小腹', '左腿', '右腿'];
+const PART_XY = { 左肩: [28, 19], 右肩: [12, 19], 左臂: [33, 32], 右臂: [7, 32], 胸口: [20, 26], 右肋: [15, 35], 左肋: [25, 35], 小腹: [20, 41], 左腿: [26, 58], 右腿: [14, 58] };
+const FOES = {
+  tu: { id: 'tu', name: '屠千山', title: '黑风寨主', ini: '屠', tone: 'red', weapon: '鬼头刀', ws: '刀', hp: 3000, atk: [52, 80], big: 230, spar: false,
+    moves: ['开山式', '横扫千军', '乌云盖顶', '黑虎掏心'],
+    flourish: ['自上而下劈落', '拦腰横斩', '挟着风声斜劈', '刀光霍霍，连环砍出'],
+    tells: [
+      { name: '力劈华山', text: '屠千山双手握刀高举过顶，浑身骨节噼啪作响……', pw: { li: 40, su: 22, qiao: 20, xi: 15 }, after: '地上青石崩裂！' },
+      { name: '黑风断魂刀', text: '屠千山连退三步，深吸一口气，刀身隐隐泛起黑光……', pw: { li: 50, su: 30, qiao: 25, xi: 20 }, after: '黑气激荡，码头上的灯笼齐齐熄灭！' },
+      { name: '连环夺命刀', text: '屠千山刀尖虚晃，脚下碎步连踩，刀势忽左忽右……', pw: { li: 25, su: 40, qiao: 35, xi: 20 }, after: '七八道刀光交织成网！' }
+    ],
+    asides: ['码头上的脚夫们远远围着，大气不敢出。', '「好！」船夫们齐声喝彩。', '漕帮管事攥紧了拳头：「打得好！」', '几个黑风寨喽啰握着刀，却没一个敢上前。'],
+    opening: ['刀势一老', '收刀稍慢', '用力过猛，身形一晃', '回刀时露了空门'],
+    intro: '屠千山「呸」地吐了口唾沫，鬼头刀一抖，九个铁环哗啦作响：「找死！」',
+    phase2: '屠千山怒吼一声，一把扯下外袍，露出满身刀疤：「小子，你惹恼老子了！」刀势陡然狂猛。',
+    win: '屠千山身子晃了两晃，鬼头刀「当啷」落地，单膝跪倒在泥水之中。渡口上下一片欢呼！',
+    lose: '你只觉眼前一黑，耳边最后听见的，是屠千山震天的狂笑……' },
+  liu: { id: 'liu', name: '柳寒舟', title: '青衫书生', ini: '柳', tone: 'jade', weapon: '伞中剑', ws: '剑', hp: 1400, atk: [28, 44], big: 110, spar: true,
+    moves: ['春风拂柳', '细雨斜织', '烟锁重楼', '柳浪闻莺'],
+    flourish: ['剑尖轻颤', '一剑斜挑', '剑光如丝', '剑走轻灵'],
+    tells: [
+      { name: '伞中藏锋', text: '柳寒舟收伞为剑，伞尖斜指地面，周身气机一凝……', pw: { li: 30, su: 25, qiao: 25, xi: 20 }, after: '伞尖点地，青石上留下一个小坑。' },
+      { name: '三分柳影', text: '柳寒舟身形一晃，竟化出三道青影，同时向你围来……', pw: { li: 15, su: 30, qiao: 40, xi: 25 }, after: '三道青影一合即散。' },
+      { name: '寒星点点', text: '柳寒舟足尖一点凌空跃起，剑尖化作点点寒星洒落……', pw: { li: 20, su: 40, qiao: 30, xi: 30 }, after: '剑雨落处，湖面溅起一片水花。' }
+    ],
+    asides: ['茶棚里的汉子们站起身来，伸长了脖子。', '卖花姑娘捂住了嘴，花篮都忘了提。', '画舫上有人推开窗，探出头来张望。'],
+    opening: ['剑势用老', '回剑稍慢', '脚下一滑', '收伞时露了空门'],
+    intro: '柳寒舟从伞柄中抽出一柄细剑，含笑拱手：「在下柳寒舟，请。」',
+    win: '柳寒舟收剑后退，笑道：「兄台好剑法，柳某佩服。」',
+    lose: '柳寒舟剑尖在你喉前三寸停住，随即收剑：「承让。」' }
+};
+const MY_MOVES = ['孤帆远影', '江枫渔火', '寒潭映月', '烟波钓叟', '霜落寒江'];
+const MY_FL = ['长剑斜挑', '剑光如一泓秋水', '手腕轻抖，抖出点点剑花', '身随剑走，衣袂飘飘', '剑势轻灵，如燕掠波'];
+const FOE_HIT = [
+  (f, p) => `${f.name}闪避不及，${H(p + '被划开一道血口')}。`,
+  (f, p) => `噗的一声，剑尖已刺入${f.name}${H(p)}。`,
+  (f, p) => `${f.name}躲闪稍慢，${H(p + '中剑')}，闷哼一声。`,
+  (f, p) => `剑光过处，${f.name}${H(p)}衣衫碎裂，渗出血来。`
+];
+const FOE_PARRY = [f => `${f.name}横${f.ws}一架，「铛」的一声，火星四溅。`, f => `${f.name}${f.weapon}一封，将这一剑荡开。`];
+const FOE_DODGE = [f => `${f.name}侧身急退，剑锋贴着衣襟掠过。`, f => `${f.name}矮身一闪，这一剑落了空。`];
+const ME_DODGE = ['你足尖一点，身形斜飘，锋刃贴着衣角削过。', '你侧身一让，长剑顺势一引，将来势卸开。'];
+const ME_PARRY = ['你横剑一格，只震得虎口发麻。', '你长剑一搭一引，将这一招带偏了半尺。'];
+const ME_HIT = [p => `你闪避不及，${H(p)}已被扫中，鲜血迸流。`, p => `你急忙后跃，终究慢了半分，${H(p)}一阵剧痛。`, p => `你${H(p)}中招，踉跄退了两步。`];
+
+function newsPool() {
+  const a = ['华山派掌门闭关不出，两位长老为争掌门之位反目。', '扬州米价涨了三成，城外的流民渐渐多了。', '有人在小金山见到一位白衣女子，一剑削断了风亭前的石柱。',
+    '六扇门的捕快在东关街贴出告示，缉拿江洋大盗「草上飞」。', '北边传来消息，边关又起战事，朝廷正在各州招兵。', '城南的威远镖局接了一趟去京城的红货，正四处招募镖师。',
+    '漕帮新任舵主到了扬州，据说是个使双刀的女子。'];
+  a.push(S.flags.boss ? '屠千山被押进扬州府大牢，黑风寨群龙无首，喽啰四散。' : '黑风寨又劫了两条漕船，漕帮的悬赏涨到了一百两。');
+  return a;
+}
+
+/* ---------- state ---------- */
+const KEY = 'yz-demo-v1';
+const ATTR0 = { 体魄: 14, 根骨: 12, 身法: 16, 悟性: 15, 胆魄: 11 };
+let S;
+function freshState() {
+  return {
+    v: 1, loc: 'hu', month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
+    hp: 820, hpMax: 1000, mp: 460, mpMax: 800, attr: Object.assign({}, ATTR0),
+    silver: 120, items: { jcy: 3, fhs: 5, flower: 0, blade: 0 },
+    quest: 0, flags: {}, rel: { liu: '素不相识' }, title: '', xia: 12,
+    sel: 'liu', reply: null, tab: 'jianghu', story: '',
+    skills: { hanjiang: { r: 1, p: 340 }, jinghong: { r: 0, p: 80 }, taxue: { r: 2, p: 120 }, xinfa: { r: 1, p: 260 }, duanshui: { r: 0, p: 10 } },
+    feed: [
+      { t: '出关', x: '闭关七日，内力 +36，「寒江剑法」略有小成。', n: 0 },
+      { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮放出悬赏。', n: 0 }
+    ]
+  };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function load() { try { const t = localStorage.getItem(KEY); if (t) { const o = JSON.parse(t); if (o && o.v === 1) return o; } } catch (e) {} return null; }
+function pushFeed(t, x) { S.feed.unshift({ t, x, n: Date.now() }); S.feed.length = Math.min(S.feed.length, 20); }
+
+/* ---------- shell ---------- */
+function buildShell() {
+  $('#app').innerHTML = `
+    <header class="appbar" id="appbar"></header>
+    <main id="main"></main>
+    <nav class="tabs" id="tabs" aria-label="主导航"></nav>
+    <div id="travel" class="travel" hidden></div>
+    <div id="fightLayer" hidden></div>
+    <div id="sheetLayer" hidden></div>
+    <div id="toast" class="toast" role="status" hidden></div>`;
+}
+let toastT;
+function toast(t) {
+  const el = $('#toast'); if (!el) return;
+  el.textContent = t; el.hidden = false; el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 1900);
+}
+function openSheet(html) { const L = $('#sheetLayer'); L.innerHTML = `<div class="scrim"><div class="panel" role="dialog" aria-modal="true">${html}</div></div>`; L.hidden = false; }
+function closeSheet() { const L = $('#sheetLayer'); L.hidden = true; L.innerHTML = ''; }
+
+function render() {
+  const r = ROOMS[S.loc];
+  $('#appbar').innerHTML = `<div><h1>${r.name}</h1><div class="sub">${r.area} · ${dateStr()}</div></div><div class="timepill">${IC.rain}${shichen(S.min)} · ${S.weather}</div>`;
+  const v = { jianghu: viewJianghu, renwu: viewRenwu, wugong: viewWugong, xingnang: viewXingnang, ditu: viewDitu }[S.tab] || viewJianghu;
+  $('#main').innerHTML = v();
+  const tabs = [['jianghu', '江湖'], ['renwu', '人物'], ['wugong', '武功'], ['xingnang', '行囊'], ['ditu', '地图']];
+  $('#tabs').innerHTML = tabs.map(([k, l]) => `<button class="tab" data-act="tab:${k}"${S.tab === k ? ' aria-current="page"' : ''}>${IC[k]}${l}</button>`).join('');
+  save();
+}
+const mb = (label, v, max, cls) => `<div class="mb ${cls}"><span>${label}</span><div class="tr"><i style="width:${Math.round(v / max * 100)}%"></i></div><span class="v">${Math.round(v)}</span></div>`;
+
+/* ---------- views ---------- */
+function viewJianghu() {
+  const r = ROOMS[S.loc], all = roomNpcs(S.loc).concat(r.objs || []);
+  if (!all.includes(S.sel)) { S.sel = all[0] || null; S.reply = null; }
+  const q = QUEST[S.quest];
+  const desc = typeof r.desc === 'function' ? r.desc() : r.desc;
+  const feed = S.feed.slice(0, 2).map(e => `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
+  const quest = q.to
+    ? `<button class="card quest" data-act="quest"><span class="tag info">主线</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(pathMin(S.loc, q.to))}</span>${IC.chev}</button>`
+    : `<div class="card quest"><span class="tag accent">主线</span><span class="qt">${q.title}</span></div>`;
+  return `
+  <section class="card status">
+    <span class="ava t-accent">沈</span>
+    <div class="who"><b>沈孤舟</b><small>${S.title ? '「' + S.title + '」' : '游侠 · 二流'}</small></div>
+    <div class="minibars">${mb('气血', S.hp, S.hpMax, 'hp')}${mb('内力', S.mp, S.mpMax, 'mp')}</div>
+  </section>
+  ${quest}
+  <section class="card scene"><p class="desc">${desc}</p>${feed ? `<div class="feed">${feed}</div>` : ''}</section>
+  <section class="card here">
+    <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
+    <div class="avas">${all.map(avaBtn).join('')}</div>
+    ${S.sel ? detail(S.sel) : ''}
+  </section>
+  <section class="go"><h2>去处</h2><div class="exits">${r.exits.map(([d, id]) => exitBtn(d, id, r.exits.length === 1)).join('')}</div></section>`;
+}
+function avaBtn(id) {
+  const n = NPCS[id];
+  const inner = n.obj ? `<span class="ava sq t-gray">${IC[n.icon]}</span>` : `<span class="ava t-${n.tone}">${n.ini}${n.count ? `<span class="badge">${n.count}</span>` : ''}</span>`;
+  return `<button class="avab" data-act="sel:${id}" aria-pressed="${S.sel === id}">${inner}<span class="nm">${nm(id)}</span></button>`;
+}
+function detail(id) {
+  const n = NPCS[id];
+  const rel = n.obj ? '物品' : (S.rel[id] || '素不相识');
+  const reply = S.reply && S.reply.id === id ? `<div class="reply">${S.reply.text}</div>` : '';
+  return `<div class="detail"><div class="d-h"><b>${nm(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>
+    <div class="acts">${n.actList.map(a => `<button class="act ${ACT_CLS[a] || ''}" data-act="do:${a}">${a}</button>`).join('')}</div>${reply}</div>`;
+}
+function exitBtn(d, id, solo) {
+  const isQ = QUEST[S.quest].to === id;
+  return `<button class="exit${solo ? ' solo' : ''}" data-act="travel:${id}"><span class="dir">${d}</span><span class="en"><b>${ROOMS[id].name}</b><small>${minLabel(hopMin(S.loc, id))}</small></span>${isQ ? '<span class="tag info">主线</span>' : ''}</button>`;
+}
+
+function viewRenwu() {
+  const AD = { 体魄: '气血 · 外功', 根骨: '内力 · 硬接', 身法: '轻身 · 闪避', 悟性: '领悟 · 拆招', 胆魄: '胆气 · 抢攻' };
+  const attrs = Object.entries(S.attr).map(([a, v]) => [a, v, AD[a]]);
+  const rels = Object.entries(S.rel).map(([id, v]) => `<div class="row"><span>${nm(id)}</span><span class="tag">${v}</span></div>`).join('');
+  return `
+  <section class="card status"><span class="ava t-accent">沈</span><div class="who"><b>沈孤舟</b><small>${S.title ? '江湖人称「' + S.title + '」' : '初出茅庐 · 无名小卒'}</small></div></section>
+  <section class="card here"><div class="sec-h"><h2>根基</h2></div>
+    <div class="attrs">${attrs.map(([a, v, d]) => `<div class="attr"><b>${v}</b><span>${a}</span><small>${d}</small></div>`).join('')}</div></section>
+  <section class="card"><div class="kv">
+    <div><span>气血</span><b>${S.hp} / ${S.hpMax}</b></div><div><span>内力</span><b>${S.mp} / ${S.mpMax}</b></div>
+    <div><span>身份</span><b>游侠</b></div><div><span>门派</span><b>无门无派</b></div>
+    <div><span>侠义</span><b>${S.xia}</b></div><div><span>银两</span><b>${S.silver} 文</b></div>
+  </div></section>
+  <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${Object.keys(S.rel).length}</span></div><div class="rows">${rels}</div></section>
+  <section class="card here"><div class="sec-h"><h2>存档</h2></div>
+    <p class="muted">进度保存在这台设备的浏览器里。从头再来会清空所有进度。</p>
+    ${S.confirmRestart ? `<div class="btnrow"><button class="btn ghost" data-act="restartNo">算了</button><button class="btn warn" data-act="restartYes">确定清空</button></div>` : `<button class="act danger" data-act="restart">从头再来</button>`}
+  </section>`;
+}
+
+function viewWugong() {
+  const opts = [['1', '一日'], ['7', '七日'], ['30', '一月']];
+  return `
+  <section class="card here"><div class="sec-h"><h2>闭关修炼</h2></div>
+    <p class="muted">闭关时光阴流逝，武功与内力缓缓精进。江湖不会等你：出关时，会听到这段日子里的新鲜事。</p>
+    <div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}">${l}</button>`).join('')}</div></section>
+  <section class="card here"><div class="sec-h"><h2>见招拆招</h2></div>
+    <p class="muted">对手出重招时，你能用的应对来自你练成的武功：内功可以硬接，轻功可以闪避，剑法可以拆招，有的剑法还能抢攻。成算取决于你的火候与对手这一招的强弱，境界越高，成算越高。</p></section>
+  <section class="card here"><div class="sec-h"><h2>品级</h2></div>
+    <div class="grades">${GRADES.map(([g, c]) => `<span class="tag g-${c}">${g}</span>`).join('')}</div>
+    <p class="muted">品级是武功的先天资质，境界是你的苦功。低品武功练到极致，一样能技惊四座。</p></section>
+  ${SKILLS.map(skillCard).join('')}`;
+}
+function skillCard(k) {
+  const s = S.skills[k.id], need = REALM_NEED[s.r], pct = Math.min(100, Math.round(s.p / need * 100));
+  return `<section class="card sk-card">
+    <div class="sk-h"><b>${k.name}</b><span class="tag g-${GRADE_CLS[k.grade]}">${k.grade}</span><span class="tag">${k.type}</span></div>
+    <div class="realm"><span>${REALMS[s.r]}</span><small>熟练 ${s.p} / ${need}</small></div>
+    <div class="tr2"><i style="width:${pct}%"></i></div>
+    <p class="sk-d">${k.desc}</p>
+    ${k.moves ? `<div class="moves">${k.moves.map(m => `<span class="tag">${m}</span>`).join('')}</div>` : ''}
+    <p class="muted">${k.use}</p>
+    ${k.resp ? `<div class="d-h"><span class="tag accent">见招拆招 · ${RESP.find(r => r.k === k.resp).act}</span><small>当前火候 ${huohou(k.resp)}</small></div>` : ''}</section>`;
+}
+
+function viewXingnang() {
+  const it = [
+    ['青锋剑', '兵器 · 装备中', '寻常青钢长剑，剑脊上刻着一个「沈」字。', '', ''],
+    ['金疮药', `×${S.items.jcy}`, '止血生肌，回复气血 260。战斗中也能服用。', 'use:jcy', S.items.jcy < 1 || S.hp >= S.hpMax],
+    ['飞蝗石', `×${S.items.fhs}`, '暗器。战斗中随手打出，伤敌不重，聊胜于无。', '', '']
+  ];
+  if (S.items.flower) it.push(['杏花', `×${S.items.flower}`, '新折的杏花，可以送人。', '', '']);
+  if (S.items.blade) it.push(['黑风断首刀', '战利品', '屠千山的鬼头刀，刀背九个铁环。剑客用不顺手，倒能卖个好价钱。', '', '']);
+  return `<section class="card"><div class="rows">${it.map(([n, c, d, act, dis]) => `
+    <div class="item"><div class="ii"><b>${n}</b><p>${d}</p></div><span class="cnt">${c}</span>${act ? `<button class="use" data-act="${act}"${dis ? ' disabled' : ''}>服用</button>` : ''}</div>`).join('')}</div></section>
+    <section class="card"><div class="kv"><div><span>银两</span><b>${S.silver} 文</b></div><div><span>负重</span><b>轻便</b></div></div></section>`;
+}
+
+function viewDitu() {
+  const pos = { daming: [50, 14], jinshan: [20, 50], hu: [50, 50], dukou: [79, 50], cheng: [50, 86] };
+  const q = QUEST[S.quest].to;
+  const nodes = Object.entries(pos).map(([id, [x, y]]) => {
+    const here = S.loc === id;
+    return `<button class="node${here ? ' here' : ''}" style="left:${x}%;top:${y}%" data-act="travel:${id}"${here ? ' aria-current="location"' : ''}>${q === id && !here ? '<span class="qdot"></span>' : ''}${ROOMS[id].name}</button>`;
+  }).join('');
+  return `<section class="map" aria-label="扬州地图">
+      <span class="ln" style="left:50%;top:14%;bottom:14%;width:2px;margin-left:-1px"></span>
+      <span class="ln" style="top:50%;left:20%;right:21%;height:2px;margin-top:-1px"></span>
+      ${nodes}</section>
+    <div class="legend"><span><i style="background:var(--accent)"></i>你在这里</span><span><i style="background:var(--info)"></i>主线目标</span><span>点地名即可自动赶路</span></div>
+    <section class="card"><p class="muted">试玩版只开放了扬州五处地方。完整版里，天下分为十余道，城镇、门派、关隘、荒野之间，坐车乘船皆可一键赶路，途中遇事会停下来交给你处理。</p></section>`;
+}
+
+/* ---------- explore actions ---------- */
+function doAct(a) {
+  const id = S.sel, n = NPCS[id]; if (!n) return;
+  if (a === '观察') return setReply(id, n.look);
+  let r = n.acts[a];
+  if (typeof r === 'function') r = r();
+  if (r == null) {
+    if (a === '赠礼') {
+      if (S.items.flower > 0) { S.items.flower--; if (S.rel[id] && S.rel[id] !== '心存芥蒂') S.rel[id] = '颇有好感'; r = n.gift || `${nm(id)}收下了杏花，神色和缓了许多。`; }
+      else r = '你身上没有合适的礼物。湖畔倒是有个卖花姑娘。';
+    } else if (a === '请教') r = `${nm(id)}摇摇头：「我没什么可教你的。」`;
+    else if (a === '切磋') r = `${nm(id)}连连摆手：「不敢不敢。」`;
+    else if (a === '偷窃') r = `你的手刚伸出去，${nm(id)}就警觉地看了过来。你只好装作整理衣襟。`;
+    else r = `${nm(id)}没有理你。`;
+  }
+  if (typeof r === 'string' && r.indexOf('fight:') === 0) return startFight(r.slice(6));
+  setReply(id, r);
+}
+function setReply(id, text) {
+  S.reply = { id, text }; render();
+  const rp = document.querySelector('.reply'); if (rp) rp.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+}
+let traveling = false;
+function travelTo(dest) {
+  if (traveling || dest === S.loc || C) return;
+  const path = pathTo(S.loc, dest); traveling = true; S.tab = 'jianghu'; render();
+  const bar = $('#travel');
+  const step = () => {
+    const nx = path.shift();
+    if (!nx) { traveling = false; bar.hidden = true; $('#main').scrollTop = 0; return; }
+    const ex = ROOMS[S.loc].exits.find(x => x[1] === nx);
+    bar.innerHTML = `<b>往${ex ? ex[0] : ''} · ${ROOMS[nx].name}</b><small>${ROAD[nx]}</small><div class="tb"><i></i></div>`;
+    bar.hidden = false;
+    setTimeout(() => { advanceMin(hopMin(S.loc, nx)); S.loc = nx; S.sel = null; S.reply = null; render(); step(); }, reduce ? 250 : 760);
+  };
+  step();
+}
+function retreat(days) {
+  days = +days; const label = { 1: '一日', 7: '七日', 30: '一月' }[days]; const mul = { 1: 1, 7: 6, 30: 22 }[days];
+  openSheet(`<div class="r-h"><span class="tag accent">闭关</span><h2>闭关${label}</h2></div><p class="muted">${dateStr()}起，闭门谢客，静心修炼……</p><div class="tr2"><i id="rtBar"></i></div>`);
+  const b = $('#rtBar'); void b.offsetWidth; b.style.transition = `width ${reduce ? 50 : 1200}ms linear`; b.style.width = '100%';
+  setTimeout(() => {
+    advanceDays(days); S.min = 7 * 60 + 10;
+    const mpUp = 4 * mul; S.mpMax += mpUp; S.mp = S.mpMax; S.hp = S.hpMax;
+    const g = { hanjiang: 60 * mul, xinfa: 40 * mul, taxue: 20 * mul, jinghong: 15 * mul };
+    const breaks = [];
+    Object.entries(g).forEach(([k, v]) => { breaks.push(...gainProf(k, v)); });
+    const pool = newsPool(), news = [];
+    for (let i = 0; i < ({ 1: 1, 7: 2, 30: 3 })[days]; i++) { const n = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]; news.push(n); }
+    news.slice().reverse().forEach(n => pushFeed('传闻', n));
+    pushFeed('出关', `闭关${label}，内力上限 +${mpUp}，「寒江剑法」熟练 +${g.hanjiang}。`);
+    $('#sheetLayer .panel').innerHTML = `
+      <div class="r-h"><span class="tag accent">出关</span><h2>闭关${label}，今日${dateStr()}</h2></div>
+      <div class="rewards"><span class="tag accent">内力上限 +${mpUp}</span><span class="tag accent">寒江剑法 +${g.hanjiang}</span><span class="tag accent">寒江心法 +${g.xinfa}</span><span class="tag accent">踏雪无痕 +${g.taxue}</span><span class="tag accent">惊鸿剑 +${g.jinghong}</span>${breaks.map(x => `<span class="tag info">${x}</span>`).join('')}</div>
+      <div class="r-sub">江湖见闻</div>
+      <div class="news">${news.map(n => `<div><span class="tag warn">传闻</span><span>${n}</span></div>`).join('')}</div>
+      <button class="btn" data-act="sheetClose">出关</button>`;
+    save();
+  }, reduce ? 150 : 1300);
+}
+
+/* ---------- combat ---------- */
+let C = null;
+const ROUND_MS = 1500;
+function startFight(fid) {
+  if (C || traveling) return;
+  const f = FOES[fid];
+  if (fid === 'liu') S.flags.liuName = true;
+  C = { f, ehp: f.hp, ehpMax: f.hp, mom: 50, round: 0, wounds: {}, recent: [], rage: 30, gu: 0, jh: 0, charge: 0, chargeT: 0,
+    prompt: null, opening: null, busy: false, paused: false, over: false, phase: 1, nextTell: f.spar ? 2 : rnd(3, 4), lastTell: -1, lock: 0,
+    st: { parry: 0, open: 0, ult: 0, big: [] }, floor: f.spar ? Math.round(Math.min(S.hpMax * 0.3, S.hp * 0.5)) : 0, T: {} };
+  const L = $('#fightLayer'); L.innerHTML = fightHTML(); L.hidden = false;
+  bindCharge(); updAll();
+  bubble('sys', f.intro);
+  C.T.tick = setTimeout(tick, 1400);
+}
+function fightHTML() {
+  const f = C.f;
+  return `<div class="fight" role="dialog" aria-label="战斗">
+  <div class="f-top"><div class="f-where"><span class="pl">${ROOMS[S.loc].name}</span><span class="tag ${f.spar ? 'accent' : 'danger'}">${f.spar ? '切磋' : '首领战'}</span></div>
+    <div class="f-r"><span class="pill" id="fRound">第 0 合</span><button class="iconbtn" data-act="pause" aria-label="暂停">${IC.pause}</button></div></div>
+  <section class="card foecard">
+    <span class="ava t-${f.tone}">${f.ini}</span>
+    <div class="foe-m"><div class="foe-n"><b>${f.name}</b><small>${f.title}</small></div><div class="tags" id="fTags"></div>
+      <div class="hpbar" id="fHp"><div class="tr"><i></i></div><span></span></div></div>
+    <svg class="body" width="26" height="47" viewBox="0 0 40 72" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="伤势图">
+      <circle cx="20" cy="8" r="6"/><path d="M11 19 H29 L27 44 H13 Z"/><path d="M11 19 L5 40"/><path d="M29 19 L35 40"/><path d="M15 44 L13 70"/><path d="M25 44 L27 70"/><g id="wounds"></g></svg>
+  </section>
+  <section class="mom"><div class="mom-l"><span class="me" id="mMe"></span><span class="st" id="mSt"></span><span class="op" id="mOp"></span></div><div class="mom-b"><i class="m1" id="mA"></i><i class="m2" id="mB"></i></div></section>
+  <div class="flog-wrap"><div class="flog" id="flog" aria-live="polite"></div></div>
+  <section class="fsheet" id="fsheet">
+    <div class="rh" id="rHead"><b>见招拆招</b><span id="rTime">对手出重招时在这里应对</span></div>
+    <button class="opstrip" id="opening" data-act="opening" hidden><span class="ops-t"><b>趁虚而入</b><small id="opPart"></small></span><span class="ops-k">点此出手</span><i></i></button>
+    <div class="rbody" id="rBody" hidden>
+      <p class="rtell" id="rTell"></p>
+      <p class="rjudge" id="rJudge"></p>
+      <div class="rbar"><i id="rFill"></i></div>
+      <div class="ropts" id="rOpts"></div>
+    </div>
+    <div class="pb" id="pBars"></div>
+    <div class="sk" id="idleBody">
+      <button class="skb" id="skGu" data-act="sk:gu"><b>寒江孤影</b><small></small></button>
+      <button class="skb" id="skJh" data-act="sk:jh"><b>惊鸿照影</b><small></small></button>
+      <button class="skb" id="skCharge"><b>运功</b><small>长按蓄力</small></button>
+      <button class="skb ult" id="skUlt" data-act="sk:ult"><b>绝招·断水</b><small></small></button>
+      <button class="skb minor" id="skJcy" data-act="sk:jcy"></button>
+      <button class="skb minor" id="skDart" data-act="sk:dart"></button>
+      <button class="skb minor" data-act="sk:yield">认输</button>
+      <button class="skb minor" data-act="sk:flee">逃跑</button>
+    </div>
+  </section>
+  <div class="ult-layer" id="ultL" hidden><small>寒江剑法 · 绝招</small><div class="ult-w"><div class="ult-word">断水</div><span class="ult-seal">寒江</span></div><span class="ult-slash"></span></div>
+  <div class="pause-layer" id="pauseL" hidden><div class="box"><b>已暂停</b><small>对手也在等你</small><button class="btn" data-act="resume">继续</button></div></div>
+</div>`;
+}
+function bubble(type, html, dmg, kind) {
+  const log = $('#flog'); if (!log) return;
+  const d = document.createElement('div'); d.className = 'b ' + type;
+  d.innerHTML = html + (dmg ? `<span class="dmg ${kind || 'out'}">${kind === 'heal' ? '+' : '−'}${Math.round(dmg)}</span>` : '');
+  log.appendChild(d);
+  const k = log.querySelectorAll('.b.me,.b.foe'); k.forEach((el, i) => el.classList.toggle('old', i < k.length - 3));
+  while (log.children.length > 46) log.removeChild(log.firstElementChild);
+  log.scrollTop = log.scrollHeight;
+}
+function next(ms) { if (!C || C.over) return; clearTimeout(C.T.tick); C.T.tick = setTimeout(tick, ms || (C.phase === 2 ? 1300 : ROUND_MS)); }
+function tick() {
+  if (!C || C.over || C.paused || C.prompt || C.busy) return;
+  C.round++;
+  S.mp = Math.min(S.mpMax, S.mp + 10);
+  if (C.gu > 0) C.gu--;
+  if (C.jh > 0) C.jh--;
+  C.nextTell--;
+  if (C.nextTell <= 0) { startTell(); updAll(); return; }
+  if (Math.random() < 0.26 + C.mom * 0.0048) playerAuto(); else foeAuto();
+  if (!C.over && Math.random() < 0.1) bubble('aside', pick(C.f.asides));
+  updAll(); next();
+}
+function chargeMul() { const m = 1 + C.charge; C.charge = 0; return m; }
+function cancelCharge() { if (!C) return; C.chargeT = 0; const b = $('#skCharge'); if (b) b.classList.remove('charging'); }
+function playerAuto() {
+  const f = C.f, p = pick(PARTS);
+  let t = `你使一招${M(pick(MY_MOVES))}，${pick(MY_FL)}，直指${f.name}${p}。`;
+  const r = Math.random(), dg = 0.14 - (C.mom - 50) * 0.002, pr = 0.2 - (C.mom - 50) * 0.002;
+  if (r < dg) bubble('me', t + pick(FOE_DODGE)(f));
+  else if (r < dg + pr) bubble('me', t + pick(FOE_PARRY)(f));
+  else {
+    let d = rnd(55, 80) * chargeMul(); const crit = Math.random() < 0.1;
+    if (crit) d *= 1.6;
+    bubble('me', t + pick(FOE_HIT)(f, p) + (crit ? '<span class="note">剑势如虹</span>' : ''), d, 'out');
+    hitFoe(d, p, crit ? 8 : 5);
+    maybeOpening(0.12);
+  }
+}
+function armMul() { const n = ['左臂', '右臂', '左肩', '右肩'].reduce((s, k) => s + (C.wounds[k] || 0), 0); return 1 - Math.min(0.25, n * 0.05); }
+function foeAuto() {
+  const f = C.f, p = pick(PARTS), charging = !!C.chargeT;
+  let t = `${f.name}一招${MO(pick(f.moves))}，${f.weapon}${pick(f.flourish)}，直取你${p}！`;
+  const r = Math.random(), dg = charging ? 0 : 0.2 + (C.mom - 50) * 0.003 + S.skills.taxue.r * 0.02, pr = charging ? 0 : 0.15;
+  if (r < dg) { bubble('foe', t + pick(ME_DODGE)); C.mom = clamp(C.mom + 2, 5, 95); maybeOpening(0.2); }
+  else if (r < dg + pr) { bubble('foe', t + pick(ME_PARRY)); maybeOpening(0.12); }
+  else {
+    let d = rnd(f.atk[0], f.atk[1]) * (C.phase === 2 ? 1.2 : 1) * armMul();
+    if (charging) { d *= 1.3; cancelCharge(); t += '你正凝神运功，躲闪不及——'; }
+    bubble('foe', t + pick(ME_HIT)(p), d, 'in');
+    C.mom = clamp(C.mom - 5, 5, 95);
+    hurtMe(d);
+  }
+}
+function hitFoe(d, p, mg) {
+  if (!C || C.over) return;
+  d = Math.round(d); C.ehp = Math.max(0, C.ehp - d);
+  if (p) { C.wounds[p] = (C.wounds[p] || 0) + 1; C.recent = C.recent.filter(x => x !== p); C.recent.push(p); }
+  C.rage = Math.min(100, C.rage + 4); C.mom = clamp(C.mom + (mg || 5), 5, 95);
+  const hb = $('#fHp'); if (hb) { hb.classList.remove('flash'); void hb.offsetWidth; hb.classList.add('flash'); }
+  if (C.f.spar) { if (C.ehp <= C.ehpMax * 0.3) endFight('win'); return; }
+  if (C.phase === 1 && C.ehp < C.ehpMax * 0.5 && C.ehp > 0) { C.phase = 2; bubble('foe', C.f.phase2); C.nextTell = Math.min(C.nextTell, 2); }
+  if (C.ehp <= 0) endFight('win');
+}
+function hurtMe(d) {
+  if (!C || C.over) return;
+  d = Math.round(d); S.hp = Math.max(C.floor, S.hp - d); C.rage = Math.min(100, C.rage + 8);
+  if (d >= 150) shake();
+  buzz(d >= 150 ? 60 : 20);
+  if (S.hp <= C.floor) endFight('lose');
+}
+function shake() { if (reduce) return; const a = $('#app'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); }
+
+function maybeOpening(base) {
+  if (!C || C.over || C.prompt || C.opening || C.paused || C.busy) return;
+  if (Math.random() >= base + Math.max(0, C.mom - 50) / 250) return;
+  const part = pick(PARTS); C.opening = { part };
+  setTimeout(() => {
+    if (!C || !C.opening || C.over || C.prompt || C.paused) { if (C) C.opening = null; return; }
+    bubble('foe', `${C.f.name}${pick(C.f.opening)}，${H(part)}空门大开——`);
+    const b = $('#opening'), i = b.querySelector('i');
+    $('#opPart').textContent = part + '空门大开'; $('#rHead').hidden = true; b.hidden = false;
+    i.style.animation = 'none'; void i.offsetWidth; i.style.animation = '';
+    buzz(15);
+    C.T.open = setTimeout(() => { if (!C || !C.opening) return; C.opening = null; hideOpening(); bubble('aside', `破绽稍纵即逝，${C.f.name}已回${C.f.ws}护住要害。`); }, 1300);
+  }, 350);
+}
+function hideOpening() { const b = $('#opening'), h = $('#rHead'); if (b) b.hidden = true; if (h) h.hidden = false; if (C) clearTimeout(C.T.open); }
+function takeOpening() {
+  if (!C || !C.opening || C.over || C.paused) return;
+  const part = C.opening.part; C.opening = null; hideOpening(); C.st.open++;
+  const d = rnd(200, 240) * chargeMul();
+  bubble('me crit', `你看得真切，剑随身走，一招${M('寒潭映月')}直刺${C.f.name}${part}！`);
+  bubble('foe', `${C.f.name}${pick(['闷哼一声', '怪叫一声', '脸色大变'])}，${H(part + '鲜血迸流')}。`, d, 'out');
+  C.rage = Math.min(100, C.rage + 10); hitFoe(d, part, 12); updAll();
+}
+
+/* 以己之长：应对方式来自你练成的武功，成算 = 你的火候与对手这一招的强弱之比 */
+const RESP = [
+  { k: 'block', act: '硬接', skill: 'xinfa', sname: '寒江心法', pw: 'li' },
+  { k: 'dodge', act: '闪避', skill: 'taxue', sname: '踏雪无痕', pw: 'su' },
+  { k: 'parry', act: '拆招', skill: 'hanjiang', sname: '寒江剑法', pw: 'qiao' },
+  { k: 'rush', act: '抢攻', skill: 'jinghong', sname: '惊鸿剑', pw: 'xi' }
+];
+function huohou(k) {
+  const a = S.attr, s = S.skills;
+  if (k === 'block') return s.xinfa.r * 10 + a.根骨 + Math.round(S.mp / S.mpMax * 10);
+  if (k === 'dodge') return s.taxue.r * 10 + a.身法;
+  if (k === 'parry') return s.hanjiang.r * 10 + a.悟性;
+  return s.jinghong.r * 10 + a.胆魄;
+}
+const chengN = p => clamp(Math.round(p * 10), 1, 9);
+const cheng = p => liang(chengN(p)) + '成';
+function tellPw(t) { const b = C.phase === 2 ? 5 : 0; return { li: t.pw.li + b, su: t.pw.su + b, qiao: t.pw.qiao + b, xi: t.pw.xi + b }; }
+function buildOpts(t) {
+  const pw = tellPw(t);
+  return RESP.map(r => {
+    const p = clamp((r.k === 'rush' ? 0.35 : 0.5) + (huohou(r.k) - pw[r.pw]) * 0.025, 0.05, 0.95);
+    const cost = r.k === 'block' ? 40 + pw.li : r.k === 'rush' ? 60 : 0;
+    const dis = cost > S.mp;
+    const note = dis ? '内力不足' : { block: `耗内力 ${cost}`, dodge: '成功可反击', parry: '成功夺势', rush: '成功重创' }[r.k];
+    return Object.assign({}, r, { p, cost, dis, note });
+  });
+}
+const JUDGE = { li: ['block', '内劲极沉'], su: ['dodge', '快得惊人'], qiao: ['parry', '变化繁复'] };
+function judge(t) {
+  const pw = tellPw(t), top = ['li', 'su', 'qiao'].sort((a, b) => pw[b] - pw[a])[0];
+  const [k, desc] = JUDGE[top], d = pw[top] - huohou(k);
+  const cmp = d > 10 ? '远在你之上' : d > 3 ? '略胜于你' : d >= -3 ? '与你在伯仲之间' : '却未必胜得过你';
+  return `你看出这一${C.f.ws}${desc}，${cmp}。`;
+}
+function startTell() {
+  hideOpening(); C.opening = null;
+  const ts = C.f.tells; let i; do { i = rnd(0, ts.length - 1); } while (i === C.lastTell); C.lastTell = i;
+  const t = ts[i];
+  if (C.chargeT) cancelCharge();
+  bubble('tell', `<span class="tl"><i></i>预兆</span>${t.text}`);
+  buzz(30);
+  const opts = buildOpts(t);
+  $('#rTell').textContent = t.text;
+  $('#rJudge').textContent = judge(t);
+  $('#rOpts').innerHTML = opts.map(o => {
+    const n = chengN(o.p);
+    return `<button class="ropt" data-act="react:${o.k}"${o.dis ? ' disabled' : ''}><span class="rn"><b>${o.act}</b><span> · ${o.sname}</span></span><span class="ro ${n >= 6 ? 'hi' : n >= 3 ? 'mid' : 'low'}">成算${cheng(o.p)}</span><span class="rx">${o.note}</span></button>`;
+  }).join('');
+  const dur = Math.round((5000 + S.skills.taxue.r * 300) * (C.phase === 2 ? 0.85 : 1));
+  C.prompt = { t, opts, dur, end: 0 };
+  armPrompt(dur, 1);
+}
+function armPrompt(rem, frac) {
+  setPromptUI(true);
+  const fill = $('#rFill'); fill.style.transition = 'none'; fill.style.width = (frac * 100) + '%'; void fill.offsetWidth;
+  fill.style.transition = `width ${rem}ms linear`; fill.style.width = '0%';
+  C.prompt.end = performance.now() + rem;
+  clearTimeout(C.T.prompt); C.T.prompt = setTimeout(() => resolveTell(null), rem);
+  clearInterval(C.T.cd);
+  const lab = $('#rTime'), upd = () => { if (C && C.prompt) lab.textContent = Math.max(0, (C.prompt.end - performance.now()) / 1000).toFixed(1) + 's'; };
+  upd(); C.T.cd = setInterval(upd, 100);
+  updSkills();
+}
+function setPromptUI(on) {
+  const sh = $('#fsheet'); if (!sh) return;
+  sh.classList.toggle('alert', on);
+  $('#rBody').hidden = !on; $('#idleBody').hidden = on;
+  if (!on) {
+    if (C) clearInterval(C.T.cd);
+    $('#rTime').textContent = '对手出重招时在这里应对';
+    const fill = $('#rFill'); fill.style.transition = 'none'; fill.style.width = '0%';
+  }
+}
+const SAY = {
+  block: () => '你沉腰坐马，运起寒江心法，长剑横胸，硬接这一招！',
+  dodge: () => '你足尖一点，「踏雪无痕」，身形斜飘而起——',
+  parry: f => `你凝神细看${f.weapon}去势，长剑一引一带——`,
+  rush: f => `你不退反进，${M('惊鸿照影')}抢在${f.name}招式未成之前刺出——`
+};
+function resolveTell(choice) {
+  if (!C || !C.prompt || C.over || C.paused) return;
+  const t = C.prompt.t, opts = C.prompt.opts; C.prompt = null; clearTimeout(C.T.prompt); setPromptUI(false);
+  if (!C.st.big.includes(t.name)) C.st.big.push(t.name);
+  let o = opts.find(x => x.k === choice && !x.dis), instinct = false;
+  if (!o) { o = opts.filter(x => !x.dis).sort((a, b) => b.p - a.p)[0]; instinct = true; }
+  const f = C.f, part = pick(PARTS), big = f.big * (C.phase === 2 ? 1.15 : 1);
+  const p = Math.max(0.05, o.p - (instinct ? 0.15 : 0)), ok = Math.random() < p;
+  S.mp = Math.max(0, S.mp - o.cost);
+  bubble('me', (instinct ? '你来不及细想，凭本能——' : '') + SAY[o.k](f) + `<span class="note">成算${cheng(p)}</span>`);
+  if (ok) {
+    C.st.parry++; C.rage = Math.min(100, C.rage + 12);
+    if (o.k === 'block') { const d = rnd(80, 110); bubble('foe', `「当」的一声巨响，${MO(t.name)}被你硬生生接下！${f.name}反被震得连退三步。`, d, 'out'); hitFoe(d, null, 15); }
+    else if (o.k === 'dodge') { bubble('foe', `${MO(t.name)}落了空，${t.after}`); C.mom = clamp(C.mom + 8, 5, 95); setTimeout(() => { if (C && !C.over && !C.prompt) maybeOpening(1); }, 450); }
+    else if (o.k === 'parry') { const d = rnd(60, 90); bubble('foe', `你以巧破拙，将${MO(t.name)}化于无形，顺势一剑划过他${H(part)}！`, d, 'out'); hitFoe(d, part, 20); }
+    else { const d = rnd(220, 280); bubble('foe', `${f.name}招式未成，${H(part + '先中一剑')}，${MO(t.name)}硬生生憋了回去！`, d, 'out'); hitFoe(d, part, 15); }
+    gainProf(o.skill, 15);
+    bubble('aside', `实战有得：「${o.sname}」熟练 +15`);
+  } else {
+    const mul = { block: 0.8, dodge: 1, parry: 1.1, rush: 1.3 }[o.k], dm = { block: 10, dodge: 8, parry: 12, rush: 15 }[o.k];
+    const txt = {
+      block: `你内力不及，${MO(t.name)}破开护体真气，余劲震得你${H(part)}一阵剧痛！`,
+      dodge: `你身法慢了半拍，${MO(t.name)}正中你${H(part)}！${t.after}`,
+      parry: `你剑势一乱，非但没拆开${MO(t.name)}，反被${f.ws}锋带过${H(part)}！`,
+      rush: `你抢攻慢了一步，正撞上${MO(t.name)}！${t.after}`
+    }[o.k];
+    C.mom = clamp(C.mom - dm, 5, 95);
+    bubble('foe', txt, big * mul, 'in'); hurtMe(big * mul);
+  }
+  updAll();
+  if (C.over) return;
+  C.nextTell = C.phase === 2 ? rnd(3, 4) : rnd(4, 6);
+  next(1000);
+}
+
+function useSkill(k) {
+  if (!C || C.over || C.paused || C.busy) return;
+  const now = performance.now(); if (now < C.lock) return;
+  const f = C.f;
+  if (k === 'dart') {
+    if (S.items.fhs < 1 || C.prompt) return; C.lock = now + 500;
+    S.items.fhs--; const p = pick(PARTS), d = rnd(30, 45);
+    bubble('me', `你扬手打出一枚飞蝗石，「嗤」的一声正中${f.name}${H(p)}。`, d, 'out'); hitFoe(d, p, 3); updAll(); return;
+  }
+  if (C.prompt) return;
+  if (k === 'gu') {
+    if (S.mp < 60 || C.gu > 0) return; S.mp -= 60; C.gu = 1; C.lock = now + 700; const p = pick(PARTS);
+    bubble('me', `你一招${M('寒江孤影')}，剑走偏锋，疾刺${f.name}${p}！`);
+    if (Math.random() < 0.82 + (C.mom - 50) * 0.003) {
+      const d = rnd(160, 200) * chargeMul();
+      bubble('foe', `${f.name}${pick(['闷哼一声', '闪避不及', '回' + f.ws + '不及'])}，${H(p + '鲜血迸流')}。`, d, 'out'); hitFoe(d, p, 8);
+    } else bubble('foe', `${f.name}拼着衣衫被划破，堪堪避过这一剑。`);
+    gainProf('hanjiang', 3); updAll(); return;
+  }
+  if (k === 'jh') {
+    if (S.mp < 80 || C.jh > 0) return; S.mp -= 80; C.jh = 3; C.lock = now + 900;
+    const ps = [pick(PARTS), pick(PARTS), pick(PARTS)];
+    bubble('me', `你身形一晃，${M('惊鸿照影')}连出三剑，剑影如惊鸿掠水，分刺${f.name}${ps.join('、')}！`);
+    const mul = chargeMul(); let tot = 0; const hits = [];
+    ps.forEach(p => { if (Math.random() < 0.78) { tot += rnd(60, 80) * mul; hits.push(p); } });
+    if (hits.length) {
+      const where = [...new Set(hits)].join('、');
+      bubble('foe', `${hits.length === 3 ? '三剑尽数命中' : '三剑中了' + liang(hits.length) + '剑'}，${f.name}${H(where)}血流如注。`, tot, 'out');
+      hits.slice(1).forEach(p => { C.wounds[p] = (C.wounds[p] || 0) + 1; });
+      hitFoe(tot, hits[0], 6 + hits.length * 2);
+    } else bubble('foe', `${f.name}${f.ws}光护体，三剑尽数挡下。`);
+    gainProf('jinghong', 4); updAll(); return;
+  }
+  if (k === 'ult') {
+    if (C.rage < 100) return; C.rage = 0; C.busy = true; C.lock = now + 1500;
+    hideOpening(); C.opening = null; clearTimeout(C.T.tick); updAll(); playUlt(); return;
+  }
+  if (k === 'jcy') {
+    if (S.items.jcy < 1 || S.hp >= S.hpMax) return; S.items.jcy--; C.lock = now + 1200;
+    const h = Math.min(260, S.hpMax - S.hp); S.hp += h;
+    bubble('sys', '你服下一包金疮药，伤口一阵清凉。', h, 'heal'); updAll(); return;
+  }
+  if (k === 'yield') {
+    if (f.spar) { bubble('me', '你收剑后退，抱拳道：「是我输了。」'); return endFight('yield'); }
+    bubble('foe', `${f.name}狞笑：「认输？晚了！」`); C.mom = clamp(C.mom - 3, 5, 95); updAll(); return;
+  }
+  if (k === 'flee') {
+    C.lock = now + 1000;
+    if (f.spar) { bubble('foe', `${f.name}收剑笑道：「兄台若有急事，改日再比。」`); return endFight('flee'); }
+    if (Math.random() < 0.25 + (C.mom - 50) / 100) { bubble('me', '你虚晃一剑，转身跃上一条漕船，消失在雨幕之中。'); return endFight('flee'); }
+    bubble('foe', `${f.name}横${f.ws}拦住去路：「想走？」`); foeAuto(); updAll();
+  }
+}
+function playUlt() {
+  const L = $('#ultL'); L.hidden = false; L.classList.remove('go'); void L.offsetWidth; L.classList.add('go');
+  buzz([20, 40, 80]);
+  setTimeout(shake, reduce ? 0 : 950);
+  setTimeout(() => {
+    L.hidden = true; if (!C || C.over) return;
+    const f = C.f, p = pick(PARTS), d = rnd(520, 600) * chargeMul();
+    bubble('me crit', `你长剑一收，凝气于锋，一剑横斩而出——剑气如匹练横江，竟将${S.loc === 'dukou' ? '江面的雨幕' : '湖上的烟雨'}生生斩断！`);
+    bubble('foe', `${f.name}踉跄后退，${H(p + '鲜血狂喷')}！`, d, 'out');
+    C.st.ult++; C.busy = false; hitFoe(d, p, 25); gainProf('duanshui', 20); updAll(); next(1100);
+  }, reduce ? 500 : 1650);
+}
+function bindCharge() {
+  const b = $('#skCharge');
+  const start = e => {
+    if (!C || b.disabled || C.prompt || C.chargeT) return;
+    e.preventDefault(); C.chargeT = performance.now(); b.classList.add('charging'); b.querySelector('small').textContent = '蓄力中…';
+    try { b.setPointerCapture(e.pointerId); } catch (_) {}
+  };
+  const end = () => {
+    if (!C || !C.chargeT) return;
+    const held = performance.now() - C.chargeT; cancelCharge();
+    if (held < 250) { bubble('sys', '按住「运功」不放即可蓄力，松手后下一招威力提升。'); updSkills(); return; }
+    C.charge = Math.min(0.8, C.charge + Math.round(Math.min(1, held / 1500) * 80) / 100);
+    bubble('me', `你凝神运转寒江心法，一股寒意缓缓注入剑身。<span class="note">下一招 +${Math.round(C.charge * 100)}%</span>`);
+    updSkills();
+  };
+  b.addEventListener('pointerdown', start);
+  b.addEventListener('pointerup', end);
+  b.addEventListener('pointercancel', end);
+  b.addEventListener('lostpointercapture', end);
+  b.addEventListener('contextmenu', e => e.preventDefault());
+  b.addEventListener('click', e => {
+    if (e.detail !== 0 || !C || b.disabled || C.prompt) return;
+    C.charge = Math.min(0.8, C.charge + 0.4);
+    bubble('me', `你凝神运转寒江心法。<span class="note">下一招 +${Math.round(C.charge * 100)}%</span>`); updSkills();
+  });
+}
+
+function pauseFight() {
+  if (!C || C.over || C.paused) return;
+  C.paused = true; clearTimeout(C.T.tick);
+  if (C.prompt) {
+    C.prompt.rem = Math.max(400, C.prompt.end - performance.now()); clearTimeout(C.T.prompt); clearInterval(C.T.cd);
+    const fill = $('#rFill'), w = getComputedStyle(fill).width; fill.style.transition = 'none'; fill.style.width = w;
+  }
+  if (C.opening) { C.opening = null; hideOpening(); }
+  if (C.chargeT) cancelCharge();
+  $('#pauseL').hidden = false; updSkills();
+}
+function resumeFight() {
+  if (!C || !C.paused) return;
+  C.paused = false; $('#pauseL').hidden = true;
+  if (C.prompt) armPrompt(C.prompt.rem, C.prompt.rem / C.prompt.dur);
+  else if (!C.busy) next(600);
+  updSkills();
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseFight(); });
+
+function updAll() { if (!C) return; updFoe(); updMom(); updPlayer(); updSkills(); $('#fRound').textContent = `第 ${C.round} 合`; }
+function updFoe() {
+  const pct = Math.round(C.ehp / C.ehpMax * 100), hp = $('#fHp');
+  hp.querySelector('i').style.width = pct + '%'; hp.querySelector('span').textContent = pct + '%';
+  const r = C.ehp / C.ehpMax;
+  const breath = r > 0.7 ? '气息平稳' : r > 0.4 ? '气息粗重' : r > 0.15 ? '摇摇欲坠' : '强弩之末';
+  const tags = [`<span class="tag">${breath}</span>`].concat(C.recent.slice(-2).reverse().map(p => `<span class="tag danger">${p}带伤</span>`));
+  if (C.phase === 2) tags.push('<span class="tag warn">狂怒</span>');
+  $('#fTags').innerHTML = tags.join('');
+  $('#wounds').innerHTML = Object.entries(C.wounds).map(([p, c]) => { const [x, y] = PART_XY[p]; return `<circle class="wd" cx="${x}" cy="${y}" r="${Math.min(3 + c, 6)}"/>`; }).join('');
+}
+function updMom() {
+  const m = Math.round(C.mom);
+  $('#mMe').textContent = `你 ${m}%`; $('#mOp').textContent = `${100 - m}% 对手`;
+  $('#mSt').textContent = '攻守之势 · ' + (m >= 75 ? '你压制对手' : m >= 56 ? '你占上风' : m > 44 ? '势均力敌' : m > 25 ? '对手占优' : '你被压制');
+  $('#mA').style.flexGrow = m; $('#mB').style.flexGrow = 100 - m;
+}
+function updPlayer() { $('#pBars').innerHTML = mb('气血', S.hp, S.hpMax, 'hp') + mb('内力', S.mp, S.mpMax, 'mp') + mb('怒气', C.rage, 100, 'rage'); }
+function updSkills() {
+  const dis = C.over || C.busy || C.paused, act = dis || !!C.prompt;
+  const gu = $('#skGu'), jh = $('#skJh'), ch = $('#skCharge'), ult = $('#skUlt'), jcy = $('#skJcy'), dart = $('#skDart');
+  gu.disabled = act || S.mp < 60 || C.gu > 0; gu.querySelector('small').textContent = C.gu > 0 ? '调息 1 合' : '内力 60';
+  jh.disabled = act || S.mp < 80 || C.jh > 0; jh.querySelector('small').textContent = C.jh > 0 ? `调息 ${C.jh} 合` : '内力 80';
+  ch.disabled = act;
+  if (!C.chargeT) { ch.querySelector('small').textContent = C.charge > 0 ? `已蓄 +${Math.round(C.charge * 100)}%` : '长按蓄力'; ch.classList.toggle('charged', C.charge > 0); }
+  const ready = C.rage >= 100;
+  ult.disabled = act || !ready; ult.classList.toggle('ready', ready); ult.querySelector('small').textContent = ready ? '怒气已满' : `怒气 ${Math.floor(C.rage)}/100`;
+  jcy.textContent = `金疮药 ×${S.items.jcy}`; jcy.disabled = act || S.items.jcy < 1 || S.hp >= S.hpMax;
+  dart.textContent = `暗器 ×${S.items.fhs}`; dart.disabled = dis || S.items.fhs < 1;
+}
+
+function endFight(res) {
+  if (!C || C.over) return;
+  C.over = true; C.res = res;
+  clearTimeout(C.T.tick); clearTimeout(C.T.prompt); clearTimeout(C.T.open); clearInterval(C.T.cd);
+  C.prompt = null; C.opening = null; hideOpening(); setPromptUI(false); cancelCharge();
+  if (res === 'win') bubble('foe', C.f.win);
+  else if (res === 'lose') bubble('sys', C.f.lose);
+  updAll();
+  setTimeout(showResult, reduce ? 300 : 1300);
+}
+function composeStory() {
+  const st = C.st, parts = [];
+  parts.push(`话说${dateStr()}${shichen(S.min)}，扬州运河渡口细雨蒙蒙。黑风寨主屠千山正指挥喽啰卸货，忽有一位青衫少年按剑而来，拦在码头当中。`);
+  if (st.big.length) parts.push(`那屠千山的${st.big.map(x => '「' + x + '」').join('、')}何等凶猛，少年却${st.parry ? liang(st.parry) + '次见招拆招，教他占不到半分便宜' : '硬是咬牙撑了下来'}。`);
+  if (st.open) parts.push(`更有${liang(st.open)}次瞧出破绽，趁虚而入。`);
+  if (st.ult) parts.push('最后一剑「断水」，剑气横江，满江雨幕为之一断——');
+  parts.push(`两人斗到第${cn(C.round)}合，屠千山终于弃刀跪倒。`);
+  parts.push('此事一传十、十传百，扬州城里人人都在打听：这位少年，究竟是什么来头？');
+  return parts.join('');
+}
+function showResult() {
+  if (!C) return;
+  const f = C.f, res = C.res, st = C.st;
+  const statline = `<p class="statline">共 ${C.round} 合 · 见招拆招得手 ${st.parry} 次 · 破绽 ${st.open} 次 · 断水 ${st.ult} 次</p>`;
+  let html = '';
+  const growth = `<div class="r-sub">变强之道</div><div class="news">
+      <div><span class="tag accent">闭关</span><span>境界越高，火候越足，见招拆招的成算越高。</span></div>
+      <div><span class="tag accent">请教</span><span>小金山的棋痴能点拨「惊鸿剑」，抢攻会更有把握。</span></div>
+      <div><span class="tag accent">问道</span><span>大明寺的了尘大师见多识广，不妨去请教。</span></div></div>`;
+  advanceMin(15);
+  if (!f.spar && res === 'win') {
+    const story = composeStory(); S.story = story;
+    S.flags.boss = true; S.quest = 2; S.title = '渡口一剑'; S.silver += 200; S.items.blade = 1; S.xia += 20;
+    const br = gainProf('hanjiang', 300);
+    pushFeed('江湖', '有人在运河渡口斗败了黑风寨主屠千山，江湖人称「渡口一剑」。');
+    html = `<div class="r-h"><span class="tag danger">首领战 · 胜</span><h2>大败黑风寨主</h2></div>
+      <div class="r-sub">战后说书</div><p class="story">${story}</p>${statline}
+      <div class="rewards"><span class="tag accent">寒江剑法 熟练 +300</span>${br.map(x => `<span class="tag info">${x}</span>`).join('')}<span class="tag accent">侠义 +20</span><span class="tag accent">银两 +200 文</span><span class="tag accent">获得 黑风断首刀</span><span class="tag purple">名号「渡口一剑」</span></div>
+      <button class="btn" data-act="resultClose">收下，回到渡口</button>`;
+  } else if (!f.spar && res === 'lose') {
+    S.loc = 'daming'; S.hp = Math.round(S.hpMax * 0.4); const lost = Math.min(30, S.silver); S.silver -= lost;
+    pushFeed('江湖', '你在渡口落败，被船夫送到了大明寺。');
+    html = `<div class="r-h"><span class="tag">首领战 · 负</span><h2>败走渡口</h2></div>
+      <p class="story">你醒来时，已躺在大明寺的禅房里。了尘大师说，是渡口的船夫冒雨把你背上了蜀冈。窗外钟声悠悠，你摸了摸胸口的伤，心里只想着一件事：以眼下的修为，那几刀究竟该怎么接？</p>${statline}${growth}
+      <div class="rewards"><span class="tag">气血恢复至四成</span><span class="tag danger">银两 −${lost} 文</span></div>
+      <button class="btn" data-act="resultClose">起身</button>`;
+  } else if (!f.spar && res === 'flee') {
+    S.loc = 'hu';
+    html = `<div class="r-h"><span class="tag">首领战</span><h2>暂避锋芒</h2></div>
+      <p class="story">你借着漕船脱身，绕了一大圈才回到瘦西湖畔。身后隐约还能听见屠千山的骂声。留得青山在，不怕没柴烧。</p>${statline}
+      <button class="btn" data-act="resultClose">回到湖畔</button>`;
+  } else {
+    const won = res === 'win';
+    if (S.rel.liu !== '心存芥蒂') S.rel.liu = '不打不相识';
+    const br = gainProf('hanjiang', won ? 80 : 40);
+    html = `<div class="r-h"><span class="tag accent">切磋 · ${won ? '胜' : '负'}</span><h2>${won ? '略胜一筹' : '棋差一着'}</h2></div>
+      <p class="story">${won ? '柳寒舟收剑入伞，笑道：「兄台的剑，比你的人还要冷。改日渡口若有事，柳某也想去看看热闹。」' : '柳寒舟收剑入伞：「兄台底子不差，只是火候未到。我出重手时，你该挑自己最有把握的法子应对，而不是最好看的。」'}</p>${statline}
+      <div class="rewards"><span class="tag accent">寒江剑法 熟练 +${won ? 80 : 40}</span>${br.map(x => `<span class="tag info">${x}</span>`).join('')}<span class="tag">柳寒舟 · 不打不相识</span></div>${won ? '' : growth}
+      <button class="btn" data-act="resultClose">回到湖畔</button>`;
+  }
+  save();
+  openSheet(html);
+}
+function closeFight() {
+  closeSheet();
+  if (C) { clearTimeout(C.T.tick); clearTimeout(C.T.prompt); clearTimeout(C.T.open); clearInterval(C.T.cd); }
+  C = null; const L = $('#fightLayer'); L.hidden = true; L.innerHTML = '';
+  S.sel = null; S.reply = null; render(); $('#main').scrollTop = 0;
+}
+
+/* ---------- events ---------- */
+const handlers = {
+  tab: v => { S.tab = v; S.confirmRestart = false; render(); $('#main').scrollTop = 0; },
+  sel: v => { S.sel = v; S.reply = null; render(); },
+  do: v => doAct(v),
+  travel: v => travelTo(v),
+  quest: () => { const q = QUEST[S.quest]; if (q.to && q.to !== S.loc) travelTo(q.to); else toast('就在此处'); },
+  use: () => { if (S.items.jcy < 1 || S.hp >= S.hpMax) return; S.items.jcy--; S.hp = Math.min(S.hpMax, S.hp + 260); toast('气血回复'); render(); },
+  retreat: v => retreat(v),
+  sheetClose: () => { closeSheet(); render(); },
+  restart: () => { S.confirmRestart = true; render(); },
+  restartNo: () => { S.confirmRestart = false; render(); },
+  restartYes: () => { S = freshState(); render(); toast('已从头再来'); },
+  sk: v => useSkill(v),
+  react: v => { if (C && C.prompt) resolveTell(v); },
+  opening: () => takeOpening(),
+  pause: () => pauseFight(),
+  resume: () => resumeFight(),
+  resultClose: () => closeFight()
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const a = el.dataset.act, i = a.indexOf(':');
+  const k = i < 0 ? a : a.slice(0, i), v = i < 0 ? '' : a.slice(i + 1);
+  if (handlers[k]) handlers[k](v, el);
+});
+
+/* ---------- boot ---------- */
+function start(data) {
+  S = (data && data.S) || load() || freshState();
+  S.confirmRestart = false;
+  if (!S.attr) S.attr = Object.assign({}, ATTR0);
+  buildShell(); render();
+}
+if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ S }));
+if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(start);
+else start((window.claude && window.claude.hot && window.claude.hot.data) || {});
+})();
+</script>
