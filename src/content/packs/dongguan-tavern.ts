@@ -59,7 +59,7 @@ const NPCS: NpcDef[] = [
             { type: 'flag', flag: 'biaoju_invite' },
             { type: 'feed', tag: '江湖', text: '你跟赵铁衣斗酒赢了，拿到了威远镖局的邀请。' }
           ] },
-        { text: '三坛下去，你眼前发黑，脑袋「咚」地磕在酒坛上……醒来时，天色已近傍晚。（银两 −10 文，时间 +60 分钟）',
+        { text: '三坛下去，你眼前发黑，脑袋「咚」地磕在酒坛上……醒来时，天色已近傍晚。（银两 −10 文，过去半个时辰）',
           do: [
             { type: 'flag', flag: 'zhao_doujiu_lose' },
             { type: 'silver', delta: -10 },
