@@ -6,6 +6,8 @@ import { run, test as cond } from '../src/engine/dsl';
 import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
 import type { NpcDef } from '../src/content/types';
 import { autoSlot } from '../src/engine/wuxue';
+import { npc as npcDef } from '../src/content';
+const NPCS_BY = { zhou: () => npcDef('fuya_zhou')!, csf: () => npcDef('zy_csf')! };
 import { canLearn, canPerform, realmCap } from '../src/engine/shicheng';
 import { gainProf, learnSkill } from '../src/engine/growth';
 import { SKILLS } from '../src/content';
@@ -324,5 +326,45 @@ describe('师承与前置', () => {
       S.pastSects = [{ school: '少林', how: '出师' }];
       expect(realmCap(S, k)).toBe(8);
     } finally { SKILLS.pop(); }
+  });
+});
+
+describe('缉拿草上飞走得完', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+  it('揭榜 → 棋痴指路 → 渔家老汉 → 夜里破船 → 放走或拿下 → 回府衙交差', async () => {
+    const { FOES } = await import('../src/content');
+    S.flags.boss = true;
+    act('fuya_zhou', '交谈');
+    act('fuya_zhou', '揭榜');
+    expect(S.quests.side_caoshangfei).toBe(1);
+    expect(act('qichi', '交谈').text).toContain('茱萸湾');
+    expect(pathTo('dukou', 'zhuyuwan')).toEqual(['zhuyuwan']);
+    act('zy_yuweng', '交谈');
+    S.min = 12 * 60;
+    expect(roomNpcs('zhuyuwan')).not.toContain('zy_csf');
+    S.min = 21 * 60;
+    expect(roomNpcs('zhuyuwan')).toContain('zy_csf');
+    // 拿下：打赢以后押回府衙
+    const won = FOES.find(f => f.id === 'zy_csf')!.results.win.do!;
+    run(won);
+    expect(S.quests.side_caoshangfei).toBe(2);
+    expect(verbsOf(NPCS_BY.zhou())).toContain('交差');
+    const silver = S.silver;
+    act('fuya_zhou', '交差');
+    expect(S.quests.side_caoshangfei).toBe(3);
+    expect(S.silver).toBe(silver + 2000);
+  });
+  it('放走：听他说完才能放，回府衙周捕头不追问', () => {
+    S.flags.boss = true;
+    act('fuya_zhou', '交谈');
+    act('fuya_zhou', '揭榜');
+    act('zy_yuweng', '交谈');
+    S.min = 21 * 60;
+    expect(verbsOf(NPCS_BY.csf())).not.toContain('放他走');
+    act('zy_csf', '交谈');
+    expect(verbsOf(NPCS_BY.csf())).toContain('放他走');
+    act('zy_csf', '放他走');
+    expect(S.quests.side_caoshangfei).toBe(3);
+    expect(act('fuya_zhou', '交差').text).toContain('就当他跑了');
   });
 });

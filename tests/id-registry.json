@@ -12,7 +12,8 @@
    "hu",
    "huafang",
    "jinshan",
-   "yz_fuya"
+   "yz_fuya",
+   "zhuyuwan"
   ],
   "npcs": [
    "ayp",
@@ -48,7 +49,9 @@
    "yaopu",
    "yunnian",
    "zhao_tieyi",
-   "zhike"
+   "zhike",
+   "zy_csf",
+   "zy_yuweng"
   ],
   "items": [
    "badge",
@@ -66,7 +69,8 @@
    "heiyi2",
    "huafang_guard",
    "liu",
-   "tu"
+   "tu",
+   "zy_csf"
   ],
   "quests": [
    "main1",
@@ -147,6 +151,7 @@
    "xm_zhaixing"
   ],
   "stories": [
+   "cangjing_verdict",
    "p_after1",
    "p_death",
    "p_night",
@@ -155,7 +160,7 @@
  },
  "stages": {
   "side_cangjing": 4,
-  "side_caoshangfei": 3,
+  "side_caoshangfei": 4,
   "side_huafang": 3,
   "prologue": 4,
   "main1": 4

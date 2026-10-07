@@ -195,6 +195,18 @@ describe('人物与物品', () => {
 });
 
 describe('任务、剧情、对手', () => {
+  it('任务走得完：每一阶段都有内容能推进到下一阶段（不留断头任务）', () => {
+    // 草上飞的教训：任务有三个阶段，却没有任何内容能推进到最后一段，玩家卡死
+    const all = JSON.stringify({ ROOMS, NPCS, STORIES, FOES });
+    const errs: string[] = [];
+    for (const q of QUESTS) {
+      const reached = [...all.matchAll(new RegExp(`"type":"quest","id":"${q.id}","stage":(\\d+)`, 'g'))].map(m => Number(m[1]));
+      if (!reached.length) errs.push(`任务 ${q.id}「${q.name}」：没有任何内容开启它`);
+      for (let s = 0; s < q.stages.length - 1; s++) if (!reached.some(x => x > s)) errs.push(`任务 ${q.id}「${q.name}」：第 ${s} 阶段「${q.stages[s].title}」之后，没有任何内容能推进下去，玩家会卡死`);
+    }
+    report(errs);
+  });
+
   it('任务阶段的目的地存在', () => {
     const errs: string[] = [];
     for (const q of QUESTS) q.stages.forEach((s, i) => { if (s.to && !roomIds.has(s.to)) errs.push(`任务 ${q.id} 第 ${i} 阶段：目的地「${s.to}」不存在`); });

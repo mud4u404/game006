@@ -16,8 +16,21 @@ const NPCS: NpcDef[] = [
   {
     id: 'fuya_zhou', name: '周捕头', ini: '周', tone: 'blue', brief: '翻着卷宗',
     look: '四十出头，络腮胡刮得发青，两眼布满血丝。皂衣上打了个补丁，腰牌上刻着一个「周」字，漆快掉光了。',
-    verbs: ['交谈', '观察', '揭榜'],
+    verbs: ['交谈', '观察', '揭榜', { verb: '交差', if: { quest: { id: 'side_caoshangfei', atLeast: 2 } } }],
     actions: {
+      交差: [
+        { if: { quest: { id: 'side_caoshangfei', is: 2 } },
+          text: '周捕头一拍桌子站起来：「好！」他亲自给草上飞上了枷，又把你让到上座。「五十两赏银，要等府台批下来。」他从自己腰间解下钱袋，倒出二两碎银推给你：「这是我的一点心意，少侠先拿着。」说罢又看了一眼堂下的草上飞，低声道：「刘家地窖里的二百两，我会去起出来。茱萸湾那边……我不去搜。」',
+          do: [
+            { type: 'quest', id: 'side_caoshangfei', stage: 3 }, { type: 'silver', delta: 2000 }, { type: 'xia', delta: 10 },
+            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交', '初识', '旧识'] },
+            { type: 'feed', tag: '江湖', text: '你押草上飞回了府衙。周捕头先垫了二两赏银，说剩下的要等府台批。' }
+          ] },
+        { if: { flag: 'csf_freed', notFlag: 'csf_reported' },
+          text: '你说草上飞从茱萸湾跑了。周捕头盯着你看了半晌，没有追问。他把那张画像慢慢卷起来，塞进卷宗最底下：「茱萸湾那几户人家，今年冬天倒是没饿死人。」他叹了口气：「这案子，我就当他跑了。」',
+          do: [{ type: 'flag', flag: 'csf_reported' }, { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交', '初识', '旧识'] }] },
+        { text: '周捕头点点头：「草上飞的案子结了，少侠辛苦。」' }
+      ],
       观察: [{ text: '他手背上有一道旧刀伤，从虎口一直划到腕子上。卷宗里夹着一张画像，画着个短打汉子，左手缺了个小指。' }],
       交谈: [
         { if: { flag: 'boss' },
@@ -104,7 +117,8 @@ const NPCS: NpcDef[] = [
 const QUESTS: QuestDef[] = [
   { id: 'side_caoshangfei', name: '六扇门 · 缉拿草上飞', stages: [
     { title: '拿到第一条线索', to: 'jinshan' },
-    { title: '追查草上飞的行踪' },
+    { title: '追查草上飞的行踪', to: 'zhuyuwan' },
+    { title: '押草上飞回府衙交差', to: 'yz_fuya' },
     { title: '缉拿草上飞 · 完' }
   ] }
 ];
