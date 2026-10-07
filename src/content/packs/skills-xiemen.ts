@@ -24,8 +24,8 @@ const SKILLS: SkillDef[] = [
       { name: '夺髓摧心', text: '你十成功力的阴毒一掌印上{foe}{part}，寒毒直奔心脉，{foe}面色登时发青。', wound: '毒伤', realm: 6 }
     ],
     performs: [
-      { name: '阴风蚀骨', text: '你一掌拍实，寒毒顺劲直透{foe}{part}，伤口泛出青黑，隐隐发麻。', mp: 80, cd: 1, hits: 1, dmg: [110, 150], acc: 0.78, fx: [{ kind: 'poison', value: 10, rounds: 3 }] },
-      { name: '抽髓夺魄', realm: 3, text: '你双掌连环拍出，掌掌阴毒，{foe}连受两掌，寒毒入体，面色青白，四肢渐不听使唤。', mp: 100, cd: 2, hits: 2, dmg: [60, 80], acc: 0.75, fx: [{ kind: 'poison', value: 15, rounds: 3 }] }
+      { name: '阴风蚀骨', text: '你一掌拍实，寒毒顺劲直透{foe}{part}，伤口泛出青黑，隐隐发麻。', mp: 75, cd: 1, hits: 1, dmg: [135, 185], acc: 0.78, fx: [{ kind: 'poison', value: 10, rounds: 3 }] },
+      { name: '抽髓夺魄', realm: 3, text: '你双掌连环拍出，掌掌阴毒，{foe}连受两掌，寒毒入体，面色青白，四肢渐不听使唤。', mp: 85, cd: 2, hits: 2, dmg: [115, 155], acc: 0.75, fx: [{ kind: 'poison', value: 15, rounds: 3 }] }
     ]
   },
   {
@@ -49,8 +49,8 @@ const SKILLS: SkillDef[] = [
       { name: '气吞日月', text: '你毕生功力凝于一击，双掌缓缓推出，如气吞日月，{foe}避无可避，硬受{part}这一记。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '蓄势待扑', text: '你蹲身蓄劲，忽然暴起，双掌全力扑出，一击之力带着闷雷般的轰响，砸向{foe}{part}！', mp: 80, cd: 1, hits: 1, dmg: [150, 190], acc: 0.78, fx: [{ kind: 'fear', value: 10 }] },
-      { name: '蛤蟆吐功', realm: 3, text: '你喉中咕的一声，毕生功力自掌心喷薄而出，一击如山崩，{foe}气血翻涌，胆气先怯了三分。', mp: 120, cd: 3, hits: 1, dmg: [180, 230], acc: 0.75, fx: [{ kind: 'fear', value: 20 }] }
+      { name: '蓄势待扑', text: '你蹲身蓄劲，忽然暴起，双掌全力扑出，一击之力带着闷雷般的轰响，砸向{foe}{part}！', mp: 75, cd: 1, hits: 1, dmg: [190, 245], acc: 0.78, fx: [{ kind: 'fear', value: 10 }] },
+      { name: '蛤蟆吐功', realm: 3, text: '你喉中咕的一声，毕生功力自掌心喷薄而出，一击如山崩，{foe}气血翻涌，胆气先怯了三分。', mp: 70, cd: 3, hits: 1, dmg: [330, 400], acc: 0.75, fx: [{ kind: 'fear', value: 20 }] }
     ],
     combos: [{ with: 'xm_lingshe', name: '白驼绝艺', bonus: 4, text: '你掌上蛤劲与杖上蛇毒相济，刚猛中藏着阴毒，{foe}躲得开掌风，躲不开毒气。' }]
   },
@@ -69,8 +69,8 @@ const SKILLS: SkillDef[] = [
       { name: '万蛇归洞', text: '你杖尖抖出漫天杖影，如万蛇归洞，齐齐涌向{foe}{part}。', wound: '毒伤', realm: 6 }
     ],
     performs: [
-      { name: '毒蛇吐信', text: '你杖尖一抖，杖头毒蛇倏然弹射而出，一口咬向{foe}{part}，毒牙见血。', mp: 75, cd: 1, hits: 1, dmg: [100, 140], acc: 0.78, fx: [{ kind: 'poison', value: 12, rounds: 3 }] },
-      { name: '群蛇乱舞', realm: 3, text: '你杖法大开，杖头毒蛇倾巢而出，连人带杖带蛇，三路齐攻，{foe}{part}连中数下，又痛又麻。', mp: 95, cd: 2, hits: 3, dmg: [45, 61], acc: 0.75, fx: [{ kind: 'poison', value: 10, rounds: 2 }] }
+      { name: '毒蛇吐信', text: '你杖尖一抖，杖头毒蛇倏然弹射而出，一口咬向{foe}{part}，毒牙见血。', mp: 70, cd: 1, hits: 1, dmg: [120, 170], acc: 0.78, fx: [{ kind: 'poison', value: 12, rounds: 3 }] },
+      { name: '群蛇乱舞', realm: 3, text: '你杖法大开，杖头毒蛇倾巢而出，连人带杖带蛇，三路齐攻，{foe}{part}连中数下，又痛又麻。', mp: 85, cd: 2, hits: 3, dmg: [85, 115], acc: 0.75, fx: [{ kind: 'poison', value: 10, rounds: 2 }] }
     ]
   },
   {
@@ -88,8 +88,8 @@ const SKILLS: SkillDef[] = [
       { name: '万毒归宗', text: '你毕生毒功凝于十指，一按之下五毒齐发，尽注{foe}{part}。', wound: '毒伤', realm: 6 }
     ],
     performs: [
-      { name: '寒蛛垂露', text: '你指尖连点，数点阴毒如露滴落，尽数渗入{foe}{part}，伤口细细密密泛起黑气。', mp: 80, cd: 1, hits: 1, dmg: [100, 140], acc: 0.78, fx: [{ kind: 'poison', value: 15, rounds: 3 }] },
-      { name: '万毒噬心', realm: 4, text: '你十指齐出，毒劲如附骨之疽直入{foe}{part}，{foe}面色青黑，喉头一甜，跪倒在地。', mp: 110, cd: 3, hits: 1, dmg: [80, 120], acc: 0.8, fx: [{ kind: 'poison', value: 20, rounds: 5 }] }
+      { name: '寒蛛垂露', text: '你指尖连点，数点阴毒如露滴落，尽数渗入{foe}{part}，伤口细细密密泛起黑气。', mp: 80, cd: 1, hits: 1, dmg: [155, 215], acc: 0.78, fx: [{ kind: 'poison', value: 15, rounds: 3 }] },
+      { name: '万毒噬心', realm: 4, text: '你十指齐出，毒劲如附骨之疽直入{foe}{part}，{foe}面色青黑，喉头一甜，跪倒在地。', mp: 70, cd: 3, hits: 1, dmg: [240, 360], acc: 0.8, fx: [{ kind: 'poison', value: 20, rounds: 5 }] }
     ]
   },
   {
@@ -107,8 +107,8 @@ const SKILLS: SkillDef[] = [
       { name: '白刀进红刀出', text: '你一刀刺进，抽刀时刀锋一带一转，{foe}{part}登时鲜血狂涌。', wound: '割伤', realm: 6 }
     ],
     performs: [
-      { name: '白刀进红刀出', text: '你一刀刺进{foe}{part}，抽刀时手腕一翻，刀锋顺势一拉，血光激射。', mp: 80, cd: 1, hits: 1, dmg: [120, 160], acc: 0.78, fx: [{ kind: 'bleed', value: 12, rounds: 3 }] },
-      { name: '血海无边', realm: 3, text: '你刀光翻滚如血海掀涛，连剜带削，{foe}{part}两处刀伤血涌不止，怎么按也按不住。', mp: 105, cd: 2, hits: 2, dmg: [75, 95], acc: 0.75, fx: [{ kind: 'bleed', value: 15, rounds: 3 }] }
+      { name: '白刀进红刀出', text: '你一刀刺进{foe}{part}，抽刀时手腕一翻，刀锋顺势一拉，血光激射。', mp: 75, cd: 1, hits: 1, dmg: [165, 220], acc: 0.78, fx: [{ kind: 'bleed', value: 12, rounds: 3 }] },
+      { name: '血海无边', realm: 3, text: '你刀光翻滚如血海掀涛，连剜带削，{foe}{part}两处刀伤血涌不止，怎么按也按不住。', mp: 90, cd: 2, hits: 2, dmg: [155, 195], acc: 0.75, fx: [{ kind: 'bleed', value: 15, rounds: 3 }] }
     ],
     combos: [{ with: 'xm_xuedaojing', name: '血刀归元', bonus: 4, text: '你以血刀经真气催动刀法，见血愈旺，越战越狂，刀势一浪高过一浪。' }]
   },
