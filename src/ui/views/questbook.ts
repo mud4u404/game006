@@ -39,7 +39,8 @@ export function partitionQuests(
     const lastIdx = Math.min(stage, total - 1);
     const last = def.stages[lastIdx];
     // 规则：当前阶段就是最后一个阶段、且最后一个阶段没有目的地，算已完成。
-    const isDone = lastIdx === total - 1 && !last.to;
+    // Issue #7：当前阶段就是最后一个阶段，算作已完成
+    const isDone = lastIdx === total - 1;
     const row: QuestRow = { id, name: def.name, stage: lastIdx, total, title: last.title, to: last.to, done: isDone };
     (isDone ? done : active).push(row);
   }
@@ -50,7 +51,7 @@ export function partitionQuests(
   return {
     active,
     done,
-    trackId: (track && Object.hasOwn(playerQuests, track) && questById(track)) ? track : '',
+    trackId: (track && Object.prototype.hasOwnProperty.call(playerQuests, track) && questById(track)) ? track : '',
   };
 }
 

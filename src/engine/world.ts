@@ -1,7 +1,7 @@
-import { S } from '../core/state';
+import { S, pushFeed } from '../core/state';
 import { fmt } from '../core/util';
 import { npc, questById, room } from '../content';
-import type { Cond, Verb } from '../content/types';
+import type { Cond, NpcDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
 
 const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
@@ -62,11 +62,20 @@ export function npcName(id: string): string {
   return n.altName && test(n.altName.if) ? n.altName.name : n.name;
 }
 
+/** 人物此刻能点的动作：带 if 的只在条件成立时出现 */
+export const verbsOf = (n: NpcDef): Verb[] => n.verbs.flatMap(v => (typeof v === 'string' ? [v] : test(v.if) ? [v.verb] : []));
+
 /** 对人物或物品做一个动作，返回要显示的文字和产生的后果 */
 export function act(id: string, verb: Verb): { text: string; out: Outcome } {
   const n = npc(id);
   if (!n) return { text: '', out: newOutcome() };
-  if (verb === '观察') return { text: fmt(n.look, textVars()), out: newOutcome() };
+  if (verb === '观察') {
+    // 先是外貌，再接上随条件变化的细节（例如拿到线索以后才看得出的东西）
+    const b = pickBranch(n.actions['观察']);
+    const out = b ? run(b.do) : newOutcome();
+    const more = b?.text ? '\n' + fmt(b.text, { ...textVars(), ...out.vars }) : '';
+    return { text: fmt(n.look, textVars()) + more, out };
+  }
   const b = pickBranch(n.actions[verb as keyof typeof n.actions]);
   if (b) {
     const out = run(b.do);
@@ -93,5 +102,10 @@ export function act(id: string, verb: Verb): { text: string; out: Outcome } {
 /** 进入地点时的触发 */
 export function enter(id: string): Outcome | null {
   const b = pickBranch(room(id).onEnter);
-  return b ? run(b.do) : null;
+  if (!b) return null;
+  const out = run(b.do);
+  // 进门时的文字记进见闻，玩家才看得到；最近几条里已经有同一句，就不再重复
+  const t = b.text ? fmt(b.text, { ...textVars(), ...out.vars }) : '';
+  if (t && !S.feed.slice(0, 5).some(e => e.x === t)) pushFeed('江湖', t);
+  return out;
 }

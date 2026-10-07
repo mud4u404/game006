@@ -12,7 +12,8 @@ export const setConfirmRestart = (v: boolean): void => { confirmRestart = v; };
 export function viewRenwu(): string {
   const attrs = (Object.keys(AD) as AttrKey[]).map(a => `<div class="attr"><b>${S.attr[a]}</b><span>${a}</span><small>${AD[a]}</small></div>`).join('');
   const rels = Object.entries(S.rel).map(([id, v]) => `<div class="row"><span>${npcName(id)}</span><span class="tag">${v}</span></div>`).join('');
-  const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : '初出茅庐 · 无名小卒';
+  // 和江湖页一致：没有名号时显示修为档
+  const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : '游侠 · ' + xiuwei(S).rank;
   return `
   <section class="card status"><span class="ava t-accent">沈</span><div class="who"><b>${fullName()}</b><small>${who}</small></div></section>
   <section class="card here"><div class="sec-h"><h2>根基</h2></div><div class="attrs">${attrs}</div></section>

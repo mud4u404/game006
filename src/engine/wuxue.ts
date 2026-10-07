@@ -50,7 +50,8 @@ export function defaultLoadout(skills: GameState['skills']): Loadout {
 /** 刚学会一门武功时，如果有合适的空槽位，自动放进去 */
 export function autoSlot(s: Pick<GameState, 'loadout'>, def: SkillDef): void {
   const lo = (s.loadout ||= {});
-  const order: Slot[] = def.category === '内功' ? ['neigong'] : def.category === '轻功' ? ['qinggong'] : def.category === '绝技' ? ['ult'] : ['main', 'off'];
+  // 只放进合适的槽位：暗器、杂学这类不能撑起主手、副手
+  const order = (['neigong', 'qinggong', 'main', 'off', 'ult'] as Slot[]).filter(slot => fits(def, slot));
   const free = order.find(slot => !lo[slot]);
   if (free) lo[free] = def.id;
 }
