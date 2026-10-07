@@ -38,7 +38,8 @@
 | [docs/story.md](docs/story.md) | 开局与主线：主角、序章、主线章回、结局、人物 |
 | [docs/content-guide.md](docs/content-guide.md) | 内容编写指南：数据格式、文风、数值参考 |
 | [AGENTS.md](AGENTS.md) | 给 AI 协作者（Trae 等）的分工、流程和规定 |
-| [docs/auto-review.md](docs/auto-review.md) | 自动审查手册：维护者的例行任务怎样审查和合并 PR |
+| [docs/auto-review.md](docs/auto-review.md) | 审查与合并规则：机器检查、自动合并、每日一审 |
+| [docs/maintainer.md](docs/maintainer.md) | 维护者交接：新开的 Claude 会话先读它，不用翻聊天记录 |
 
 ## 开发
 
@@ -49,6 +50,7 @@ npm install
 npm run dev        # 本地运行，手机和电脑在同一网络下可以直接打开显示的地址
 npm run check      # 类型检查与全部测试（含内容校验）
 npm run build      # 打包到 dist/
+npm run smoke      # 冒烟测试：无头浏览器从标题画面一路玩到首领战
 ```
 
 技术栈：Vite + TypeScript，不依赖任何界面框架；测试用 Vitest。
@@ -60,10 +62,10 @@ npm run build      # 打包到 dist/
 ## 协作方式
 
 1. **维护者（Claude）**：负责世界观、玩法框架、引擎和界面，并把具体工作拆成 GitHub Issue。任务快做完时会自动补发新任务。
-2. **协作者（Trae 等）**：负责人发一句「开工指令」（见 [AGENTS.md](AGENTS.md) 第八节）。协作者逐个完成 Issue，每个任务提一个 PR。
-3. **自动审查**：维护者的例行任务每小时检查一次新 PR，规则见 [docs/auto-review.md](docs/auto-review.md)。
-   - 小问题直接改好。
-   - 只新增内容的 PR 自动合并。
-   - 改动功能的 PR 等项目负责人合并。
+2. **协作者（Trae 等，可替换）**：负责人发一句「开工指令」，见 [AGENTS.md](AGENTS.md) 第八节。协作者逐个完成 Issue，每个任务提一个 PR。换工具的步骤见 AGENTS.md 第九节。
+3. **两道关**：详见 [docs/auto-review.md](docs/auto-review.md)。
+   - 第一道，机器检查：只新增内容的 PR，CI 全部通过就自动合并，并自动部署。
+   - 第二道，每日一审：维护者每天精修一次当天的内容，审查功能 PR，补发任务。
+   - 功能 PR 由项目负责人合并。
 
 详见 [AGENTS.md](AGENTS.md)。
