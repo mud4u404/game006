@@ -1,0 +1,39 @@
+name: 内容任务
+description: 新增地点、人物、对话、支线、奇遇、对手或剧情
+title: "【内容】"
+labels: ["内容"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        认领前先读 `AGENTS.md` 与 `docs/content-guide.md`。内容写在 `src/content/packs/` 下的新文件里。
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: 这段内容在故事和世界里的位置，相关文档章节
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: 要做什么
+      description: 地点、人物、对话要点、触发条件、后果、需要用到的 id
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      value: |
+        - [ ] `npm run check` 与 `npm run build` 通过
+        - [ ] 新内容在游戏里点得到，所有动作都有回应
+        - [ ] 至少两种解法，后果用 flag / rel / xia 记录
+        - [ ] 文风符合 docs/content-guide.md
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 允许修改的文件
+      value: 只在 src/content/packs/ 下新建文件

@@ -126,7 +126,7 @@ svg{display:block}
 .acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .act{height:44px;border-radius:12px;background:var(--chip);font-size:14px;font-weight:500}
 .act.danger{background:var(--danger-soft);color:var(--danger)}
-.act.fight{background:var(--danger-fill);color:var(--on-danger);font-weight:700}
+.act.strong{background:var(--danger-fill);color:var(--on-danger);font-weight:700}
 .act.spar{background:var(--accent-soft);color:var(--accent);font-weight:700}
 .reply{padding:10px 12px;border-radius:12px;background:var(--bg);font-size:14px;line-height:1.75;animation:fin .3s ease-out}
 
@@ -565,7 +565,7 @@ const NPCS = {
     look: '黑子大龙被困，却在角上留着一手「倒脱靴」的余味。看得久了，竟像是三道剑光。',
     actList: ['观察'], acts: {} }
 };
-const ACT_CLS = { 偷窃: 'danger', 动手: 'fight', 切磋: 'spar' };
+const ACT_CLS = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar' };
 const FEED_TONE = { 传闻: 'warn', 出关: 'accent', 主线: 'info', 江湖: 'purple', 突破: 'accent' };
 function nm(id) { return id === 'liu' && S.flags.liuName ? '柳寒舟' : NPCS[id].name; }
 
