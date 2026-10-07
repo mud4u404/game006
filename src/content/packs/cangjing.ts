@@ -212,7 +212,7 @@ const STORIES: StoryDef[] = [
             { type: 'flag', flag: 'cangjing_mercy' }, { type: 'flag', flag: 'cangjing_solved' },
             { type: 'quest', id: 'side_cangjing', stage: 3 },
             { type: 'xia', delta: 3 },
-            { type: 'rel', npc: 'liaochen', value: '感念高义', from: ['素不相识', '初识'] },
+            { type: 'rel', npc: 'liaochen', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '藏经阁一案，了尘感念你的高义' },
             { type: 'feed', tag: '江湖', text: '你替明心求了情，大明寺罚他抄经三年。这件事，庙里没有声张。' }
           ], next: 1 },
         { label: '送官究办', sub: '得酬金二百文',
@@ -221,7 +221,7 @@ const STORIES: StoryDef[] = [
             { type: 'flag', flag: 'cangjing_report' }, { type: 'flag', flag: 'cangjing_solved' },
             { type: 'quest', id: 'side_cangjing', stage: 3 },
             { type: 'silver', delta: 200 },
-            { type: 'rel', npc: 'liaochen', value: '感念高义', from: ['素不相识', '初识'] },
+            { type: 'rel', npc: 'liaochen', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '藏经阁一案，了尘感念你的高义' },
             { type: 'feed', tag: '江湖', text: '你把偷经卷的小沙弥送了官，领了二百文酬金。藏经阁从此换人扫拂。' }
           ], next: 1 },
         { label: '替他娘出药钱', sub: '银两 −100，侠义 +5',
@@ -231,7 +231,7 @@ const STORIES: StoryDef[] = [
             { type: 'quest', id: 'side_cangjing', stage: 3 },
             { type: 'silver', delta: -100 },
             { type: 'xia', delta: 5 },
-            { type: 'rel', npc: 'liaochen', value: '感念高义', from: ['素不相识', '初识'] },
+            { type: 'rel', npc: 'liaochen', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '藏经阁一案，了尘感念你的高义' },
             { type: 'feed', tag: '江湖', text: '你替明心的娘付了一百文药钱。他娘的疟疾，往后有药可医了。' }
           ], next: 1 }
       ] },

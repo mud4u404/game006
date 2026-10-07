@@ -94,11 +94,11 @@ const NPCS: NpcDef[] = [
       交谈: [
         { if: { quest: { id: 'main1', is: 0 }, item: { id: 'jade' } },
           text: '了尘大师看见你腰间那半块玉佩，扫帚停在半空，良久才道：「江老三……终究还是走了么。」他双手合十：「黑风寨主屠千山今日午时在运河渡口卸货，那三船盐是漕帮兄弟半年的血汗。施主若能截住他，老衲便把你想知道的事，原原本本说给你听。」',
-          do: [{ type: 'rel', npc: 'liaochen', value: '初识', from: ['素不相识'] }, { type: 'quest', id: 'main1', stage: 1 },
+          do: [{ type: 'rel', npc: 'liaochen', value: '点头之交', from: ['素不相识'], note: '江伯临终让你来找他' }, { type: 'quest', id: 'main1', stage: 1 },
             { type: 'feed', tag: '主线', text: '了尘大师托你：前往运河渡口，截住黑风寨主屠千山。' }, { type: 'toast', text: '主线更新' }] },
         { if: { quest: { id: 'main1', is: 0 } },
           text: '了尘大师放下扫帚，双手合十：「施主来得正好。黑风寨主屠千山今日午时在运河渡口卸货，那三船盐是漕帮兄弟半年的血汗……老衲出家人，不便动手。」',
-          do: [{ type: 'rel', npc: 'liaochen', value: '初识', from: ['素不相识'] }, { type: 'quest', id: 'main1', stage: 1 },
+          do: [{ type: 'rel', npc: 'liaochen', value: '点头之交', from: ['素不相识'], note: '江伯临终让你来找他' }, { type: 'quest', id: 'main1', stage: 1 },
             { type: 'feed', tag: '主线', text: '了尘大师托你：前往运河渡口，截住黑风寨主屠千山。' }, { type: 'toast', text: '主线更新' }] },
         { if: { quest: { id: 'main1', is: 1 } }, text: '「屠千山刀法刚猛，施主千万小心。」' },
         { text: '「阿弥陀佛。施主仗义出手，漕帮兄弟会记住的。至于湖畔那块石碑……日后再说吧。」' }
@@ -128,7 +128,7 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察'],
     actions: { 交谈: [
       { if: { flag: 'boss', notFlag: 'paid' }, text: '管事一揖到地：「恩公！这是漕帮的一点心意，万望收下。」（银两 +100 文）',
-        do: [{ type: 'flag', flag: 'paid' }, { type: 'silver', delta: 100 }, { type: 'rel', npc: 'guanshi', value: '感恩戴德' }, { type: 'toast', text: '银两 +100 文' }] },
+        do: [{ type: 'flag', flag: 'paid' }, { type: 'silver', delta: 100 }, { type: 'rel', npc: 'guanshi', value: '相谈甚欢', note: '你斗败屠千山，夺回了漕帮的三船盐' }, { type: 'toast', text: '银两 +100 文' }] },
       { if: { flag: 'boss' }, text: '「恩公以后在运河上行船，报漕帮的名号便是。」' },
       { if: { quest: { id: 'main1', is: 1 } }, text: '「那姓屠的就在码头上……三船盐，是兄弟们半年的血汗啊。」' },
       { text: '「黑风寨劫了我们三船盐，帮主正发愁呢。」' }
@@ -189,7 +189,7 @@ const NPCS: NpcDef[] = [
     verbs: ['观察'], actions: {} }
 ];
 
-const LIU_REL: Effect = { type: 'rel', npc: 'liu', value: '不打不相识', from: ['素不相识', '点头之交', '相谈甚欢'] };
+const LIU_REL: Effect = { type: 'rel', npc: 'liu', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '湖畔切磋，不打不相识' };
 const LIU_YIELD: FightResult = {
   tag: '切磋', title: '收剑认输', story: '柳寒舟收剑入伞，拱手道：「承让。兄台若有兴致，改日再来。」',
   do: [{ type: 'prof', skill: 'hanjiang', amount: 20 }], button: '回到湖畔'
@@ -216,7 +216,7 @@ const FOES: FoeDef[] = [
       win: { tag: '首领战 · 胜', title: '大败黑风寨主', story: '@compose', button: '收下，回到渡口',
         do: [{ type: 'flag', flag: 'boss' }, { type: 'quest', id: 'main1', stage: 2 }, { type: 'title', value: '渡口一剑' },
           { type: 'prof', skill: 'hanjiang', amount: 300 }, { type: 'xia', delta: 20 }, { type: 'silver', delta: 200 },
-          { type: 'item', id: 'blade', delta: 1 },
+          { type: 'item', id: 'blade', delta: 1 }, { type: 'attr', key: '胆魄', delta: 1 },
           { type: 'feed', tag: '江湖', text: '有人在运河渡口斗败了黑风寨主屠千山，江湖人称「渡口一剑」。' }] },
       lose: { tag: '首领战 · 负', title: '败走渡口', growth: true, button: '起身',
         story: '你醒来时，已躺在大明寺的禅房里。了尘大师说，是渡口的船夫冒雨把你背上了蜀冈。窗外钟声悠悠，你摸了摸胸口的伤，心里只想着一件事：以眼下的修为，那几刀究竟该怎么接？',

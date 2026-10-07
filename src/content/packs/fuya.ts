@@ -24,7 +24,7 @@ const NPCS: NpcDef[] = [
           do: [
             { type: 'quest', id: 'side_caoshangfei', stage: 3 }, { type: 'flag', flag: 'csf_zhangfang_free' },
             { type: 'silver', delta: 2000 }, { type: 'xia', delta: 15 },
-            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交', '初识', '旧识'] },
+            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '草上飞一案，你劝他自首，周捕头替他求情' },
             { type: 'feed', tag: '江湖', text: '草上飞自首，账房先生出狱。周捕头在文书上写明了那一百两的去处，要在府台面前替他求情。' }
           ] },
         { if: { quest: { id: 'side_caoshangfei', is: 2 } },
@@ -32,7 +32,7 @@ const NPCS: NpcDef[] = [
           do: [
             { type: 'quest', id: 'side_caoshangfei', stage: 3 }, { type: 'flag', flag: 'csf_zhangfang_free' },
             { type: 'silver', delta: 2000 }, { type: 'xia', delta: 5 },
-            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交', '初识', '旧识'] },
+            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '草上飞一案，你把人押回了府衙' },
             { type: 'feed', tag: '江湖', text: '你押草上飞回了府衙，刘家的账房先生出了狱。周捕头先垫了二两赏银。' }
           ] },
         { if: { flag: 'csf_freed', notFlag: 'csf_reported' },
@@ -45,7 +45,7 @@ const NPCS: NpcDef[] = [
         { if: { flag: 'boss' },
           text: '周捕头抬起头，愣了一下：「渡口一剑？」他把卷宗一合，快步迎过来：「久仰久仰！眼下有个棘手的案子，草上飞那贼最近在小金山一带出没，悬赏五十两……少侠若有兴致？」',
           do: [
-            { type: 'rel', npc: 'fuya_zhou', value: '初识', from: ['素不相识'] },
+            { type: 'rel', npc: 'fuya_zhou', value: '点头之交', from: ['素不相识'], note: '扬州府捕头，托你缉拿草上飞' },
             { type: 'flag', flag: 'fuya_trust' },
             { type: 'flag', flag: 'caoshangfei_hint1' },
             { type: 'quest', id: 'side_caoshangfei', stage: 0 },
@@ -54,7 +54,7 @@ const NPCS: NpcDef[] = [
         { if: { flag: 'mem2_patrol' },
           text: '周捕头忽然睁大眼：「你是……{given}？当年那个去叫来巡检讨公道的孩子！」他叹了口气：「岁月不饶人啊。来，坐下说话。」',
           do: [
-            { type: 'rel', npc: 'fuya_zhou', value: '旧识', from: ['素不相识'] },
+            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '当年你叫来巡检讨公道，如今他是扬州府捕头' },
             { type: 'flag', flag: 'fuya_trust' },
             { type: 'feed', tag: '江湖', text: '周捕头认出了你：当年你叫来巡检，现在他已是扬州府捕头了。' }
           ] },
@@ -93,7 +93,7 @@ const NPCS: NpcDef[] = [
             { type: 'silver', delta: -20 },
             { type: 'flag', flag: 'fuya_bribed' },
             { type: 'flag', flag: 'fuya_trust' },
-            { type: 'rel', npc: 'fuya_yayi', value: '笑脸相迎', from: ['素不相识'] }
+            { type: 'rel', npc: 'fuya_yayi', value: '点头之交', from: ['素不相识'], note: '府衙的衙役，收过你的赏钱' }
           ] },
         { text: '你摸了摸钱袋，空空如也。' }
       ]

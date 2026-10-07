@@ -11,6 +11,7 @@ import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { canLearn } from './shicheng';
+import { syncAttr } from './gengu';
 
 export function test(c?: Cond): boolean {
   if (!c) return true;
@@ -80,6 +81,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'rel': {
         const cur = S.rel[e.npc] ?? '素不相识';
         if (!e.from || e.from.includes(cur)) S.rel[e.npc] = e.value;
+        if (e.note) (S.relNote ??= {})[e.npc] = e.note;
         break;
       }
       case 'prof': out.breaks.push(...gainProf(e.skill, e.amount)); break;
@@ -92,7 +94,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'leaveSect':
         if (S.sect) { (S.pastSects ??= []).push({ school: S.sect.school, how: e.how }); delete S.sect; }
         break;
-      case 'attr': S.attr[e.key] += e.delta; break;
+      case 'attr': S.attr[e.key] += e.delta; syncAttr(S); break;
       case 'xia': S.xia += e.delta; break;
       case 'eming': S.eming = Math.max(0, S.eming + e.delta); break;
       case 'title': S.title = e.value; break;

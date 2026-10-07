@@ -1,7 +1,7 @@
 import { S } from '../../core/state';
 import { questById, room } from '../../content';
 import { minLabel } from '../../core/time';
-import { pathMin } from '../../engine/world';
+import { pathMin, travelMin } from '../../engine/world';
 import { IC } from '../icons';
 import { closeSheet, openSheet, render } from '../shell';
 
@@ -66,7 +66,7 @@ export function questbookSheetHtml(): string {
       </div>`;
   }
   const renderRow = (r: QuestRow, group: 'active' | 'done') => {
-    const dist = r.to ? pathMin(S.loc, r.to) : 0;
+    const dist = r.to ? travelMin(pathMin(S.loc, r.to)) : 0;
     const here = r.to && S.loc === r.to;
     const target = r.to ? room(r.to) : null;
     const trackable = group === 'active';

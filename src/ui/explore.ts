@@ -8,7 +8,8 @@ import { NEWS, questById, room, skillById } from '../content';
 import type { SkillId, Verb } from '../content/types';
 import { test } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
-import { act, curQuest, enter, hopMin, pathTo, roadText } from '../engine/world';
+import { growAttr } from '../engine/gengu';
+import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
 import { afterOutcome, closeSheet, openSheet, registerHandlers, render, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
@@ -40,7 +41,7 @@ export function travelTo(dest: string, onArrive?: () => void): void {
     bar.innerHTML = `<b>往${ex ? ex[0] : ''} · ${room(nx).name}</b><small>${roadText(nx)}</small><div class="tb"><i></i></div>`;
     bar.hidden = false;
     window.setTimeout(() => {
-      const m = hopMin(S.loc, nx);
+      const m = travelMin(hopMin(S.loc, nx));
       S.min += m;
       if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
       S.loc = nx; S.sel = null; S.reply = null;
@@ -79,6 +80,8 @@ function retreat(days: number): void {
     const plan: [SkillId | undefined, number][] = [[S.loadout.main, 60 * mul], [S.loadout.neigong, 40 * mul], [S.loadout.qinggong, 20 * mul], [S.loadout.off, 15 * mul]];
     const gains = plan.filter((x): x is [SkillId, number] => !!x[0] && !!S.skills[x[0]]);
     const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
+    // 闭关一月，打熬筋骨：体魄加一，最多三次（engine/gengu.ts）
+    if (days === 30) for (let i = 1; i <= 3; i++) if (!S.flags[`gg_体魄_闭关${i}`]) { S.flags[`gg_体魄_闭关${i}`] = true; growAttr(S, '体魄', 1, '闭关一月，打熬筋骨'); break; }
     const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
     const news: string[] = [];
     for (let i = 0; i < ({ 1: 1, 7: 2, 30: 3 } as Record<number, number>)[days] && pool.length; i++) {

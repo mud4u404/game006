@@ -4,6 +4,8 @@ import { npc, questById, room } from '../content';
 import type { Cond, NpcDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
 import { advanceMin, shichen } from '../core/time';
+import { attrEffects } from './gengu';
+import { warmer } from './renqing';
 
 const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
   (list || []).filter(x => typeof x === 'string' || test(x.if)).map(x => (typeof x === 'string' ? x : x.id));
@@ -67,6 +69,9 @@ export function npcName(id: string): string {
 export const verbsOf = (n: NpcDef): Verb[] => n.verbs.flatMap(v => (typeof v === 'string' ? [v] : test(v.if) ? [v.verb] : []));
 
 /** 对人物或物品做一个动作，返回要显示的文字和产生的后果 */
+/** 实际赶路的分钟数：身法好的人走得快（engine/gengu.ts） */
+export const travelMin = (m: number): number => Math.max(1, Math.round(m * attrEffects(S).travel));
+
 /**
  * 每个动作花多少时间（分钟）。分支里写了 time 效果的，以分支为准；开打、开剧情的，由战斗、剧情自己算时间。
  * 没列出的动作算十分钟。这样在城里走动、和人说话，时辰也会慢慢过去。
@@ -110,8 +115,7 @@ function doAct(id: string, verb: Verb): { text: string; out: Outcome; timed?: bo
     case '赠礼':
       if ((S.items.flower || 0) > 0) {
         S.items.flower--;
-        const cur = S.rel[id];
-        if (cur && cur !== '心存芥蒂') S.rel[id] = '颇有好感';
+        S.rel[id] = warmer(S.rel[id]);
         return { text: n.gift || `${who}收下了杏花，神色和缓了许多。`, out };
       }
       return { text: '你身上没有合适的礼物。', out };

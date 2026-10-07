@@ -1,6 +1,7 @@
 import type { AttrKey, FeedTag, SectRank, SkillId } from '../content/types';
 import type { Loadout } from '../engine/wuxue';
 import { clearSaveSafely, readSave, writeSave } from './save';
+import { syncAttr } from '../engine/gengu';
 
 export interface SkillProg { r: number; p: number }
 export interface FeedEntry { t: FeedTag; x: string; n: number }
@@ -39,6 +40,10 @@ export interface GameState {
   sect?: { school: string; rank: SectRank };
   /** 离开过的师门 */
   pastSects?: { school: string; how: '出师' | '叛门' }[];
+  /** 根基已经折算进气血、内力上限的部分（engine/gengu.ts 的 syncAttr 用） */
+  attrApplied?: { hp: number; mp: number };
+  /** 人情备注：为什么记得这个人，例如「湖畔切磋，不打不相识」 */
+  relNote?: Record<string, string>;
   feed: FeedEntry[];
   /** 战后说书，供说书人复述 */
   story: string;
@@ -67,7 +72,7 @@ export function newGame(): GameState {
 
 /** 跳过序章，直接从扬州开始（与原型一致的配置） */
 export function skipToYangzhou(): GameState {
-  return {
+  const s: GameState = {
     v: 2, chapter: 1, name: '孤舟', loc: 'hu', month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
     hp: 820, hpMax: 1000, mp: 460, mpMax: 800,
     silver: 120, items: { jcy: 3, fhs: 5, jade: 1, scroll: 1 },
@@ -82,6 +87,9 @@ export function skipToYangzhou(): GameState {
     ],
     story: '', sel: 'liu', reply: null, tab: 'jianghu'
   };
+  // 根基折算进气血、内力上限（engine/gengu.ts）
+  syncAttr(s);
+  return s;
 }
 
 export let S: GameState = newGame();

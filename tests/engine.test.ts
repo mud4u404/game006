@@ -9,6 +9,8 @@ import { autoSlot } from '../src/engine/wuxue';
 import { npc as npcDef } from '../src/content';
 const NPCS_BY = { zhou: () => npcDef('fuya_zhou')!, csf: () => npcDef('zy_csf')! };
 import { canLearn, canPerform, realmCap } from '../src/engine/shicheng';
+import { COMMON, attrEffects, attrLines, growAttr } from '../src/engine/gengu';
+import { relGroup, warmer } from '../src/engine/renqing';
 import { gainProf, learnSkill } from '../src/engine/growth';
 import { SKILLS } from '../src/content';
 import type { SkillDef } from '../src/content/types';
@@ -302,6 +304,7 @@ describe('师承与前置', () => {
   });
 
   it('外功不能比内功高出一重以上；到了瓶颈熟练照涨，内功突破后跟着突破', () => {
+    S.attr = { ...COMMON }; // 常人根基：练功不加不减，数字才好算
     S.skills.xinfa = { r: 1, p: 0 };
     S.skills.hanjiang = { r: 2, p: 0 };
     const hj = SKILLS.find(k => k.id === 'hanjiang')!;
@@ -405,5 +408,60 @@ describe('缉拿草上飞走得完', () => {
     expect(act('fuya_zhou', '交差').text).toContain('他就出不来');
     expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
     expect(act('zy_zhangfang', '交谈').text).toContain('三天又三天');
+  });
+});
+
+describe('根基有实效', () => {
+  beforeEach(() => { setState(skipToYangzhou()); S.attr = { ...COMMON }; S.attrApplied = undefined; S.hpMax = 1000; S.mpMax = 800; });
+
+  it('体魄长气血上限，根骨长内力上限；加了根基马上生效，不会重复加', () => {
+    run([{ type: 'attr', key: '体魄', delta: 2 }]);
+    expect(S.hpMax).toBe(1080);
+    run([{ type: 'attr', key: '根骨', delta: 1 }]);
+    expect(S.mpMax).toBe(830);
+    run([{ type: 'attr', key: '体魄', delta: -1 }]);
+    expect(S.hpMax).toBe(1040);
+  });
+
+  it('悟性管外功、根骨管内功练得快慢；身法管赶路', () => {
+    S.skills.hanjiang = { r: 0, p: 0 };
+    S.attr.悟性 = COMMON.悟性 + 5;
+    gainProf('hanjiang', 100);
+    expect(S.skills.hanjiang!.p).toBe(115);
+    S.attr.身法 = COMMON.身法 + 10;
+    expect(attrEffects(S).travel).toBeCloseTo(0.8);
+    S.attr.身法 = COMMON.身法 + 40;
+    expect(attrEffects(S).travel).toBe(0.7);
+  });
+
+  it('武功练到第四重，根基跟着长，每一重只长一次', () => {
+    S.skills.xinfa = { r: 1, p: 0 };
+    gainProf('xinfa', 600 + 1200);
+    expect(S.skills.xinfa!.r).toBe(3);
+    expect(S.attr.根骨).toBe(COMMON.根骨 + 1);
+    expect(S.feed.some(e => e.x.includes('根骨加一'))).toBe(true);
+    growAttr(S, '根骨', 100, '测试');
+    expect(S.attr.根骨).toBe(30);
+  });
+
+  it('人物页写的是实际的数，不是空话', () => {
+    S.attr.体魄 = COMMON.体魄 + 2;
+    expect(attrLines(S).体魄).toBe('气血上限 +80');
+    expect(attrLines(S).胆魄).toBe('开战怒气 +0 · 抢攻');
+  });
+});
+
+describe('人情', () => {
+  it('赠礼最多送到相谈甚欢；有过节的不因一份礼就和好', () => {
+    expect(warmer(undefined)).toBe('点头之交');
+    expect(warmer('点头之交')).toBe('相谈甚欢');
+    expect(warmer('相谈甚欢')).toBe('相谈甚欢');
+    expect(warmer('有隙')).toBe('有隙');
+  });
+  it('萍水相逢的人收起来，有意义的人分组', () => {
+    expect(relGroup('点头之交')).toBe('萍水相逢');
+    expect(relGroup('相谈甚欢')).toBe('交好');
+    expect(relGroup('仇敌')).toBe('恩怨');
+    expect(relGroup('阴阳两隔')).toBe('至亲至交');
   });
 });

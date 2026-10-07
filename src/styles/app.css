@@ -161,6 +161,17 @@ svg{display:block}
 .kv b{font-weight:500;font-variant-numeric:tabular-nums}
 .rows{display:flex;flex-direction:column}
 .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.row small{font-size:12px;text-align:right}
+/* 人情：分组列出有意义的人，萍水相逢的收起来 */
+.rq{padding:10px 0;border-top:1px solid var(--line)}
+.rq-h{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:15px}
+.rq small{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.rq p{margin:4px 0 0;font-size:13px;line-height:1.6}
+.rq-g{margin-top:12px;font-size:12px;font-weight:600;color:var(--muted)}
+.rq-more{border-top:1px solid var(--line)}
+.rq-more summary{min-height:44px;display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted);cursor:pointer;list-style:none}
+.rq-more summary::-webkit-details-marker{display:none}
+.rq-more[open] summary small{visibility:hidden}
 .row:first-child{border-top:0;padding-top:2px}
 .item{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
 .item:first-child{border-top:0;padding-top:2px}

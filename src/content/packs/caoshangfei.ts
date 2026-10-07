@@ -53,7 +53,7 @@ const NPCS: NpcDef[] = [
       买鱼: [
         { if: { silver: 30 },
           text: '你挑了两尾鲫鱼，放下三十文——足够买一篓。老汉要找钱，你摆摆手，把鱼推了回去：「给屋里的孩子熬碗汤。」老汉捏着那几十个铜板，半晌没说话。',
-          do: [{ type: 'silver', delta: -30 }, { type: 'flag', flag: 'csf_yuweng_trust' }, { type: 'rel', npc: 'zy_yuweng', value: '点头之交', from: ['素不相识'] }] },
+          do: [{ type: 'silver', delta: -30 }, { type: 'flag', flag: 'csf_yuweng_trust' }, { type: 'rel', npc: 'zy_yuweng', value: '点头之交', from: ['素不相识'], note: '茱萸湾的渔家，你给他孙子买过鱼' }] },
         { text: '你摸了摸钱袋，里头只剩几个铜板，只好讪讪地缩回手。' }
       ],
       交谈: [
