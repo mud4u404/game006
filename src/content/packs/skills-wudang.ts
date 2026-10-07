@@ -37,9 +37,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '揽雀尾', text: '你双手一捋一带，将{foe}之力引偏，顺势绵掌按出，{part}受力不稳，劲力已被卸去大半。',
-        mp: 60, cd: 2, hits: 1, dmg: [80, 110], acc: 0.8, fx: [{ kind: 'weaken', value: 15, rounds: 2 }, { kind: 'guard', value: 20, rounds: 2 }] },
+        mp: 65, cd: 2, hits: 1, dmg: [80, 110], acc: 0.8, fx: [{ kind: 'weaken', value: 15, rounds: 2 }, { kind: 'guard', value: 20, rounds: 2 }] },
       { name: '如封似闭', realm: 4, text: '你双手一封，如封似闭，将{foe}来势尽数化去，反手一按，掌力绵密如山，稳稳护住周身。',
-        mp: 90, cd: 3, hits: 0, dmg: [10, 10], acc: 0.8, fx: [{ kind: 'weaken', value: 20, rounds: 3 }, { kind: 'guard', value: 25, rounds: 3 }] }
+        mp: 50, cd: 3, hits: 0, dmg: [10, 10], acc: 0.8, fx: [{ kind: 'weaken', value: 20, rounds: 3 }, { kind: 'guard', value: 25, rounds: 3 }] }
     ]
   },
   {
@@ -59,9 +59,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '玉女穿梭', text: '你身形一转，剑如穿梭往来，寒气随剑而生，{foe}{part}一凉，出招登时迟缓。',
-        mp: 65, cd: 2, hits: 1, dmg: [120, 150], acc: 0.82, fx: [{ kind: 'chill', rounds: 3 }] },
+        mp: 65, cd: 2, hits: 1, dmg: [125, 155], acc: 0.82, fx: [{ kind: 'chill', rounds: 3 }] },
       { name: '绵剑藏锋', realm: 4, text: '你剑走绵密，剑意藏而不露，连绵剑气层层裹住{foe}{part}，将其力缓缓化去。',
-        mp: 100, cd: 3, hits: 1, dmg: [100, 130], acc: 0.8, fx: [{ kind: 'weaken', value: 15, rounds: 2 }] }
+        mp: 70, cd: 3, hits: 1, dmg: [285, 370], acc: 0.8, fx: [{ kind: 'weaken', value: 15, rounds: 2 }] }
     ],
     combos: [
       { with: 'wd_taijiquan', name: '太极合璧', text: '你左手太极剑意绵绵，右手太极拳势圆转，剑掌相合，如环无端，{foe}无从下手。', bonus: 7 }
@@ -104,9 +104,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '绵里藏针', text: '你一掌轻按{foe}{part}，掌面绵软，内劲却如针暗吐，直伤脏腑。',
-        mp: 60, cd: 1, hits: 1, dmg: [100, 120], acc: 0.85, fx: [{ kind: 'weaken', value: 12, rounds: 2 }] },
+        mp: 75, cd: 1, hits: 1, dmg: [100, 120], acc: 0.85, fx: [{ kind: 'weaken', value: 12, rounds: 2 }] },
       { name: '后劲绵绵', realm: 5, text: '你掌力一浪接一浪，前劲未消后劲又至，{foe}{part}如陷绵絮，气力渐泄。',
-        mp: 80, cd: 3, hits: 2, dmg: [50, 70], acc: 0.8, fx: [{ kind: 'weaken', value: 10, rounds: 2 }] }
+        mp: 65, cd: 3, hits: 2, dmg: [100, 140], acc: 0.8, fx: [{ kind: 'weaken', value: 10, rounds: 2 }] }
     ]
   },
   {
@@ -126,9 +126,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '剑锁双腕', text: '你剑影一合，锁住{foe}双腕神门，长剑一震，对手兵刃脱手飞出。',
-        mp: 50, cd: 2, hits: 1, dmg: [70, 90], acc: 0.8, fx: [{ kind: 'disarm', rounds: 2 }] },
+        mp: 25, cd: 3, hits: 1, dmg: [70, 90], acc: 0.8, fx: [{ kind: 'disarm', rounds: 2 }] },
       { name: '十三连刺', realm: 5, text: '你剑光连闪，一十三剑连绵刺出，剑剑不离{foe}{part}，破绽尽露。',
-        mp: 90, cd: 3, hits: 3, dmg: [45, 65], acc: 0.78, fx: [{ kind: 'break', value: 8, rounds: 1 }] }
+        mp: 65, cd: 3, hits: 3, dmg: [90, 125], acc: 0.78, fx: [{ kind: 'break', value: 8, rounds: 1 }] }
     ]
   },
   {

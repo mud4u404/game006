@@ -36,9 +36,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '罗汉伏虎', text: '你沉肩坐马，一拳捣出，拳风沉沉，正打在{foe}{part}。',
-        mp: 35, cd: 1, hits: 1, dmg: [90, 110], acc: 0.8 },
+        mp: 45, cd: 1, hits: 1, dmg: [90, 110], acc: 0.8 },
       { name: '罗汉撞钟', realm: 2, text: '你肩背一耸，全身之力撞上{foe}{part}，如撞铜钟，震得对手连退数步。',
-        mp: 40, cd: 2, hits: 1, dmg: [60, 80], acc: 0.8, fx: [{ kind: 'break', value: 5, rounds: 1 }] }
+        mp: 35, cd: 2, hits: 1, dmg: [95, 130], acc: 0.8, fx: [{ kind: 'break', value: 5, rounds: 1 }] }
     ]
   },
   {
@@ -57,9 +57,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '金刚推山', text: '你双掌齐推，掌力如山压来，{foe}{part}受力不住，门户大开。',
-        mp: 50, cd: 1, hits: 1, dmg: [110, 130], acc: 0.85, fx: [{ kind: 'break', value: 8, rounds: 1 }] },
+        mp: 65, cd: 1, hits: 1, dmg: [110, 130], acc: 0.85, fx: [{ kind: 'break', value: 8, rounds: 1 }] },
       { name: '佛光普照', realm: 3, text: '你双掌外分，掌影笼罩四野，{foe}心头一凛，{part}连中两掌。',
-        mp: 80, cd: 3, hits: 2, dmg: [60, 80], acc: 0.8, fx: [{ kind: 'fear', value: 10 }] }
+        mp: 65, cd: 3, hits: 2, dmg: [105, 140], acc: 0.8, fx: [{ kind: 'fear', value: 10 }] }
     ],
     combos: [
       { with: 'sl_luohan', name: '金刚合击', text: '你罗汉拳刚猛，韦陀掌沉厚，两般少林拳掌相合，{foe}难以招架。', bonus: 5 }
@@ -81,9 +81,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '拈花点穴', text: '你指如拈花，轻轻拂过{foe}{part}，指力一透，对手气血立时滞住。',
-        mp: 50, cd: 2, hits: 0, dmg: [10, 10], acc: 0.8, fx: [{ kind: 'busy', rounds: 2 }, { kind: 'weaken', value: 10, rounds: 2 }] },
+        mp: 20, cd: 3, hits: 1, dmg: [10, 15], acc: 0.8, fx: [{ kind: 'busy', rounds: 2 }, { kind: 'weaken', value: 10, rounds: 2 }] },
       { name: '弹指惊雷', realm: 4, text: '你屈指连弹，指风如惊雷炸响，{foe}{part}接连中招，破绽大露。',
-        mp: 90, cd: 3, hits: 2, dmg: [80, 100], acc: 0.8, fx: [{ kind: 'break', value: 10, rounds: 2 }] }
+        mp: 70, cd: 3, hits: 2, dmg: [150, 190], acc: 0.8, fx: [{ kind: 'break', value: 10, rounds: 2 }] }
     ]
   },
   {
@@ -102,9 +102,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '燃木焚天', text: '你一刀劈出，刀气赤烈如焰，灼上{foe}{part}，衣发俱焦。',
-        mp: 70, cd: 2, hits: 1, dmg: [140, 170], acc: 0.8, fx: [{ kind: 'burn', value: 20, rounds: 3 }] },
+        mp: 70, cd: 2, hits: 1, dmg: [170, 205], acc: 0.8, fx: [{ kind: 'burn', value: 20, rounds: 3 }] },
       { name: '焚木成灰', realm: 4, text: '你连挥数刀，刀气交织如火网，{foe}{part}无处可避，皮肉为之焦灼。',
-        mp: 100, cd: 3, hits: 2, dmg: [70, 90], acc: 0.78, fx: [{ kind: 'burn', value: 15, rounds: 2 }, { kind: 'break', value: 8, rounds: 2 }] }
+        mp: 70, cd: 3, hits: 2, dmg: [145, 185], acc: 0.78, fx: [{ kind: 'burn', value: 15, rounds: 2 }, { kind: 'break', value: 8, rounds: 2 }] }
     ]
   },
   {
@@ -123,9 +123,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '疯魔狂啸', text: '你杖走颠狂，一声狂啸，杖影乱舞，{foe}心神一乱，{part}已中一杖。',
-        mp: 60, cd: 2, hits: 1, dmg: [110, 140], acc: 0.8, fx: [{ kind: 'fear', value: 18 }] },
+        mp: 55, cd: 2, hits: 1, dmg: [145, 185], acc: 0.8, fx: [{ kind: 'fear', value: 18 }] },
       { name: '一杖擎天', realm: 4, text: '你举杖擎天，重重劈落，杖风扫过{foe}{part}，打得对手门户大开。',
-        mp: 90, cd: 3, hits: 2, dmg: [70, 90], acc: 0.78, fx: [{ kind: 'break', value: 10, rounds: 2 }] }
+        mp: 65, cd: 3, hits: 2, dmg: [115, 150], acc: 0.78, fx: [{ kind: 'break', value: 10, rounds: 2 }] }
     ]
   },
   {

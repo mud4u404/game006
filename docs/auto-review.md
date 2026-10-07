@@ -22,7 +22,7 @@
    - 运行 `git fetch origin`。
    - 运行 `npm ci`。
 2. 读 `docs/charter.md`（宪章）、`docs/decisions.md`、`AGENTS.md`、`docs/content-guide.md`、`docs/story.md` 第二节和第六节。
-3. 本地验证用 `npm run check`、`npm run build`、`npm run smoke`。环境里已经装好 Chromium，**不要**运行 `playwright install`。
+3. 本地验证用 `npm run check`、`npm run build`、`npm run smoke`。环境里已经装好 Chromium，**不要**运行 `playwright install`。武功包的数值超出平衡区间时，运行 `npm run retune` 统一调好，放进当天的精修 PR；调数只改数，不改字。
 4. 先估一下今天有多少事：
    - 第一节：看「上次审到的提交」之后 main 上有没有新合并的内容。上次审到哪里，见 Issue #16「【记录】每日一审」最新一条评论里的 `审到 <提交号>`；没有评论时，以正文里的为准。
    - 第二节、第三节：看有没有开着的 PR。
