@@ -15,7 +15,65 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: 类型检查与测试（含内容校验）
+      - name: 类型检查与测试（含内容校验、文风与剧透检查）
         run: npm run check
       - name: 打包
         run: npm run build
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: 安装无头浏览器
+        run: npx playwright install --with-deps chromium
+      - name: 冒烟测试：从标题画面一路玩到首领战
+        run: npm run smoke
+
+  # 只新增内容包的 PR，检查全部通过后自动合并，不需要人或 Claude 介入。
+  # 规则见 docs/auto-review.md。改动了其他文件的 PR 不会自动合并，留给项目负责人。
+  automerge:
+    needs: [check, smoke]
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !contains(github.event.pull_request.labels.*.name, '暂缓合并')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: 判断是不是只新增了内容
+        id: scope
+        run: |
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | "\(.status) \(.deletions) \(.filename)"')
+          ok=true
+          [ -n "$files" ] || ok=false
+          while read -r status deletions file; do
+            [ -n "$file" ] || continue
+            case "$status:$file" in
+              added:src/content/packs/*.ts) ;;
+              modified:tests/forbidden-names.ts) [ "$deletions" = "0" ] || ok=false ;;
+              *) ok=false ;;
+            esac
+            echo "$status $file"
+          done <<< "$files"
+          echo "content_only=$ok" >> "$GITHUB_OUTPUT"
+          echo "只新增内容：$ok"
+      - name: 合并
+        if: steps.scope.outputs.content_only == 'true'
+        run: gh pr merge "$PR" --repo "$REPO" --merge
+      - name: 部署试玩网址
+        # 用 GITHUB_TOKEN 合并不会触发 main 上的推送事件，这里手动启动部署
+        if: steps.scope.outputs.content_only == 'true'
+        run: gh workflow run pages.yml --repo "$REPO" --ref main
