@@ -47,6 +47,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
       actions: write
     env:
       GH_TOKEN: ${{ github.token }}
@@ -73,6 +74,16 @@ jobs:
       - name: 合并
         if: steps.scope.outputs.content_only == 'true'
         run: gh pr merge "$PR" --repo "$REPO" --merge
+      - name: 关闭对应的 Issue
+        # 机器人合并时，GitHub 不会按「Closes #编号」自动关闭 Issue，这里补上。
+        # 不关的话，协作者的 wait-for-work 会把它当成还没做的任务。
+        if: steps.scope.outputs.content_only == 'true'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          for n in $(grep -oE '\[#[0-9]+\]' <<< "$TITLE" | tr -dc '0-9\n'); do
+            gh issue close "$n" --repo "$REPO" --reason completed --comment "已由 #$PR 完成，检查通过后自动合并。" || true
+          done
       - name: 部署试玩网址
         # 用 GITHUB_TOKEN 合并不会触发 main 上的推送事件，这里手动启动部署
         if: steps.scope.outputs.content_only == 'true'

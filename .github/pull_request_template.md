@@ -19,4 +19,5 @@ Closes #
 - [ ] `npm run check` 通过
 - [ ] `npm run build` 通过
 - [ ] 只改了 Issue 允许的文件
+- [ ] 符合 `docs/charter.md`（宪章），尤其是任务质量和不剧透
 - [ ] 在浏览器里亲自走过一遍
