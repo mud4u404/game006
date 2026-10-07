@@ -2,9 +2,11 @@ name: CI
 
 # 每次推送都跑检查。协作者只需要推送分支，不用自己建 PR：
 # 分支名形如 <工具名>/<Issue 编号>-<英文>，open-pr 会按 Issue 自动建 PR；
-# 只新增内容包的，检查全部通过后由 automerge 自动合并。规则见 docs/auto-review.md。
+# 只新增内容包的（或「修订」任务点名的内容包），检查全部通过后由 automerge 自动合并。
+# 分支上的检查测的是「合进最新 main 以后」的样子；自动合并后再把 main 重测一遍。规则见 docs/auto-review.md。
 on:
   push:
+    branches: ['**']
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 合入最新 main，测的是合并以后的样子
+        if: github.ref != 'refs/heads/main'
+        run: |
+          git config user.name ci && git config user.email ci@localhost
+          git merge --no-edit origin/main || { echo "::error::和 main 有冲突，先合入最新的 main 并解决冲突再推送"; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -32,6 +41,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 合入最新 main，测的是合并以后的样子
+        if: github.ref != 'refs/heads/main'
+        run: |
+          git config user.name ci && git config user.email ci@localhost
+          git merge --no-edit origin/main || { echo "::error::和 main 有冲突，先合入最新的 main 并解决冲突再推送"; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -98,7 +114,20 @@ jobs:
             fi
           fi
           if [ -z "$pr" ]; then
-            gh issue comment "$n" --repo "$REPO" --body "分支 \`$BRANCH\` 已推送，但 CI 没能自动创建 PR。多半是仓库还没允许 GitHub Actions 创建 PR：项目负责人请打开 Settings → Actions → General，在最下面的 Workflow permissions 里勾选「Allow GitHub Actions to create and approve pull requests」并保存，然后重新运行这次 CI。也可以点这里手动创建：https://github.com/$REPO/compare/main...$BRANCH?expand=1"
+            if grep -qi 'no commits between' err.txt; then
+              echo "分支和 main 没有差别，不建 PR。"
+              exit 0
+            fi
+            if grep -qi 'not permitted to create' err.txt; then
+              why="仓库还没允许 GitHub Actions 创建 PR。项目负责人请打开 Settings → Actions → General，在最下面的 Workflow permissions 里勾选「Allow GitHub Actions to create and approve pull requests」并保存，然后重新运行这次 CI。"
+            else
+              why="错误信息：$(head -c 300 err.txt)"
+            fi
+            mark="<!-- open-pr:$BRANCH -->"
+            if ! gh issue view "$n" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$mark"; then
+              gh issue comment "$n" --repo "$REPO" --body "$mark
+          分支 \`$BRANCH\` 已推送，但 CI 没能自动创建 PR。$why 也可以点这里手动创建：https://github.com/$REPO/compare/main...$BRANCH?expand=1"
+            fi
             exit 1
           fi
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
@@ -122,11 +151,17 @@ jobs:
       REPO: ${{ github.repository }}
       BRANCH: ${{ github.ref_name }}
     steps:
-      - name: 判断是不是只新增了内容
+      - name: 判断是不是只动了内容
         id: scope
         run: |
           held=$(gh pr view "$PR" --repo "$REPO" --json isDraft,labels --jq '.isDraft or any(.labels[]; .name == "暂缓合并")')
           if [ "$held" = "true" ]; then echo "草稿或带「暂缓合并」标签，不自动合并。"; echo "content_only=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # 「修订」任务：Issue 正文「## 允许修改的文件」里点名的内容包，可以修改
+          allowed=""
+          if [ "$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq 'any(.labels[]; .name == "修订")')" = "true" ]; then
+            allowed=$(gh issue view "$ISSUE" --repo "$REPO" --json body --jq .body | sed -n '/^## 允许修改的文件/,/^## [^允]/p' | grep -oE 'src/content/packs/[A-Za-z0-9_.-]+[.]ts' | sort -u)
+            echo "修订任务，允许修改：$allowed"
+          fi
           files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | "\(.status) \(.deletions) \(.filename)"')
           ok=true
           [ -n "$files" ] || ok=false
@@ -134,13 +169,14 @@ jobs:
             [ -n "$file" ] || continue
             case "$status:$file" in
               added:src/content/packs/*.ts) ;;
+              modified:src/content/packs/*.ts) grep -qxF "$file" <<< "$allowed" || ok=false ;;
               modified:tests/forbidden-names.ts) [ "$deletions" = "0" ] || ok=false ;;
               *) ok=false ;;
             esac
             echo "$status $file"
           done <<< "$files"
           echo "content_only=$ok" >> "$GITHUB_OUTPUT"
-          echo "只新增内容：$ok"
+          echo "只动了内容：$ok"
       - name: 合并
         if: steps.scope.outputs.content_only == 'true'
         # 只合并检查过的这一个提交；期间又有推送，就留给下一轮 CI
@@ -152,7 +188,9 @@ jobs:
         run: |
           gh issue close "$ISSUE" --repo "$REPO" --reason completed --comment "已由 #$PR 完成，检查通过后自动合并。" || true
           gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" || true
-      - name: 部署试玩网址
-        # 用 GITHUB_TOKEN 合并不会触发 main 上的推送事件，这里手动启动部署
+      - name: 部署试玩网址，并重测 main
+        # 用 GITHUB_TOKEN 合并不会触发 main 上的推送事件，这里手动启动部署和 main 的检查
         if: steps.scope.outputs.content_only == 'true'
-        run: gh workflow run pages.yml --repo "$REPO" --ref main
+        run: |
+          gh workflow run pages.yml --repo "$REPO" --ref main
+          gh workflow run ci.yml --repo "$REPO" --ref main

@@ -356,6 +356,22 @@ describe('文字', () => {
   });
 });
 
+describe('内容包只是数据', () => {
+  // 内容包能自动合并，所以只许引用数据格式，不许引用引擎、界面或改全局状态
+  const sources = import.meta.glob<string>('../src/content/packs/*.ts', { query: '?raw', import: 'default', eager: true });
+  it('只从 ../types 引用类型', () => {
+    const errs: string[] = [];
+    for (const [path, src] of Object.entries(sources)) {
+      const file = path.split('/').pop();
+      for (const m of src.matchAll(/^\s*(import|export)\b[^;]*?from\s*['"]([^'"]+)['"]/gm)) {
+        if (m[2] !== '../types' || !/^\s*import\s+type\b/.test(m[0])) errs.push(`${file}：${m[0].trim().slice(0, 60)}（只能写 import type … from '../types'）`);
+      }
+      if (/\bimport\s*\(|\brequire\s*\(/.test(src)) errs.push(`${file}：不能动态引用模块`);
+    }
+    report(errs);
+  });
+});
+
 describe('文风与剧透', () => {
   const packs = import.meta.glob<{ default: ContentPack }>('../src/content/packs/*.ts', { eager: true });
   const textsOf = (x: unknown): string[] => {
