@@ -9,7 +9,7 @@
   --t-red-bg:#FBE7E3; --t-red:#B4432B; --t-jade-bg:#E1F1EC; --t-jade:#0F7A63; --t-amber-bg:#FDEBD3; --t-amber:#94560E;
   --t-gray-bg:#ECEEF1; --t-gray:#5B636A; --t-blue-bg:#DCE5F8; --t-blue:#2E5BCE; --t-purple-bg:#ECE5F8; --t-purple:#6B4FB8;
   --g-fan:#6B7177; --g-liang:#2F8A4C; --g-shang:#2E5BCE; --g-jue:#7A4BC2; --g-shen:#A06D08; --g-jin:#A3261A;
-  --shadow:0 -6px 20px rgba(20,23,26,.06); --lift:0 8px 24px rgba(20,23,26,.16); --scrim:rgba(20,23,26,.42);
+  --desk:#D7DCE0; --shadow:0 -6px 20px rgba(20,23,26,.06); --lift:0 8px 24px rgba(20,23,26,.16); --scrim:rgba(20,23,26,.42);
   --ult-bg:rgba(241,243,244,.95); --ult-ink:#14171A;
   --f-sans:'Noto Sans SC','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
   --f-serif:'Noto Serif SC','Songti SC','STSong',serif;
@@ -28,7 +28,7 @@
     --t-red-bg:#3B1E18; --t-red:#FF9A85; --t-jade-bg:#143A31; --t-jade:#5FD3B2; --t-amber-bg:#33260E; --t-amber:#F2C46B;
     --t-gray-bg:#262C30; --t-gray:#AEB6BD; --t-blue-bg:#1D2949; --t-blue:#93B0FF; --t-purple-bg:#2B2140; --t-purple:#C3A6F5;
     --g-fan:#9AA0A6; --g-liang:#5CC27E; --g-shang:#86A6FF; --g-jue:#B592F0; --g-shen:#E5B64A; --g-jin:#FF7A66;
-    --shadow:0 -6px 20px rgba(0,0,0,.35); --lift:0 8px 24px rgba(0,0,0,.5); --scrim:rgba(0,0,0,.6);
+    --desk:#050607; --shadow:0 -6px 20px rgba(0,0,0,.35); --lift:0 8px 24px rgba(0,0,0,.5); --scrim:rgba(0,0,0,.6);
     --ult-bg:rgba(14,17,19,.95); --ult-ink:#ECEFF1;
     color-scheme:dark;
   }
@@ -43,7 +43,7 @@
   --t-red-bg:#3B1E18; --t-red:#FF9A85; --t-jade-bg:#143A31; --t-jade:#5FD3B2; --t-amber-bg:#33260E; --t-amber:#F2C46B;
   --t-gray-bg:#262C30; --t-gray:#AEB6BD; --t-blue-bg:#1D2949; --t-blue:#93B0FF; --t-purple-bg:#2B2140; --t-purple:#C3A6F5;
   --g-fan:#9AA0A6; --g-liang:#5CC27E; --g-shang:#86A6FF; --g-jue:#B592F0; --g-shen:#E5B64A; --g-jin:#FF7A66;
-  --shadow:0 -6px 20px rgba(0,0,0,.35); --lift:0 8px 24px rgba(0,0,0,.5); --scrim:rgba(0,0,0,.6);
+  --desk:#050607; --shadow:0 -6px 20px rgba(0,0,0,.35); --lift:0 8px 24px rgba(0,0,0,.5); --scrim:rgba(0,0,0,.6);
   --ult-bg:rgba(14,17,19,.95); --ult-ink:#ECEFF1;
   color-scheme:dark;
 }
@@ -52,7 +52,12 @@
 [hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--fg);font-family:var(--f-sans);font-size:15px;line-height:1.5;overflow:hidden;-webkit-tap-highlight-color:transparent}
-#app{position:relative;max-width:440px;height:100%;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+#app{position:relative;max-width:440px;height:100%;margin:0 auto;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;container-type:inline-size}
+/* 电脑、平板等宽屏上，画面收成一台手机的比例居中显示，不再拉成整屏高的长条 */
+@media (min-width:600px) and (min-height:560px){
+  body{display:flex;align-items:center;justify-content:center;background:var(--desk)}
+  #app{--fh:min(calc(100dvh - 48px),880px);flex-shrink:0;height:var(--fh);width:calc(var(--fh) * 390 / 844);max-width:none;margin:0;border-radius:28px;box-shadow:0 0 0 1px var(--line),0 24px 64px rgba(0,0,0,.22)}
+}
 @media (min-width:480px){#app{box-shadow:0 0 0 1px var(--line)}}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -303,7 +308,7 @@ svg{display:block}
 .ult-layer{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--ult-bg);overflow:hidden}
 .ult-layer small{font-size:13px;letter-spacing:6px;color:var(--muted);font-weight:700}
 .ult-w{position:relative}
-.ult-word{font-family:var(--f-brush);font-size:min(44vw,180px);line-height:1;color:var(--ult-ink)}
+.ult-word{font-family:var(--f-brush);font-size:min(44vw,180px);font-size:min(44cqw,180px);line-height:1;color:var(--ult-ink)}
 .ult-seal{position:absolute;right:-14px;bottom:-4px;padding:4px 3px;border:2px solid var(--danger-fill);border-radius:3px;color:var(--danger-fill);font-family:var(--f-serif);font-weight:900;font-size:15px;line-height:1.1;writing-mode:vertical-rl;opacity:0}
 .ult-slash{position:absolute;left:-10%;right:-10%;top:54%;height:3px;background:var(--danger-fill);transform:scaleX(0) rotate(-5deg);transform-origin:left center}
 .ult-layer.go small{animation:fade .3s both}
@@ -337,7 +342,7 @@ svg{display:block}
 .title{position:absolute;inset:0;background:var(--night);color:var(--night-fg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;overflow:hidden}
 .rain{position:absolute;inset:0;pointer-events:none}
 .rain i{position:absolute;top:-80px;width:1px;height:70px;background:var(--night-fg);opacity:.16;animation:fall linear infinite}
-.t-word{position:relative;white-space:nowrap;font-family:var(--f-brush);font-size:min(20vw,96px);line-height:1.05;letter-spacing:4px;animation:brush 1.4s cubic-bezier(.2,.7,.2,1) both}
+.t-word{position:relative;white-space:nowrap;font-family:var(--f-brush);font-size:min(20vw,96px);font-size:min(20cqw,96px);line-height:1.05;letter-spacing:4px;animation:brush 1.4s cubic-bezier(.2,.7,.2,1) both}
 .t-verse{position:relative;font-family:var(--f-serif);font-size:14px;color:var(--night-muted);letter-spacing:3px;text-align:center}
 .t-btns{position:relative;width:min(320px,100%);display:flex;flex-direction:column;gap:10px;margin-top:28px}
 .t-btn{min-height:52px;padding:8px 16px;border-radius:14px;background:var(--night-fg);color:var(--night);font-size:16px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
@@ -364,7 +369,7 @@ svg{display:block}
 .namepicks button{min-height:44px;padding:0 16px;border-radius:22px;background:var(--chip);font-size:15px}
 .chap{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;animation:fade .4s}
 .chap small{font-size:13px;letter-spacing:8px;color:var(--muted);font-weight:700}
-.chap .cw{font-family:var(--f-brush);font-size:min(30vw,140px);line-height:1.1;animation:brush .9s cubic-bezier(.2,.7,.2,1) both}
+.chap .cw{font-family:var(--f-brush);font-size:min(30vw,140px);font-size:min(30cqw,140px);line-height:1.1;animation:brush .9s cubic-bezier(.2,.7,.2,1) both}
 .chap p{margin-top:18px;font-size:13px;color:var(--muted)}
 .rtip{padding:8px 12px;border-radius:10px;background:var(--info-soft);color:var(--info);font-size:13px;line-height:1.6}
 @keyframes fall{to{transform:translateY(130vh)}}
