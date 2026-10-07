@@ -5,7 +5,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'hanjiang', name: '寒江剑法', grade: '良品', category: '剑法', school: '寒江', nature: '柔', reach: '短',
     desc: '寒江一脉的入门剑法。剑势如江上寒风，轻灵迅疾，练到深处，一剑可断流水。',
-    learn: '江伯自幼传授',
+    learn: '江伯自幼传授', teach: '奇遇',
     moves: [
       { name: '孤帆远影', text: '剑尖斜挑，一点寒光直奔{foe}{part}，去势悠远，如孤帆没入天际。' },
       { name: '江枫渔火', text: '剑锋连点三点星芒，忽明忽暗，罩住{foe}{part}。' },
@@ -42,17 +42,18 @@ const SKILLS: SkillDef[] = [
   {
     id: 'xinfa', name: '寒江心法', grade: '良品', category: '内功', school: '寒江', nature: '阴',
     desc: '寒江一脉的内功根基，内力绵长，运功蓄力时尤见功效。',
-    learn: '江伯自幼传授'
+    learn: '江伯自幼传授', teach: '奇遇'
   },
   {
     id: 'taxue', name: '踏雪无痕', grade: '良品', category: '轻功', school: '寒江', nature: '中正',
     desc: '身轻如燕，踏雪无痕。境界越高，越容易闪开对手的攻击。',
-    learn: '江伯自幼传授'
+    learn: '江伯自幼传授', teach: '奇遇'
   },
   {
     id: 'duanshui', name: '断水', grade: '绝品', category: '绝技', school: '寒江', nature: '刚',
     desc: '寒江剑法的终极一式。传说练至化境，一剑横江，流水为之一断。',
     learn: '江伯临终所传',
+    teach: '奇遇', requires: [{ skill: 'hanjiang', realm: 1 }],
     ult: { title: '寒江剑法 · 绝招', text: '你长剑一收，凝气于锋，一剑横斩而出——剑气如匹练横江，竟将眼前的雨幕生生斩断！', dmg: [520, 600] }
   }
 ];

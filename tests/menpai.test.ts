@@ -1,12 +1,14 @@
 /**
- * 门派打法校验：门派之间打法不同，同一门派的武功合起来是一套打法。规则见 docs/menpai.md 第四节。
+ * 门派打法与师承校验：门派之间打法不同，同一门派的武功合起来是一套打法，并且是一棵有前置、有师承的武学树。
+ * 规则见 docs/menpai.md 第四节、第七节。
  * 看每个门派的体检结果：npm run menpai
  */
 import { describe, expect, it } from 'vitest';
 import { SKILLS } from '../src/content';
-import { GRADES, JIANGHU_RULE, NATURES, OUTER, SCHOOLS, SCHOOL_STYLE, STYLES, STYLE_PENDING, STYLE_RING, styleBeats } from '../src/content/skills';
+import { GRADES, JIANGHU_RULE, NATURES, OUTER, REALMS, ROOTED_CATS, ROOT_ANY, SCHOOLS, SCHOOL_STYLE, STYLES, STYLE_PENDING, STYLE_RING, TEACH_GRADES, styleBeats } from '../src/content/skills';
+import { rootsOn } from '../src/engine/shicheng';
 import type { Style } from '../src/content/skills';
-import type { FxDef, FxKind, SkillDef } from '../src/content/types';
+import type { AttrKey, FxDef, FxKind, SkillDef } from '../src/content/types';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const FX_KINDS = Object.keys({ busy: 0, bleed: 0, poison: 0, burn: 0, chill: 0, weaken: 0, break: 0, disarm: 0, fear: 0, drain: 0, guard: 0, haste: 0, heal: 0, rage: 0 } satisfies Record<FxKind, number>) as FxKind[];
@@ -41,6 +43,7 @@ export function styleProblems(school: string): string[] {
     for (const k of skills) {
       if (gradeRank(k.grade) > gradeRank(JIANGHU_RULE.maxGrade)) errs.push(`${k.name}：江湖散学最高${JIANGHU_RULE.maxGrade}，这里是${k.grade}`);
       for (const x of fxOf(k)) errs.push(`${x.where}：江湖散学不带效果（${x.f.kind}）`);
+      if (k.teach || k.roots) errs.push(`${k.name}：江湖散学谁都能学、不挑内功，不写 teach、roots`);
     }
     return errs;
   }
@@ -62,6 +65,42 @@ export function styleProblems(school: string): string[] {
   const core = skills.filter(k => OUTER.includes(k.category) || k.category === '内功');
   const inTend = core.filter(k => pos.natures.includes(k.nature)).length;
   if (core.length && inTend * 3 < core.length * 2) errs.push(`拳脚、兵刃、内功共 ${core.length} 门，性质落在倾向（${pos.natures.join('、')}）里的只有 ${inTend} 门，至少三分之二`);
+  errs.push(...shichengProblems(school));
+  return errs;
+}
+
+const byId = (id: string): SkillDef | undefined => SKILLS.find(k => k.id === id);
+
+/** 一门派的师承问题：传授、前置、内功为根、武学树（docs/menpai.md 第七节） */
+function shichengProblems(school: string): string[] {
+  const skills = SKILLS.filter(k => k.school === school);
+  const errs: string[] = [];
+  for (const k of skills) {
+    if (!k.teach) { errs.push(`${k.name}：没写 teach（入门、外门、内门、真传、奇遇）`); continue; }
+    if (gradeRank(k.grade) >= gradeRank('绝品')) {
+      const same = (k.requires || []).some(r => byId(r.skill)?.school === school);
+      if (!same && !(k.teach === '奇遇' && k.needAttr)) errs.push(`${k.name}：${k.grade}要有同门的前置武学（requires）；奇遇武功可以改用属性门槛（needAttr）`);
+    }
+    if (k.teach === '内门' || k.teach === '真传') {
+      // 顺着前置往下找，要能找到本门的入门或外门武功
+      const seen = new Set<string>(), stack = [k.id];
+      let ok = false;
+      while (stack.length && !ok) {
+        const cur = byId(stack.pop()!);
+        if (!cur || seen.has(cur.id)) continue;
+        seen.add(cur.id);
+        for (const r of cur.requires || []) {
+          const d = byId(r.skill);
+          if (d?.school === school && (d.teach === '入门' || d.teach === '外门')) ok = true;
+          else if (d?.school === school) stack.push(d.id);
+        }
+      }
+      if (!ok) errs.push(`${k.name}：${k.teach}武功顺着前置往下，找不到本门的入门或外门武功，武学树断了`);
+    }
+    const usesRoot = ROOTED_CATS.includes(k.category) && (k.performs?.length || k.ult || k.combos?.length);
+    if (usesRoot && !k.roots?.includes(ROOT_ANY) && !SKILLS.some(n => n.category === '内功' && gradeRank(n.grade) <= gradeRank('上品') && rootsOn(k, n)))
+      errs.push(`${k.name}：内功为根，要有一门上品以下、能给它打底的内功（本门内功，或写进 roots），否则绝招没人使得出`);
+  }
   return errs;
 }
 
@@ -134,6 +173,38 @@ describe('门派打法', () => {
     expect(errs).toEqual([]);
   });
 
+  it('师承与前置的数据本身没有错（所有武功，包括待改造的门派）', () => {
+    const errs: string[] = [];
+    const ATTRS: AttrKey[] = ['体魄', '根骨', '身法', '悟性', '胆魄'];
+    for (const k of SKILLS) {
+      const w = `${k.school} ${k.name}`;
+      if (k.teach && !TEACH_GRADES[k.teach].includes(k.grade)) errs.push(`${w}：${k.teach}武功只能是${TEACH_GRADES[k.teach].join('、')}，这里是${k.grade}`);
+      for (const r of k.requires || []) {
+        const d = byId(r.skill);
+        if (!d) { errs.push(`${w}：前置武学「${r.skill}」不存在`); continue; }
+        if (d.id === k.id) errs.push(`${w}：前置不能是自己`);
+        if (!Number.isInteger(r.realm) || r.realm < 0 || r.realm >= REALMS.length) errs.push(`${w}：前置境界要是 0 到 ${REALMS.length - 1} 的整数`);
+        if (gradeRank(d.grade) > gradeRank(k.grade)) errs.push(`${w}：前置「${d.name}」（${d.grade}）比它本身的品级还高`);
+      }
+      for (const [a, v] of Object.entries(k.needAttr || {})) if (!ATTRS.includes(a as AttrKey) || !v || v < 1 || v > 99) errs.push(`${w}：属性门槛「${a}: ${v}」写错了`);
+      for (const r of k.roots || []) {
+        if (r === ROOT_ANY) { if (k.teach !== '奇遇' || !k.requires?.length) errs.push(`${w}：不挑内功（roots: 任意）只给有前置的奇遇武功`); continue; }
+        if (byId(r)?.category !== '内功') errs.push(`${w}：roots 里的「${r}」不是内功`);
+      }
+    }
+    // 前置不能绕成圈
+    const state = new Map<string, number>();
+    const visit = (id: string, path: string[]): void => {
+      if (state.get(id) === 2) return;
+      if (state.get(id) === 1) { errs.push(`前置武学绕成了圈：${[...path, id].join(' → ')}`); return; }
+      state.set(id, 1);
+      for (const r of byId(id)?.requires || []) visit(r.skill, [...path, id]);
+      state.set(id, 2);
+    };
+    for (const k of SKILLS) visit(k.id, []);
+    expect(errs).toEqual([]);
+  });
+
   it('机器把关本身管用：故意写错的门派会被拦下', () => {
     const fake: SkillDef = {
       id: 'fake', name: '假掌', grade: '上品', category: '掌法', school: '铁掌帮', nature: '阴', reach: '徒手', desc: '', learn: '',
@@ -147,6 +218,11 @@ describe('门派打法', () => {
       const asQuanzhen = { ...fake, school: '全真' };
       SKILLS[SKILLS.length - 1] = asQuanzhen;
       expect(styleProblems('全真').join('\n')).toContain('三连击');
+      const noTree = { ...fake, school: '全真', grade: '绝品', teach: '真传', hits: 1 } as SkillDef;
+      SKILLS[SKILLS.length - 1] = noTree;
+      const qz = styleProblems('全真').join('\n');
+      expect(qz).toContain('同门的前置');
+      expect(qz).toContain('武学树断了');
     } finally { SKILLS.pop(); }
   });
 });

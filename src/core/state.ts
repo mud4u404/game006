@@ -1,4 +1,4 @@
-import type { AttrKey, FeedTag, SkillId } from '../content/types';
+import type { AttrKey, FeedTag, SectRank, SkillId } from '../content/types';
 import type { Loadout } from '../engine/wuxue';
 import { clearSaveSafely, readSave, writeSave } from './save';
 
@@ -35,6 +35,10 @@ export interface GameState {
   skills: Partial<Record<SkillId, SkillProg>>;
   /** 搭配：各槽位放的武功，见 docs/wuxue.md */
   loadout: Loadout;
+  /** 师门：同一时间只有一个，见 docs/menpai.md 第七节 */
+  sect?: { school: string; rank: SectRank };
+  /** 离开过的师门 */
+  pastSects?: { school: string; how: '出师' | '叛门' }[];
   feed: FeedEntry[];
   /** 战后说书，供说书人复述 */
   story: string;

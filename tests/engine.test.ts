@@ -6,6 +6,9 @@ import { run, test as cond } from '../src/engine/dsl';
 import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
 import type { NpcDef } from '../src/content/types';
 import { autoSlot } from '../src/engine/wuxue';
+import { canLearn, canPerform, realmCap } from '../src/engine/shicheng';
+import { gainProf, learnSkill } from '../src/engine/growth';
+import { SKILLS } from '../src/content';
 import type { SkillDef } from '../src/content/types';
 import { cheng, huohou, odds, respOptions } from '../src/engine/formulas';
 
@@ -212,5 +215,96 @@ describe('内容包合并', () => {
     expect(a.exits).toEqual([['北', 'b']]);
     expect(a.npcs).toEqual(['n1']);
     expect(b.objs).toEqual([{ id: 'o1', if: { flag: 'f' } }]);
+  });
+});
+
+describe('师承与前置', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+  const fake = (o: Partial<SkillDef>): SkillDef => ({ id: 'x', name: '某功', grade: '上品', category: '剑法', school: '少林', nature: '刚', desc: '', learn: '', ...o } as SkillDef);
+
+  it('门派武功要拜师、地位够；前置、属性不够学不成', () => {
+    const k = fake({ teach: '外门', requires: [{ skill: 'hanjiang', realm: 3 }], needAttr: { 悟性: 30 } });
+    expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('拜入少林') });
+    S.sect = { school: '少林', rank: '记名' };
+    expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('外门弟子') });
+    S.sect.rank = '外门';
+    expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('寒江剑法') });
+    S.skills.hanjiang = { r: 3, p: 0 };
+    expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('悟性') });
+    S.attr.悟性 = 30;
+    expect(canLearn(S, k).ok).toBe(true);
+  });
+
+  it('门规：严门不兼修别派；宽门禁修的打法学不了；江湖散学都能学', () => {
+    const wudang = fake({ school: '武当', teach: '奇遇' });
+    const xingxiu = fake({ school: '星宿', teach: '奇遇' });
+    S.sect = { school: '少林', rank: '内门' };
+    expect(canLearn(S, wudang)).toMatchObject({ ok: false, why: expect.stringContaining('门规森严') });
+    expect(canLearn(S, SKILLS.find(k => k.id === 'jinghong')!).ok).toBe(true);
+    S.sect = { school: '丐帮', rank: '内门' };
+    expect(canLearn(S, wudang).ok).toBe(true);
+    expect(canLearn(S, xingxiu)).toMatchObject({ ok: false, why: expect.stringContaining('禁修阴毒') });
+  });
+
+  it('学不成时不学，只记一条见闻；条件 canLearn 跟着变', () => {
+    delete S.skills.duanshui;
+    S.skills.hanjiang = { r: 0, p: 0 };
+    expect(cond({ canLearn: 'duanshui' })).toBe(false);
+    expect(learnSkill('duanshui')).toEqual([]);
+    expect(S.skills.duanshui).toBeUndefined();
+    expect(S.feed[0].x).toContain('根基未到');
+    S.skills.hanjiang = { r: 1, p: 0 };
+    expect(cond({ canLearn: 'duanshui' })).toBe(true);
+    expect(learnSkill('duanshui')).toEqual(['习得「断水」']);
+  });
+
+  it('拜师、升地位只升不降，身在别派时拜不了；出师、叛门都记下来', () => {
+    run([{ type: 'sect', school: '少林', rank: '外门' }]);
+    expect(cond({ sect: { school: '少林' } })).toBe(true);
+    expect(cond({ sect: { school: '少林', rank: '内门' } })).toBe(false);
+    run([{ type: 'sect', school: '少林', rank: '记名' }]);
+    run([{ type: 'sect', school: '武当', rank: '真传' }]);
+    expect(S.sect).toEqual({ school: '少林', rank: '外门' });
+    run([{ type: 'leaveSect', how: '叛门' }]);
+    expect(S.sect).toBeUndefined();
+    expect(S.pastSects).toEqual([{ school: '少林', how: '叛门' }]);
+    run([{ type: 'sect', school: '武当', rank: '记名' }]);
+    expect(S.sect).toEqual({ school: '武当', rank: '记名' });
+  });
+
+  it('内功为根：绝招要本门内功来使，江湖散学不挑', () => {
+    const shaolin = fake({});
+    expect(canPerform(S, SKILLS.find(k => k.id === 'hanjiang')!)).toBe(true);
+    expect(canPerform(S, SKILLS.find(k => k.id === 'jinghong')!)).toBe(true);
+    expect(canPerform(S, shaolin)).toBe(false);
+    expect(canPerform(S, { ...shaolin, roots: ['xinfa'] })).toBe(true);
+    expect(canPerform({ loadout: {} }, SKILLS.find(k => k.id === 'hanjiang')!)).toBe(false);
+  });
+
+  it('外功不能比内功高出一重以上；到了瓶颈熟练照涨，内功突破后跟着突破', () => {
+    S.skills.xinfa = { r: 1, p: 0 };
+    S.skills.hanjiang = { r: 2, p: 0 };
+    const hj = SKILLS.find(k => k.id === 'hanjiang')!;
+    expect(realmCap(S, hj)).toBe(2);
+    expect(realmCap(S, fake({}))).toBe(1);
+    expect(gainProf('hanjiang', 1300)).toEqual([]);
+    expect(S.skills.hanjiang).toEqual({ r: 2, p: 1300 });
+    expect(S.feed[0].x).toContain('瓶颈');
+    const outs = gainProf('xinfa', 600);
+    expect(outs).toContain('「寒江心法」突破至「融会贯通」');
+    expect(outs).toContain('「寒江剑法」突破至「炉火纯青」');
+    expect(S.skills.hanjiang).toEqual({ r: 3, p: 100 });
+  });
+
+  it('叛出的师门，武功境界封顶', () => {
+    const k = fake({ id: 'zz_fake2', category: '内功' });
+    SKILLS.push(k);
+    try {
+      S.skills.zz_fake2 = { r: 4, p: 0 };
+      S.pastSects = [{ school: '少林', how: '叛门' }];
+      expect(realmCap(S, k)).toBe(4);
+      S.pastSects = [{ school: '少林', how: '出师' }];
+      expect(realmCap(S, k)).toBe(8);
+    } finally { SKILLS.pop(); }
   });
 });
