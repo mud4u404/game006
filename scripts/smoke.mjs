@@ -31,6 +31,11 @@ const snap = async name => { if (shots) await p.screenshot({ path: `${shots}/${n
 const log = (...a) => console.log('·', ...a);
 
 await snap('01-title');
+// 标题页的登录入口：登录框必须盖在标题画面上面，点得到、能输入（曾被标题画面挡住，玩家点了没反应）
+await click('[data-act="acctOpen"]');
+await click('#acctName');
+await p.fill('#acctName', '体检');
+await click('[data-act="sheetClose"]');
 await click('[data-act="tGo:new"]');
 await click('[data-act="stPick:0"]');                 // 回想
 for (let i = 0; i < 3; i++) { await click(`[data-act="stPick:${i}"]`); await click('[data-act="stNext"]'); }
