@@ -84,7 +84,7 @@ describe('存档：更新游戏不丢档', () => {
     expect(days[0] > 'jhyy-bak-2026-10-02').toBe(true);
     clearSaveSafely();
     expect(mem.getItem(KEY)).toBeNull();
-    expect(listBackups()[0].label).toBe('重新开始前');
+    expect(listBackups()[0].label).toBe('上次重来或导入之前');
     expect(listBackups()[0].state?.loc).toBe(skipToYangzhou().loc);
   });
 

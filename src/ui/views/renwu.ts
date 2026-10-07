@@ -24,9 +24,16 @@ export function viewRenwu(): string {
   </div></section>
   <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${Object.keys(S.rel).length}</span></div><div class="rows">${rels}</div></section>
   <section class="card here"><div class="sec-h"><h2>存档</h2></div>
-    <p class="muted">进度保存在这台设备的浏览器里。回到标题画面后，可以继续，也可以开始新的江湖。</p>
+    ${saveCardHTML()}
     ${confirmRestart
-      ? `<div class="btnrow"><button class="btn ghost" data-act="restartNo">算了</button><button class="btn warn" data-act="restartYes">清空存档</button></div>`
-      : `<div class="btnrow"><button class="act" data-act="toTitle">回到标题</button><button class="act danger" data-act="restart">清空存档</button></div>`}
+      ? `<p class="muted">清空前会先另存一份，之后在「找回备份」里还能换回来。</p><div class="btnrow"><button class="btn ghost" data-act="restartNo">算了</button><button class="btn warn" data-act="restartYes">清空存档</button></div>`
+      : `<button class="act danger" data-act="restart">清空存档，重新开始</button>`}
   </section>`;
+}
+
+/** 存档一栏的按钮，处理函数在 ui/savecard.ts */
+export function saveCardHTML(): string {
+  return `<p class="muted">进度自动保存在这台设备的浏览器里，每天另留一份备份。换手机、清缓存之前，先导出存档码带走。</p>
+    <div class="btnrow"><button class="act" data-act="saveExport">导出存档码</button><button class="act" data-act="saveImport">导入存档码</button></div>
+    <div class="btnrow"><button class="act" data-act="saveBackups">找回备份</button><button class="act" data-act="toTitle">回到标题</button></div>`;
 }

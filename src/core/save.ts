@@ -13,6 +13,7 @@ import { fits } from '../engine/wuxue';
 import type { Loadout } from '../engine/wuxue';
 import type { Slot } from '../content/types';
 import { newGame, skipToYangzhou, type GameState } from './state';
+import { dateStr } from './time';
 
 export const SAVE_VERSION = 2;
 export const KEY = 'jhyy-save-v2';
@@ -136,16 +137,28 @@ export function savedAt(): number {
   try { return JSON.parse(st()?.getItem(META) ?? '{}').savedAt ?? 0; } catch { return 0; }
 }
 
+/** 把当前存档另存一份，留作「上次替换之前」的备份 */
+function keepCurrent(s: SaveStore): void {
+  const t = s.getItem(KEY);
+  if (t) s.setItem(BAK_RESTART, t);
+}
+
 /** 清空前先另存一份，误点了还能找回 */
 export function clearSaveSafely(): void {
   const s = st();
   if (!s) return;
-  try {
-    const t = s.getItem(KEY);
-    if (t) s.setItem(BAK_RESTART, t);
-    s.removeItem(KEY);
-  } catch { /* 同上 */ }
+  try { keepCurrent(s); s.removeItem(KEY); } catch { /* 同上 */ }
 }
+
+/** 用导入的存档码或备份替换当前进度；当前进度先另存一份 */
+export function replaceSave(state: GameState): void {
+  const s = st();
+  if (s) try { keepCurrent(s); } catch { /* 同上 */ }
+  writeSave(state);
+}
+
+/** 一行看得懂的进度摘要：第一回 · 三月初九 · 沈孤舟 */
+export const summary = (s: GameState): string => `${s.chapter === 0 ? '序章' : '第一回'} · ${dateStr(s)} · 沈${s.name}`;
 
 /** 所有备份，新的在前：重新开始前的那份、每天的、读不出来时另存的 */
 export function listBackups(): { key: string; label: string; state: GameState | null }[] {
@@ -157,7 +170,7 @@ export function listBackups(): { key: string; label: string; state: GameState | 
     if (!t) return [];
     let state: GameState | null = null;
     try { state = migrate(JSON.parse(t)); } catch { /* 读不出来的也列出来，可以导出给维护者 */ }
-    const label = k === BAK_RESTART ? '重新开始前' : k.startsWith(BROKEN) ? '读不出来的旧存档' : k.slice(BAK.length);
+    const label = k === BAK_RESTART ? '上次重来或导入之前' : k.startsWith(BROKEN) ? '读不出来的旧存档' : '每日备份 ' + k.slice(BAK.length + 5);
     return [{ key: k, label, state }];
   });
 }
