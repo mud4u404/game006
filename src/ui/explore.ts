@@ -4,12 +4,13 @@
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { advanceDays, dateStr } from '../core/time';
 import { $, reduceMotion } from '../core/util';
-import { NEWS, room } from '../content';
+import { NEWS, questById, room, skillById } from '../content';
 import type { SkillId, Verb } from '../content/types';
 import { test } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
 import { act, curQuest, enter, hopMin, pathTo, roadText } from '../engine/world';
 import { afterOutcome, closeSheet, openSheet, registerHandlers, render, toast } from './shell';
+import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
 import { showTitle } from './story';
 
@@ -74,8 +75,9 @@ function retreat(days: number): void {
     S.min = 7 * 60 + 10;
     const mpUp = 4 * mul;
     S.mpMax += mpUp; S.mp = S.mpMax; S.hp = S.hpMax;
-    const plan: [SkillId, number][] = [['hanjiang', 60 * mul], ['xinfa', 40 * mul], ['taxue', 20 * mul], ['jinghong', 15 * mul]];
-    const gains = plan.filter(([k]) => S.skills[k]);
+    // 闭关练的是搭配在身上的武功：主手最多，内功次之，轻功、副手再次
+    const plan: [SkillId | undefined, number][] = [[S.loadout.main, 60 * mul], [S.loadout.neigong, 40 * mul], [S.loadout.qinggong, 20 * mul], [S.loadout.off, 15 * mul]];
+    const gains = plan.filter((x): x is [SkillId, number] => !!x[0] && !!S.skills[x[0]]);
     const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
     const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
     const news: string[] = [];
@@ -83,12 +85,12 @@ function retreat(days: number): void {
       news.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     }
     news.slice().reverse().forEach(n => pushFeed('传闻', n));
-    pushFeed('出关', `闭关${label}，内力上限 +${mpUp}，「寒江剑法」熟练 +${60 * mul}。`);
-    const names: Record<string, string> = { hanjiang: '寒江剑法', xinfa: '寒江心法', taxue: '踏雪无痕', jinghong: '惊鸿剑' };
+    const names = (id: SkillId): string => skillById(id)?.name ?? id;
+    pushFeed('出关', `闭关${label}，内力上限 +${mpUp}${gains[0] ? `，「${names(gains[0][0])}」熟练 +${gains[0][1]}` : ''}。`);
     const panel = document.querySelector('#sheetLayer .panel');
     if (panel) panel.innerHTML = `
       <div class="r-h"><span class="tag accent">出关</span><h2>闭关${label}，今日${dateStr(S)}</h2></div>
-      <div class="rewards"><span class="tag accent">内力上限 +${mpUp}</span>${gains.map(([k, v]) => `<span class="tag accent">${names[k]} +${v}</span>`).join('')}${breaks.map(x => `<span class="tag info">${x}</span>`).join('')}</div>
+      <div class="rewards"><span class="tag accent">内力上限 +${mpUp}</span>${gains.map(([k, v]) => `<span class="tag accent">${names(k)} +${v}</span>`).join('')}${breaks.map(x => `<span class="tag info">${x}</span>`).join('')}</div>
       <div class="r-sub">江湖见闻</div>
       <div class="news">${news.map(n => `<div><span class="tag warn">传闻</span><span>${n}</span></div>`).join('')}</div>
       <button class="btn" data-act="sheetClose">出关</button>`;
@@ -105,6 +107,19 @@ registerHandlers({
     const q = curQuest();
     if (q?.to && q.to !== S.loc) travelTo(q.to);
     else toast('就在此处');
+  },
+  questbook: () => { openQuestbook(); },
+  qtrack: v => { if (v) trackQuest(v); },
+  qgo: v => {
+    if (!v) return;
+    const def = questById(v);
+    if (!def) return;
+    const stageIdx = Math.min(S.quests[v] ?? 0, def.stages.length - 1);
+    const to = def.stages[stageIdx].to;
+    if (!to) { toast('此阶段无目的地'); return; }
+    if (to === S.loc) { toast('就在此处'); return; }
+    closeSheet();
+    travelTo(to);
   },
   use: v => {
     if (v !== 'jcy' || (S.items.jcy || 0) < 1 || S.hp >= S.hpMax) return;

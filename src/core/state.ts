@@ -1,4 +1,5 @@
 import type { AttrKey, FeedTag, SkillId } from '../content/types';
+import { defaultLoadout, type Loadout } from '../engine/wuxue';
 
 export interface SkillProg { r: number; p: number }
 export interface FeedEntry { t: FeedTag; x: string; n: number }
@@ -31,6 +32,8 @@ export interface GameState {
   eming: number;
   attr: Record<AttrKey, number>;
   skills: Partial<Record<SkillId, SkillProg>>;
+  /** 搭配：各槽位放的武功，见 docs/wuxue.md */
+  loadout: Loadout;
   feed: FeedEntry[];
   /** 战后说书，供说书人复述 */
   story: string;
@@ -51,6 +54,7 @@ export function newGame(): GameState {
     flags: {}, rel: { jiangbo: '相依为命' }, title: '', xia: 0, eming: 0,
     attr: { 体魄: 13, 根骨: 11, 身法: 14, 悟性: 13, 胆魄: 10 },
     skills: { hanjiang: { r: 1, p: 200 }, xinfa: { r: 1, p: 150 }, taxue: { r: 2, p: 0 } },
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang' },
     feed: [{ t: '传闻', x: '江上这两天来了几条生船，不打鱼，专打听人。', n: 0 }],
     story: '', sel: null, reply: null, tab: 'jianghu'
   };
@@ -66,6 +70,7 @@ export function skipToYangzhou(): GameState {
     flags: { skipped: true }, rel: { liu: '素不相识' }, title: '', xia: 12, eming: 0,
     attr: { ...ATTR0 },
     skills: { hanjiang: { r: 1, p: 340 }, jinghong: { r: 0, p: 80 }, taxue: { r: 2, p: 120 }, xinfa: { r: 1, p: 260 }, duanshui: { r: 0, p: 10 } },
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang', off: 'jinghong', ult: 'duanshui' },
     feed: [
       { t: '出关', x: '闭关七日，内力 +36，「寒江剑法」略有小成。', n: 0 },
       { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮放出悬赏。', n: 0 }
@@ -90,6 +95,7 @@ export function load(): GameState | null {
     const o = JSON.parse(t) as GameState;
     if (!o || o.v !== 2) return null;
     o.eming ??= 0;
+    o.loadout ??= defaultLoadout(o.skills);
     return o;
   } catch { return null; }
 }

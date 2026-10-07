@@ -1,6 +1,7 @@
 import { S, fullName } from '../../core/state';
 import type { AttrKey } from '../../content/types';
 import { npcName } from '../../engine/world';
+import { xiuwei } from '../../engine/wuxue';
 
 const AD: Record<AttrKey, string> = { 体魄: '气血 · 外功', 根骨: '内力 · 硬接', 身法: '轻身 · 闪避', 悟性: '领悟 · 拆招', 胆魄: '胆气 · 抢攻' };
 
@@ -17,6 +18,7 @@ export function viewRenwu(): string {
   <section class="card"><div class="kv">
     <div><span>气血</span><b>${S.hp} / ${S.hpMax}</b></div><div><span>内力</span><b>${S.mp} / ${S.mpMax}</b></div>
     <div><span>身份</span><b>${S.chapter === 0 ? '渔家' : '游侠'}</b></div><div><span>门派</span><b>无门无派</b></div>
+    <div><span>修为</span><b>${xiuwei(S).rank}</b></div><div><span>修为值</span><b>${xiuwei(S).value}</b></div>
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
   </div></section>

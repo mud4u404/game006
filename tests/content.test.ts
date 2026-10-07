@@ -4,10 +4,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import { FOES, ITEMS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
-import type { Branch, Cond, Effect } from '../src/content/types';
+import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
 import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
+import { ACTIVE_MAX, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
+import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
 
 const roomIds = new Set(ROOMS.map(r => r.id));
 const npcIds = new Set(NPCS.map(n => n.id));
@@ -229,12 +231,116 @@ describe('任务、剧情、对手', () => {
   });
 });
 
-describe('文字', () => {
-  const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, SKILLS, NEWS });
+describe('武功', () => {
+  const len = (t: string | undefined, min: number, max: number): boolean => !!t && t.length >= min && t.length <= max;
 
-  it('不使用金庸等作品的原创名字', () => {
-    const hits = FORBIDDEN_NAMES.filter(n => all.includes(n));
-    expect(hits, `出现了不能用的名字：${hits.join('、')}（见 tests/forbidden-names.ts）`).toEqual([]);
+  function checkFx(list: FxDef[] | undefined, w: string, errs: string[], passive = false): void {
+    for (const fx of list || []) {
+      const rule = FX_RULES[fx.kind];
+      if (!rule) { errs.push(`${w}：效果「${fx.kind}」不存在`); continue; }
+      if (passive) {
+        if (!rule.passive) { errs.push(`${w}：「${fx.kind}」不能做被动效果，被动只能用 guard、haste、heal、rage`); continue; }
+        if (fx.value === undefined || fx.value < rule.passive[0] || fx.value > rule.passive[1]) errs.push(`${w}：被动「${fx.kind}」的 value 要在 ${rule.passive.join(' 到 ')} 之间`);
+        continue;
+      }
+      if (rule.value && (fx.value === undefined || fx.value < rule.value[0] || fx.value > rule.value[1])) errs.push(`${w}：「${fx.kind}」的 value 要在 ${rule.value.join(' 到 ')} 之间`);
+      if (!rule.value && fx.value !== undefined) errs.push(`${w}：「${fx.kind}」不用写 value`);
+      if (rule.rounds && (fx.rounds === undefined || fx.rounds < rule.rounds[0] || fx.rounds > rule.rounds[1])) errs.push(`${w}：「${fx.kind}」的 rounds 要在 ${rule.rounds.join(' 到 ')} 之间`);
+      if (!rule.rounds && fx.rounds !== undefined) errs.push(`${w}：「${fx.kind}」是一次性效果，不用写 rounds`);
+      if (fx.chance !== undefined && (fx.chance < 0.1 || fx.chance > 1)) errs.push(`${w}：「${fx.kind}」的 chance 要在 0.1 到 1 之间`);
+    }
+  }
+
+  it('字段齐全，取值合规，数值不超品级预算', () => {
+    const errs: string[] = [];
+    const seen = new Set<string>();
+    const grades = new Set(GRADES.map(g => g[0]));
+    const ids = new Set(SKILLS.map(k => k.id));
+    for (const k of SKILLS) {
+      const w = `武功 ${k.id}`;
+      if (seen.has(k.id)) errs.push(`武功 id 重复：${k.id}`);
+      seen.add(k.id);
+      if (!/^[a-z][a-z0-9_]*$/.test(k.id)) errs.push(`${w}：id 只能用小写字母、数字和下划线`);
+      if (!len(k.name, 2, 8)) errs.push(`${w}：名字要 2 到 8 个字`);
+      if (!grades.has(k.grade)) errs.push(`${w}：品级「${k.grade}」不存在`);
+      if (!CATEGORIES.includes(k.category)) errs.push(`${w}：分类「${k.category}」不存在`);
+      if (!SCHOOLS.includes(k.school)) errs.push(`${w}：门派「${k.school}」不在 src/content/skills.ts 的 SCHOOLS 里`);
+      if (!NATURES.includes(k.nature)) errs.push(`${w}：性质「${k.nature}」不存在`);
+      if (!len(k.desc, 10, 120)) errs.push(`${w}：desc 要 10 到 120 个字`);
+      if (!len(k.learn, 2, 30)) errs.push(`${w}：learn（怎样学到）要 2 到 30 个字`);
+      const outer = OUTER.includes(k.category);
+      if (outer && (!k.reach || !REACHES.includes(k.reach))) errs.push(`${w}：拳脚、兵刃必须写 reach（长、短、徒手）`);
+      const moves = k.moves || [];
+      if (outer && (moves.length < 6 || moves.length > 12)) errs.push(`${w}：拳脚、兵刃要写 6 到 12 招，现在是 ${moves.length} 招`);
+      if (!outer && moves.length > 12) errs.push(`${w}：招式最多 12 招`);
+      if (new Set(moves.map(m => m.name)).size !== moves.length) errs.push(`${w}：招名有重复`);
+      if (outer && moves.length && moves.filter(m => !m.realm).length < 3) errs.push(`${w}：至少要有 3 招一开始就会（不写 realm）`);
+      moves.forEach(m => {
+        const mw = `${w} 的招式「${m.name}」`;
+        if (!len(m.name, 2, 8)) errs.push(`${mw}：招名要 2 到 8 个字`);
+        if (!len(m.text, 8, 60)) errs.push(`${mw}：描写要 8 到 60 个字`);
+        if (m.realm !== undefined && (m.realm < 0 || m.realm > 8)) errs.push(`${mw}：realm 要在 0 到 8 之间`);
+        if (m.wound && !WOUNDS.includes(m.wound)) errs.push(`${mw}：伤势「${m.wound}」不存在`);
+      });
+      const ps = k.performs || [];
+      if (ps.length && !outer) errs.push(`${w}：只有拳脚、兵刃可以有绝招（performs）`);
+      if (ps.length > 3) errs.push(`${w}：绝招最多 3 个`);
+      ps.forEach(p => {
+        const pw = `${w} 的绝招「${p.name}」`;
+        const cap = ACTIVE_MAX[k.grade], loosen = 1 + 0.08 * (p.realm ?? 0);
+        if (!len(p.name, 2, 8) || !len(p.text, 8, 80)) errs.push(`${pw}：招名要 2 到 8 个字，描写要 8 到 80 个字`);
+        if (p.realm !== undefined && (p.realm < 0 || p.realm > 8)) errs.push(`${pw}：realm 要在 0 到 8 之间`);
+        if (p.mp < 20 || p.mp > 150) errs.push(`${pw}：耗内力要在 20 到 150 之间`);
+        if (p.cd < 1 || p.cd > 5) errs.push(`${pw}：调息合数要在 1 到 5 之间`);
+        if (![0, 1, 2, 3].includes(p.hits)) errs.push(`${pw}：连击数只能是 0 到 3`);
+        if (p.hits === 0 && !p.fx?.length) errs.push(`${pw}：连击数为 0 的绝招必须带效果`);
+        if (p.acc < 0.5 || p.acc > 0.9) errs.push(`${pw}：命中率要在 0.5 到 0.9 之间`);
+        if (p.hits > 0 && (p.dmg[0] < 10 || p.dmg[0] > p.dmg[1] || p.dmg[1] > 400)) errs.push(`${pw}：伤害区间要满足 10 ≤ 下限 ≤ 上限 ≤ 400`);
+        if ((p.fx?.length ?? 0) > FX_PER_PERFORM[k.grade]) errs.push(`${pw}：${k.grade}的绝招最多带 ${FX_PER_PERFORM[k.grade]} 种效果`);
+        checkFx(p.fx, pw, errs);
+        const budget = performBudget(p);
+        if (budget > cap.expected * loosen) errs.push(`${pw}：预算 ${Math.round(budget)} 超过${k.grade}上限 ${Math.round(cap.expected * loosen)}（期望伤害 ${Math.round(performExpected(p))} + 效果当量）`);
+        if (performEfficiency(p) > cap.efficiency * loosen) errs.push(`${pw}：太划算了，预算 ÷（耗内力 + 20 × 调息）超过${k.grade}上限 ${(cap.efficiency * loosen).toFixed(2)}`);
+      });
+      if ((k.passive?.length ?? 0) > 2) errs.push(`${w}：被动效果最多 2 种`);
+      checkFx(k.passive, `${w} 的被动`, errs, true);
+      if (passiveCost(k.passive) > PASSIVE_MAX[k.grade]) errs.push(`${w}：被动效果当量 ${passiveCost(k.passive)} 超过${k.grade}上限 ${PASSIVE_MAX[k.grade]}`);
+      if (k.category === '绝技' && !k.ult) errs.push(`${w}：绝技必须写 ult`);
+      if (k.category !== '绝技' && k.ult) errs.push(`${w}：只有绝技可以写 ult`);
+      if (k.ult) {
+        const u = k.ult;
+        if (!len(u.title, 2, 12) || !len(u.text, 10, 100)) errs.push(`${w}：杀招题字要 2 到 12 个字，演出文字要 10 到 100 个字`);
+        if (u.dmg[0] > u.dmg[1]) errs.push(`${w}：杀招伤害下限大于上限`);
+        if ((u.fx?.length ?? 0) > FX_PER_PERFORM[k.grade]) errs.push(`${w}：杀招最多带 ${FX_PER_PERFORM[k.grade]} 种效果`);
+        checkFx(u.fx, `${w} 的杀招`, errs);
+        if (ultBudget(u) > ULT_MAX[k.grade]) errs.push(`${w}：杀招预算 ${Math.round(ultBudget(u))} 超过${k.grade}上限 ${ULT_MAX[k.grade]}`);
+      }
+      if ((k.combos?.length ?? 0) > 3) errs.push(`${w}：合璧最多 3 种`);
+      for (const c of k.combos || []) {
+        const cw = `${w} 的合璧「${c.name}」`;
+        const school = c.with.startsWith('门派:') ? c.with.slice(3) : null;
+        if (school ? !SCHOOLS.includes(school) : !ids.has(c.with)) errs.push(`${cw}：with「${c.with}」既不是已有武功，也不是「门派:XX」`);
+        if (!len(c.name, 2, 8) || !len(c.text, 8, 80)) errs.push(`${cw}：名字要 2 到 8 个字，描写要 8 到 80 个字`);
+        if (c.bonus < 1 || c.bonus > 8) errs.push(`${cw}：bonus 要在 1 到 8 之间`);
+        checkFx(c.fx, cw, errs, true);
+      }
+    }
+    report(errs);
+  });
+
+  it('武功文字里的占位符只能用 {foe} {part}', () => {
+    const bad = [...JSON.stringify(SKILLS).matchAll(/\{(\w+)\}/g)].map(m => m[1]).filter(x => x !== 'foe' && x !== 'part');
+    expect([...new Set(bad)], '武功文字里只能用 {foe} 和 {part}').toEqual([]);
+  });
+});
+
+describe('文字', () => {
+  const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS });
+  const allWithSkills = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, SKILLS, NEWS });
+
+  it('出场人物不用金庸、古龙书中人物的名字', () => {
+    const hits = [...NPCS, ...FOES].filter(x => FORBIDDEN_NAMES.some(n => x.name.includes(n))).map(x => `${x.id}（${x.name}）`);
+    expect(hits, `这些人物用了书中人物的名字：${hits.join('、')}。武功、门派、典故可以用，书中人物不作为 NPC 出场（见 tests/forbidden-names.ts）`).toEqual([]);
   });
 
   it('占位符只能用 {given} {name} {story} {news}', () => {
@@ -244,7 +350,7 @@ describe('文字', () => {
 
   it('对白用「」，不用英文引号', () => {
     const texts: string[] = [];
-    JSON.parse(all, (_k, v) => { if (typeof v === 'string') texts.push(v); return v; });
+    JSON.parse(allWithSkills, (_k, v) => { if (typeof v === 'string') texts.push(v); return v; });
     const bad = texts.filter(t => /["']/.test(t) || /[“”‘’]/.test(t));
     expect(bad, '请把引号换成「」或『』').toEqual([]);
   });

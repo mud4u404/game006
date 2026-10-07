@@ -4,9 +4,9 @@
  * 2. 人物写了 at 的，放进对应地点。
  * 新增内容只需要在 packs/ 下新建文件，这里不用改。
  */
-import type { ContentPack, FoeDef, ItemDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, StoryDef } from './types';
+import type { ContentPack, FoeDef, ItemDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, SkillDef, StoryDef } from './types';
 
-export { SKILLS, skillById, REALMS, REALM_NEED, GRADES } from './skills';
+export { REALMS, REALM_NEED, GRADES, GRADE_COEF, SLOT_CATS, SLOT_NAME } from './skills';
 
 const modules = import.meta.glob<{ default: ContentPack }>('./packs/*.ts', { eager: true });
 const packs = Object.keys(modules).sort().map(k => modules[k].default);
@@ -20,6 +20,7 @@ export interface Registry {
   STORIES: StoryDef[];
   ITEMS: ItemDef[];
   NEWS: NewsDef[];
+  SKILLS: SkillDef[];
 }
 
 /** 合并内容包：补回程出口、按 at 放人物 */
@@ -32,7 +33,8 @@ export function mergePacks(list: ContentPack[]): Registry {
     QUESTS: list.flatMap(p => p.quests || []),
     STORIES: list.flatMap(p => p.stories || []),
     ITEMS: list.flatMap(p => p.items || []),
-    NEWS: list.flatMap(p => p.news || [])
+    NEWS: list.flatMap(p => p.news || []),
+    SKILLS: list.flatMap(p => p.skills || [])
   };
   const byId = new Map(reg.ROOMS.map(r => [r.id, r]));
   for (const r of reg.ROOMS) {
@@ -53,7 +55,7 @@ export function mergePacks(list: ContentPack[]): Registry {
   return reg;
 }
 
-export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS } = mergePacks(packs);
+export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS, SKILLS } = mergePacks(packs);
 
 const roomMap = new Map(ROOMS.map(r => [r.id, r]));
 const npcMap = new Map(NPCS.map(n => [n.id, n]));
@@ -61,6 +63,7 @@ const storyMap = new Map(STORIES.map(s => [s.id, s]));
 const foeMap = new Map(FOES.map(f => [f.id, f]));
 const questMap = new Map(QUESTS.map(q => [q.id, q]));
 const itemMap = new Map(ITEMS.map(i => [i.id, i]));
+const skillMap = new Map(SKILLS.map(k => [k.id, k]));
 
 export function room(id: string): RoomDef {
   const r = roomMap.get(id);
@@ -72,3 +75,4 @@ export const storyById = (id: string): StoryDef | undefined => storyMap.get(id);
 export const foeById = (id: string): FoeDef | undefined => foeMap.get(id);
 export const questById = (id: string): QuestDef | undefined => questMap.get(id);
 export const itemById = (id: string): ItemDef | undefined => itemMap.get(id);
+export const skillById = (id: string): SkillDef | undefined => skillMap.get(id);

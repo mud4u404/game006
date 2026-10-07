@@ -2,6 +2,7 @@ import { S, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
 import { REALMS, REALM_NEED, skillById } from '../content';
 import type { SkillId } from '../content/types';
+import { autoSlot } from './wuxue';
 
 /** 增加熟练度，满了自动突破。返回突破说明，例如「「寒江剑法」突破至「融会贯通」」 */
 export function gainProf(id: SkillId, n: number): string[] {
@@ -25,6 +26,7 @@ export function learnSkill(id: SkillId, realm = 0, prof = 0): string[] {
   const sk = skillById(id);
   if (!sk) return [];
   S.skills[id] = { r: realm, p: prof };
+  autoSlot(S, sk);
   const msg = `习得「${sk.name}」`;
   pushFeed('突破', msg + '！');
   emit('toast', msg + '！');

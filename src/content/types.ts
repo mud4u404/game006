@@ -7,7 +7,8 @@
  * 编写说明见 docs/content-guide.md。
  */
 
-export type SkillId = 'hanjiang' | 'jinghong' | 'taxue' | 'xinfa' | 'duanshui';
+/** 武功 id：任何内容包都可以新增武功，见 docs/wuxue.md */
+export type SkillId = string;
 export type AttrKey = '体魄' | '根骨' | '身法' | '悟性' | '胆魄';
 export type FeedTag = '传闻' | '出关' | '主线' | '江湖' | '突破' | '收获';
 export type Tone = 'red' | 'jade' | 'amber' | 'gray' | 'blue' | 'purple';
@@ -161,6 +162,9 @@ export interface FoeDef {
   weapon: string;
   /** 兵器的简称：刀、剑…… */
   ws: string;
+  /** 武功的性质与兵器长短，用来算克制（见 docs/wuxue.md）；不写就不算克制 */
+  nature?: SkillNature;
+  reach?: SkillReach;
   hp: number;
   atk: [number, number];
   big: number;
@@ -185,16 +189,122 @@ export interface FoeDef {
   results: { win: FightResult; lose?: FightResult; flee?: FightResult; yield?: FightResult };
 }
 
+/* ---------- 武功（武学库，详见 docs/wuxue.md） ---------- */
+
+export type SkillGrade = '凡品' | '良品' | '上品' | '绝品' | '神品' | '禁品';
+/**
+ * 分类参照北大侠客行：拳脚、兵刃各有门类；内功、轻功、绝技单列；杂学是不上阵的学问（读书写字、医术、毒术、琴棋书画）。
+ * 能放进哪个搭配槽位，见 src/content/skills.ts 的 SLOT_CATS。
+ */
+export type SkillCategory =
+  | '内功' | '轻功' | '绝技' | '杂学'
+  | '拳法' | '掌法' | '指法' | '爪法' | '腿法' | '手法'
+  | '剑法' | '刀法' | '枪法' | '棍法' | '杖法' | '鞭法' | '斧法' | '锤法' | '奇门' | '暗器';
+/** 性质相克：柔克刚、刚克阴、阴克阳、阳克柔；中正不克也不被克 */
+export type SkillNature = '刚' | '柔' | '阴' | '阳' | '中正';
+/** 兵器长短：一寸长一寸强，一寸短一寸险 */
+export type SkillReach = '长' | '短' | '徒手';
+/** 搭配槽位：内功、轻功、主手外功、副手外功、绝技 */
+export type Slot = 'neigong' | 'qinggong' | 'main' | 'off' | 'ult';
+/** 伤势类型，决定战斗里伤势的写法 */
+export type WoundKind = '瘀伤' | '内伤' | '刺伤' | '割伤' | '砸伤' | '冻伤' | '灼伤' | '毒伤';
+
+/**
+ * 战斗效果（增益与减益）。数值范围和「预算」见 docs/wuxue.md，由 tests/content.test.ts 校验。
+ * - busy 点穴、缠绕：对手若干合不能出手
+ * - bleed 流血、poison 中毒、burn 灼烧：对手每合掉血 value
+ * - chill 寒气：对手出招变慢，重招来得更晚
+ * - weaken 卸力、内伤：对手伤害降低 value%
+ * - break 破绽、破甲：对手受到的伤害提高 value%
+ * - disarm 缴械：对手兵刃脱手，伤害大减
+ * - fear 震慑：对手气势（势）下降 value
+ * - drain 吸内力：吸取对手内力 value 补给自己
+ * - guard 护体：自己受到的伤害降低 value%
+ * - haste 身法：自己闪避提高 value%
+ * - heal 疗伤：回复自己气血 value
+ * - rage 怒气：增加怒气 value
+ */
+export type FxKind = 'busy' | 'bleed' | 'poison' | 'burn' | 'chill' | 'weaken' | 'break' | 'disarm' | 'fear' | 'drain' | 'guard' | 'haste' | 'heal' | 'rage';
+export interface FxDef {
+  kind: FxKind;
+  /** 数值：伤害、百分比或点数，依效果而定；busy、chill、disarm 不用写 */
+  value?: number;
+  /** 持续几合；一次性的效果（drain、heal、rage、fear）不用写 */
+  rounds?: number;
+  /** 触发几率，0.1 到 1，不写为 1 */
+  chance?: number;
+}
+
+/**
+ * 一招：招名加一句描写。描写可用 {foe}（对手名字）和 {part}（部位）。
+ * realm：练到第几重境界（0 起）才会使出这一招，不写为一开始就会。
+ */
+export interface MoveDef { name: string; text: string; realm?: number; wound?: WoundKind }
+
+/** 武功的「绝招」：战斗中点按钮施展，可带效果。参照北大侠客行的 perform */
+export interface PerformDef {
+  name: string;
+  /** 出招描写，可用 {foe} {part} */
+  text: string;
+  /** 练到第几重境界才能用，不写为一开始就能用 */
+  realm?: number;
+  /** 耗内力 */
+  mp: number;
+  /** 用过之后要调息几合 */
+  cd: number;
+  /** 连击数，0 到 3。0 表示不打伤害，只施加效果 */
+  hits: number;
+  /** 每一击的伤害区间 */
+  dmg: [number, number];
+  /** 每一击的命中率，0.5 到 0.9 */
+  acc: number;
+  fx?: FxDef[];
+}
+
+/** 绝技槽的「杀招」：怒气满时施展，全屏题字，震撼收场 */
+export interface UltDef {
+  /** 题字时显示的小字，例如「寒江剑法 · 绝招」 */
+  title: string;
+  /** 演出文字，可用 {foe} {part} */
+  text: string;
+  dmg: [number, number];
+  fx?: FxDef[];
+}
+
+/** 搭配合璧：和另一门武功（或同一门派的任何武功）同时搭配时触发 */
+export interface ComboDef {
+  /** 另一门武功的 id，或「门派:少林」这种写法表示该门派任何一门 */
+  with: string;
+  name: string;
+  /** 开战时显示的合璧描写 */
+  text: string;
+  /** 火候加成，1 到 8 */
+  bonus: number;
+  fx?: FxDef[];
+}
+
 export interface SkillDef {
   id: SkillId;
   name: string;
-  grade: '凡品' | '良品' | '上品' | '绝品' | '神品' | '禁品';
-  type: string;
+  grade: SkillGrade;
+  category: SkillCategory;
+  /** 门派或出处，必须是 src/content/skills.ts 里 SCHOOLS 列出的名字 */
+  school: string;
+  nature: SkillNature;
+  /** 拳脚、兵刃必填 */
+  reach?: SkillReach;
   desc: string;
-  moves?: string[];
-  use: string;
-  /** 见招拆招时对应的应对 */
-  resp?: 'block' | 'dodge' | 'parry' | 'rush';
+  /** 拳脚、兵刃写 6 到 12 招；其他可以不写 */
+  moves?: MoveDef[];
+  /** 拳脚、兵刃的绝招，最多 3 个 */
+  performs?: PerformDef[];
+  /** 搭配在身上时一直生效的效果，例如内功护体、轻功身法 */
+  passive?: FxDef[];
+  /** 绝技必须有 */
+  ult?: UltDef;
+  combos?: ComboDef[];
+  /** 怎样学到：写给人看的说明，例如「少林寺达摩院首座传授」 */
+  learn: string;
 }
 
 export interface ItemDef { id: string; name: string; desc: string; usable?: boolean; hidden?: boolean }
@@ -246,4 +356,5 @@ export interface ContentPack {
   stories?: StoryDef[];
   items?: ItemDef[];
   news?: NewsDef[];
+  skills?: SkillDef[];
 }
