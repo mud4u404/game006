@@ -272,6 +272,8 @@ export interface PerformDef {
   /** 每一击的命中率，0.5 到 0.9 */
   acc: number;
   fx?: FxDef[];
+  /** 蓄势：先蓄一合再出手，伤害加两成；蓄势时被点穴、缴械就落空。只有带刚猛的门派能用，只能是一击（docs/menpai.md 第五节） */
+  charge?: boolean;
 }
 
 /** 绝技槽的「杀招」：怒气满时施展，全屏题字，震撼收场 */

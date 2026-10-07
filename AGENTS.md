@@ -30,6 +30,7 @@ npm run check      # 类型检查 + 全部测试（提交前必须通过）
 npm run validate   # 只跑内容校验
 npm run menpai     # 门派体检：每个门派的打法合不合规
 npm run retune     # 武功数值调进品级区间（只改数，不改字）
+npm run balance    # 对战模拟：各门派两两对打的胜率矩阵
 npm run build      # 打包，产物在 dist/
 npm run smoke      # 冒烟测试：无头浏览器从标题一路玩到首领战（需要能跑浏览器的环境）
 ```
@@ -50,6 +51,8 @@ src/
 tests/
   content.test.ts      内容校验：引用、兜底分支、往返出口、禁用名字、引号……
   menpai.test.ts       门派打法：可用效果、招牌、性质、门派之间不雷同
+  combat.test.ts       战斗内核：相克规则逐条验证
+  balance.test.ts      对战模拟：谁也不能独大（由维护者维护）
   engine.test.ts       引擎与公式测试
   forbidden-names.ts   不能用作 NPC 名字的书中人物（可以往里加）
   style-rules.ts       文风与剧透规则：现代词、剧透词、传闻字数（由维护者维护）
