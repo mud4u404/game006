@@ -160,12 +160,14 @@ describe('人物与物品', () => {
       if (n.obj && !n.icon) errs.push(`${w}：物品需要 icon`);
       if (!n.obj && (!n.ini || !n.tone)) errs.push(`${w}：人物需要 ini（头像字）和 tone（配色）`);
       if (!n.look) errs.push(`${w}：缺少 look（观察时的描写）`);
-      if (new Set(n.verbs).size !== n.verbs.length) errs.push(`${w}：verbs 里有重复的动作`);
-      for (const v of n.verbs) {
+      const verbNames = n.verbs.map(v => (typeof v === 'string' ? v : v.verb));
+      n.verbs.forEach(v => { if (typeof v !== 'string') checkCond(v.if, `${w} 的动作「${v.verb}」`, errs); });
+      if (new Set(verbNames).size !== verbNames.length) errs.push(`${w}：verbs 里有重复的动作`);
+      for (const v of verbNames) {
         if (!DEFAULT_VERBS.has(v) && !n.actions[v]) errs.push(`${w}：动作「${v}」没有写 actions`);
       }
       for (const [v, bs] of Object.entries(n.actions)) {
-        if (!n.verbs.includes(v as never)) errs.push(`${w}：actions 里的「${v}」没有列在 verbs 里，玩家点不到`);
+        if (!verbNames.includes(v as never)) errs.push(`${w}：actions 里的「${v}」没有列在 verbs 里，玩家点不到`);
         checkBranches(bs, `${w} 的「${v}」`, errs, true);
       }
       checkCond(n.altName?.if, `${w} 的 altName`, errs);

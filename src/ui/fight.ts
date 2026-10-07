@@ -381,6 +381,18 @@ function resolveTell(choice: RespKey | null): void {
   let instinct = false;
   if (!o) { o = opts.filter(x => !x.dis).sort((a, b) => b.p - a.p)[0]; instinct = true; }
   const f = c.f, part = pick(PARTS), big = f.big * (c.phase === 2 ? 1.15 : 1);
+  if (!o) {
+    // 没有一种应对用得上（槽位空着，或内力都不够）：硬吃这一招
+    c.mom = clamp(c.mom - 12, 5, 95);
+    bubble('foe', `你无从招架，${MO(t.name)}结结实实打在你${H(part)}！${t.after}`, big * 1.2, 'in');
+    hurtMe(big * 1.2);
+    updAll();
+    if (!C || C.over || C.rescued) return;
+    C.tellRound = C.round;
+    C.nextTell = C.phase === 2 ? rnd(3, 4) : rnd(4, 6);
+    next(1000);
+    return;
+  }
   const p = Math.max(0.05, o.p - (instinct ? 0.15 : 0));
   const ok = Math.random() < p;
   S.mp = Math.max(0, S.mp - o.cost);

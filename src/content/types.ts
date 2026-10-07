@@ -14,7 +14,8 @@ export type FeedTag = '传闻' | '出关' | '主线' | '江湖' | '突破' | '�
 export type Tone = 'red' | 'jade' | 'amber' | 'gray' | 'blue' | 'purple';
 /**
  * 人物身上可以点的动作。常用的列在这里，也可以自拟两个字的动作名（例如「斗酒」「打听」）。
- * 「观察」由引擎读取 look 字段；「赠礼」「请教」「切磋」「偷窃」不写 actions 时有默认回应。
+ * 「观察」先显示 look，再接上 actions.观察 里第一个条件成立的分支（可以带效果，例如细看出线索）；
+ * 「赠礼」「请教」「切磋」「偷窃」不写 actions 时有默认回应。
  */
 export type Verb = '交谈' | '观察' | '请教' | '切磋' | '赠礼' | '偷窃' | '购买' | '打赏' | '动手' | '细看' | '抓药' | '推门' | (string & {});
 
@@ -125,8 +126,8 @@ export interface NpcDef {
   look: string;
   /** 收到杏花等礼物时的反应，不写则用默认句子 */
   gift?: string;
-  /** 动作列表的顺序 */
-  verbs: Verb[];
+  /** 动作列表的顺序。带 if 的动作只在条件成立时出现，例如真相揭开后才有的「求情」，免得按钮先剧透 */
+  verbs: (Verb | { verb: Verb; if: Cond })[];
   actions: Partial<Record<Verb, Branch[]>>;
 }
 

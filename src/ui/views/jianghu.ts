@@ -1,7 +1,7 @@
 import { S, fullName } from '../../core/state';
 import { minLabel } from '../../core/time';
 import { npc, room } from '../../content';
-import { curQuest, hopMin, npcName, pathMin, roomDesc, roomNpcs, roomObjs } from '../../engine/world';
+import { curQuest, hopMin, npcName, pathMin, roomDesc, roomNpcs, roomObjs, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { xiuwei } from '../../engine/wuxue';
@@ -15,9 +15,11 @@ export function viewJianghu(): string {
   const q = curQuest();
   const feed = S.feed.slice(0, 2).map(e =>
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
+  // 横幅标签按任务种类：序章、主线（main 开头）、其余都是支线
+  const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
   const quest = !q ? '' : q.to
-    ? `<button class="card quest" data-act="quest"><span class="tag info">${S.chapter === 0 ? '序章' : '主线'}</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(pathMin(S.loc, q.to))}</span>${IC.chev}</button>`
-    : `<div class="card quest"><span class="tag accent">主线</span><span class="qt">${q.title}</span></div>`;
+    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(pathMin(S.loc, q.to))}</span>${IC.chev}</button>`
+    : `<div class="card quest"><span class="tag accent">${kind}</span><span class="qt">${q.title}</span></div>`;
   const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="任务簿" title="任务簿">${IC.quest}</button></div>`;
   const who = S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : '游侠 · ' + xiuwei(S).rank;
   return `
@@ -51,7 +53,7 @@ function detail(id: string): string {
   const rel = n.obj ? '物品' : (S.rel[id] || '素不相识');
   const reply = S.reply && S.reply.id === id ? `<div class="reply">${S.reply.text}</div>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>
-    <div class="acts">${n.verbs.map(v => `<button class="act ${VERB_CLS[v] || ''}" data-act="do:${v}">${v}</button>`).join('')}</div>${reply}</div>`;
+    <div class="acts">${verbsOf(n).map(v => `<button class="act ${VERB_CLS[v] || ''}" data-act="do:${v}">${v}</button>`).join('')}</div>${reply}</div>`;
 }
 
 function exitBtn(d: string, id: string, solo: boolean, questTo?: string): string {

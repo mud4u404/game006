@@ -3,7 +3,10 @@ import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { cn, cleanName, fmt, liang } from '../src/core/util';
 import { dayName, minLabel, shichen } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
-import { act, curQuest, hopMin, pathMin, pathTo, roomNpcs } from '../src/engine/world';
+import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
+import type { NpcDef } from '../src/content/types';
+import { autoSlot } from '../src/engine/wuxue';
+import type { SkillDef } from '../src/content/types';
 import { cheng, huohou, odds, respOptions } from '../src/engine/formulas';
 
 describe('文字与时间', () => {
@@ -122,6 +125,33 @@ describe('条件与效果', () => {
     expect(S.quests.side_caoshangfei).toBe(1);
     act('fuya_zhou', '交谈');
     expect(S.quests.side_caoshangfei).toBe(1);
+  });
+  it('观察：先是外貌，再接上随条件变化的细节', () => {
+    const t = act('fuya_zhou', '观察').text;
+    expect(t).toContain('络腮胡');
+    expect(t).toContain('旧刀伤');
+  });
+  it('带条件的动作，条件成立才出现', () => {
+    const n = { verbs: ['交谈', { verb: '求情', if: { flag: 'truth' } }] } as unknown as NpcDef;
+    expect(verbsOf(n)).toEqual(['交谈']);
+    S.flags.truth = true;
+    expect(verbsOf(n)).toEqual(['交谈', '求情']);
+  });
+  it('进门时的文字记进见闻', () => {
+    enter('daming_cangjing');
+    expect(S.feed.some(e => e.x.includes('「善本经卷失窃」'))).toBe(true);
+    enter('daming_cangjing');
+    enter('daming_cangjing');
+    expect(S.feed.filter(e => e.x.includes('「善本经卷失窃」')).length).toBe(1);
+    expect(S.feed.filter(e => e.x.includes('还是那幅模样')).length).toBe(1);
+  });
+  it('暗器、杂学不会被自动放进主手、副手', () => {
+    const s = { loadout: {} };
+    autoSlot(s, { id: 'yishu', category: '杂学' } as SkillDef);
+    autoSlot(s, { id: 'feidao', category: '暗器' } as SkillDef);
+    expect(s.loadout).toEqual({});
+    autoSlot(s, { id: 'jian', category: '剑法' } as SkillDef);
+    expect(s.loadout).toEqual({ main: 'jian' });
   });
   it('望江楼买花雕：扣钱，也给酒', () => {
     S.silver = 100;
