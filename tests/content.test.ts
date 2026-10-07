@@ -5,7 +5,9 @@
 import { describe, expect, it } from 'vitest';
 import { FOES, ITEMS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect } from '../src/content/types';
+import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
+import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
 
 const roomIds = new Set(ROOMS.map(r => r.id));
 const npcIds = new Set(NPCS.map(n => n.id));
@@ -247,3 +249,45 @@ describe('文字', () => {
     expect(bad, '请把引号换成「」或『』').toEqual([]);
   });
 });
+
+describe('文风与剧透', () => {
+  const packs = import.meta.glob<{ default: ContentPack }>('../src/content/packs/*.ts', { eager: true });
+  const textsOf = (x: unknown): string[] => {
+    const out: string[] = [];
+    JSON.parse(JSON.stringify(x), (_k, v) => { if (typeof v === 'string' && /[\u4e00-\u9fff]/.test(v)) out.push(v); return v; });
+    return out;
+  };
+  const byPack = Object.entries(packs).map(([path, m]) => ({ file: path.split('/').pop()!.replace(/\.ts$/, ''), texts: textsOf(m.default) }));
+
+  it('不出现现代词汇', () => {
+    const errs: string[] = [];
+    for (const { file, texts } of byPack) for (const t of texts) {
+      const hit = MODERN_WORDS.find(r => r.test(t));
+      if (hit) errs.push(`${file}.ts：「${t.slice(0, 30)}」里有现代词汇（${hit.source}）`);
+    }
+    report(errs);
+  });
+
+  it('叙述文字里的数字写成中文（+80、×2、气血 260 这类数值说明除外）', () => {
+    const errs: string[] = [];
+    for (const { file, texts } of byPack) for (const t of texts) {
+      if (/[0-9０-９]/.test(t.replace(/([+＋\-−×]|气血|内力|银两|熟练度?)\s?[0-9]+/g, ''))) errs.push(`${file}.ts：「${t.slice(0, 30)}」里的数字请写成中文`);
+    }
+    report(errs);
+  });
+
+  it('不提前剧透主线真相', () => {
+    const errs: string[] = [];
+    for (const { file, texts } of byPack) {
+      if (SPOILER_ALLOWED_PACKS.includes(file)) continue;
+      for (const t of texts) for (const w of SPOILER_WORDS) if (t.includes(w)) errs.push(`${file}.ts：「${t.slice(0, 30)}」提到了「${w}」，这是后面章回才揭开的事（见 docs/story.md 第二节）`);
+    }
+    report(errs);
+  });
+
+  it('传闻不超过规定字数', () => {
+    const long = NEWS.filter(n => n.text.length > NEWS_MAX_LEN).map(n => `${n.text.slice(0, 20)}…（${n.text.length} 字）`);
+    expect(long, `传闻最多 ${NEWS_MAX_LEN} 字`).toEqual([]);
+  });
+});
+

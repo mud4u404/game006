@@ -1,7 +1,8 @@
 /**
  * 端到端冒烟测试：用无头 Chromium 从标题画面一路玩到第一回首领战。
- * 用法：先 npm run build && npm run preview，再运行 node scripts/smoke.mjs [网址] [截图目录]
- * 需要本机装有 playwright（npm i -D playwright 或全局安装）。
+ * 用法：npm run smoke（先打包，再自动起一个本地预览服务来测）。
+ * 也可以测指定网址：node scripts/smoke.mjs <网址> [截图目录]
+ * 页面报错或流程走不通时，以非零状态退出，CI 会因此变红。
  */
 import { createRequire } from 'node:module';
 import { execSync } from 'node:child_process';
@@ -9,7 +10,13 @@ const require = createRequire(import.meta.url);
 let pw;
 try { pw = require('playwright'); } catch { pw = require(execSync('npm root -g').toString().trim() + '/playwright'); }
 
-const url = process.argv[2] || 'http://localhost:4173/';
+let url = process.argv[2];
+let server;
+if (!url) {
+  const { preview } = await import('vite');
+  server = await preview({ preview: { port: 4173 }, logLevel: 'warn' });
+  url = server.resolvedUrls.local[0];
+}
 const shots = process.argv[3];
 const b = await pw.chromium.launch();
 const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
@@ -89,3 +96,5 @@ log('结算：', (await p.textContent('#sheetLayer .r-h')).trim());
 await snap('09-result');
 console.log(errs.length ? 'ERRORS:\n' + errs.join('\n') : 'no page errors');
 await b.close();
+await server?.close();
+process.exit(errs.length ? 1 : 0);
