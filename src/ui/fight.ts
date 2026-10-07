@@ -365,6 +365,14 @@ function setPromptUI(on: boolean): void {
   sh.classList.toggle('alert', on);
   $('#rBody')!.hidden = !on;
   $('#idleBody')!.hidden = on;
+  // 矮屏上底部面板放不下时可以滚动；出重招时滚到应对按钮露全，免得按钮在屏幕外、玩家以为卡死
+  if (on) requestAnimationFrame(() => {
+    const o = $('#rOpts');
+    if (!o) return;
+    const below = o.getBoundingClientRect().bottom - sh.getBoundingClientRect().bottom;
+    if (below > 0) sh.scrollTop += below + 8;
+  });
+  else sh.scrollTop = 0;
   if (!on) {
     if (C) clearInterval(C.T.cd);
     $('#rTime')!.textContent = '对手出重招时在这里应对';

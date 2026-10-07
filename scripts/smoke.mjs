@@ -19,7 +19,8 @@ if (!url) {
 }
 const shots = process.argv[3];
 const b = await pw.chromium.launch();
-const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+// 用矮屏手机的尺寸跑：手机浏览器的工具栏、微信的标题栏会吃掉一截高度，按钮跑到屏幕外，玩家就会以为卡死了
+const p = await b.newPage({ viewport: { width: 360, height: 560 }, deviceScaleFactor: 2 });
 const errs = [];
 p.on('pageerror', e => errs.push(e.message));
 await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
@@ -60,6 +61,14 @@ async function fight(tag, pickBest = true) {
     if (!(await p.$('#fightLayer:not([hidden])'))) return 'closed';
     if (await p.$('#sheetLayer:not([hidden]) [data-act="fResult"]')) return 'result';
     if (await p.$('#fsheet.alert')) {
+      await p.waitForTimeout(150);
+      // 每个应对按钮都要露在屏幕里、点得到（不能靠自动滚动去找）
+      const hidden = await p.$$eval('.ropt', els => els.filter(e => {
+        const r = e.getBoundingClientRect(), cy = r.top + r.height / 2;
+        const top = cy > 0 && cy < innerHeight ? document.elementFromPoint(r.left + r.width / 2, cy) : null;
+        return !(top && (top === e || e.contains(top)));
+      }).map(e => e.textContent.trim().slice(0, 8)));
+      if (hidden.length) throw new Error('见招拆招的应对按钮在屏幕外或被挡住：' + hidden.join('、'));
       const opts = await p.$$eval('.ropt', els => els.map(e => ({ act: e.dataset.act, dis: e.disabled, o: e.querySelector('.ro').textContent })));
       const live = opts.filter(o => !o.dis);
       const order = '一两三四五六七八九';

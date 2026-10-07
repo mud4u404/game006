@@ -22,7 +22,8 @@ let traveling = false;
 export const isTraveling = (): boolean => traveling;
 
 export function travelTo(dest: string, onArrive?: () => void): void {
-  if (traveling || dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
+  if (traveling) { toast('正在赶路……'); return; }
+  if (dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
   const path = pathTo(S.loc, dest);
   if (!path.length) { toast('从这里去不了那儿'); return; }
   traveling = true;
