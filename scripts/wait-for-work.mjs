@@ -42,9 +42,10 @@ async function get(url) {
   }
 }
 
-// 已推送的任务分支：CI 建好 PR 之前，也不能再接这个任务
+// 已推送的任务分支：CI 建好 PR 之前，也不能再接这个任务。
+// 读不到就抛错，交给下面的重试；不能当成「没有分支」，否则会把别人正在做的任务再领一次。
 const remoteBranches = () =>
-  sh('git ls-remote --heads origin')
+  execSync('git ls-remote --heads origin', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
     .split('\n')
     .map(l => l.split('refs/heads/')[1])
     .filter(Boolean);
