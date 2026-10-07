@@ -42,6 +42,13 @@ async function get(url) {
   }
 }
 
+// 已推送的任务分支：CI 建好 PR 之前，也不能再接这个任务
+const remoteBranches = () =>
+  sh('git ls-remote --heads origin')
+    .split('\n')
+    .map(l => l.split('refs/heads/')[1])
+    .filter(Boolean);
+
 async function openItems() {
   const items = [];
   for (let page = 1; page <= 5; page++) {
@@ -56,7 +63,7 @@ const start = Date.now();
 let fails = 0;
 for (;;) {
   try {
-    const w = pickWork(await openItems());
+    const w = pickWork(await openItems(), remoteBranches());
     fails = 0;
     if (w) {
       console.log(describe(w));

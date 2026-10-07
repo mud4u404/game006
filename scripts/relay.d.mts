@@ -9,5 +9,6 @@ export interface GhItem {
 export const WORK_LABELS: string[];
 export const HOLD_LABEL: string;
 export function deps(body: string | null | undefined): number[];
-export function pickWork<T extends GhItem>(items: T[]): T | null;
+export function branchIssue(name: string): number | null;
+export function pickWork<T extends GhItem>(items: T[], branches?: string[]): T | null;
 export function describe(w: GhItem): string;
