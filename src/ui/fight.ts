@@ -1,6 +1,6 @@
 /**
  * 即时回合战斗。规则说明见 docs/design.md 第四节。
- * 对手的数值、台词和结算都来自 src/content/foes.ts。
+ * 对手的数值、台词和结算都来自 src/content/packs/ 下各内容包的 foes 字段。
  */
 import { S, save } from '../core/state';
 import { advanceMin, dateStr, shichen } from '../core/time';

@@ -3,3 +3,7 @@ dist/
 .vite/
 *.log
 .DS_Store
+
+# Trae 自动生成的本地文件，留在本机，不提交
+CODE_WIKI.md
+.trae-html-share-packages/
