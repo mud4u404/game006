@@ -1,4 +1,4 @@
-import type { ContentPack, NpcDef, QuestDef, RoomDef } from '../types';
+import type { Cond, ContentPack, NpcDef, QuestDef, RoomDef } from '../types';
 
 /** 大明寺藏经阁失窃支线：推理指认 */
 
@@ -22,10 +22,11 @@ const ROOMS: RoomDef[] = [
   }
 ];
 
-/** 辅助：判断线索够不够 */
-const CLUE_ENOUGH: Record<string, unknown> = { any: [
-  { flag: 'clue_gui' }, { flag: 'clue_xianglu' }, { flag: 'clue_jiaoyin' }
-] } as const;
+/** 辅助：判断线索够不够——三条线索里至少拿到两条，才能指认（Issue #6 的要求） */
+const CLUE_ENOUGH: Cond = { any: [
+  { flag: 'clue_gui', any: [{ flag: 'clue_xianglu' }, { flag: 'clue_jiaoyin' }] },
+  { flag: 'clue_xianglu', any: [{ flag: 'clue_jiaoyin' }] }
+] };
 
 const NPCS: NpcDef[] = [
   // —— 嫌疑人 A：明心（小沙弥，真凶）——
@@ -124,7 +125,7 @@ const NPCS: NpcDef[] = [
     verbs: ['观察', '细看'],
     actions: {
       观察: [{ text: '门锁明显是被硬撬开的，地上掉了两根木楔子。' }],
-      细看: [{ text: '你凑近细看，撬痕细小，只有小指粗的东西才能伸得进去——这不像大人干的。柜角还沾了一点泥脚印子。（线索 1：撬痕细小，像是小孩手）',
+      细看: [{ text: '你凑近细看，撬痕细小，只有小指粗的东西才能伸得进去——这不像大人干的。柜角还沾了一点泥脚印子。（线索一：撬痕细小，像是小孩手）',
         do: [{ type: 'flag', flag: 'clue_gui' }] }]
     }
   },
@@ -136,7 +137,7 @@ const NPCS: NpcDef[] = [
     verbs: ['观察', '细看'],
     actions: {
       观察: [{ text: '香炉里有张纸片没烧干净，边角还留着。' }],
-      细看: [{ text: '你小心地把纸片挑出来，看清上面歪歪扭扭写着两个字：「草药」。字是小孩的笔迹。（线索 2：药方）',
+      细看: [{ text: '你小心地把纸片挑出来，看清上面歪歪扭扭写着两个字：「草药」。字是小孩的笔迹。（线索二：药方）',
         do: [{ type: 'flag', flag: 'clue_xianglu' }] }]
     }
   },
@@ -148,7 +149,7 @@ const NPCS: NpcDef[] = [
     verbs: ['观察', '细看'],
     actions: {
       观察: [{ text: '墙角好像有什么东西，蹲下来才能看清。' }],
-      细看: [{ text: '你蹲下来细看，是一串光脚的泥脚印，偏小，只有三寸宽。脚印从菜园那边一路延伸到藏经阁的后墙根。（线索 3：脚印偏小、光脚）',
+      细看: [{ text: '你蹲下来细看，是一串光脚的泥脚印，偏小，只有三寸宽。脚印从菜园那边一路延伸到藏经阁的后墙根。（线索三：脚印偏小、光脚）',
         do: [{ type: 'flag', flag: 'clue_jiaoyin' }] }]
     }
   }
