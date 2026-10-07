@@ -54,11 +54,15 @@ docs/                  设计文档
 
 1. **认领**：在 Issue 下留言「认领」。一次只做一个 Issue。
 2. **拉分支**：从最新的 `main` 拉出分支，命名为 `trae/<Issue 编号>-<简短英文>`，例如 `trae/12-huafang`。
+   - 先运行 `git fetch origin`，再运行 `git switch -c trae/12-huafang origin/main`。
+   - 不要在上一个任务的分支、或者别人的分支上接着做。
 3. **只改允许的范围**：
    - 内容任务：只在 `src/content/packs/` 下**新建自己的文件**。
    - 需要把人物放进已有地点时，用 `at` 字段；需要和已有地点连通时，用出口的第三项「回程方位」。这两种情况都不需要改别人的文件。
    - 如果 Issue 明确要求修改某个已有文件，就只改它点名的部分。
-4. **自检**：提交前 `npm run check` 必须全部通过，`npm run build` 必须成功。
+4. **自检**：
+   - 提交前 `npm run check` 必须全部通过，`npm run build` 必须成功。
+   - 运行 `git diff --stat origin/main`，确认只改动了允许范围内的文件。
 5. **提 PR**：
    - 目标分支 `main`，标题写成 `[#Issue编号] 任务标题`。
    - 正文按 PR 模板填写，写上 `Closes #Issue编号`。
@@ -79,6 +83,7 @@ docs/                  设计文档
 - 不使用金庸、古龙等作品的原创人名、武功名、门派名，详见 `tests/forbidden-names.ts`。少林、武当、峨眉、华山这类现实中存在的门派可以用。
 - 一个 PR 只对应一个 Issue。
 - 不提交 `dist/`、`node_modules/`。
+- 不提交 Trae 自动生成的 `CODE_WIKI.md`、`.trae-html-share-packages/`。它们已写进 `.gitignore`，只留在本机。
 
 ## 七、完成标准
 
