@@ -407,3 +407,10 @@ svg{display:block}
 .qb-go{min-width:76px;min-height:36px;padding:0 12px;border-radius:10px;background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:2px}
 .qb-go svg{width:14px;height:14px}
 .qb-go.dim, .qb-go:disabled{background:var(--chip);color:var(--muted);opacity:.6;cursor:default}
+/* 存档码 */
+.codebox{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--fg);font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:10px 12px;resize:vertical;word-break:break-all}
+.row small.muted{display:block;font-size:12px}
+.row .act{flex-shrink:0;padding:0 16px}
+/* 账号 */
+.field{width:100%;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:16px;padding:0 14px}
+.err{color:var(--danger)}

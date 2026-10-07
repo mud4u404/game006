@@ -1,5 +1,6 @@
 import type { AttrKey, FeedTag, SkillId } from '../content/types';
-import { defaultLoadout, type Loadout } from '../engine/wuxue';
+import type { Loadout } from '../engine/wuxue';
+import { clearSaveSafely, readSave, writeSave } from './save';
 
 export interface SkillProg { r: number; p: number }
 export interface FeedEntry { t: FeedTag; x: string; n: number }
@@ -79,30 +80,22 @@ export function skipToYangzhou(): GameState {
   };
 }
 
-const KEY = 'jhyy-save-v2';
-
 export let S: GameState = newGame();
 export function setState(s: GameState): void { S = s; }
 
-export function save(): void {
-  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* 隐私模式等情况下存不了，游戏照常进行 */ }
-}
+/* 存档的读写、迁移、备份都在 core/save.ts，这里只是转一手 */
+export function save(): void { writeSave(S); }
 
+let broken = false;
+/** 读存档；读不出来时返回 null，并且 saveBroken() 为真（原存档已另存，不会被覆盖） */
 export function load(): GameState | null {
-  try {
-    const t = localStorage.getItem(KEY);
-    if (!t) return null;
-    const o = JSON.parse(t) as GameState;
-    if (!o || o.v !== 2) return null;
-    o.eming ??= 0;
-    o.loadout ??= defaultLoadout(o.skills);
-    return o;
-  } catch { return null; }
+  const r = readSave();
+  broken = r.broken;
+  return r.state;
 }
+export const saveBroken = (): boolean => broken;
 
-export function clearSave(): void {
-  try { localStorage.removeItem(KEY); } catch { /* 同上 */ }
-}
+export function clearSave(): void { clearSaveSafely(); }
 
 export function fullName(): string { return '沈' + S.name; }
 

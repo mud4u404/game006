@@ -1,7 +1,8 @@
 /**
  * 剧情卡片、标题画面、章回题字。
  */
-import { S, load, newGame, save, setState, skipToYangzhou, type GameState } from '../core/state';
+import { titleAccountHTML } from './views/account-link';
+import { S, load, newGame, save, saveBroken, setState, skipToYangzhou, type GameState } from '../core/state';
 import { dateStr } from '../core/time';
 import { $, cleanName, fmt } from '../core/util';
 import { storyById } from '../content';
@@ -120,10 +121,13 @@ export function showTitle(allowContinue = true): void {
   const rain = Array.from({ length: 36 }, (_, i) =>
     `<i style="left:${(i * 137) % 100}%;animation-duration:${(0.6 + (i % 7) * 0.12).toFixed(2)}s;animation-delay:-${((i % 11) * 0.17).toFixed(2)}s"></i>`).join('');
   const L = $('#titleLayer')!;
+  const warn = saveBroken()
+    ? '<p class="t-warn">原来的存档读不出来了，已经原样另存一份，不会丢。请告诉维护者；在「人物 → 存档 → 找回备份」里可以导出它。</p>'
+    : '';
   L.innerHTML = `<div class="title"><div class="rain">${rain}</div>
     <div class="t-word">江湖夜雨</div>
     <p class="t-verse">桃李春风一杯酒　江湖夜雨十年灯</p>
-    <div class="t-btns" id="tBtns"></div></div>`;
+    ${warn}<div class="t-btns" id="tBtns"></div></div>`;
   L.hidden = false;
   titleButtons(saved);
 }
@@ -140,9 +144,9 @@ function titleButtons(saved: GameState | null, confirm?: 'new' | 'skip'): void {
   box.innerHTML = saved
     ? `<button class="t-btn" data-act="tContinue">继续<small>${chapterLabel(saved)} · ${dateStr(saved)}</small></button>
        <button class="t-btn ghost" data-act="tNew:new">新的江湖</button>
-       <button class="t-link" data-act="tNew:skip">跳过序章，直接去扬州</button>`
+       <button class="t-link" data-act="tNew:skip">跳过序章，直接去扬州</button>${titleAccountHTML()}`
     : `<button class="t-btn" data-act="tGo:new">新的江湖</button>
-       <button class="t-link" data-act="tGo:skip">跳过序章，直接去扬州</button>`;
+       <button class="t-link" data-act="tGo:skip">跳过序章，直接去扬州</button>${titleAccountHTML()}`;
 }
 
 function hideTitle(): void {

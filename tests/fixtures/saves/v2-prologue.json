@@ -1,0 +1,67 @@
+{
+ "v": 2,
+ "chapter": 0,
+ "name": "孤舟",
+ "loc": "gz_home",
+ "month": 3,
+ "day": 5,
+ "min": 920,
+ "weather": "阴",
+ "hp": 1000,
+ "hpMax": 1000,
+ "mp": 600,
+ "mpMax": 800,
+ "silver": 30,
+ "items": {
+  "jcy": 1,
+  "fhs": 3
+ },
+ "quests": {
+  "prologue": 0
+ },
+ "track": "prologue",
+ "flags": {},
+ "rel": {
+  "jiangbo": "相依为命"
+ },
+ "title": "",
+ "xia": 0,
+ "eming": 0,
+ "attr": {
+  "体魄": 13,
+  "根骨": 11,
+  "身法": 14,
+  "悟性": 13,
+  "胆魄": 10
+ },
+ "skills": {
+  "hanjiang": {
+   "r": 1,
+   "p": 200
+  },
+  "xinfa": {
+   "r": 1,
+   "p": 150
+  },
+  "taxue": {
+   "r": 2,
+   "p": 0
+  }
+ },
+ "loadout": {
+  "neigong": "xinfa",
+  "qinggong": "taxue",
+  "main": "hanjiang"
+ },
+ "feed": [
+  {
+   "t": "传闻",
+   "x": "江上这两天来了几条生船，不打鱼，专打听人。",
+   "n": 0
+  }
+ ],
+ "story": "",
+ "sel": null,
+ "reply": null,
+ "tab": "jianghu"
+}

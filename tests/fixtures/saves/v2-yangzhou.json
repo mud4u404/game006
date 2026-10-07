@@ -1,0 +1,111 @@
+{
+ "v": 2,
+ "chapter": 1,
+ "name": "孤舟",
+ "loc": "hu",
+ "month": 3,
+ "day": 7,
+ "min": 460,
+ "weather": "微雨",
+ "hp": 820,
+ "hpMax": 1000,
+ "mp": 460,
+ "mpMax": 800,
+ "silver": 90,
+ "items": {
+  "jcy": 3,
+  "fhs": 5,
+  "jade": 1,
+  "scroll": 1,
+  "huadiao": 1
+ },
+ "quests": {
+  "prologue": 3,
+  "main1": 0,
+  "side_caoshangfei": 1,
+  "side_huafang": 0
+ },
+ "track": "main1",
+ "flags": {
+  "skipped": true,
+  "boss": true,
+  "fuya_trust": true,
+  "caoshangfei_hint1": true,
+  "huafang_started": true
+ },
+ "rel": {
+  "liu": "素不相识",
+  "fuya_zhou": "初识",
+  "yunnian": "点头之交"
+ },
+ "title": "",
+ "xia": 12,
+ "eming": 0,
+ "attr": {
+  "体魄": 14,
+  "根骨": 12,
+  "身法": 16,
+  "悟性": 15,
+  "胆魄": 11
+ },
+ "skills": {
+  "hanjiang": {
+   "r": 1,
+   "p": 340
+  },
+  "jinghong": {
+   "r": 0,
+   "p": 80
+  },
+  "taxue": {
+   "r": 2,
+   "p": 120
+  },
+  "xinfa": {
+   "r": 1,
+   "p": 260
+  },
+  "duanshui": {
+   "r": 0,
+   "p": 10
+  }
+ },
+ "loadout": {
+  "neigong": "xinfa",
+  "qinggong": "taxue",
+  "main": "hanjiang",
+  "off": "jinghong",
+  "ult": "duanshui"
+ },
+ "feed": [
+  {
+   "t": "江湖",
+   "x": "云娘欠了汪家少爷八十文，今晚要么还钱，要么被卖去青楼。",
+   "n": 1791389286796
+  },
+  {
+   "t": "江湖",
+   "x": "你正式接下了缉拿草上飞的委托：线索一，他常在小金山一带出没。",
+   "n": 1791389286796
+  },
+  {
+   "t": "江湖",
+   "x": "周捕头给你开了个悬赏：缉拿江洋大盗「草上飞」，线索说他常在小金山一带出没。",
+   "n": 1791389286796
+  },
+  {
+   "t": "出关",
+   "x": "闭关七日，内力 +36，「寒江剑法」略有小成。",
+   "n": 0
+  },
+  {
+   "t": "传闻",
+   "x": "黑风寨劫了漕帮三船盐货，漕帮放出悬赏。",
+   "n": 0
+  }
+ ],
+ "story": "",
+ "sel": "liu",
+ "reply": null,
+ "tab": "jianghu"
+}
