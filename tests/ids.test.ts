@@ -5,10 +5,12 @@
  * 维护者每天审查时运行 `npm run ids` 把新 id 记进来。
  */
 import { describe, expect, it } from 'vitest';
-import { readFileSync, writeFileSync } from 'node:fs';
 import { FOES, ITEMS, NPCS, QUESTS, ROOMS, SKILLS, STORIES } from '../src/content';
 
-const FILE = new URL('./id-registry.json', import.meta.url);
+type Registry = { ids: Record<string, string[]>; stages: Record<string, number> };
+const RAW = import.meta.glob<string>('./id-registry.json', { query: '?raw', import: 'default', eager: true })['./id-registry.json'];
+// 测试环境是 Node，但项目没装 Node 的类型，这里用最小的写法拿到环境变量和写文件
+const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const current = (): Record<string, string[]> => ({
   rooms: ROOMS.map(x => x.id),
   npcs: NPCS.map(x => x.id),
@@ -22,19 +24,19 @@ const current = (): Record<string, string[]> => ({
 const stages = (): Record<string, number> => Object.fromEntries(QUESTS.map(q => [q.id, q.stages.length]));
 
 describe('内容 id 只增不删', () => {
-  if (process.env.UPDATE_IDS) {
-    it('更新 id 登记表', () => {
-      let old: { ids: Record<string, string[]>; stages: Record<string, number> } = { ids: {}, stages: {} };
-      try { old = JSON.parse(readFileSync(FILE, 'utf8')); } catch { /* 第一次 */ }
+  if (env.UPDATE_IDS) {
+    it('更新 id 登记表', async () => {
+      const fs: { writeFileSync(p: URL, s: string): void } = await import(/* @vite-ignore */ 'node:' + 'fs');
+      const old: Registry = RAW ? JSON.parse(RAW) : { ids: {}, stages: {} };
       const ids = current();
       for (const k of Object.keys(ids)) ids[k] = [...new Set([...(old.ids[k] ?? []), ...ids[k]])].sort();
       const st = { ...old.stages };
       for (const [k, n] of Object.entries(stages())) st[k] = Math.max(st[k] ?? 0, n);
-      writeFileSync(FILE, JSON.stringify({ ids, stages: st }, null, 1) + '\n');
+      fs.writeFileSync(new URL('./id-registry.json', import.meta.url), JSON.stringify({ ids, stages: st }, null, 1) + '\n');
     });
     return;
   }
-  const reg: { ids: Record<string, string[]>; stages: Record<string, number> } = JSON.parse(readFileSync(FILE, 'utf8'));
+  const reg: Registry = JSON.parse(RAW);
   it('已经发出去的 id 都还在', () => {
     const now = current();
     const missing = Object.entries(reg.ids).flatMap(([k, list]) => list.filter(id => !now[k]?.includes(id)).map(id => `${k}：${id}`));
