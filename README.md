@@ -38,6 +38,7 @@
 | [docs/story.md](docs/story.md) | 开局与主线：主角、序章、主线章回、结局、人物 |
 | [docs/content-guide.md](docs/content-guide.md) | 内容编写指南：数据格式、文风、数值参考 |
 | [AGENTS.md](AGENTS.md) | 给 AI 协作者（Trae 等）的分工、流程和规定 |
+| [docs/auto-review.md](docs/auto-review.md) | 自动审查手册：维护者的例行任务怎样审查和合并 PR |
 
 ## 开发
 
@@ -58,8 +59,11 @@ npm run build      # 打包到 dist/
 
 ## 协作方式
 
-1. **维护者（Claude）**：负责世界观、玩法框架、引擎和界面，并把具体工作拆成 GitHub Issue。
-2. **协作者（Trae 等）**：认领 Issue，完成后提 PR。
-3. **审查与合并**：维护者审查 PR，项目负责人合并。
+1. **维护者（Claude）**：负责世界观、玩法框架、引擎和界面，并把具体工作拆成 GitHub Issue。任务快做完时会自动补发新任务。
+2. **协作者（Trae 等）**：负责人发一句「开工指令」（见 [AGENTS.md](AGENTS.md) 第八节）。协作者逐个完成 Issue，每个任务提一个 PR。
+3. **自动审查**：维护者的例行任务每小时检查一次新 PR，规则见 [docs/auto-review.md](docs/auto-review.md)。
+   - 小问题直接改好。
+   - 只新增内容的 PR 自动合并。
+   - 改动功能的 PR 等项目负责人合并。
 
 详见 [AGENTS.md](AGENTS.md)。
