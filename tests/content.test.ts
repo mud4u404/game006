@@ -31,6 +31,7 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   for (const w of [...(c.rel?.is ?? []), ...(c.rel?.not ?? [])]) if (!REL_WORDS.includes(w)) errs.push(`${where}：关系「${w}」不在关系阶梯里（见 engine/renqing.ts），味道写进 rel 效果的 note`);
   if (c.learned && !skillIds.has(c.learned)) errs.push(`${where}：条件里的武功「${c.learned}」不存在`);
   if (c.notLearned && !skillIds.has(c.notLearned)) errs.push(`${where}：条件里的武功「${c.notLearned}」不存在`);
+  if (c.realm && !skillIds.has(c.realm.skill)) errs.push(`${where}：条件里的武功「${c.realm.skill}」不存在`);
   if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
   if (c.sect && !SCHOOL_STYLE[c.sect.school]) errs.push(`${where}：条件里的门派「${c.sect.school}」没有定位（见 SCHOOL_STYLE）`);
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
@@ -251,6 +252,17 @@ describe('任务、剧情、对手', () => {
         checkEffects(r.then, `${w} 的结算 ${k} 的 then`, errs);
       }
       if (!f.spar && !f.script && !f.results.lose) errs.push(`${w}：会输的战斗需要 lose 结算`);
+      // 备战：每一项要有叙述；单项最多削四成，全部叠满也不能低于对手的一半
+      let hpAll = 1, atkAll = 1;
+      (f.prep ?? []).forEach((p, i) => {
+        const pw = `${w} 的备战 ${i}`;
+        checkCond(p.if, pw, errs);
+        checkEffects(p.win, `${pw} 的 win`, errs);
+        if (!p.text) errs.push(`${pw}：要写 text，开打时告诉玩家这项准备起了作用`);
+        for (const k of ['hp', 'atk', 'big'] as const) if (p[k] !== undefined && (p[k]! < 0.6 || p[k]! > 1)) errs.push(`${pw}：${k} 要在 0.6 到 1 之间`);
+        hpAll *= p.hp ?? 1; atkAll *= p.atk ?? 1;
+      });
+      if (hpAll < 0.5 || atkAll < 0.5) errs.push(`${w}：备战全部叠满，对手的气血、出手不能低于一半`);
     }
     report(errs);
   });

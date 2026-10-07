@@ -4,7 +4,7 @@ import { REALMS, REALM_NEED, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { autoSlot } from './wuxue';
 import { canLearn, realmCap } from './shicheng';
-import { milestoneGrowth, profMul } from './gengu';
+import { milestoneGrowth, neigongGrowth, profMul } from './gengu';
 
 /** 按境界上限把攒够的熟练度换成突破，返回突破说明 */
 function settle(id: SkillId): string[] {
@@ -18,6 +18,7 @@ function settle(id: SkillId): string[] {
     s.r++;
     out.push(`「${sk.name}」突破至「${REALMS[s.r]}」`);
     milestoneGrowth(S, sk, s.r);
+    neigongGrowth(S, sk);
   }
   return out;
 }
