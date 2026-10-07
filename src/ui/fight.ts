@@ -310,7 +310,7 @@ function startTell(): void {
   bubble('tell', `<span class="tl"><i></i>预兆</span>${t.text}`);
   buzz(30);
   const pw = tellPw(t, c.phase);
-  const opts = respOptions(S, pw);
+  const opts = respOptions(S, pw, c.f);
   $('#rTell')!.textContent = t.text;
   $('#rJudge')!.textContent = judgeText(S, pw, c.f.ws);
   $('#rOpts')!.innerHTML = opts.map(o => {

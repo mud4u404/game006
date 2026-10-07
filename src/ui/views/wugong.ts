@@ -1,7 +1,9 @@
 import { S } from '../../core/state';
-import { GRADES, REALMS, REALM_NEED, SKILLS } from '../../content';
-import type { SkillDef } from '../../content/types';
+import { GRADES, REALMS, REALM_NEED, SKILLS, SLOT_NAME } from '../../content';
+import { OUTER } from '../../content/skills';
+import type { SkillDef, Slot } from '../../content/types';
 import { RESP, huohou } from '../../engine/formulas';
+import { RESP_SLOT, xiuwei } from '../../engine/wuxue';
 
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
 
@@ -15,26 +17,36 @@ export function viewWugong(): string {
       ? '<p class="muted">江伯还病着，眼下不是闭关的时候。</p>'
       : `<div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}">${l}</button>`).join('')}</div>`}
   </section>
-  <section class="card here"><div class="sec-h"><h2>见招拆招</h2></div>
-    <p class="muted">对手出重招时，你能用的应对来自你练成的武功：内功可以硬接，轻功可以闪避，剑法可以拆招，有的剑法还能抢攻。成算取决于你的火候与对手这一招的强弱，境界越高，成算越高。</p></section>
+  <section class="card here"><div class="sec-h"><h2>见招拆招</h2><span class="count">修为 · ${xiuwei(S).rank}</span></div>
+    <p class="muted">对手出重招时，你能用的应对来自你搭配的武功：内功硬接，轻功闪避，主手外功拆招，副手外功抢攻。成算取决于你的火候与对手这一招的强弱，境界越高，成算越高；武功的性质还有相生相克。</p></section>
   <section class="card here"><div class="sec-h"><h2>品级</h2></div>
     <div class="grades">${GRADES.map(([g, c]) => `<span class="tag g-${c}">${g}</span>`).join('')}</div>
     <p class="muted">品级是武功的先天资质，境界是你的苦功。低品武功练到极致，一样能技惊四座。</p></section>
   ${learned.map(skillCard).join('')}`;
 }
 
+const kind = (k: SkillDef): string => (OUTER.includes(k.category) ? '外功 · ' + k.category : k.category);
+
+function useText(k: SkillDef, realm: number): string {
+  const parts: string[] = [`${k.nature}${k.reach && k.reach !== '徒手' ? ' · ' + k.reach + '兵' : ''}`];
+  if (k.performs?.length) parts.push(`绝招 ${k.performs.map(p => (p.realm ?? 0) <= realm ? `「${p.name}」` : `「${p.name}」（${REALMS[p.realm!]}）`).join('')}`);
+  if (k.ult) parts.push('杀招 · 怒气满时可用');
+  return parts.join(' · ');
+}
+
 function skillCard(k: SkillDef): string {
   const s = S.skills[k.id]!;
   const need = REALM_NEED[s.r];
   const pct = Math.min(100, Math.round((s.p / need) * 100));
-  const resp = k.resp ? RESP.find(r => r.k === k.resp) : undefined;
+  const slot = (Object.keys(SLOT_NAME) as Slot[]).find(x => S.loadout[x] === k.id);
+  const resp = slot && slot !== 'ult' ? RESP.find(r => RESP_SLOT[r.k] === slot) : undefined;
   return `<section class="card sk-card">
-    <div class="sk-h"><b>${k.name}</b><span class="tag g-${GRADE_CLS[k.grade]}">${k.grade}</span><span class="tag">${k.type}</span></div>
+    <div class="sk-h"><b>${k.name}</b><span class="tag g-${GRADE_CLS[k.grade]}">${k.grade}</span><span class="tag">${kind(k)}</span>${slot ? `<span class="tag accent">${slot === 'main' || slot === 'off' ? SLOT_NAME[slot] : '已搭配'}</span>` : ''}</div>
     <div class="realm"><span>${REALMS[s.r]}</span><small>熟练 ${s.p} / ${need}</small></div>
     <div class="tr2"><i style="width:${pct}%"></i></div>
     <p class="sk-d">${k.desc}</p>
-    ${k.moves ? `<div class="moves">${k.moves.map(m => `<span class="tag">${m}</span>`).join('')}</div>` : ''}
-    <p class="muted">${k.use}</p>
+    ${k.moves ? `<div class="moves">${k.moves.map(m => `<span class="tag"${(m.realm ?? 0) > s.r ? ' style="opacity:.4"' : ''}>${m.name}</span>`).join('')}</div>` : ''}
+    <p class="muted">${useText(k, s.r)}</p>
     ${resp ? `<div class="d-h"><span class="tag accent">见招拆招 · ${resp.act}</span><small>当前火候 ${huohou(S, resp.k)}</small></div>` : ''}
   </section>`;
 }

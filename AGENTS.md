@@ -45,7 +45,7 @@ src/
 tests/
   content.test.ts      内容校验：引用、兜底分支、往返出口、禁用名字、引号……
   engine.test.ts       引擎与公式测试
-  forbidden-names.ts   不能用的名字（可以往里加）
+  forbidden-names.ts   不能用作 NPC 名字的书中人物（可以往里加）
   style-rules.ts       文风与剧透规则：现代词、剧透词、传闻字数（由维护者维护）
 scripts/smoke.mjs      端到端冒烟测试（从标题一路玩到首领战）
 prototype/             早期单文件原型，只作参考，不再修改
@@ -99,7 +99,7 @@ docs/                  设计文档
 - 不新增 npm 依赖。
 - 不修改 `tests/style-rules.ts`（文风和剧透规则）。觉得规则误伤了，就在 Issue 里说明。
 - 不删除、不改名已有内容的 id，否则会损坏玩家存档。修改别人写的文字，要在 PR 里说明理由。
-- 不使用金庸、古龙等作品的原创人名、武功名、门派名，详见 `tests/forbidden-names.ts`。少林、武当、峨眉、华山这类现实中存在的门派可以用。
+- **武学宇宙以金庸群侠为底**：金庸的武功、门派都可以用，前代侠客的事迹也可以写进武功介绍、传闻、典故。但金庸、古龙书中的人物**不作为 NPC 出场**，因为本作故事是原创的。名单见 `tests/forbidden-names.ts`。
 - 一个 PR 只对应一个 Issue。
 - 不提交 `dist/`、`node_modules/`。
 - 不提交工具自己生成的文件，比如 Trae 的 `CODE_WIKI.md`、`.trae-html-share-packages/`。它们已写进 `.gitignore`，只留在本机。

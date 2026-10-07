@@ -13,7 +13,7 @@
    - `src/content/types.ts`、`src/content/index.ts`、`src/content/skills.ts`
    - `tests/`（可以往 `tests/forbidden-names.ts` 里加名字）
 4. 不新增依赖。不删除、不改名已有 id。
-5. 不使用金庸、古龙等作品的原创人名、武功名、门派名。对白用「」，嵌套用『』，不用英文引号。
+5. 金庸的武功、门派、典故都可以用；但书中人物不作为 NPC 出场（见 `tests/forbidden-names.ts`）。对白用「」，嵌套用『』，不用英文引号。
 6. 提交前运行 `npm run check` 和 `npm run build`，必须全部通过。
    - 再用 `git diff --stat origin/main` 确认只改了允许的文件。
    - 不提交 `CODE_WIKI.md` 和 `.trae-html-share-packages/`。
