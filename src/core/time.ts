@@ -9,6 +9,15 @@ export function shichen(min: number): string {
   return SHICHEN[Math.floor(((h + 1) % 24) / 2)] + '时';
 }
 
+/**
+ * 时辰加刻，例如 15:50 → 申时三刻。一个时辰两个钟头、八刻，每刻十五分钟；整时辰只说时辰。
+ * 顶栏用它，玩家每做一件事都看得到时间在走。
+ */
+export function shichenKe(min: number): string {
+  const ke = Math.floor((((min + 60) % 120) + 120) % 120 / 15);
+  return shichen(min) + (ke ? cn(ke) + '刻' : '');
+}
+
 /** 1–30 → 初一 … 三十 */
 export function dayName(d: number): string {
   if (d <= 10) return '初' + (d === 10 ? '十' : cn(d));

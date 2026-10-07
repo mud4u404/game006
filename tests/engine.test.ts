@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { cn, cleanName, fmt, liang } from '../src/core/util';
-import { dayName, minLabel, shichen } from '../src/core/time';
+import { dayName, minLabel, shichen, shichenKe } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
 import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
 import type { NpcDef } from '../src/content/types';
@@ -25,6 +25,13 @@ describe('文字与时间', () => {
     expect(dayName(7)).toBe('初七');
     expect(dayName(10)).toBe('初十');
     expect(dayName(21)).toBe('廿一');
+  });
+  it('时辰加刻：整时辰只说时辰，一刻十五分钟', () => {
+    expect(shichenKe(15 * 60)).toBe('申时');
+    expect(shichenKe(15 * 60 + 50)).toBe('申时三刻');
+    expect(shichenKe(16 * 60 + 45)).toBe('申时七刻');
+    expect(shichenKe(23 * 60 + 15)).toBe('子时一刻');
+    expect(shichenKe(0)).toBe('子时四刻');
   });
   it('赶路耗时', () => {
     expect(minLabel(10)).toBe('片刻');
@@ -147,6 +154,17 @@ describe('条件与效果', () => {
     enter('daming_cangjing');
     expect(S.feed.filter(e => e.x.includes('「善本经卷失窃」')).length).toBe(1);
     expect(S.feed.filter(e => e.x.includes('还是那幅模样')).length).toBe(1);
+  });
+  it('做事花时间：交谈十分钟、请教半个时辰；天色变了记一句见闻', () => {
+    S.loc = 'daming';
+    const m0 = S.min;
+    act('liaochen', '观察');
+    expect(S.min).toBe(m0 + 5);
+    act('liaochen', '交谈');
+    expect(S.min).toBe(m0 + 15);
+    S.min = 16 * 60 + 55;
+    act('liaochen', '观察');
+    expect(S.feed[0].x).toBe('日头偏西，天色向晚。');
   });
   it('暗器、杂学不会被自动放进主手、副手', () => {
     const s = { loadout: {} };
