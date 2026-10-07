@@ -104,3 +104,75 @@ export const PASSIVE_COST: Partial<Record<FxKind, number>> = { guard: 3, haste: 
 export const PASSIVE_MAX: Record<SkillGrade, number> = { 凡品: 15, 良品: 25, 上品: 35, 绝品: 45, 神品: 55, 禁品: 70 };
 /** 每个绝招最多几种效果 */
 export const FX_PER_PERFORM: Record<SkillGrade, number> = { 凡品: 1, 良品: 1, 上品: 2, 绝品: 2, 神品: 3, 禁品: 3 };
+
+/* ---------- 门派打法（详见 docs/menpai.md，由 tests/menpai.test.ts 校验） ---------- */
+
+/** 七种打法。每个门派有一个主打法、一个副打法 */
+export type Style = '刚猛' | '浑厚' | '阴毒' | '绵柔' | '迅捷' | '擒拿' | '吸纳';
+
+/** 相克环：每种打法克它后面两种、被它前面两种克，和对面两种势均力敌 */
+export const STYLE_RING: Style[] = ['刚猛', '浑厚', '阴毒', '绵柔', '迅捷', '擒拿', '吸纳'];
+
+/** a 是否克 b */
+export const styleBeats = (a: Style, b: Style): boolean => {
+  const d = (STYLE_RING.indexOf(b) - STYLE_RING.indexOf(a) + STYLE_RING.length) % STYLE_RING.length;
+  return d === 1 || d === 2;
+};
+
+/**
+ * 每种打法的招牌效果和可用效果。
+ * multi：多段连击（hits ≥ 2）也算这种打法的招牌；三连击只有带迅捷的门派能用。
+ */
+export const STYLES: Record<Style, { sig: FxKind[]; multi?: boolean; allowed: FxKind[] }> = {
+  刚猛: { sig: ['break', 'fear'], allowed: ['break', 'fear', 'rage'] },
+  浑厚: { sig: ['guard', 'heal'], allowed: ['guard', 'heal', 'rage', 'fear'] },
+  阴毒: { sig: ['poison', 'burn', 'bleed'], allowed: ['poison', 'burn', 'bleed', 'chill', 'weaken'] },
+  绵柔: { sig: ['weaken', 'guard'], allowed: ['weaken', 'guard', 'chill'] },
+  迅捷: { sig: ['haste'], multi: true, allowed: ['haste', 'bleed', 'break'] },
+  擒拿: { sig: ['busy', 'disarm'], allowed: ['busy', 'disarm', 'chill', 'weaken'] },
+  吸纳: { sig: ['drain'], allowed: ['drain', 'guard', 'weaken'] }
+};
+
+/**
+ * 门派定位：主打法、副打法、性质倾向。没有两个门派的主副打法完全相同。
+ * 新门派要先在这里定位，才能写武功。江湖散学不挂打法，规矩见 JIANGHU_RULE。
+ */
+export const SCHOOL_STYLE: Record<string, { main: Style; sub: Style; natures: SkillNature[] }> = {
+  丐帮: { main: '刚猛', sub: '擒拿', natures: ['刚', '柔'] },
+  白驼山: { main: '刚猛', sub: '阴毒', natures: ['刚', '阴'] },
+  铁掌帮: { main: '刚猛', sub: '迅捷', natures: ['刚'] },
+  绿林: { main: '刚猛', sub: '浑厚', natures: ['刚'] },
+  少林: { main: '浑厚', sub: '刚猛', natures: ['刚', '阳'] },
+  全真: { main: '浑厚', sub: '擒拿', natures: ['阳', '中正'] },
+  军伍: { main: '浑厚', sub: '迅捷', natures: ['刚', '阳'] },
+  星宿: { main: '阴毒', sub: '吸纳', natures: ['阴'] },
+  五毒教: { main: '阴毒', sub: '浑厚', natures: ['阴'] },
+  灵鹫宫: { main: '阴毒', sub: '擒拿', natures: ['阴', '阳'] },
+  血刀门: { main: '阴毒', sub: '迅捷', natures: ['阳', '刚'] },
+  武当: { main: '绵柔', sub: '浑厚', natures: ['中正', '柔'] },
+  明教: { main: '绵柔', sub: '刚猛', natures: ['阳', '中正'] },
+  姑苏慕容: { main: '绵柔', sub: '擒拿', natures: ['中正'] },
+  漕帮: { main: '绵柔', sub: '迅捷', natures: ['柔', '中正'] },
+  峨眉: { main: '迅捷', sub: '绵柔', natures: ['柔', '阴'] },
+  华山: { main: '迅捷', sub: '刚猛', natures: ['中正', '刚'] },
+  古墓: { main: '迅捷', sub: '阴毒', natures: ['阴', '柔'] },
+  寒江: { main: '迅捷', sub: '擒拿', natures: ['柔', '阴'] },
+  桃花岛: { main: '擒拿', sub: '刚猛', natures: ['刚', '柔'] },
+  大理段氏: { main: '擒拿', sub: '迅捷', natures: ['阳', '刚'] },
+  苍梧: { main: '擒拿', sub: '阴毒', natures: ['阴', '中正'] },
+  六扇门: { main: '擒拿', sub: '浑厚', natures: ['中正'] },
+  逍遥: { main: '吸纳', sub: '擒拿', natures: ['阴', '中正'] },
+  日月神教: { main: '吸纳', sub: '迅捷', natures: ['阴'] }
+};
+
+/** 江湖散学：天下流传的寻常功夫，不挂打法。品级最高上品，绝招、杀招、合璧都不带效果，只比真功夫 */
+export const JIANGHU_RULE = { school: '江湖', maxGrade: '上品' as SkillGrade };
+
+/**
+ * 还没按定位改造完的门派：tests/menpai.test.ts 对它们只提醒、不报错。
+ * 改造完一个就删一个，直到清空。新门派不许进这个名单。
+ */
+export const STYLE_PENDING: string[] = [
+  '丐帮', '白驼山', '铁掌帮', '少林', '全真', '星宿', '五毒教', '灵鹫宫', '血刀门', '武当', '明教', '姑苏慕容',
+  '峨眉', '华山', '古墓', '桃花岛', '大理段氏', '逍遥', '日月神教'
+];

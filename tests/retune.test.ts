@@ -34,10 +34,13 @@ export function retuneSkill(k: SkillDef): Tuned[] {
     const [lo, hi] = EFFICIENCY_BAND[k.grade].map(x => x * L);
     const capB = ACTIVE_MAX[k.grade].expected * L;
     const lower = done.filter(d => d.realm < realm);
-    const minB = lower.length ? Math.max(...lower.map(d => d.b)) * REALM_STEP + 2 : 0;
+    // need 是内容校验的底线；调数时多留 2 点余量
+    const need = lower.length ? Math.max(...lower.map(d => d.b)) * REALM_STEP : 0;
+    const minB = need ? need + 2 : 0;
     const p: PerformDef = { ...p0, dmg: [...p0.dmg] as [number, number] };
-    const fits = (q: PerformDef): boolean => { const e = performEfficiency(q), b = performBudget(q); return e >= lo && e <= hi && b <= capB && b >= minB && q.cd > lockOf(q); };
-    if (fits(p0)) { done.push({ realm, b: performBudget(p0) }); continue; }
+    const fitsAt = (q: PerformDef, floor: number): boolean => { const e = performEfficiency(q), b = performBudget(q); return e >= lo && e <= hi && b <= capB && b >= floor && q.cd > lockOf(q); };
+    const fits = (q: PerformDef): boolean => fitsAt(q, minB);
+    if (fitsAt(p0, need - 1e-9)) { done.push({ realm, b: performBudget(p0) }); continue; }
     const fx = (p.fx || []).reduce((a, f) => a + fxCost(f), 0);
     const minCd = lockOf(p) + 1;
     p.cd = Math.max(p.cd, minCd);
@@ -71,7 +74,8 @@ export function retuneSkill(k: SkillDef): Tuned[] {
       else if (e > hi) { if (p.mp < 150) p.mp += 5; else if (p.cd < 5) p.cd++; else if (p.hits) down(); else break; }
     }
     done.push({ realm, b: performBudget(p) });
-    out.push({ id: k.id, name: p0.name, mp: p.mp, cd: p.cd, hits: p.hits, dmg: p.dmg });
+    const same = p.mp === p0.mp && p.cd === p0.cd && p.hits === p0.hits && p.dmg[0] === p0.dmg[0] && p.dmg[1] === p0.dmg[1];
+    if (!same) out.push({ id: k.id, name: p0.name, mp: p.mp, cd: p.cd, hits: p.hits, dmg: p.dmg });
   }
   return out;
 }

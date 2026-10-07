@@ -9,6 +9,7 @@
 - 整体设计见 [docs/design.md](docs/design.md)。
 - 剧情与人物见 [docs/story.md](docs/story.md)。
 - **写内容必读** [docs/content-guide.md](docs/content-guide.md)。
+- **写武功必读** [docs/menpai.md](docs/menpai.md)（门派打法与相克）和 [docs/wuxue.md](docs/wuxue.md)（单门武功的写法与数值）。
 - **根本原则**见 [docs/charter.md](docs/charter.md)。任何内容和功能都不能违反它；拿不准就在 Issue 里问。
 - 已经定下的事见 [docs/decisions.md](docs/decisions.md)，开发顺序见 [docs/roadmap.md](docs/roadmap.md)。
 
@@ -27,6 +28,8 @@ npm install        # 安装依赖（第一次）
 npm run dev        # 本地运行，手机和电脑在同一网络下可以直接打开显示的地址
 npm run check      # 类型检查 + 全部测试（提交前必须通过）
 npm run validate   # 只跑内容校验
+npm run menpai     # 门派体检：每个门派的打法合不合规
+npm run retune     # 武功数值调进品级区间（只改数，不改字）
 npm run build      # 打包，产物在 dist/
 npm run smoke      # 冒烟测试：无头浏览器从标题一路玩到首领战（需要能跑浏览器的环境）
 ```
@@ -46,6 +49,7 @@ src/
   styles/app.css       全部样式（D「素白卡片」风格的颜色变量与组件）
 tests/
   content.test.ts      内容校验：引用、兜底分支、往返出口、禁用名字、引号……
+  menpai.test.ts       门派打法：可用效果、招牌、性质、门派之间不雷同
   engine.test.ts       引擎与公式测试
   forbidden-names.ts   不能用作 NPC 名字的书中人物（可以往里加）
   style-rules.ts       文风与剧透规则：现代词、剧透词、传闻字数（由维护者维护）

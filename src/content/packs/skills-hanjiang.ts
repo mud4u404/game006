@@ -15,9 +15,12 @@ const SKILLS: SkillDef[] = [
       { name: '寒江孤影', text: '剑走偏锋，人剑合一，一道孤影疾刺{foe}{part}。' }
     ],
     performs: [
-      { name: '寒江孤影', text: '你一招「寒江孤影」，剑走偏锋，疾刺{foe}{part}！', mp: 80, cd: 1, hits: 1, dmg: [160, 200], acc: 0.82 },
-      { name: '独钓寒江', realm: 3, text: '你剑尖一颤，寒气四溢，一式「独钓寒江」洒出漫天冷光，{foe}只觉{part}一凉，手脚登时迟缓。',
-        mp: 65, cd: 3, hits: 1, dmg: [165, 220], acc: 0.8, fx: [{ kind: 'chill', rounds: 2 }] }
+      { name: '寒江孤影', text: '你一招「寒江孤影」，人随剑走，一道孤影疾刺{foe}{part}，身形已飘出三步之外！',
+        mp: 65, cd: 2, hits: 1, dmg: [115, 145], acc: 0.82, fx: [{ kind: 'haste', value: 15, rounds: 2 }] },
+      { name: '江枫渔火', realm: 1, text: '你剑锋连颤，「江枫渔火」三点星芒忽明忽暗，先后落向{foe}{part}！',
+        mp: 80, cd: 2, hits: 3, dmg: [65, 85], acc: 0.78 },
+      { name: '独钓寒江', realm: 3, text: '你剑尖一颤，「独钓寒江」两道冷光先后刺中{foe}{part}，寒气顺着剑尖透入经脉，{foe}半身一僵，竟动弹不得。',
+        mp: 65, cd: 3, hits: 2, dmg: [85, 110], acc: 0.8, fx: [{ kind: 'busy', rounds: 1 }] }
     ]
   },
   {
