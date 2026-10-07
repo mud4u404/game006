@@ -3,7 +3,7 @@ import { questById, room } from '../../content';
 import { minLabel } from '../../core/time';
 import { pathMin } from '../../engine/world';
 import { IC } from '../icons';
-import { openSheet, render } from '../shell';
+import { closeSheet, openSheet, render } from '../shell';
 
 /**
  * 任务簿的纯函数部分：给定 quests 记录和 QUESTS 定义，分成「进行中」和「已完成」两组。
@@ -76,7 +76,7 @@ export function questbookSheetHtml(): string {
     const goBtn = (trackable && r.to && target)
       ? `<button class="qb-go${here ? ' dim' : ''}" data-act="qgo:${r.id}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button>`
       : '';
-    const toLabel = target ? (here ? '就在此处' : `约${minLabel(dist)}`) : (r.to ? r.to : '');
+    const toLabel = target ? `${target.name} · ${here ? '就在此处' : '约' + minLabel(dist)}` : '';
     const toSpan = toLabel ? `<small class="qb-to">${toLabel}</small>` : '';
     const stageNum = `${r.stage + 1} / ${r.total}`;
     return `
@@ -109,13 +109,10 @@ export function questbookSheetHtml(): string {
 /** 打开任务簿弹层（供 explore.ts 的 handler 调用） */
 export function openQuestbook(): void { openSheet(questbookSheetHtml()); }
 
-/** 追踪指定任务，刷新弹层和主视图 */
+/** 追踪指定任务：设 S.track、关闭弹层、刷新，顶部横幅随之切换（Issue #7 第 3 条） */
 export function trackQuest(id: string): void {
   if (!questById(id)) return;
   S.track = id;
-  openSheet(questbookSheetHtml());
+  closeSheet();
   render();
 }
-
-/** 前往指定任务的目的地。调用方负责 import travelTo 以避免循环。 */
-export const QUEST_NAMESPACE = true; // 标记此模块的 UI 入口

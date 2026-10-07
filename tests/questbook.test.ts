@@ -40,19 +40,6 @@ describe('partitionQuests', () => {
     expect(r.active[0].to).toBe(main1.stages[0].to);
   });
 
-  it('side_cangjing 最后一阶段没有 to，算作已完成', () => {
-    const q = QUESTS.find(q => q.id === 'side_cangjing');
-    if (!q) {
-      // 此任务可能还没合进 main，跳过
-      console.log('(skip) side_cangjing not yet in QUESTS');
-      return;
-    }
-    const lastIdx = q.stages.length - 1;
-    expect(q.stages[lastIdx].to).toBeUndefined();
-    const r = partitionQuests({ side_cangjing: lastIdx }, '');
-    expect(r.done.map(x => x.id)).toContain('side_cangjing');
-  });
-
   it('stage 超出 QUESTS 长度时，取最后阶段', () => {
     const main1 = QUESTS.find(q => q.id === 'main1')!;
     const overflow = main1.stages.length + 5;

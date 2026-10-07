@@ -108,12 +108,7 @@ registerHandlers({
     else toast('就在此处');
   },
   questbook: () => { openQuestbook(); },
-  qtrack: v => {
-    if (!v) return;
-    // 点击已追踪的任务，取消追踪
-    if (S.track === v) { S.track = ''; render(); openQuestbook(); return; }
-    trackQuest(v);
-  },
+  qtrack: v => { if (v) trackQuest(v); },
   qgo: v => {
     if (!v) return;
     const def = questById(v);

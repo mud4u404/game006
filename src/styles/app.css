@@ -374,6 +374,10 @@ svg{display:block}
 .rtip{padding:8px 12px;border-radius:10px;background:var(--info-soft);color:var(--info);font-size:13px;line-height:1.6}
 @keyframes fall{to{transform:translateY(130vh)}}
 
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
 /* ---------- 任务簿：江湖页顶部入口 + 弹层 ---------- */
 .quest-row{display:flex;align-items:stretch;gap:8px}
 .quest-row .quest{flex:1;min-width:0}
@@ -403,7 +407,3 @@ svg{display:block}
 .qb-go{min-width:76px;min-height:36px;padding:0 12px;border-radius:10px;background:var(--accent);color:var(--on-accent);font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:2px}
 .qb-go svg{width:14px;height:14px}
 .qb-go.dim, .qb-go:disabled{background:var(--chip);color:var(--muted);opacity:.6;cursor:default}
-
-@media (prefers-reduced-motion: reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
-}
