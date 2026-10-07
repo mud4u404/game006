@@ -320,7 +320,7 @@ const QUESTS: QuestDef[] = [
 ];
 
 const pack: ContentPack = {
-  regions: { yz: { name: '扬州', note: '首发版本开放江南道：瓜洲、扬州、镇江寒江渚、苏州。完整版里，天下分为十余道，坐车乘船皆可一键赶路，途中遇事会停下来交给你处理。' } },
+  regions: { yz: { name: '扬州', order: 1, note: '首发版本开放江南道：瓜洲、扬州、镇江寒江渚、苏州。完整版里，天下分为十余道，坐车乘船皆可一键赶路，途中遇事会停下来交给你处理。' } },
   rooms: ROOMS,
   npcs: NPCS,
   foes: FOES,

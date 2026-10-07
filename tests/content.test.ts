@@ -3,7 +3,7 @@
  * 报错信息会指出是哪个文件里的哪一条数据有问题。
  */
 import { describe, expect, it } from 'vitest';
-import { FOES, ITEMS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
+import { ENCOUNTERS, FOES, ITEMS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
@@ -225,9 +225,11 @@ describe('任务、剧情、对手', () => {
       if (!s.cards.length) errs.push(`剧情 ${s.id}：没有卡片`);
       s.cards.forEach((c, i) => {
         if (!c.choices.length) errs.push(`剧情 ${s.id} 第 ${i} 张：没有选项`);
+        else if (c.choices.every(ch => ch.if)) errs.push(`剧情 ${s.id} 第 ${i} 张：选项都带条件，条件都不成立时玩家会卡住；至少留一个不带 if 的`);
         c.choices.forEach((ch, k) => {
           const w = `剧情 ${s.id} 第 ${i} 张第 ${k} 个选项`;
           if (ch.next !== undefined && ch.next !== -1 && (ch.next < 0 || ch.next >= s.cards.length)) errs.push(`${w}：next 指向不存在的卡片`);
+          checkCond(ch.if, w, errs);
           checkEffects(ch.do, w, errs);
         });
       });
@@ -263,6 +265,34 @@ describe('任务、剧情、对手', () => {
         hpAll *= p.hp ?? 1; atkAll *= p.atk ?? 1;
       });
       if (hpAll < 0.5 || atkAll < 0.5) errs.push(`${w}：备战全部叠满，对手的气血、出手不能低于一半`);
+    }
+    report(errs);
+  });
+
+  it('路遇有效：剧情、地区、地点都存在；历练不超过上限', () => {
+    const errs: string[] = [];
+    const seen = new Set<string>();
+    for (const e of ENCOUNTERS) {
+      const w = `路遇 ${e.id}`;
+      if (seen.has(e.id)) errs.push(`${w}：id 重复`);
+      seen.add(e.id);
+      const st = STORIES.find(x => x.id === e.story);
+      if (!st) errs.push(`${w}：剧情「${e.story}」不存在`);
+      if (!e.region.length) errs.push(`${w}：至少写一个地区`);
+      for (const r of e.region) if (!REGIONS[r]) errs.push(`${w}：地区「${r}」不存在`);
+      for (const t of e.to ?? []) {
+        const r = ROOMS.find(x => x.id === t);
+        if (!r) errs.push(`${w}：地点「${t}」不存在`);
+        else if (!e.region.includes(r.region)) errs.push(`${w}：地点「${t}」不在它的地区里`);
+      }
+      if (e.weight !== undefined && !(e.weight > 0)) errs.push(`${w}：weight 要大于 0`);
+      checkCond(e.if, w, errs);
+      // 一条路上最多拿到的历练：每张卡片取给得最多的那个选项，加起来
+      if (st) {
+        const most = st.cards.reduce((sum, c) => sum + Math.max(0, ...c.choices.map(ch => (ch.do ?? []).reduce((a, x) => a + (x.type === 'lilian' ? x.amount : 0), 0))), 0);
+        const cap = e.once ? 200 : 40;
+        if (most > cap) errs.push(`${w}：一次最多给历练 ${most}，${e.once ? '奇遇' : '能反复遇的路遇'}不超过 ${cap}`);
+      }
     }
     report(errs);
   });

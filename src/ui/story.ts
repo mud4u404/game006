@@ -7,18 +7,18 @@ import { dateStr } from '../core/time';
 import { $, cleanName, fmt } from '../core/util';
 import { storyById } from '../content';
 import type { StoryDef } from '../content/types';
-import { newOutcome, run, textVars, type Outcome } from '../engine/dsl';
+import { newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
 import { afterOutcome, hooks, registerHandlers, render } from './shell';
 
 /* ---------- 剧情卡片 ---------- */
 
-interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome }
+interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void }
 let cur: Playing | null = null;
 
-export function openStory(id: string): void {
+export function openStory(id: string, onDone?: () => void): void {
   const def = storyById(id);
-  if (!def) return;
-  cur = { def, i: 0, out: newOutcome() };
+  if (!def) { onDone?.(); return; }
+  cur = { def, i: 0, out: newOutcome(), onDone };
   draw();
   $('#storyLayer')!.hidden = false;
 }
@@ -35,7 +35,7 @@ function draw(): void {
     : '';
   const choices = cur.result !== undefined
     ? `<button class="choice primary" data-act="stNext"><b>继续</b></button>`
-    : card.choices.map((c, k) => `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${c.sub ? `<small>${c.sub}</small>` : ''}</button>`).join('');
+    : card.choices.map((c, k) => test(c.if) ? `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${c.sub ? `<small>${c.sub}</small>` : ''}</button>` : '').join('');
   $('#storyLayer')!.innerHTML = `<div class="story-l" role="dialog" aria-label="${card.title}">
     ${card.tag ? `<span class="tag accent">${card.tag}</span>` : ''}
     <h2>${fmt(card.title, v)}</h2>
@@ -52,7 +52,7 @@ function pick(k: number): void {
   if (!cur) return;
   const card = cur.def.cards[cur.i];
   const c = card.choices[k];
-  if (!c) return;
+  if (!c || !test(c.if)) return;
   if (card.input === 'name') {
     const raw = ($('#nameIn') as HTMLInputElement | null)?.value || '';
     S.name = cleanName(raw) || '孤舟';
@@ -69,8 +69,10 @@ function advance(next: number): void {
   if (out.fight || out.story) { close(); afterOutcome(out); return; }
   if (next < 0 || next >= cur.def.cards.length) {
     const end = cur.def.endChapter;
+    const fin = cur.onDone;
+    const done = (): void => { render(); fin?.(); };
     close();
-    if (end) playChapter(end.small, end.big, render); else render();
+    if (end) playChapter(end.small, end.big, done); else done();
     return;
   }
   cur.i = next;

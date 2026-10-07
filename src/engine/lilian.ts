@@ -5,6 +5,7 @@
  * 没有历练，闭门造车，进境有限。成长的源头在江湖上，不在闭关的按钮上。
  */
 import { emit } from '../core/bus';
+import { dayNo } from '../core/time';
 import { pushFeed, type GameState } from '../core/state';
 import type { FoeDef, QuestDef, SkillId, Slot } from '../content/types';
 
@@ -12,8 +13,6 @@ export function addLilian(s: GameState, n: number): void {
   if (n > 0) s.lilian = (s.lilian ?? 0) + n;
 }
 
-/** 一年三百六十天里的第几天，算交手间隔用 */
-const dayNo = (s: Pick<GameState, 'month' | 'day'>): number => (s.month - 1) * 30 + s.day;
 
 export type FightRes = 'win' | 'lose' | 'flee' | 'yield';
 const RES_SHARE: Record<FightRes, number> = { win: 1, lose: 0.5, yield: 0.3, flee: 0 };

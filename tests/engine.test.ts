@@ -17,6 +17,8 @@ import type { SkillDef } from '../src/content/types';
 import { cheng, huohou, odds, realmPow, respOptions } from '../src/engine/formulas';
 import { FOE_WINDOW, RETREAT, fightLilian, retreatPlan } from '../src/engine/lilian';
 import { prepFoe } from '../src/engine/beizhan';
+import { ENC_GAP, ENC_REPEAT_DAYS, eligible, encounterChance, markEncounter, rollEncounter } from '../src/engine/encounter';
+import { ENCOUNTERS } from '../src/content';
 
 describe('文字与时间', () => {
   it('中文数字', () => {
@@ -59,7 +61,10 @@ describe('世界', () => {
     expect(pathTo('hu', 'hu')).toEqual([]);
     expect(hopMin('hu', 'daming')).toBe(30);
     expect(pathMin('jinshan', 'daming')).toBe(40);
-    expect(pathTo('hu', 'gz_home')).toEqual([]);
+    // 扬州和瓜洲由运河客船连着，单程约两个时辰
+    expect(pathTo('dukou', 'gz_pier')).toEqual(['gz_kechuan', 'gz_pier']);
+    expect(pathMin('dukou', 'gz_pier')).toBe(120);
+    expect(pathTo('gz_pier', 'zj_xijin')).toEqual(['gz_duchuan', 'zj_xijin']);
   });
   it('屠千山只在接到任务后出现在渡口', () => {
     expect(roomNpcs('dukou')).not.toContain('tu');
@@ -589,5 +594,89 @@ describe('渡口一剑：弱小的少年怎么赢', () => {
     run(prepFoe(FOES.find(f => f.id === 'tu')!).active.flatMap(p => p.win ?? []));
     S.quests.main1 = 2;
     expect(act('liu', '交谈').text).toContain('跟谁学的');
+  });
+});
+
+describe('路遇', () => {
+  beforeEach(() => { setState(skipToYangzhou()); S.min = 10 * 60; });
+  const always = (): number => 0;
+  const never = (): number => 0.99;
+
+  it('路越长越容易遇上，最多四成', () => {
+    expect(encounterChance(15)).toBeCloseTo(0.1);
+    expect(encounterChance(60)).toBeCloseTo(0.4);
+    expect(encounterChance(300)).toBe(0.4);
+  });
+
+  it('骰子没中、序章里、没有合适的路遇，都不遇', () => {
+    expect(rollEncounter('hu', 'cheng', never)).toBeNull();
+    expect(rollEncounter('hu', 'daming', always)).toBeNull();
+    S.chapter = 0;
+    expect(rollEncounter('hu', 'cheng', always)).toBeNull();
+  });
+
+  it('遇上了按地区和目的地挑；奇遇一生一次；两次路遇隔两个时辰', () => {
+    const e = rollEncounter('hu', 'cheng', always)!;
+    expect(e.id).toBe('luyu_maishen');
+    markEncounter(e);
+    expect(rollEncounter('hu', 'cheng', always)).toBeNull();
+    S.min += ENC_GAP;
+    expect(rollEncounter('hu', 'cheng', always)!.id).toBe('luyu_xiaozei');
+    expect(eligible('cheng').map(x => x.id)).not.toContain('luyu_maishen');
+  });
+
+  it('能反复遇的，七天之内不再遇', () => {
+    ENCOUNTERS.push({ id: 't_repeat', region: ['yz'], to: ['daming'], story: 'ly_maishen' });
+    try {
+      const e = rollEncounter('hu', 'daming', always)!;
+      expect(e.id).toBe('t_repeat');
+      markEncounter(e);
+      S.min += ENC_GAP;
+      expect(rollEncounter('hu', 'daming', always)).toBeNull();
+      S.day += ENC_REPEAT_DAYS;
+      expect(rollEncounter('hu', 'daming', always)!.id).toBe('t_repeat');
+    } finally { ENCOUNTERS.pop(); }
+  });
+
+  it('那个孩子：你当初怎么待他，渡口再遇时他就是什么样子', () => {
+    const kid = (): string[] => eligible('dukou').map(x => x.id).filter(id => id.startsWith('luyu_xiaozei'));
+    expect(kid()).toEqual([]);
+    S.flags.ly_xiaozei_fed = true;
+    expect(kid()).toEqual(['luyu_xiaozei_fed']);
+  });
+
+  it('同船的老人只在夜里的客船上', () => {
+    expect(eligible('gz_kechuan').map(x => x.id)).toEqual([]);
+    S.min = 22 * 60;
+    expect(eligible('gz_kechuan').map(x => x.id)).toEqual(['luyu_tongchuan']);
+  });
+});
+
+describe('重回瓜洲', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+
+  it('序章以后，小屋是焦土，生船不见了，镇上的人记得江伯', () => {
+    expect(roomNpcs('gz_pier')).toContain('shaogong');
+    expect(act('chatan', '交谈').text).toContain('还敢回来');
+    expect(act('ayp', '交谈').text).toContain('坟');
+    expect(S.relNote?.ayp).toContain('照看江伯的坟');
+  });
+
+  it('石臼底下的小木剑，回春堂的旧方子，都只给一次', () => {
+    act('gz_shijiu', '细看');
+    expect(S.items.mujian).toBe(1);
+    expect(act('gz_shijiu', '细看').text).toContain('空了');
+    act('huichun', '交谈');
+    act('huichun', '交谈');
+    expect(S.items.fangzi).toBe(1);
+  });
+
+  it('坟前祭拜：斗败屠千山以后，有话要对江伯说', () => {
+    expect(act('gz_fenmu', '祭拜').text).toContain('磕了三个头');
+    S.flags.boss = true;
+    expect(act('gz_fenmu', '祭拜').text).toContain('渡口那一剑');
+    S.items.huadiao = 1;
+    expect(act('gz_fenmu', '祭拜').text).toContain('花雕');
+    expect(S.items.huadiao).toBe(0);
   });
 });
