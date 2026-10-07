@@ -10,6 +10,8 @@
  */
 import { ROOMS, SKILLS } from '../content';
 import { fits } from '../engine/wuxue';
+import { syncAttr } from '../engine/gengu';
+import { migrateRel } from '../engine/renqing';
 import type { Loadout } from '../engine/wuxue';
 import type { Slot } from '../content/types';
 import { newGame, skipToYangzhou, type GameState } from './state';
@@ -72,6 +74,9 @@ function repair(s: GameState): GameState {
   // 同一版本里后来加的字段，用新游戏的默认值补上
   if (rec.loadout === undefined) rec.loadout = legacyLoadout(s.skills ?? {});
   for (const k of Object.keys(def)) if (rec[k] === undefined) rec[k] = def[k];
+  // 关系称谓统一到关系阶梯，根基折算进气血、内力上限（都可以反复执行）
+  migrateRel(s);
+  syncAttr(s);
   // 地点没了，送回这一回的起点
   if (!ROOMS.some(r => r.id === s.loc)) s.loc = s.chapter === 0 ? newGame().loc : skipToYangzhou().loc;
   // 搭配里指向没学会、或已经没有的武功，就空出来

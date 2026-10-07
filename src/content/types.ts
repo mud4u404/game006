@@ -57,7 +57,8 @@ export type Effect =
   | { type: 'silver'; delta: number }
   | { type: 'item'; id: string; delta: number }
   /** 设置关系；写了 from 时，只有当前关系在 from 里才改 */
-  | { type: 'rel'; npc: string; value: string; from?: string[] }
+  /** 改关系：value 只用关系阶梯里的词（engine/renqing.ts）；note 是人情备注，写为什么记得这个人 */
+  | { type: 'rel'; npc: string; value: string; from?: string[]; note?: string }
   | { type: 'prof'; skill: SkillId; amount: number }
   | { type: 'learn'; skill: SkillId; realm?: number; prof?: number }
   /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先出师或叛门 */

@@ -1,3 +1,4 @@
+import { REL_LEGACY } from '../src/engine/renqing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { clearSaveSafely, exportCode, importCode, listBackups, migrate, readSave, useStore, writeSave, KEY, SAVE_VERSION, type SaveStore } from '../src/core/save';
 import { newGame, skipToYangzhou } from '../src/core/state';
@@ -28,7 +29,10 @@ describe('存档：更新游戏不丢档', () => {
       const old = JSON.parse(raw);
       const s = migrate(JSON.parse(raw));
       expect(s.v, file).toBe(SAVE_VERSION);
-      for (const k of ['name', 'loc', 'chapter', 'silver', 'quests', 'flags', 'items', 'skills', 'rel', 'xia'] as const) expect(s[k], `${file} 的 ${k}`).toEqual(old[k]);
+      for (const k of ['name', 'loc', 'chapter', 'silver', 'quests', 'flags', 'items', 'skills', 'xia'] as const) expect(s[k], `${file} 的 ${k}`).toEqual(old[k]);
+      // 关系：旧称谓换成关系阶梯里对应的词，人一个不少、高低不变
+      const rel = Object.fromEntries(Object.entries(old.rel as Record<string, string>).map(([id, v]) => [id, REL_LEGACY[v] ?? v]));
+      expect(s.rel, `${file} 的 rel`).toEqual(rel);
     }
   });
 
@@ -95,5 +99,13 @@ describe('存档：更新游戏不丢档', () => {
     expect(back).toEqual(migrate(JSON.parse(JSON.stringify(s))));
     expect(() => importCode('随便一段字')).toThrow('这不是存档码');
     expect(() => importCode(exportCode(s).slice(0, 40))).toThrow('不完整');
+  });
+
+  it('关系称谓统一到阶梯：旧词换成阶梯里的词，有味道的留作人情备注；根基折算进气血上限，反复读档也不重复加', () => {
+    const s = migrate({ ...skipToYangzhou(), rel: { liu: '不打不相识', fuya_zhou: '初识' }, attr: { ...skipToYangzhou().attr, 体魄: 15 }, hpMax: 1000, attrApplied: undefined } as GameState);
+    expect(s.rel).toEqual({ liu: '相谈甚欢', fuya_zhou: '点头之交' });
+    expect(s.relNote).toEqual({ liu: '湖畔切磋，不打不相识' });
+    expect(s.hpMax).toBe(1080);
+    expect(migrate(JSON.parse(JSON.stringify(s))).hpMax).toBe(1080);
   });
 });

@@ -9,6 +9,7 @@ import { foeById, itemById, room, skillById } from '../content';
 import type { Effect, FightResult, FoeDef, TellDef } from '../content/types';
 import { run, textVars } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
+import { attrEffects } from '../engine/gengu';
 import { cheng, chengN, judgeText, respOptions, tellPw, type RespKey, type RespOption } from '../engine/formulas';
 import { npcName } from '../engine/world';
 import { IC } from './icons';
@@ -58,7 +59,7 @@ export function startFight(fid: string): void {
   const f = foeById(fid);
   if (C || !f) return;
   C = {
-    f, ehp: f.hp, ehpMax: f.hp, mom: 50, round: 0, wounds: {}, recent: [], rage: 30, gu: 0, jh: 0, charge: 0, chargeT: 0,
+    f, ehp: f.hp, ehpMax: f.hp, mom: 50, round: 0, wounds: {}, recent: [], rage: Math.max(0, 30 + attrEffects(S).rage), gu: 0, jh: 0, charge: 0, chargeT: 0,
     prompt: null, opening: null, busy: false, paused: false, over: false, phase: 1,
     nextTell: f.firstTell ?? rnd(3, 4), lastTell: -1, lock: 0,
     st: { parry: 0, open: 0, ult: 0, big: [] },

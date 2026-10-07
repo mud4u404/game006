@@ -10,6 +10,7 @@ import { FORBIDDEN_NAMES } from './forbidden-names';
 import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
 import { ACTIVE_MAX, EFFICIENCY_BAND, JIANGHU_RULE, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
 import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
+import { REL_WORDS } from '../src/engine/renqing';
 
 const roomIds = new Set(ROOMS.map(r => r.id));
 const npcIds = new Set(NPCS.map(n => n.id));
@@ -27,6 +28,7 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   if (c.item && !itemIds.has(c.item.id)) errs.push(`${where}：条件里的物品「${c.item.id}」不存在`);
   if (c.noItem && !itemIds.has(c.noItem)) errs.push(`${where}：条件里的物品「${c.noItem}」不存在`);
   if (c.rel && !npcIds.has(c.rel.npc)) errs.push(`${where}：条件里的人物「${c.rel.npc}」不存在`);
+  for (const w of [...(c.rel?.is ?? []), ...(c.rel?.not ?? [])]) if (!REL_WORDS.includes(w)) errs.push(`${where}：关系「${w}」不在关系阶梯里（见 engine/renqing.ts），味道写进 rel 效果的 note`);
   if (c.learned && !skillIds.has(c.learned)) errs.push(`${where}：条件里的武功「${c.learned}」不存在`);
   if (c.notLearned && !skillIds.has(c.notLearned)) errs.push(`${where}：条件里的武功「${c.notLearned}」不存在`);
   if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
@@ -46,7 +48,10 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
       }
       case 'track': if (!quests.has(e.id)) errs.push(`${w}：任务「${e.id}」不存在`); break;
       case 'item': if (!itemIds.has(e.id)) errs.push(`${w}：物品「${e.id}」不存在`); break;
-      case 'rel': if (!npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`); break;
+      case 'rel':
+        if (!npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
+        for (const x of [e.value, ...(e.from ?? [])]) if (!REL_WORDS.includes(x)) errs.push(`${w}：关系「${x}」不在关系阶梯里（见 engine/renqing.ts），味道写进 note`);
+        break;
       case 'prof': case 'learn': if (!skillIds.has(e.skill)) errs.push(`${w}：武功「${e.skill}」不存在`); break;
       case 'move': if (!roomIds.has(e.to)) errs.push(`${w}：地点「${e.to}」不存在`); break;
       case 'fight': if (!foeIds.has(e.foe)) errs.push(`${w}：对手「${e.foe}」不存在`); break;
@@ -195,6 +200,18 @@ describe('人物与物品', () => {
 });
 
 describe('任务、剧情、对手', () => {
+  it('任务走得完：每一阶段都有内容能推进到下一阶段（不留断头任务）', () => {
+    // 草上飞的教训：任务有三个阶段，却没有任何内容能推进到最后一段，玩家卡死
+    const all = JSON.stringify({ ROOMS, NPCS, STORIES, FOES });
+    const errs: string[] = [];
+    for (const q of QUESTS) {
+      const reached = [...all.matchAll(new RegExp(`"type":"quest","id":"${q.id}","stage":(\\d+)`, 'g'))].map(m => Number(m[1]));
+      if (!reached.length) errs.push(`任务 ${q.id}「${q.name}」：没有任何内容开启它`);
+      for (let s = 0; s < q.stages.length - 1; s++) if (!reached.some(x => x > s)) errs.push(`任务 ${q.id}「${q.name}」：第 ${s} 阶段「${q.stages[s].title}」之后，没有任何内容能推进下去，玩家会卡死`);
+    }
+    report(errs);
+  });
+
   it('任务阶段的目的地存在', () => {
     const errs: string[] = [];
     for (const q of QUESTS) q.stages.forEach((s, i) => { if (s.to && !roomIds.has(s.to)) errs.push(`任务 ${q.id} 第 ${i} 阶段：目的地「${s.to}」不存在`); });

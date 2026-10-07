@@ -4,6 +4,7 @@ import { REALMS, REALM_NEED, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { autoSlot } from './wuxue';
 import { canLearn, realmCap } from './shicheng';
+import { milestoneGrowth, profMul } from './gengu';
 
 /** 按境界上限把攒够的熟练度换成突破，返回突破说明 */
 function settle(id: SkillId): string[] {
@@ -16,6 +17,7 @@ function settle(id: SkillId): string[] {
     s.p -= REALM_NEED[s.r];
     s.r++;
     out.push(`「${sk.name}」突破至「${REALMS[s.r]}」`);
+    milestoneGrowth(S, sk, s.r);
   }
   return out;
 }
@@ -29,7 +31,8 @@ export function gainProf(id: SkillId, n: number): string[] {
   const sk = skillById(id);
   if (!s || !sk) return [];
   const was = s.p;
-  s.p += n;
+  // 根基决定练得快慢：根骨管内功，身法管轻功，悟性管外功（engine/gengu.ts）
+  s.p += Math.max(0, Math.round(n * profMul(S, sk)));
   const out = settle(id);
   // 内功突破了，先前卡在瓶颈的外功跟着突破
   if (sk.category === '内功' && out.length) for (const other of Object.keys(S.skills)) if (other !== id) out.push(...settle(other));
