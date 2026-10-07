@@ -29,7 +29,7 @@ describe('试算台', () => {
 
   it('绝招预算报告：列出预算、上限、是否超标', () => {
     const rep = performReport(skillById('hanjiang')!);
-    expect(rep.map(r => r.name)).toEqual(['寒江孤影', '独钓寒江']);
+    expect(rep.map(r => r.name)).toEqual(['寒江孤影', '江枫渔火', '独钓寒江']);
     expect(rep[0].over).toBe(false);
     expect(rep[0].budget).toBeGreaterThan(0);
     expect(rep[1].cap).toBeGreaterThan(rep[0].cap);
