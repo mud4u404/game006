@@ -115,8 +115,13 @@ const listKeys = (s: SaveStore, prefix: string): string[] => {
   return out.sort();
 };
 
+/** 每次写完存档后调用，云存档在这里挂上自己（见 net/sync.ts），存档本身不依赖网络 */
+const listeners: ((state: GameState) => void)[] = [];
+export const onSaved = (fn: (state: GameState) => void): void => { listeners.push(fn); };
+
 /** 写存档，顺手留当天的备份 */
 export function writeSave(state: GameState): void {
+  for (const fn of listeners) try { fn(state); } catch { /* 云端出错不影响本机存档 */ }
   const s = st();
   if (!s) return;
   try {
@@ -137,10 +142,18 @@ export function savedAt(): number {
   try { return JSON.parse(st()?.getItem(META) ?? '{}').savedAt ?? 0; } catch { return 0; }
 }
 
+/** 当前进度被清空或替换之前调用；云存档在这里把它收进云上的历史 */
+const replacing: ((old: GameState) => void)[] = [];
+export const onReplacing = (fn: (old: GameState) => void): void => { replacing.push(fn); };
+
 /** 把当前存档另存一份，留作「上次替换之前」的备份 */
 function keepCurrent(s: SaveStore): void {
   const t = s.getItem(KEY);
-  if (t) s.setItem(BAK_RESTART, t);
+  if (!t) return;
+  s.setItem(BAK_RESTART, t);
+  let old: GameState | null = null;
+  try { old = migrate(JSON.parse(t)); } catch { /* 读不出来的就只留在本机 */ }
+  if (old) for (const fn of replacing) try { fn(old); } catch { /* 云端出错不影响本机 */ }
 }
 
 /** 清空前先另存一份，误点了还能找回 */

@@ -2,6 +2,7 @@ import { S, fullName } from '../../core/state';
 import type { AttrKey } from '../../content/types';
 import { npcName } from '../../engine/world';
 import { xiuwei } from '../../engine/wuxue';
+import { cloudRowHTML } from './account-link';
 
 const AD: Record<AttrKey, string> = { 体魄: '气血 · 外功', 根骨: '内力 · 硬接', 身法: '轻身 · 闪避', 悟性: '领悟 · 拆招', 胆魄: '胆气 · 抢攻' };
 
@@ -33,7 +34,7 @@ export function viewRenwu(): string {
 
 /** 存档一栏的按钮，处理函数在 ui/savecard.ts */
 export function saveCardHTML(): string {
-  return `<p class="muted">进度自动保存在这台设备的浏览器里，每天另留一份备份。换手机、清缓存之前，先导出存档码带走。</p>
+  return `${cloudRowHTML()}<p class="muted">进度自动保存在这台设备的浏览器里，每天另留一份备份。换手机、清缓存之前，先导出存档码带走。</p>
     <div class="btnrow"><button class="act" data-act="saveExport">导出存档码</button><button class="act" data-act="saveImport">导入存档码</button></div>
     <div class="btnrow"><button class="act" data-act="saveBackups">找回备份</button><button class="act" data-act="toTitle">回到标题</button></div>`;
 }

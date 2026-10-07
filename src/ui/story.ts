@@ -1,6 +1,7 @@
 /**
  * 剧情卡片、标题画面、章回题字。
  */
+import { titleAccountHTML } from './views/account-link';
 import { S, load, newGame, save, saveBroken, setState, skipToYangzhou, type GameState } from '../core/state';
 import { dateStr } from '../core/time';
 import { $, cleanName, fmt } from '../core/util';
@@ -143,9 +144,9 @@ function titleButtons(saved: GameState | null, confirm?: 'new' | 'skip'): void {
   box.innerHTML = saved
     ? `<button class="t-btn" data-act="tContinue">继续<small>${chapterLabel(saved)} · ${dateStr(saved)}</small></button>
        <button class="t-btn ghost" data-act="tNew:new">新的江湖</button>
-       <button class="t-link" data-act="tNew:skip">跳过序章，直接去扬州</button>`
+       <button class="t-link" data-act="tNew:skip">跳过序章，直接去扬州</button>${titleAccountHTML()}`
     : `<button class="t-btn" data-act="tGo:new">新的江湖</button>
-       <button class="t-link" data-act="tGo:skip">跳过序章，直接去扬州</button>`;
+       <button class="t-link" data-act="tGo:skip">跳过序章，直接去扬州</button>${titleAccountHTML()}`;
 }
 
 function hideTitle(): void {
