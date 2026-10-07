@@ -33,6 +33,8 @@ export interface Cond {
   rel?: { npc: string; is?: string[]; not?: string[] };
   learned?: SkillId;
   notLearned?: SkillId;
+  /** 某门武功练到第几重（0 起）：atLeast 不低于，below 低于（没学会算低于任何一重） */
+  realm?: { skill: SkillId; atLeast?: number; below?: number };
   /** 属性不低于 */
   attr?: { key: AttrKey; atLeast: number };
   /** 侠义、恶名不低于 */
@@ -60,6 +62,8 @@ export type Effect =
   /** 改关系：value 只用关系阶梯里的词（engine/renqing.ts）；note 是人情备注，写为什么记得这个人 */
   | { type: 'rel'; npc: string; value: string; from?: string[]; note?: string }
   | { type: 'prof'; skill: SkillId; amount: number }
+  /** 历练：江湖上的见识与实战，闭关时化为武功进境（engine/lilian.ts）。高人指点、奇遇用它；打架、了结任务由引擎自动给 */
+  | { type: 'lilian'; amount: number }
   | { type: 'learn'; skill: SkillId; realm?: number; prof?: number }
   /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先出师或叛门 */
   | { type: 'sect'; school: string; rank: SectRank }
@@ -197,6 +201,25 @@ export interface FoeDef {
   win: string;
   lose: string;
   results: { win: FightResult; lose?: FightResult; flee?: FightResult; yield?: FightResult };
+  /**
+   * 备战：开打前做过的准备，条件成立就生效，可以叠加（engine/beizhan.ts）。
+   * 打听到对手的底细、找来帮手、占了地利……弱小的人靠这些也能以弱胜强。
+   */
+  prep?: PrepDef[];
+}
+
+export interface PrepDef {
+  if: Cond;
+  /** 开打时的叙述，例如「你记着船夫的话，专往他左边走」 */
+  text: string;
+  /** 对手气血、普通招式、重招的倍数，例如 0.85 */
+  hp?: number;
+  atk?: number;
+  big?: number;
+  /** 战后说书里的一句，写成完整的句子 */
+  story?: string;
+  /** 带着这项准备打赢时，额外执行的效果（准备的代价、后果写在这里） */
+  win?: Effect[];
 }
 
 /* ---------- 武功（武学库，详见 docs/wuxue.md） ---------- */
@@ -333,7 +356,13 @@ export interface SkillDef {
 
 export interface ItemDef { id: string; name: string; desc: string; usable?: boolean; hidden?: boolean }
 
-export interface QuestDef { id: string; name: string; stages: { title: string; to?: string }[] }
+export interface QuestDef {
+  id: string;
+  name: string;
+  stages: { title: string; to?: string }[];
+  /** 了结时给的历练；不写按阶段数算，每阶段 100（engine/lilian.ts） */
+  lilian?: number;
+}
 
 export interface StoryChoice {
   label: string;

@@ -10,6 +10,7 @@ import { test } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
 import { growAttr } from '../engine/gengu';
 import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
+import { retreatPlan } from '../engine/lilian';
 import { afterOutcome, closeSheet, openSheet, registerHandlers, render, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
@@ -65,7 +66,6 @@ function doAct(verb: Verb): void {
 
 function retreat(days: number): void {
   const label = ({ 1: '一日', 7: '七日', 30: '一月' } as Record<number, string>)[days];
-  const mul = ({ 1: 1, 7: 6, 30: 22 } as Record<number, number>)[days];
   openSheet(`<div class="r-h"><span class="tag accent">闭关</span><h2>闭关${label}</h2></div><p class="muted">${dateStr(S)}起，闭门谢客，静心修炼……</p><div class="tr2"><i id="rtBar"></i></div>`);
   const b = $('#rtBar')!;
   void b.offsetWidth;
@@ -74,11 +74,10 @@ function retreat(days: number): void {
   window.setTimeout(() => {
     advanceDays(S, days);
     S.min = 7 * 60 + 10;
-    const mpUp = 4 * mul;
-    S.mpMax += mpUp; S.mp = S.mpMax; S.hp = S.hpMax;
-    // 闭关练的是搭配在身上的武功：主手最多，内功次之，轻功、副手再次
-    const plan: [SkillId | undefined, number][] = [[S.loadout.main, 60 * mul], [S.loadout.neigong, 40 * mul], [S.loadout.qinggong, 20 * mul], [S.loadout.off, 15 * mul]];
-    const gains = plan.filter((x): x is [SkillId, number] => !!x[0] && !!S.skills[x[0]]);
+    S.mp = S.mpMax; S.hp = S.hpMax;
+    // 闭关是把江湖上攒下的历练消化成功夫；没有历练，闭门造车（engine/lilian.ts）
+    const { used, gains } = retreatPlan(S, days);
+    S.lilian -= used;
     const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
     // 闭关一月，打熬筋骨：体魄加一，最多三次（engine/gengu.ts）
     if (days === 30) for (let i = 1; i <= 3; i++) if (!S.flags[`gg_体魄_闭关${i}`]) { S.flags[`gg_体魄_闭关${i}`] = true; growAttr(S, '体魄', 1, '闭关一月，打熬筋骨'); break; }
@@ -89,11 +88,12 @@ function retreat(days: number): void {
     }
     news.slice().reverse().forEach(n => pushFeed('传闻', n));
     const names = (id: SkillId): string => skillById(id)?.name ?? id;
-    pushFeed('出关', `闭关${label}，内力上限 +${mpUp}${gains[0] ? `，「${names(gains[0][0])}」熟练 +${gains[0][1]}` : ''}。`);
+    const how = used ? `消化历练 ${used}` : '没有历练可消化，闭门造车，进境有限';
+    pushFeed('出关', `闭关${label}，${how}${gains[0] ? `，「${names(gains[0][0])}」熟练 +${gains[0][1]}` : ''}。`);
     const panel = document.querySelector('#sheetLayer .panel');
     if (panel) panel.innerHTML = `
       <div class="r-h"><span class="tag accent">出关</span><h2>闭关${label}，今日${dateStr(S)}</h2></div>
-      <div class="rewards"><span class="tag accent">内力上限 +${mpUp}</span>${gains.map(([k, v]) => `<span class="tag accent">${names(k)} +${v}</span>`).join('')}${breaks.map(x => `<span class="tag info">${x}</span>`).join('')}</div>
+      <div class="rewards"><span class="tag ${used ? 'accent' : ''}">${used ? `消化历练 ${used}` : '闭门造车'}</span>${gains.map(([k, v]) => `<span class="tag accent">${names(k)} +${v}</span>`).join('')}${breaks.map(x => `<span class="tag info">${x}</span>`).join('')}</div>
       <div class="r-sub">江湖见闻</div>
       <div class="news">${news.map(n => `<div><span class="tag warn">传闻</span><span>${n}</span></div>`).join('')}</div>
       <button class="btn" data-act="sheetClose">出关</button>`;

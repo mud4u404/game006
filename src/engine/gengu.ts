@@ -78,6 +78,15 @@ export function milestoneGrowth(s: GameState, def: SkillDef, realm: number): voi
   growAttr(s, k, 1, `「${def.name}」练到第${cn(realm + 1)}重`);
 }
 
+/** 内功每突破一重，气血、内力上限跟着涨（开局从零练起，底子靠内功一层层垫上去） */
+export const NEIGONG_STEP = { hp: 60, mp: 40 };
+export function neigongGrowth(s: GameState, def: SkillDef): void {
+  if (def.category !== '内功') return;
+  s.hpMax += NEIGONG_STEP.hp; s.hp += NEIGONG_STEP.hp;
+  s.mpMax += NEIGONG_STEP.mp; s.mp += NEIGONG_STEP.mp;
+  pushFeed('突破', `内功深了一层：气血上限 +${NEIGONG_STEP.hp}，内力上限 +${NEIGONG_STEP.mp}。`);
+}
+
 /** 人物页上每项根基的说明：写它现在实际带来了什么 */
 export function attrLines(s: Pick<GameState, 'attr'>): Record<AttrKey, string> {
   const e = attrEffects(s);

@@ -5,6 +5,7 @@ import type { SkillDef, Slot } from '../../content/types';
 import { RESP, huohou } from '../../engine/formulas';
 import { RESP_SLOT, xiuwei } from '../../engine/wuxue';
 import { canPerform, realmCap } from '../../engine/shicheng';
+import { RETREAT } from '../../engine/lilian';
 
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
 
@@ -12,8 +13,8 @@ export function viewWugong(): string {
   const opts: [string, string][] = [['1', '一日'], ['7', '七日'], ['30', '一月']];
   const learned = SKILLS.filter(k => S.skills[k.id]);
   return `
-  <section class="card here"><div class="sec-h"><h2>闭关修炼</h2></div>
-    <p class="muted">闭关时光阴流逝，武功与内力缓缓精进。江湖不会等你：出关时，会听到这段日子里的新鲜事。</p>
+  <section class="card here"><div class="sec-h"><h2>闭关修炼</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
+    <p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多消化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练，闭门造车，进境有限。</p>
     ${S.chapter === 0
       ? '<p class="muted">江伯还病着，眼下不是闭关的时候。</p>'
       : `<div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}">${l}</button>`).join('')}</div>`}

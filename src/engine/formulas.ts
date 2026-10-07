@@ -30,6 +30,13 @@ export const odds = (k: RespKey, hh: number, strength: number): number =>
 export const chengN = (p: number): number => clamp(Math.round(p * 10), 1, 9);
 export const cheng = (p: number): string => liang(chengN(p)) + '成';
 
+/**
+ * 出手的轻重随境界走：初窥门径打八成，每深一重加一成，练到大乘一倍六。
+ * 开局的渔家少年剑上没有火候，要靠练出来（docs/audit.md「开局强度」）。
+ */
+export const realmPow = (s: Pick<GameState, 'skills'>, id: SkillId | undefined): number =>
+  0.8 + 0.1 * (id ? s.skills[id]?.r ?? 0 : 0);
+
 /** 首领二阶段时，四项强度各加 5 */
 export function tellPw(t: TellDef, phase: number): TellDef['pw'] {
   const b = phase === 2 ? 5 : 0;

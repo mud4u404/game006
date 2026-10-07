@@ -183,6 +183,7 @@ export default pack;
 | `{ type: 'item', id: 'jcy', delta: 1 }` | 增减物品 |
 | `{ type: 'rel', npc: 'liu', value: '知交', from: ['相谈甚欢'] }` | 改关系；写了 `from` 时，只有当前关系在列表里才改 |
 | `{ type: 'prof', skill: 'hanjiang', amount: 50 }` | 增加武功熟练度，满了会自动突破 |
+| `{ type: 'lilian', amount: 60 }` | 给历练，闭关时化成功夫。用在高人指点、奇遇、看人比武这类「长见识」的地方；打架、了结任务由引擎自动给，不用另写 |
 | `{ type: 'learn', skill: 'jinghong', prof: 120 }` | 习得武功 |
 | `{ type: 'attr', key: '悟性', delta: 1 }` | 改属性 |
 | `{ type: 'xia', delta: 5 }` | 改侠义 |
@@ -218,6 +219,7 @@ export default pack;
 ```
 
 - 阶段从 0 开始。最后一个阶段一般不写 `to`，表示已经完成。
+- 推到最后一个阶段时，引擎自动给历练，每个阶段 100。大事、小事不相称时，用 `lilian: 400` 另定。
 - 任务靠效果推进：`{ type: 'quest', id, stage }`。
 - 要让顶部横幅追踪某个任务，用 `{ type: 'track', id }`。主线进行中时，支线一般不要抢走横幅。
 
@@ -239,7 +241,18 @@ export default pack;
   - 会输的战斗必须写 `lose`。
   - 切磋（`spar: true`）建议写上 `yield` 和 `flee`。
   - `results` 里 `story: '@compose'` 表示由引擎根据战况生成战后说书，一般只给首领用。
-- 结算里的奖励标签会根据 `do` 里的效果自动生成，不用另写。
+- 结算里的奖励标签会根据 `do` 里的效果自动生成，不用另写。打完的历练也由引擎自动算。
+- **备战（`prep`）**：强敌要给弱小的人留出路。打听底细、找帮手、占地利，每一条写成一项准备：
+  ```ts
+  prep: [
+    { if: { flag: 'tu_scar' }, atk: 0.85, big: 0.85,
+      text: '你记着船夫的话，专往屠千山左边走。',      // 开打时的叙述
+      story: '少年早从船夫口中探得他左臂有旧伤。' },   // 战后说书里的一句
+    { if: { flag: 'tu_allies' }, hp: 0.75, text: '……',
+      win: [{ type: 'flag', flag: 'tu_with_allies' }] } // 带着这项准备打赢的后果、代价
+  ]
+  ```
+  准备要从内容里挣来（看出破绽、交好某人、侠义够了），每一项都要有代价或后果，不能白拿。示范见 `src/content/packs/yangzhou.ts` 的屠千山。
 
 ---
 

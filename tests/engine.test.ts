@@ -14,7 +14,9 @@ import { relGroup, warmer } from '../src/engine/renqing';
 import { gainProf, learnSkill } from '../src/engine/growth';
 import { SKILLS } from '../src/content';
 import type { SkillDef } from '../src/content/types';
-import { cheng, huohou, odds, respOptions } from '../src/engine/formulas';
+import { cheng, huohou, odds, realmPow, respOptions } from '../src/engine/formulas';
+import { FOE_WINDOW, RETREAT, fightLilian, retreatPlan } from '../src/engine/lilian';
+import { prepFoe } from '../src/engine/beizhan';
 
 describe('文字与时间', () => {
   it('中文数字', () => {
@@ -208,6 +210,8 @@ describe('见招拆招成算', () => {
     expect(cheng(0.2)).toBe('两成');
   });
   it('火候由境界和属性决定', () => {
+    S.skills.taxue = { r: 2, p: 0 };
+    S.skills.hanjiang = { r: 1, p: 0 };
     expect(huohou(S, 'dodge')).toBe(2 * 10 + 16);
     expect(huohou(S, 'parry')).toBe(1 * 10 + 15);
   });
@@ -270,12 +274,12 @@ describe('师承与前置', () => {
 
   it('学不成时不学，只记一条见闻；条件 canLearn 跟着变', () => {
     delete S.skills.duanshui;
-    S.skills.hanjiang = { r: 0, p: 0 };
+    delete S.skills.hanjiang;
     expect(cond({ canLearn: 'duanshui' })).toBe(false);
     expect(learnSkill('duanshui')).toEqual([]);
     expect(S.skills.duanshui).toBeUndefined();
     expect(S.feed[0].x).toContain('根基未到');
-    S.skills.hanjiang = { r: 1, p: 0 };
+    S.skills.hanjiang = { r: 0, p: 0 };
     expect(cond({ canLearn: 'duanshui' })).toBe(true);
     expect(learnSkill('duanshui')).toEqual(['习得「断水」']);
   });
@@ -463,5 +467,127 @@ describe('人情', () => {
     expect(relGroup('相谈甚欢')).toBe('交好');
     expect(relGroup('仇敌')).toBe('恩怨');
     expect(relGroup('阴阳两隔')).toBe('至亲至交');
+  });
+});
+
+describe('从零练武：成长从江湖上来', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+
+  it('开局不入流：寒江三门都在初窥门径；出手轻重随境界，初窥门径打八成，大乘一倍六', () => {
+    const g = newGame();
+    expect(Object.values(g.skills).every(x => x!.r === 0 && x!.p === 0)).toBe(true);
+    expect(realmPow(S, 'hanjiang')).toBeCloseTo(0.8);
+    S.skills.hanjiang!.r = 8;
+    expect(realmPow(S, 'hanjiang')).toBeCloseTo(1.6);
+    expect(realmPow(S, 'jinghong')).toBeCloseTo(0.8);
+  });
+
+  it('内功每突破一重，气血上限 +60、内力上限 +40；外功突破不加', () => {
+    const hp = S.hpMax, mp = S.mpMax;
+    S.skills.xinfa = { r: 0, p: 0 };
+    gainProf('xinfa', 300);
+    expect(S.skills.xinfa.r).toBe(1);
+    expect(S.hpMax).toBe(hp + 60);
+    expect(S.mpMax).toBe(mp + 40);
+    S.skills.taxue = { r: 0, p: 0 };
+    gainProf('taxue', 300);
+    expect(S.hpMax).toBe(hp + 60);
+  });
+
+  it('打一架攒历练：赢了得对手气血的一成，输了一半，逃跑没有；七天内反复打同一人，一次减半', () => {
+    S.lilian = 0;
+    const foe = { id: 'tu', hp: 3000 };
+    expect(fightLilian(S, foe, 'lose')).toBe(150);
+    expect(fightLilian(S, foe, 'lose')).toBe(75);
+    expect(fightLilian(S, foe, 'win')).toBe(75);
+    expect(S.lilian).toBe(300);
+    S.day += FOE_WINDOW;
+    expect(fightLilian(S, foe, 'win')).toBe(300);
+    expect(fightLilian(S, { id: 'liu', hp: 1400 }, 'flee')).toBe(0);
+  });
+
+  it('一件事了结时给历练，只给一次', () => {
+    S.lilian = 0;
+    run([{ type: 'quest', id: 'side_huafang', stage: 1 }]);
+    expect(S.lilian).toBe(0);
+    run([{ type: 'quest', id: 'side_huafang', stage: 2 }]);
+    expect(S.lilian).toBe(200);
+    run([{ type: 'quest', id: 'side_huafang', stage: 2 }]);
+    expect(S.lilian).toBe(200);
+  });
+
+  it('闭关消化历练；没有历练，闭门造车，进境只有一点', () => {
+    S.lilian = 0;
+    const idle = retreatPlan(S, 30);
+    expect(idle.used).toBe(0);
+    expect(idle.gains.reduce((a, [, v]) => a + v, 0)).toBeLessThanOrEqual(RETREAT[30].base + 2);
+    S.lilian = 5000;
+    const full = retreatPlan(S, 30);
+    expect(full.used).toBe(RETREAT[30].cap);
+    expect(full.gains.map(([k]) => k)).toEqual(['hanjiang', 'xinfa', 'taxue']);
+    expect(full.gains[0][1]).toBeGreaterThan(full.gains[1][1]);
+    expect(retreatPlan(S, 1).used).toBe(RETREAT[1].cap);
+  });
+
+  it('备战：条件成立的准备都生效，可以叠加；没有准备就是原来的对手', async () => {
+    const { FOES } = await import('../src/content');
+    const tu = FOES.find(f => f.id === 'tu')!;
+    expect(prepFoe(tu).foe).toBe(tu);
+    S.flags.tu_scar = true;
+    S.flags.tu_allies = true;
+    const { foe, active } = prepFoe(tu);
+    expect(active).toHaveLength(2);
+    expect(foe.hp).toBe(Math.round(tu.hp * 0.75));
+    expect(foe.big).toBe(Math.round(tu.big * 0.85));
+  });
+});
+
+describe('渡口一剑：弱小的少年怎么赢', () => {
+  beforeEach(() => {
+    setState(skipToYangzhou());
+    S.quests.main1 = 1;
+  });
+
+  it('了尘不叫你闭关，而是点你去找船夫、漕帮、柳寒舟', () => {
+    const t = act('liaochen', '交谈').text;
+    expect(t).toContain('船夫');
+    expect(t).toContain('漕帮');
+    expect(t).not.toContain('闭关');
+  });
+
+  it('知彼：先看出他左臂有伤，船夫才肯说那道伤的来历', () => {
+    expect(act('chuanfu', '交谈').text).toContain('什么都没看见');
+    act('tu', '观察');
+    expect(S.flags.tu_saw_arm).toBe(true);
+    expect(act('chuanfu', '交谈').text).toContain('分水刺');
+    expect(S.flags.tu_scar).toBe(true);
+    expect(act('liaochen', '交谈').text).toContain('没有白走');
+  });
+
+  it('帮手：侠义够了，漕帮管事才肯违了帮主的令；打赢以后他丢了差事', async () => {
+    const g = (): NpcDef => npcDef('guanshi')!;
+    S.xia = 12;
+    expect(verbsOf(g())).not.toContain('请他帮忙');
+    expect(act('guanshi', '交谈').text).toContain('谁也不认得少侠');
+    S.xia = 20;
+    expect(verbsOf(g())).toContain('请他帮忙');
+    act('guanshi', '请他帮忙');
+    expect(S.flags.tu_allies).toBe(true);
+    const { FOES } = await import('../src/content');
+    const tu = FOES.find(f => f.id === 'tu')!;
+    run([...tu.results.win.do!, ...prepFoe(tu).active.flatMap(p => p.win ?? [])]);
+    expect(S.flags.tu_with_allies).toBe(true);
+    expect(act('guanshi', '交谈').text).toContain('撑篙');
+  });
+
+  it('掠阵：和柳寒舟交好了，他才肯去渡口；打完以后，他问起你的剑法', async () => {
+    expect(act('liu', '交谈').text).not.toContain('算我一个');
+    S.rel.liu = '相谈甚欢';
+    expect(act('liu', '交谈').text).toContain('算我一个');
+    expect(S.flags.tu_liu).toBe(true);
+    const { FOES } = await import('../src/content');
+    run(prepFoe(FOES.find(f => f.id === 'tu')!).active.flatMap(p => p.win ?? []));
+    S.quests.main1 = 2;
+    expect(act('liu', '交谈').text).toContain('跟谁学的');
   });
 });
