@@ -1,0 +1,74 @@
+/**
+ * 内容总表：自动收录 src/content/packs/ 下所有内容包，并做两件合并工作：
+ * 1. 出口写了回程方位的，给对面地点补上回来的出口；
+ * 2. 人物写了 at 的，放进对应地点。
+ * 新增内容只需要在 packs/ 下新建文件，这里不用改。
+ */
+import type { ContentPack, FoeDef, ItemDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, StoryDef } from './types';
+
+export { SKILLS, skillById, REALMS, REALM_NEED, GRADES } from './skills';
+
+const modules = import.meta.glob<{ default: ContentPack }>('./packs/*.ts', { eager: true });
+const packs = Object.keys(modules).sort().map(k => modules[k].default);
+
+export interface Registry {
+  REGIONS: Record<string, RegionDef>;
+  ROOMS: RoomDef[];
+  NPCS: NpcDef[];
+  FOES: FoeDef[];
+  QUESTS: QuestDef[];
+  STORIES: StoryDef[];
+  ITEMS: ItemDef[];
+  NEWS: NewsDef[];
+}
+
+/** 合并内容包：补回程出口、按 at 放人物 */
+export function mergePacks(list: ContentPack[]): Registry {
+  const reg: Registry = {
+    REGIONS: Object.assign({}, ...list.map(p => p.regions || {})),
+    ROOMS: list.flatMap(p => p.rooms || []),
+    NPCS: list.flatMap(p => p.npcs || []),
+    FOES: list.flatMap(p => p.foes || []),
+    QUESTS: list.flatMap(p => p.quests || []),
+    STORIES: list.flatMap(p => p.stories || []),
+    ITEMS: list.flatMap(p => p.items || []),
+    NEWS: list.flatMap(p => p.news || [])
+  };
+  const byId = new Map(reg.ROOMS.map(r => [r.id, r]));
+  for (const r of reg.ROOMS) {
+    for (const ex of r.exits) {
+      const back = ex[2];
+      const target = byId.get(ex[1]);
+      if (back && target && !target.exits.some(e => e[1] === r.id)) target.exits.push([back, r.id]);
+    }
+  }
+  for (const n of reg.NPCS) {
+    if (!n.at) continue;
+    const target = byId.get(n.at.room);
+    if (!target) continue;
+    const list2 = n.obj ? (target.objs ||= []) : target.npcs;
+    if (list2.some(x => (typeof x === 'string' ? x : x.id) === n.id)) continue;
+    list2.push(n.at.if ? { id: n.id, if: n.at.if } : n.id);
+  }
+  return reg;
+}
+
+export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS } = mergePacks(packs);
+
+const roomMap = new Map(ROOMS.map(r => [r.id, r]));
+const npcMap = new Map(NPCS.map(n => [n.id, n]));
+const storyMap = new Map(STORIES.map(s => [s.id, s]));
+const foeMap = new Map(FOES.map(f => [f.id, f]));
+const questMap = new Map(QUESTS.map(q => [q.id, q]));
+const itemMap = new Map(ITEMS.map(i => [i.id, i]));
+
+export function room(id: string): RoomDef {
+  const r = roomMap.get(id);
+  if (!r) throw new Error(`未知地点：${id}`);
+  return r;
+}
+export const npc = (id: string): NpcDef | undefined => npcMap.get(id);
+export const storyById = (id: string): StoryDef | undefined => storyMap.get(id);
+export const foeById = (id: string): FoeDef | undefined => foeMap.get(id);
+export const questById = (id: string): QuestDef | undefined => questMap.get(id);
+export const itemById = (id: string): ItemDef | undefined => itemMap.get(id);
