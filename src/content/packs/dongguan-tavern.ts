@@ -21,8 +21,8 @@ const NPCS: NpcDef[] = [
       观察: [{ text: '柜台后面的酒架上摆满了酒坛，标着「花雕」「竹叶青」「女儿红」。' }],
       交谈: [{ text: '「客官好眼力，今儿个新到的花雕，三十文一壶，要不要来一坛？」' }],
       购买: [
-        { if: { silver: 30 }, text: '掌柜麻利地倒了一壶花雕递过来。（银两 −30 文）',
-          do: [{ type: 'silver', delta: -30 }, { type: 'toast', text: '银两 −30 文' }] },
+        { if: { silver: 30 }, text: '掌柜麻利地封好一壶花雕递过来。（银两 −30 文，得花雕一壶）',
+          do: [{ type: 'silver', delta: -30 }, { type: 'item', id: 'huadiao', delta: 1 }, { type: 'toast', text: '银两 −30 文　花雕 +1' }] },
         { text: '「三十文一壶，一文不能少。」' }
       ]
     }

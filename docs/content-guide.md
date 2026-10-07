@@ -161,7 +161,7 @@ export default pack;
 | 写法 | 作用 |
 |---|---|
 | `{ type: 'flag', flag: 'x' }` | 设置标记 |
-| `{ type: 'quest', id: 'main1', stage: 2 }` | 设置任务进度 |
+| `{ type: 'quest', id: 'main1', stage: 2 }` | 设置任务进度。只升不降：已经到了更高阶段时，这条不起作用，所以开启任务的效果可以放心写在会重复触发的地方 |
 | `{ type: 'track', id: 'side_x' }` | 把顶部横幅切换成追踪这个任务 |
 | `{ type: 'feed', tag: '传闻', text: '……' }` | 在场景卡片里加一条见闻，标签可选：传闻、出关、主线、江湖、突破、收获 |
 | `{ type: 'toast', text: '……' }` | 屏幕顶部弹出一句提示 |

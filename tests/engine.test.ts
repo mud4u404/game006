@@ -107,6 +107,33 @@ describe('条件与效果', () => {
     expect(cond({ hour: { from: 19, to: 5 } })).toBe(false);
     expect(cond({ hour: { from: 9, to: 17 } })).toBe(true);
   });
+  it('任务进度只升不降', () => {
+    run([{ type: 'quest', id: 'side_x', stage: 2 }]);
+    run([{ type: 'quest', id: 'side_x', stage: 0 }]);
+    expect(S.quests.side_x).toBe(2);
+    run([{ type: 'quest', id: 'side_x', stage: 3 }]);
+    expect(S.quests.side_x).toBe(3);
+  });
+  it('带名号再找周捕头交谈，缉拿草上飞的进度不会退回', () => {
+    S.flags.boss = true;
+    act('fuya_zhou', '交谈');
+    expect(S.quests.side_caoshangfei).toBe(0);
+    act('fuya_zhou', '揭榜');
+    expect(S.quests.side_caoshangfei).toBe(1);
+    act('fuya_zhou', '交谈');
+    expect(S.quests.side_caoshangfei).toBe(1);
+  });
+  it('望江楼买花雕：扣钱，也给酒', () => {
+    S.silver = 100;
+    act('changgui', '购买');
+    expect(S.silver).toBe(70);
+    expect(S.items.huadiao).toBe(1);
+  });
+  it('画舫了结以后，瘦西湖的佩刀汉子会议论，名号在身也一样', () => {
+    S.flags.boss = true;
+    S.flags.huafang_good = true;
+    expect(act('caobang', '交谈').text).toContain('汪家');
+  });
   it('序章：江伯 → 抓药 → 入夜', () => {
     act('jiangbo', '交谈');
     expect(S.quests.prologue).toBe(1);

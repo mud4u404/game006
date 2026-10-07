@@ -74,7 +74,7 @@ docs/                  设计文档
 4. **自检**：
    - 提交前 `npm run check` 必须全部通过，`npm run build` 必须成功。
    - 运行 `git diff --stat origin/main`，确认只改动了允许范围内的文件。
-   - **PR 正文的「自检」部分，贴上 `npm run check` 和 `npm run build` 最后几行的真实输出**。不要只打勾。
+   - **PR 正文的「自检」部分，贴上 `npm run check` 和 `npm run build` 最后几行的真实输出**。不要只打勾；没跑就写「没跑」，不要声称通过。
 5. **提 PR**：
    - 目标分支 `main`，标题写成 `[#Issue编号] 任务标题`。
    - 正文按 PR 模板填写，写上 `Closes #Issue编号`。
