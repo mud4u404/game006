@@ -33,6 +33,15 @@ const NPCS: NpcDef[] = [
           do: [{ type: 'rel', npc: 'yunnian', value: '心存芥蒂' }] },
         { if: { flag: 'huafang_started' },
           text: '云娘低声道：「那汪家大少还在画舫上呢，公子千万小心。」' },
+        { if: { quest: { id: 'main1', atLeast: 3 } },
+          text: '云娘抬眼看了看篷外，声音低得像蚊子哼：「公子……我欠了汪家八十文的债，他说今夜不还钱，就要把我卖去青楼。」',
+          do: [
+            { type: 'rel', npc: 'yunnian', value: '点头之交', from: ['素不相识'] },
+            { type: 'quest', id: 'side_huafang', stage: 0 },
+            { type: 'track', id: 'side_huafang' },
+            { type: 'flag', flag: 'huafang_started' },
+            { type: 'feed', tag: '江湖', text: '云娘欠了汪家少爷八十文，今晚要么还钱，要么被卖去青楼。' }
+          ] },
         { text: '云娘抬眼看了看篷外，声音低得像蚊子哼：「公子……我欠了汪家八十文的债，他说今夜不还钱，就要把我卖去青楼。」',
           do: [
             { type: 'rel', npc: 'yunnian', value: '点头之交', from: ['素不相识'] },
@@ -46,7 +55,7 @@ const NPCS: NpcDef[] = [
         { if: { any: [{ flag: 'huafang_good' }, { flag: 'huafang_betray' }] },
           text: '云娘摇头：「公子已经帮过云娘了，这债……不用还了。」' },
         { if: { silver: 80 },
-          text: '你摸出八十文递给云娘：「这是我身上所有的钱，你拿去还债吧。」云娘的眼泪「唰」地流下来，双手接过。',
+          text: '你摸出八十文递给云娘：「这是八十文，你拿去还债吧。」云娘的眼泪「唰」地流下来，双手接过。',
           do: [
             { type: 'silver', delta: -80 },
             { type: 'flag', flag: 'huafang_pay' }, { type: 'flag', flag: 'huafang_good' },
@@ -60,13 +69,13 @@ const NPCS: NpcDef[] = [
   },
   {
     id: 'wangshao', name: '汪家少爷', ini: '汪', tone: 'red', brief: '摇着折扇',
-    look: '锦袍玉带，腰间挂着一块羊脂玉佩，手里折扇摇得正欢。身后立着一个膀大腰圆的护院。',
+    look: '锦袍玉带，腰间挂着一块羊脂玉佩，手里折扇摇得正欢，一口徽州腔，是扬州大盐商家的少爷。身后立着一个膀大腰圆的护院。',
     verbs: ['交谈', '观察', '动手'],
     actions: {
       观察: [{ text: '护院腰上别着一柄厚背单刀，刀鞘磨得发亮。汪少爷的鞋尖沾着一点没擦干净的湖泥。' }],
       交谈: [
         { if: { flag: 'boss' },
-          text: '汪少爷一眼瞥见你腰间的半块玉佩，折扇「啪」地合上：「渡……渡口一剑？」他脸色一白，转身就走，护院赶紧跟上。',
+          text: '汪少爷一眼瞥见你腰间的长剑，折扇「啪」地合上：「渡……渡口一剑？」他脸色一白，转身就走，护院赶紧跟上。',
           do: [
             { type: 'flag', flag: 'huafang_nianhao' }, { type: 'flag', flag: 'huafang_good' },
             { type: 'flag', flag: 'huafang_done' },
