@@ -55,6 +55,8 @@ export function styleProblems(school: string): string[] {
   for (const k of skills) {
     for (const x of fxOf(k)) if (!allowed.has(x.f.kind)) errs.push(`${x.where}：效果 ${x.f.kind} 不在本门可用的效果里（${pos.main}＋${pos.sub}：${[...allowed].join(' ')}）`);
     if (!quick) for (const p of k.performs || []) if (p.hits >= 3) errs.push(`${k.name}「${p.name}」：三连击是迅捷的专长，${pos.main}＋${pos.sub}的门派最多两击`);
+    const hard = pos.main === '刚猛' || pos.sub === '刚猛';
+    for (const p of k.performs || []) if (p.charge && (!hard || p.hits !== 1)) errs.push(`${k.name}「${p.name}」：蓄势（charge）是刚猛的专长，只能用在带刚猛的门派、一击的绝招上`);
   }
   if (!skills.length) return errs;
   const m = sigCount(skills, pos.main), s = sigCount(skills, pos.sub);

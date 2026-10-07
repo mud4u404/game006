@@ -1,0 +1,147 @@
+/**
+ * 对战模拟用的搭配：给一个门派、一个时期，按师承规则配出这一期能拿出来的最好搭配，算成战斗内核的 Kit。
+ * 「同等投入」：同一时期，所有门派的境界、气血、内力相同，能用的武功由传授方式（teach）决定。
+ */
+import { SKILLS } from '../content';
+import { JIANGHU_RULE, OUTER, SCHOOL_STYLE, STYLES } from '../content/skills';
+import type { FxDef, FxKind, SkillDef, SkillGrade, SkillTeach } from '../content/types';
+import type { Kit, Move } from './combat';
+import { rootsOn } from './shicheng';
+import { passiveCost, performBudget, skillPower, ultBudget } from './wuxue';
+
+export interface Stage { name: string; realm: number; teach: SkillTeach[]; qiyu: SkillGrade; hp: number; mp: number; budget: number }
+
+/**
+ * 前期：入门、外门的武功练到略有小成；中期：加上内门，登堂入室；后期：真传都有，返璞归真。
+ * 奇遇武功按品级算：前期碰得到良品以下的，中期绝品以下，后期什么都有。
+ * 品级额度（docs/menpai.md 第六节「同等投入」）：五个槽位的品级点数加起来不超过 budget，凡品 0、良品 1、上品 2、绝品 3、神品 4、禁品 5。
+ */
+export const STAGES: Stage[] = [
+  { name: '前期', realm: 2, teach: ['入门', '外门'], qiyu: '良品', hp: 1500, mp: 600, budget: 7 },
+  { name: '中期', realm: 4, teach: ['入门', '外门', '内门'], qiyu: '绝品', hp: 2000, mp: 800, budget: 11 },
+  { name: '后期', realm: 7, teach: ['入门', '外门', '内门', '真传'], qiyu: '禁品', hp: 2600, mp: 1000, budget: 16 }
+];
+const RANK: SkillGrade[] = ['凡品', '良品', '上品', '绝品', '神品', '禁品'];
+
+/** 还没写 teach 的武功（待改造的门派），按品级推定 */
+const GRADE_TEACH: Record<SkillGrade, SkillTeach> = { 凡品: '入门', 良品: '入门', 上品: '外门', 绝品: '内门', 神品: '真传', 禁品: '奇遇' };
+const teachOf = (k: SkillDef): SkillTeach => k.teach ?? GRADE_TEACH[k.grade];
+
+/** 这一期、这个门派能用的武功（本门加江湖散学） */
+export function available(school: string, st: Stage): SkillDef[] {
+  const ok = (k: SkillDef): boolean => {
+    if (k.school === JIANGHU_RULE.school) return true;
+    const t = teachOf(k);
+    return t === '奇遇' ? RANK.indexOf(k.grade) <= RANK.indexOf(st.qiyu) : st.teach.includes(t);
+  };
+  return SKILLS.filter(k => (k.school === school || k.school === JIANGHU_RULE.school) && ok(k));
+}
+
+export interface Build { school: string; stage: Stage; neigong?: SkillDef; qinggong?: SkillDef; main?: SkillDef; off?: SkillDef; ult?: SkillDef }
+
+const toMove = (k: SkillDef, p: NonNullable<SkillDef['performs']>[number]): Move => ({
+  name: `${k.name}「${p.name}」`, mp: p.mp, cd: p.cd, hits: p.hits, dmg: p.dmg, acc: p.acc, fx: p.fx || [],
+  // 蓄势的重招（只有刚猛的门派写，docs/menpai.md 第五节）
+  heavy: !!p.charge && p.hits === 1
+});
+
+/** 一门外功在这一期、这门内功下的分量：解锁了的、使得出的绝招预算之和，加普通招式 */
+function outerScore(k: SkillDef, ng: SkillDef | undefined, st: Stage): number {
+  const usable = ng ? rootsOn(k, ng) : k.school === JIANGHU_RULE.school;
+  const ps = usable ? (k.performs || []).filter(p => (p.realm ?? 0) <= st.realm) : [];
+  return skillPower(k, st.realm) * 3 + ps.reduce((a, p) => a + performBudget(p), 0);
+}
+
+/** 品级点数：凡品 0、良品 1……禁品 5 */
+export const gradePoints = (k?: SkillDef): number => (k ? RANK.indexOf(k.grade) : 0);
+
+/** 搭配的分量（配招用的粗估）：外功和绝招、杀招、内功、轻功的功力与被动 */
+function buildScore(b: Omit<Build, 'school' | 'stage'>, st: Stage): number {
+  const ng = b.neigong;
+  let v = 0;
+  if (b.main) v += outerScore(b.main, ng, st);
+  if (b.off) v += 0.6 * outerScore(b.off, ng, st);
+  if (b.ult?.ult && (!ng || rootsOn(b.ult, ng))) v += 0.5 * ultBudget(b.ult.ult);
+  if (ng) v += 4 * skillPower(ng, st.realm) + 5 * passiveCost(ng.passive);
+  if (b.qinggong) v += 2 * skillPower(b.qinggong, st.realm) + 5 * passiveCost(b.qinggong.passive);
+  return v;
+}
+
+/** 配出这一期、品级额度以内的最好搭配：五个槽位穷举（每槽只留分量最高的几门） */
+export function bestBuild(school: string, st: Stage): Build {
+  const pool = available(school, st);
+  const top = (xs: SkillDef[], score: (k: SkillDef) => number, n: number): (SkillDef | undefined)[] => [undefined, ...[...xs].sort((a, b) => score(b) - score(a)).slice(0, n)];
+  const ngs = top(pool.filter(k => k.category === '内功'), k => skillPower(k, st.realm) + passiveCost(k.passive) * 2, 4);
+  const qgs = top(pool.filter(k => k.category === '轻功'), k => skillPower(k, st.realm) + passiveCost(k.passive) * 2, 3);
+  const outers = pool.filter(k => OUTER.includes(k.category));
+  const ults = top(pool.filter(k => k.category === '绝技' && k.ult), k => ultBudget(k.ult!), 3);
+  let best: Build = { school, stage: st }, bestV = -1;
+  for (const neigong of ngs) for (const qinggong of qgs) for (const ult of ults) {
+    const used = gradePoints(neigong) + gradePoints(qinggong) + gradePoints(ult);
+    if (used > st.budget) continue;
+    const mains = top(outers, k => outerScore(k, neigong, st), 6);
+    for (const main of mains) for (const off of mains) {
+      if (off && off === main) continue;
+      if (used + gradePoints(main) + gradePoints(off) > st.budget) continue;
+      const v = buildScore({ neigong, qinggong, main, off, ult }, st);
+      if (v > bestV) { bestV = v; best = { school, stage: st, neigong, qinggong, main, off, ult }; }
+    }
+  }
+  return best;
+}
+
+const PASSIVE_KINDS: FxKind[] = ['guard', 'haste', 'heal', 'rage'];
+
+/** 把搭配算成战斗内核的 Kit */
+export function kitOf(b: Build): Kit {
+  const st = b.stage, ng = b.neigong;
+  const rooted = (k: SkillDef): boolean => (ng ? rootsOn(k, ng) : k.school === JIANGHU_RULE.school);
+  const passive = { guard: 0, haste: 0, heal: 0, rage: 0 };
+  const add = (fx: FxDef): void => { if (PASSIVE_KINDS.includes(fx.kind)) passive[fx.kind as keyof typeof passive] += fx.value ?? 0; };
+  for (const fx of ng?.passive || []) add(fx);
+  const openers: FxDef[] = [];
+  let hit = 0;
+  // 合璧：两门都搭配在身上才生效；效果里的增益算被动，减益开战时施加给对手
+  const worn = [ng, b.qinggong, b.main, b.off, b.ult].filter((k): k is SkillDef => !!k);
+  for (const k of worn) for (const cb of k.combos || []) {
+    const pair = cb.with.startsWith('门派:') ? worn.some(x => x !== k && x.school === cb.with.slice(3)) : worn.some(x => x.id === cb.with);
+    if (!pair || !rooted(k)) continue;
+    hit += cb.bonus / 100;
+    for (const fx of cb.fx || []) (PASSIVE_KINDS.includes(fx.kind) ? add(fx) : openers.push(fx));
+  }
+  const moves: Move[] = [];
+  for (const k of [b.main, b.off]) if (k && rooted(k)) for (const p of k.performs || []) if ((p.realm ?? 0) <= st.realm) moves.push(toMove(k, p));
+  const mainPow = b.main ? skillPower(b.main, st.realm) : 0;
+  const avg = 60 + mainPow * 1.2;
+  const basic: Move = { name: b.main ? `${b.main.name}的普通招式` : '拳脚', mp: 0, cd: 0, hits: 1, dmg: [avg * 0.8, avg * 1.2], acc: 0.85, fx: [] };
+  const ult = b.ult?.ult && rooted(b.ult) ? { name: `${b.ult.name}（杀招）`, mp: 0, cd: 0, hits: 1, dmg: b.ult.ult.dmg, acc: 1, fx: b.ult.ult.fx || [], sure: true } : undefined;
+  const qg = b.qinggong;
+  const dodge = 0.08 + (qg ? skillPower(qg, st.realm) / 400 : 0) + (qg?.passive || []).filter(f => f.kind === 'haste').reduce((a, f) => a + (f.value ?? 0), 0) / 100;
+  const pos = SCHOOL_STYLE[b.school];
+  const bias: Partial<Record<FxKind, number>> = {};
+  if (pos) for (const f of [...STYLES[pos.main].sig, ...STYLES[pos.sub].sig]) bias[f] = 1.15;
+  return {
+    name: b.school, hpMax: st.hp, mpMax: st.mp,
+    mpRegen: Math.round(st.mp * 0.04 + (ng ? skillPower(ng, st.realm) / 2 : 0)),
+    nature: b.main?.nature, dodge, hit, passive, openers, moves, basic, ult, bias
+  };
+}
+
+/**
+ * 混搭：以 root 为根基门派（内功、绝技不动），主手或副手换成一门外来的武功。
+ * 不是本门弟子，只学得到别派的奇遇武功和江湖散学（docs/menpai.md 第七节）；门规严的门派只能兼修江湖散学，禁修的打法不能碰。
+ * 别派外功没有本门内功打底，只剩普通招式；roots 写「任意」的奇遇武功例外。
+ */
+export function mixedBuilds(root: string, st: Stage): Build[] {
+  const base = bestBuild(root, st);
+  const pos = SCHOOL_STYLE[root];
+  const qiyuOk = (k: SkillDef): boolean => teachOf(k) === '奇遇' && RANK.indexOf(k.grade) <= RANK.indexOf(st.qiyu);
+  const foreign = SKILLS.filter(k => {
+    if (!OUTER.includes(k.category) || k.school === root) return false;
+    if (k.school === JIANGHU_RULE.school) return true;
+    if (pos?.discipline === '严' || !qiyuOk(k)) return false;
+    const style = SCHOOL_STYLE[k.school]?.main;
+    return !(style && pos?.forbid?.includes(style));
+  });
+  return foreign.flatMap(k => [{ ...base, off: k }, { ...base, main: k, off: base.main }]).filter(b => b.main !== b.off);
+}
