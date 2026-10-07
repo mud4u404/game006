@@ -15,9 +15,9 @@ const SKILLS: SkillDef[] = [
       { name: '寒江孤影', text: '剑走偏锋，人剑合一，一道孤影疾刺{foe}{part}。' }
     ],
     performs: [
-      { name: '寒江孤影', text: '你一招「寒江孤影」，剑走偏锋，疾刺{foe}{part}！', mp: 60, cd: 1, hits: 1, dmg: [160, 200], acc: 0.82 },
+      { name: '寒江孤影', text: '你一招「寒江孤影」，剑走偏锋，疾刺{foe}{part}！', mp: 80, cd: 1, hits: 1, dmg: [160, 200], acc: 0.82 },
       { name: '独钓寒江', realm: 3, text: '你剑尖一颤，寒气四溢，一式「独钓寒江」洒出漫天冷光，{foe}只觉{part}一凉，手脚登时迟缓。',
-        mp: 70, cd: 3, hits: 1, dmg: [90, 120], acc: 0.8, fx: [{ kind: 'chill', rounds: 2 }] }
+        mp: 65, cd: 3, hits: 1, dmg: [165, 220], acc: 0.8, fx: [{ kind: 'chill', rounds: 2 }] }
     ]
   },
   {
@@ -33,7 +33,7 @@ const SKILLS: SkillDef[] = [
       { name: '惊鸿照影', text: '身形一晃，三道剑影如惊鸿掠水，分刺{foe}{part}。' }
     ],
     performs: [
-      { name: '惊鸿照影', text: '你身形一晃，「惊鸿照影」连出三剑，剑影如惊鸿掠水，分刺{foe}{part}！', mp: 80, cd: 3, hits: 3, dmg: [60, 80], acc: 0.78 }
+      { name: '惊鸿照影', text: '你身形一晃，「惊鸿照影」连出三剑，剑影如惊鸿掠水，分刺{foe}{part}！', mp: 65, cd: 3, hits: 3, dmg: [70, 95], acc: 0.78 }
     ]
   },
   {

@@ -53,6 +53,18 @@ export const SLOT_NAME: Record<Slot, string> = { neigong: '内功', qinggong: '�
  * 效率 = 预算 ÷（耗内力 + 20 × 调息合数）。两项都不能超过本品级的上限。
  * 要练到更高境界才能用的绝招，预算上限每重放宽 8%。
  */
+/**
+ * 绝招效率的目标区间（不是上限）：起手绝招落在区间里，不顶格，也不偷懒。
+ * 要练到更高境界才能用的绝招，区间按 loosen(境界) 放宽。差异性和平衡性见 docs/wuxue.md 第五节。
+ */
+export const EFFICIENCY_BAND: Record<SkillGrade, [number, number]> = {
+  凡品: [1.1, 1.3], 良品: [1.3, 1.5], 上品: [1.5, 1.8], 绝品: [1.8, 2.1], 神品: [2.1, 2.5], 禁品: [2.5, 2.9]
+};
+/** 每高一重境界，绝招的上限和目标区间放宽 8% */
+export const loosen = (realm = 0): number => 1 + 0.08 * realm;
+/** 同一门武功里，境界更高的绝招，预算至少是低境界绝招的这么多倍 */
+export const REALM_STEP = 1.15;
+
 export const ACTIVE_MAX: Record<SkillGrade, { expected: number; efficiency: number }> = {
   凡品: { expected: 140, efficiency: 1.5 },
   良品: { expected: 170, efficiency: 1.9 },

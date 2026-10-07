@@ -8,7 +8,7 @@ import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
 import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
-import { ACTIVE_MAX, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
+import { ACTIVE_MAX, EFFICIENCY_BAND, REALM_STEP, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
 import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
 
 const roomIds = new Set(ROOMS.map(r => r.id));
@@ -297,6 +297,8 @@ describe('武功', () => {
         if (p.acc < 0.5 || p.acc > 0.9) errs.push(`${pw}：命中率要在 0.5 到 0.9 之间`);
         if (p.hits > 0 && (p.dmg[0] < 10 || p.dmg[0] > p.dmg[1] || p.dmg[1] > 400)) errs.push(`${pw}：伤害区间要满足 10 ≤ 下限 ≤ 上限 ≤ 400`);
         if ((p.fx?.length ?? 0) > FX_PER_PERFORM[k.grade]) errs.push(`${pw}：${k.grade}的绝招最多带 ${FX_PER_PERFORM[k.grade]} 种效果`);
+        const lock = Math.max(0, ...(p.fx || []).filter(f => f.kind === 'busy' || f.kind === 'disarm').map(f => f.rounds ?? 1));
+        if (lock && p.cd <= lock) errs.push(`${pw}：点穴、缴械 ${lock} 合，调息至少要 ${lock + 1} 合，不然能把对手一直定住`);
         checkFx(p.fx, pw, errs);
         const budget = performBudget(p);
         if (budget > cap.expected * loosen) errs.push(`${pw}：预算 ${Math.round(budget)} 超过${k.grade}上限 ${Math.round(cap.expected * loosen)}（期望伤害 ${Math.round(performExpected(p))} + 效果当量）`);
@@ -310,7 +312,7 @@ describe('武功', () => {
       if (k.ult) {
         const u = k.ult;
         if (!len(u.title, 2, 12) || !len(u.text, 10, 100)) errs.push(`${w}：杀招题字要 2 到 12 个字，演出文字要 10 到 100 个字`);
-        if (u.dmg[0] > u.dmg[1]) errs.push(`${w}：杀招伤害下限大于上限`);
+        if (u.dmg[0] < 0 || u.dmg[0] > u.dmg[1]) errs.push(`${w}：杀招伤害要满足 0 ≤ 下限 ≤ 上限`);
         if ((u.fx?.length ?? 0) > FX_PER_PERFORM[k.grade]) errs.push(`${w}：杀招最多带 ${FX_PER_PERFORM[k.grade]} 种效果`);
         checkFx(u.fx, `${w} 的杀招`, errs);
         if (ultBudget(u) > ULT_MAX[k.grade]) errs.push(`${w}：杀招预算 ${Math.round(ultBudget(u))} 超过${k.grade}上限 ${ULT_MAX[k.grade]}`);
@@ -324,6 +326,23 @@ describe('武功', () => {
         if (c.bonus < 1 || c.bonus > 8) errs.push(`${cw}：bonus 要在 1 到 8 之间`);
         checkFx(c.fx, cw, errs, true);
       }
+    }
+    report(errs);
+  });
+
+  it('平衡：绝招效率落在品级的目标区间，境界越高的绝招越强', () => {
+    const errs: string[] = [];
+    for (const k of SKILLS) {
+      const ps = [...(k.performs || [])].sort((a, b) => (a.realm ?? 0) - (b.realm ?? 0));
+      ps.forEach(p => {
+        const pw = `武功 ${k.id} 的绝招「${p.name}」`;
+        const [lo, hi] = EFFICIENCY_BAND[k.grade].map(x => x * loosen(p.realm)) as [number, number];
+        const eff = performEfficiency(p);
+        if (eff < lo - 1e-9 || eff > hi + 1e-9) errs.push(`${pw}：效率 ${eff.toFixed(2)} 不在${k.grade}${p.realm ? `（${p.realm} 重，已放宽）` : ''}的目标区间 ${lo.toFixed(2)}～${hi.toFixed(2)}。调伤害、耗内力或调息，见 docs/wuxue.md 第五节`);
+        const lower = ps.filter(q => (q.realm ?? 0) < (p.realm ?? 0));
+        const need = Math.max(0, ...lower.map(performBudget)) * REALM_STEP;
+        if (lower.length && performBudget(p) < need - 1e-9) errs.push(`${pw}：要练到 ${p.realm} 重才能用，预算 ${Math.round(performBudget(p))} 却不到低境界绝招的 ${REALM_STEP} 倍（${Math.round(need)}）。练得越深，绝招必须越强`);
+      });
     }
     report(errs);
   });

@@ -34,8 +34,8 @@ const SKILLS: SkillDef[] = [
       { name: '纯阳无极', text: '你十成功力凝于双掌，一掌推出，热气蒸腾如雾，直透{foe}{part}。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '阳关三叠', text: '你一掌快过一掌，三掌连绵拍出，掌力一重叠一重，尽数压向{foe}{part}！', mp: 90, cd: 2, hits: 3, dmg: [55, 75], acc: 0.75 },
-      { name: '阳极生阴', realm: 4, text: '你炽热掌力忽转阴寒，{foe}{part}先如火烧，继而寒意彻骨，气血滞涩。', mp: 110, cd: 3, hits: 1, dmg: [90, 130], acc: 0.8, fx: [{ kind: 'chill', rounds: 3 }, { kind: 'weaken', value: 20, rounds: 2 }] }
+      { name: '阳关三叠', text: '你一掌快过一掌，三掌连绵拍出，掌力一重叠一重，尽数压向{foe}{part}！', mp: 85, cd: 2, hits: 3, dmg: [90, 120], acc: 0.75 },
+      { name: '阳极生阴', realm: 4, text: '你炽热掌力忽转阴寒，{foe}{part}先如火烧，继而寒意彻骨，气血滞涩。', mp: 70, cd: 3, hits: 1, dmg: [170, 245], acc: 0.8, fx: [{ kind: 'chill', rounds: 3 }, { kind: 'weaken', value: 20, rounds: 2 }] }
     ]
   },
   {
@@ -53,8 +53,8 @@ const SKILLS: SkillDef[] = [
       { name: '凌寒独开', text: '你于重重掌影中独辟一线，一掌破空而出，直贯{foe}{part}。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '暗香浮动', text: '你掌力若有若无，忽东忽西，{foe}捉摸不定，{part}接连中了柔劲！', mp: 75, cd: 1, hits: 1, dmg: [110, 150], acc: 0.78 },
-      { name: '随招拆招', realm: 3, text: '你看破{foe}招式来路，就势一带一折，反将其劲路引向自身{part}，破绽尽显。', mp: 100, cd: 2, hits: 1, dmg: [80, 120], acc: 0.8, fx: [{ kind: 'break', value: 25, rounds: 2 }, { kind: 'disarm', rounds: 1 }] }
+      { name: '暗香浮动', text: '你掌力若有若无，忽东忽西，{foe}捉摸不定，{part}接连中了柔劲！', mp: 75, cd: 1, hits: 1, dmg: [185, 255], acc: 0.78 },
+      { name: '随招拆招', realm: 3, text: '你看破{foe}招式来路，就势一带一折，反将其劲路引向自身{part}，破绽尽显。', mp: 90, cd: 2, hits: 1, dmg: [140, 210], acc: 0.8, fx: [{ kind: 'break', value: 25, rounds: 2 }, { kind: 'disarm', rounds: 1 }] }
     ]
   },
   {
@@ -82,8 +82,8 @@ const SKILLS: SkillDef[] = [
       { name: '乾元一指', text: '你默运玄功，一指遥遥点出，指力如天行刚健，一往无前，贯穿{foe}{part}。', wound: '灼伤', realm: 6 }
     ],
     performs: [
-      { name: '一阳来复', text: '你一指遥点，指力柔中带韧，绵绵渗入{foe}{part}，内里作痛。', mp: 75, cd: 1, hits: 1, dmg: [105, 145], acc: 0.78 },
-      { name: '一指封穴', realm: 2, text: '你身形一晃，指风已封住{foe}{part}穴道，{foe}半边身子登时酸麻，动弹不得。', mp: 70, cd: 2, hits: 0, dmg: [10, 10], acc: 0.8, fx: [{ kind: 'busy', rounds: 2 }] }
+      { name: '一阳来复', text: '你一指遥点，指力柔中带韧，绵绵渗入{foe}{part}，内里作痛。', mp: 75, cd: 1, hits: 1, dmg: [185, 255], acc: 0.78 },
+      { name: '一指封穴', realm: 2, text: '你身形一晃，指风已封住{foe}{part}穴道，{foe}半边身子登时酸麻，动弹不得。', mp: 50, cd: 3, hits: 1, dmg: [145, 180], acc: 0.8, fx: [{ kind: 'busy', rounds: 2 }] }
     ],
     combos: [{
       with: 'xd_liumai', name: '指剑同源', bonus: 6,
@@ -104,8 +104,8 @@ const SKILLS: SkillDef[] = [
       { name: '六脉齐发', text: '你十指轮弹，六道剑气纵横交织，交织成网，密密罩向{foe}{part}。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '少商剑', text: '你拇指剑气轰然射出，剑气雄浑如潮，直贯{foe}{part}！', mp: 90, cd: 1, hits: 1, dmg: [130, 180], acc: 0.8 },
-      { name: '六脉齐发', realm: 5, text: '你六脉剑气齐出，三道先行袭敌，三道随后封路，{foe}{part}破绽尽露，避无可避。', mp: 120, cd: 3, hits: 3, dmg: [85, 115], acc: 0.75, fx: [{ kind: 'break', value: 20, rounds: 2 }] }
+      { name: '少商剑', text: '你拇指剑气轰然射出，剑气雄浑如潮，直贯{foe}{part}！', mp: 90, cd: 1, hits: 1, dmg: [290, 400], acc: 0.8 },
+      { name: '六脉齐发', realm: 5, text: '你六脉剑气齐出，三道先行袭敌，三道随后封路，{foe}{part}破绽尽露，避无可避。', mp: 85, cd: 3, hits: 3, dmg: [155, 215], acc: 0.75, fx: [{ kind: 'break', value: 20, rounds: 2 }] }
     ]
   },
   {

@@ -25,9 +25,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '亢龙有悔', text: '你一掌推出，掌力未尽，后劲又至，一重叠一重压向{foe}{part}，正是「亢龙有悔」！',
-        mp: 70, cd: 2, hits: 1, dmg: [150, 190], acc: 0.8, fx: [{ kind: 'break', value: 10, rounds: 2 }] },
+        mp: 70, cd: 2, hits: 1, dmg: [165, 205], acc: 0.8, fx: [{ kind: 'break', value: 10, rounds: 2 }] },
       { name: '震惊百里', realm: 4, text: '你长啸声中连发两掌，掌风滚滚如雷，{foe}气血翻涌，脚下站立不稳。',
-        mp: 110, cd: 4, hits: 2, dmg: [90, 120], acc: 0.75, fx: [{ kind: 'fear', value: 15 }] }
+        mp: 50, cd: 4, hits: 2, dmg: [175, 230], acc: 0.75, fx: [{ kind: 'fear', value: 15 }] }
     ],
     combos: [
       { with: 'gb_dagou', name: '刚柔并济', text: '你左掌右棒，亢龙之势与打狗之巧互为表里，{foe}顾此失彼。', bonus: 5 }
@@ -53,11 +53,11 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '缠字诀', text: '你竹棒先绊后缠，一圈圈绕住{foe}手脚，{part}一麻，兵刃几乎脱手。',
-        mp: 60, cd: 3, hits: 0, dmg: [10, 10], acc: 0.8, fx: [{ kind: 'busy', rounds: 1 }, { kind: 'disarm', rounds: 2 }] },
+        mp: 20, cd: 3, hits: 1, dmg: [30, 40], acc: 0.8, fx: [{ kind: 'busy', rounds: 1 }, { kind: 'disarm', rounds: 2 }] },
       { name: '劈字诀', text: '你棒走刚猛，当头一劈，竹影压顶，{foe}{part}如遭棒喝。',
         mp: 40, cd: 1, hits: 1, dmg: [120, 150], acc: 0.85 },
       { name: '转字诀', realm: 5, text: '你棒转如轮，连绞带打，{foe}兵刃一偏，{part}接连中棒。',
-        mp: 100, cd: 4, hits: 2, dmg: [80, 100], acc: 0.8, fx: [{ kind: 'break', value: 10, rounds: 2 }] }
+        mp: 50, cd: 4, hits: 2, dmg: [160, 200], acc: 0.8, fx: [{ kind: 'break', value: 10, rounds: 2 }] }
     ]
   },
   {
@@ -82,7 +82,7 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '扶摇直上', text: '你身形拔起，双拳连挥，如大鹏扶摇，拳拳打向{foe}{part}。',
-        mp: 40, cd: 1, hits: 2, dmg: [50, 70], acc: 0.8 },
+        mp: 45, cd: 1, hits: 2, dmg: [50, 70], acc: 0.8 },
       { name: '御风而行', text: '你拳势一变，身如御风，闪到{foe}身侧，一拳递向{part}。',
         mp: 50, cd: 2, hits: 1, dmg: [70, 90], acc: 0.8, fx: [{ kind: 'haste', value: 20, rounds: 2 }] }
     ],
@@ -106,9 +106,9 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '莲心暗藏', text: '你一掌轻拂{foe}{part}，掌心内劲暗吐，看似绵软，实已伤及脏腑。',
-        mp: 50, cd: 1, hits: 1, dmg: [90, 110], acc: 0.85, fx: [{ kind: 'weaken', value: 10, rounds: 2 }] },
+        mp: 65, cd: 1, hits: 1, dmg: [90, 110], acc: 0.85, fx: [{ kind: 'weaken', value: 10, rounds: 2 }] },
       { name: '万朵莲花', realm: 4, text: '你掌影重重，如万朵莲花齐绽，{foe}分不清虚实，{part}连中三掌。',
-        mp: 80, cd: 3, hits: 3, dmg: [45, 65], acc: 0.78 }
+        mp: 65, cd: 3, hits: 3, dmg: [75, 110], acc: 0.78 }
     ]
   },
   {
@@ -127,7 +127,7 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '缠丝锁腕', text: '你指腕如丝，一圈圈缠上{foe}腕脉，{part}一麻，再也抬不起手。',
-        mp: 40, cd: 2, hits: 0, dmg: [10, 10], acc: 0.8, fx: [{ kind: 'busy', rounds: 1 }] },
+        mp: 40, cd: 2, hits: 1, dmg: [60, 75], acc: 0.8, fx: [{ kind: 'busy', rounds: 1 }] },
       { name: '金丝缠腕', text: '你欺身扣住{foe}{part}，借力一拧，只听得骨节轻响。',
         mp: 30, cd: 1, hits: 1, dmg: [70, 90], acc: 0.85 }
     ]

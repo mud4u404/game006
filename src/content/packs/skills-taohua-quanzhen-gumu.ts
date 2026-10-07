@@ -17,9 +17,9 @@ const SKILLS: SkillDef[] = [
       { name: '此时无声', text: '你最后一指悄然弹出，无声无息，{foe}只觉{part}一麻，指力已透穴而入。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '轻拢慢捻', text: '你指法忽拢忽捻，指力一记轻一记重，如拨弦弄筝，声声不离{foe}{part}。', mp: 80, cd: 1, hits: 1, dmg: [130, 170], acc: 0.78 },
-      { name: '隔空点穴', realm: 3, text: '你遥遥一指，隔空一弹，一缕指力无声无息，正中{foe}{part}穴道，{foe}半身登时酸麻，动弹不得。', mp: 90, cd: 2, hits: 0, dmg: [10, 10], acc: 0.8, fx: [{ kind: 'busy', rounds: 2 }] },
-      { name: '铁骑突出', realm: 4, text: '你指力尽吐，如铁骑破阵，一往无前，{foe}格挡的门户被生生撞开，{part}露出破绽。', mp: 110, cd: 2, hits: 1, dmg: [100, 140], acc: 0.8, fx: [{ kind: 'break', value: 15, rounds: 2 }] }
+      { name: '轻拢慢捻', text: '你指法忽拢忽捻，指力一记轻一记重，如拨弦弄筝，声声不离{foe}{part}。', mp: 75, cd: 1, hits: 1, dmg: [200, 260], acc: 0.78 },
+      { name: '隔空点穴', realm: 3, text: '你遥遥一指，隔空一弹，一缕指力无声无息，正中{foe}{part}穴道，{foe}半身登时酸麻，动弹不得。', mp: 60, cd: 3, hits: 1, dmg: [200, 250], acc: 0.8, fx: [{ kind: 'busy', rounds: 2 }] },
+      { name: '铁骑突出', realm: 4, text: '你指力尽吐，如铁骑破阵，一往无前，{foe}格挡的门户被生生撞开，{part}露出破绽。', mp: 90, cd: 2, hits: 1, dmg: [265, 365], acc: 0.8, fx: [{ kind: 'break', value: 15, rounds: 2 }] }
     ]
   },
   {
@@ -37,8 +37,8 @@ const SKILLS: SkillDef[] = [
       { name: '万点飞红', text: '你全身滚进，双掌幻出万点飞红，漫天花雨般落向{foe}{part}。', wound: '瘀伤', realm: 6 }
     ],
     performs: [
-      { name: '落英缤纷', text: '你双掌连挥，一十六道掌影缤纷而下，{foe}拆得一掌又是一掌，{part}应接不暇。', mp: 90, cd: 2, hits: 3, dmg: [55, 75], acc: 0.75 },
-      { name: '乱红飞过', realm: 4, text: '你掌力陡然催急，残红乱飞，势不可收，滚滚掌劲涌向{foe}{part}，压得{foe}气血翻腾。', mp: 100, cd: 2, hits: 2, dmg: [70, 90], acc: 0.75, fx: [{ kind: 'weaken', value: 15, rounds: 2 }] }
+      { name: '落英缤纷', text: '你双掌连挥，一十六道掌影缤纷而下，{foe}拆得一掌又是一掌，{part}应接不暇。', mp: 85, cd: 2, hits: 3, dmg: [75, 100], acc: 0.75 },
+      { name: '乱红飞过', realm: 4, text: '你掌力陡然催急，残红乱飞，势不可收，滚滚掌劲涌向{foe}{part}，压得{foe}气血翻腾。', mp: 85, cd: 2, hits: 2, dmg: [115, 145], acc: 0.75, fx: [{ kind: 'weaken', value: 15, rounds: 2 }] }
     ]
   },
   {
@@ -56,8 +56,8 @@ const SKILLS: SkillDef[] = [
       { name: '广陵散', text: '你长剑一振，剑音铮铮如奏绝响，一剑之威激荡而出，直贯{foe}{part}。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '碧海潮生', text: '你剑势忽如海潮暗涌，一浪高过一浪，{foe}心神摇曳，{part}门户洞开，被这一剑拂中。', mp: 75, cd: 1, hits: 1, dmg: [115, 145], acc: 0.78, fx: [{ kind: 'fear', value: 12 }] },
-      { name: '曲终人不见', realm: 3, text: '你剑音渐低，剑光渐淡，如曲终人不见，{foe}一怔之间，寒气已随这一剑渗入{part}。', mp: 95, cd: 2, hits: 1, dmg: [100, 140], acc: 0.8, fx: [{ kind: 'chill', rounds: 2 }] }
+      { name: '碧海潮生', text: '你剑势忽如海潮暗涌，一浪高过一浪，{foe}心神摇曳，{part}门户洞开，被这一剑拂中。', mp: 75, cd: 1, hits: 1, dmg: [150, 185], acc: 0.78, fx: [{ kind: 'fear', value: 12 }] },
+      { name: '曲终人不见', realm: 3, text: '你剑音渐低，剑光渐淡，如曲终人不见，{foe}一怔之间，寒气已随这一剑渗入{part}。', mp: 85, cd: 2, hits: 1, dmg: [200, 280], acc: 0.8, fx: [{ kind: 'chill', rounds: 2 }] }
     ]
   },
   {
@@ -81,8 +81,8 @@ const SKILLS: SkillDef[] = [
       { name: '天罡北斗', text: '你连踏七星方位，长剑连环七刺，剑剑相连如天罡北斗阵，齐指{foe}{part}。', wound: '刺伤', realm: 6 }
     ],
     performs: [
-      { name: '天罡北斗', text: '你踏位连刺，七剑环攻，如天罡北斗环列，剑剑相续，罩向{foe}{part}。', mp: 85, cd: 2, hits: 3, dmg: [50, 66], acc: 0.75 },
-      { name: '浪迹天涯', realm: 3, text: '你一剑浪迹而出，人随剑走，剑随心动，身法轻灵，{foe}连{part}都看不清。', mp: 95, cd: 2, hits: 1, dmg: [100, 135], acc: 0.8, fx: [{ kind: 'haste', value: 15, rounds: 2 }] }
+      { name: '天罡北斗', text: '你踏位连刺，七剑环攻，如天罡北斗环列，剑剑相续，罩向{foe}{part}。', mp: 80, cd: 2, hits: 3, dmg: [70, 95], acc: 0.75 },
+      { name: '浪迹天涯', realm: 3, text: '你一剑浪迹而出，人随剑走，剑随心动，身法轻灵，{foe}连{part}都看不清。', mp: 85, cd: 2, hits: 1, dmg: [210, 280], acc: 0.8, fx: [{ kind: 'haste', value: 15, rounds: 2 }] }
     ],
     combos: [{ with: 'tq_suxin', name: '双剑合璧', bonus: 8, text: '你与同伴各使一路剑法，一刚一柔，一全真一古墓，两剑竟似心意相通，互补破绽，端的是天衣无缝。' }]
   },
@@ -101,8 +101,8 @@ const SKILLS: SkillDef[] = [
       { name: '举案齐眉', text: '你平剑齐眉一递，堂堂正正，剑随臂展，直贯{foe}{part}。', wound: '刺伤', realm: 6 }
     ],
     performs: [
-      { name: '花前月下', text: '你剑光如月色倾泻，绵绵一剑裹着绵绵一剑，教{foe}在花月温柔里着了道，{part}血线悄然渗出。', mp: 70, cd: 1, hits: 1, dmg: [110, 145], acc: 0.78 },
-      { name: '西窗夜话', realm: 3, text: '你剑光忽敛忽吐，如剪烛夜话，低声絮絮，{foe}心神恍惚，寒气已随两剑渗入{part}。', mp: 90, cd: 2, hits: 2, dmg: [60, 80], acc: 0.78, fx: [{ kind: 'chill', rounds: 2 }] }
+      { name: '花前月下', text: '你剑光如月色倾泻，绵绵一剑裹着绵绵一剑，教{foe}在花月温柔里着了道，{part}血线悄然渗出。', mp: 65, cd: 1, hits: 1, dmg: [150, 195], acc: 0.78 },
+      { name: '西窗夜话', realm: 3, text: '你剑光忽敛忽吐，如剪烛夜话，低声絮絮，{foe}心神恍惚，寒气已随两剑渗入{part}。', mp: 85, cd: 2, hits: 2, dmg: [105, 140], acc: 0.78, fx: [{ kind: 'chill', rounds: 2 }] }
     ],
     combos: [{ with: 'tq_quanzhen', name: '双剑合璧', bonus: 8, text: '你与同伴各使一路剑法，一柔一刚，一古墓一全真，两剑意趣相合，破绽互为掩映，浑然一体。' }]
   },

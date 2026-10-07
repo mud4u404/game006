@@ -23,8 +23,8 @@ const SKILLS: SkillDef[] = [
       { name: '万佛朝宗', text: '你双掌齐出，掌影重重叠叠，如万佛临空，一齐压向{foe}{part}。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '佛光初现', text: '你双掌推出又收，收了再推，一重柔劲叠着一重，如佛光层层荡开，绵绵不绝地涌向{foe}{part}。', mp: 60, cd: 1, hits: 1, dmg: [100, 130], acc: 0.8 },
-      { name: '三叠绵掌', realm: 2, text: '你一掌快过一掌，三叠绵劲前后相续，{foe}卸得一重，又来一重，{part}登时吃不消。', mp: 80, cd: 2, hits: 2, dmg: [55, 75], acc: 0.8, fx: [{ kind: 'weaken', value: 15, rounds: 2 }] }
+      { name: '佛光初现', text: '你双掌推出又收，收了再推，一重柔劲叠着一重，如佛光层层荡开，绵绵不绝地涌向{foe}{part}。', mp: 60, cd: 1, hits: 1, dmg: [115, 145], acc: 0.8 },
+      { name: '三叠绵掌', realm: 2, text: '你一掌快过一掌，三叠绵劲前后相续，{foe}卸得一重，又来一重，{part}登时吃不消。', mp: 75, cd: 2, hits: 2, dmg: [65, 85], acc: 0.8, fx: [{ kind: 'weaken', value: 15, rounds: 2 }] }
     ],
     combos: [{ with: 'eh_linji', name: '金顶佛光', text: '你掌力裹上临济真气，柔劲中透出一线暖芒，如金顶佛光，拂身不痛，痛在里子。', bonus: 3 }]
   },
@@ -43,8 +43,8 @@ const SKILLS: SkillDef[] = [
       { name: '梅子黄时雨', text: '你剑势连绵不尽，忽如黄梅时雨，密密斜斜落在{foe}{part}。', wound: '刺伤', realm: 6 }
     ],
     performs: [
-      { name: '柳浪闻莺', text: '你剑光忽聚，连点七八剑，如群莺穿柳，声东击西，尽数落在{foe}{part}。', mp: 70, cd: 1, hits: 1, dmg: [110, 140], acc: 0.8 },
-      { name: '回风拂柳', realm: 3, text: '你剑势忽地一收，借回风之力再度拂出，剑光柔和如柳，内里却寒意侵人，{foe}{part}又麻又痛。', mp: 90, cd: 2, hits: 2, dmg: [60, 80], acc: 0.78, fx: [{ kind: 'haste', value: 15, rounds: 2 }, { kind: 'chill', rounds: 2 }] }
+      { name: '柳浪闻莺', text: '你剑光忽聚，连点七八剑，如群莺穿柳，声东击西，尽数落在{foe}{part}。', mp: 70, cd: 1, hits: 1, dmg: [150, 190], acc: 0.8 },
+      { name: '回风拂柳', realm: 3, text: '你剑势忽地一收，借回风之力再度拂出，剑光柔和如柳，内里却寒意侵人，{foe}{part}又麻又痛。', mp: 85, cd: 2, hits: 2, dmg: [80, 105], acc: 0.78, fx: [{ kind: 'haste', value: 15, rounds: 2 }, { kind: 'chill', rounds: 2 }] }
     ]
   },
   {
@@ -63,8 +63,8 @@ const SKILLS: SkillDef[] = [
       { name: '截天式', text: '你并指如戟，向天一截，{foe}劲力未吐先被截散，{part}气血翻涌。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '顺手截脉', text: '你卖个破绽诱{foe}抢攻，手腕一翻已搭上其{part}，顺着劲路一截一按。', mp: 55, cd: 1, hits: 1, dmg: [90, 120], acc: 0.78 },
-      { name: '九式归元', realm: 3, text: '你九式连环使出，末了双掌一错，快逾闪电地截向{foe}持兵的手，只一拿一带，兵刃便脱手飞出。', mp: 50, cd: 2, hits: 0, dmg: [10, 10], acc: 0.8, fx: [{ kind: 'disarm', rounds: 2 }] }
+      { name: '顺手截脉', text: '你卖个破绽诱{foe}抢攻，手腕一翻已搭上其{part}，顺着劲路一截一按。', mp: 55, cd: 1, hits: 1, dmg: [105, 145], acc: 0.78 },
+      { name: '九式归元', realm: 3, text: '你九式连环使出，末了双掌一错，快逾闪电地截向{foe}持兵的手，只一拿一带，兵刃便脱手飞出。', mp: 25, cd: 3, hits: 1, dmg: [85, 105], acc: 0.8, fx: [{ kind: 'disarm', rounds: 2 }] }
     ]
   },
   {
@@ -88,8 +88,8 @@ const SKILLS: SkillDef[] = [
       { name: '萧史乘龙', text: '你剑随身走，腾跃如乘龙，一剑快似一剑，绕袭{foe}{part}。', wound: '刺伤', realm: 6 }
     ],
     performs: [
-      { name: '有凤来仪', text: '你一招「有凤来仪」，剑光自下而上翩然撩起，凤翅般的剑影罩向{foe}{part}。', mp: 60, cd: 1, hits: 1, dmg: [95, 125], acc: 0.8 },
-      { name: '白虹贯日', realm: 3, text: '你气随剑走，一剑刺出，剑光凝如白虹，隐隐透出嗡嗡之声，直贯{foe}{part}。', mp: 80, cd: 2, hits: 1, dmg: [90, 120], acc: 0.78, fx: [{ kind: 'break', value: 15, rounds: 2 }] }
+      { name: '有凤来仪', text: '你一招「有凤来仪」，剑光自下而上翩然撩起，凤翅般的剑影罩向{foe}{part}。', mp: 60, cd: 1, hits: 1, dmg: [110, 150], acc: 0.8 },
+      { name: '白虹贯日', realm: 3, text: '你气随剑走，一剑刺出，剑光凝如白虹，隐隐透出嗡嗡之声，直贯{foe}{part}。', mp: 75, cd: 2, hits: 1, dmg: [130, 175], acc: 0.78, fx: [{ kind: 'break', value: 15, rounds: 2 }] }
     ],
     combos: [{ with: 'eh_zixia', name: '紫霞剑气', text: '你真气一转，面泛紫气，紫霞内力透上剑尖，剑光隐隐带紫，又添三分威势。', bonus: 4 }]
   },
@@ -108,8 +108,8 @@ const SKILLS: SkillDef[] = [
       { name: '罡风蔽日', text: '你全力挥剑，剑气激荡成罡，漫天剑光罩下，蔽住{foe}{part}。', wound: '割伤', realm: 6 }
     ],
     performs: [
-      { name: '风起青萍', text: '你剑尖一颤，嗡的一声轻啸，快剑已递到{foe}{part}，端的是先声夺人。', mp: 65, cd: 1, hits: 1, dmg: [105, 135], acc: 0.8 },
-      { name: '快剑连环', realm: 2, text: '你长剑连挥，一剑快过一剑，前后三剑一气呵成，剑剑不离{foe}{part}，快得只余一片光幕。', mp: 100, cd: 2, hits: 3, dmg: [62, 82], acc: 0.8, fx: [{ kind: 'bleed', value: 10, rounds: 2 }] }
+      { name: '风起青萍', text: '你剑尖一颤，嗡的一声轻啸，快剑已递到{foe}{part}，端的是先声夺人。', mp: 65, cd: 1, hits: 1, dmg: [140, 180], acc: 0.8 },
+      { name: '快剑连环', realm: 2, text: '你长剑连挥，一剑快过一剑，前后三剑一气呵成，剑剑不离{foe}{part}，快得只余一片光幕。', mp: 85, cd: 2, hits: 3, dmg: [75, 100], acc: 0.8, fx: [{ kind: 'bleed', value: 10, rounds: 2 }] }
     ]
   },
   {
@@ -128,8 +128,8 @@ const SKILLS: SkillDef[] = [
       { name: '破气式', text: '你凝神静气，剑随意走，一剑递出，直破{foe}护体真气，伤其{part}。', wound: '内伤', realm: 6 }
     ],
     performs: [
-      { name: '料敌机先', text: '你凝神观敌，{foe}招式未出，破绽先露，你后发先至，一剑点到{foe}{part}。', mp: 80, cd: 1, hits: 1, dmg: [120, 160], acc: 0.85 },
-      { name: '无招胜有招', realm: 5, text: '你随手挥洒，全无定式，{foe}却处处受制，{part}破绽大开，这一剑正落在破绽最深处。', mp: 110, cd: 3, hits: 1, dmg: [110, 150], acc: 0.82, fx: [{ kind: 'break', value: 30, rounds: 3 }] }
+      { name: '料敌机先', text: '你凝神观敌，{foe}招式未出，破绽先露，你后发先至，一剑点到{foe}{part}。', mp: 75, cd: 1, hits: 1, dmg: [210, 280], acc: 0.85 },
+      { name: '无招胜有招', realm: 5, text: '你随手挥洒，全无定式，{foe}却处处受制，{part}破绽大开，这一剑正落在破绽最深处。', mp: 80, cd: 3, hits: 1, dmg: [200, 275], acc: 0.82, fx: [{ kind: 'break', value: 30, rounds: 3 }] }
     ]
   }
 ];
