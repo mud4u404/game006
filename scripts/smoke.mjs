@@ -83,8 +83,9 @@ async function settle() {
       await p.click('#storyLayer .choice').catch(() => {});
       continue;
     }
-    if (await p.$('#fightLayer:not([hidden])')) { log('路遇开打', await fight(null)); continue; }
+    // 先看结算页：打完以后结算页盖在战斗层上面，战斗层这时还没收起
     if (await p.$('#sheetLayer:not([hidden]) [data-act="fResult"]')) { await p.click('[data-act="fResult"]').catch(() => {}); continue; }
+    if (await p.$('#fightLayer:not([hidden])')) { log('路遇开打', await fight(null)); continue; }
     if (await p.$('#travel:not([hidden])')) continue;
     return;
   }
