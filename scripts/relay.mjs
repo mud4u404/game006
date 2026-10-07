@@ -14,16 +14,23 @@ export function deps(body) {
   return m ? [...m[1].matchAll(/#(\d+)/g)].map(x => Number(x[1])) : [];
 }
 
+/** 远端分支名里的 Issue 编号：<工具名>/<编号>-<英文>，维护者的 claude/ 分支不算 */
+export const branchIssue = name => (name.startsWith('claude/') ? null : Number(name.match(/^[^/]+\/(\d+)-/)?.[1]) || null);
+
 /**
  * items：GitHub 接口 /issues?state=open 返回的数组，Issue 和 PR 混在一起（PR 带 pull_request 字段）。
- * 可以做的任务：带「内容」或「功能」标签，不带「暂缓」，还没有开着的 PR 标题写着 [#编号]，依赖的 Issue 都已关闭。
- * 编号最小的先做；没有就返回 null。
+ * branches：远端分支名。推送了任务分支、CI 还没来得及建 PR 时，也算有人在做。
+ * 可以做的任务：带「内容」或「功能」标签，不带「暂缓」，还没有开着的 PR 标题写着 [#编号]，
+ * 也没有对应的任务分支，依赖的 Issue 都已关闭。编号最小的先做；没有就返回 null。
  */
-export function pickWork(items) {
+export function pickWork(items, branches = []) {
   const prs = items.filter(i => i.pull_request);
   const issues = items.filter(i => !i.pull_request);
   const open = new Set(issues.map(i => i.number));
-  const taken = new Set(prs.flatMap(p => [...p.title.matchAll(/\[#(\d+)\]/g)].map(m => Number(m[1]))));
+  const taken = new Set([
+    ...prs.flatMap(p => [...p.title.matchAll(/\[#(\d+)\]/g)].map(m => Number(m[1]))),
+    ...branches.map(branchIssue).filter(Boolean)
+  ]);
   return (
     issues
       .filter(i => {

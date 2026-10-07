@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deps, pickWork, type GhItem } from '../scripts/relay.mjs';
+import { branchIssue, deps, pickWork, type GhItem } from '../scripts/relay.mjs';
 
 const issue = (number: number, labels: string[], body = ''): GhItem => ({ number, title: `任务 ${number}`, body, labels: labels.map(name => ({ name })) });
 const pr = (number: number, title: string): GhItem => ({ number, title, labels: [], pull_request: {} });
@@ -21,6 +21,14 @@ describe('接力：挑下一个任务', () => {
     const items = [issue(22, ['内容'], '依赖：#21'), issue(21, ['功能']), pr(41, '[#21] 试算台')];
     expect(pickWork(items)).toBeNull();
     expect(pickWork([issue(22, ['内容'], '依赖：#21')])?.number).toBe(22);
+  });
+
+  it('任务分支已推送、PR 还没建好时也跳过；维护者分支不算', () => {
+    const items = [issue(24, ['内容']), issue(25, ['内容'])];
+    expect(pickWork(items, ['main', 'zcode/24-emei-huashan'])?.number).toBe(25);
+    expect(pickWork(items, ['claude/24-x'])?.number).toBe(24);
+    expect(branchIssue('trae/7-questbook')).toBe(7);
+    expect(branchIssue('feature-x')).toBeNull();
   });
 
   it('没有任务时返回 null', () => {
