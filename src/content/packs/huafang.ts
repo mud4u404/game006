@@ -121,7 +121,6 @@ const GUARD_FOE: FoeDef = {
         { type: 'silver', delta: -15 },
         { type: 'feed', tag: '江湖', text: '你在画舫上败给了汪家护院，云娘还是被带走了……' }
       ] }
-    }
   }
 };
 
