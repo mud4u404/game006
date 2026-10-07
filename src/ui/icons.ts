@@ -15,5 +15,6 @@ export const IC: Record<string, string> = {
   stele: sm('<path d="M7 21 V6 A5 5 0 0 1 17 6 V21 Z"/><path d="M5 21 H19 M10 9 H14 M10 13 H14"/>'),
   go: sm('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12 H20 M12 4 V20"/><circle cx="8" cy="8" r="1.8" fill="currentColor"/><circle cx="16" cy="16" r="1.8"/>'),
   boat: sm('<path d="M3 15 H21 L18 20 H6 Z"/><path d="M12 15 V4 L18 12 H12"/>'),
-  door: sm('<path d="M6 21 V3 H18 V21"/><path d="M4 21 H20"/><circle cx="15" cy="12" r="1" fill="currentColor"/>')
+  door: sm('<path d="M6 21 V3 H18 V21"/><path d="M4 21 H20"/><circle cx="15" cy="12" r="1" fill="currentColor"/>'),
+  quest: sv('<path d="M4 5 A2 2 0 0 1 6 3 H18 V19 H6 A2 2 0 0 1 4 17 Z"/><path d="M8 7 H16 M8 11 H14 M8 15 H12"/>')
 };
