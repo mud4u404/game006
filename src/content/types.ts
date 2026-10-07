@@ -40,6 +40,10 @@ export interface Cond {
   eming?: number;
   /** 时辰：from 到 to 点之间（24 小时制，可跨午夜，例如 from: 19, to: 5 表示入夜到天亮） */
   hour?: { from: number; to: number };
+  /** 学得了这门武功：前置、属性、师门、门规都满足（见 docs/menpai.md 第七节）。常和 notLearned 一起用 */
+  canLearn?: SkillId;
+  /** 是某门派的弟子（在门中），rank 写了就要求不低于这个地位 */
+  sect?: { school: string; rank?: SectRank };
   any?: Cond[];
 }
 
@@ -56,6 +60,10 @@ export type Effect =
   | { type: 'rel'; npc: string; value: string; from?: string[] }
   | { type: 'prof'; skill: SkillId; amount: number }
   | { type: 'learn'; skill: SkillId; realm?: number; prof?: number }
+  /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先出师或叛门 */
+  | { type: 'sect'; school: string; rank: SectRank }
+  /** 离开师门：出师所学全留；叛门则本门武功境界封顶，门派追杀 */
+  | { type: 'leaveSect'; how: '出师' | '叛门' }
   | { type: 'attr'; key: AttrKey; delta: number }
   | { type: 'xia'; delta: number }
   /** 恶名：与侠义是两条独立的值，不互相抵消 */
@@ -201,6 +209,10 @@ export type SkillCategory =
   | '内功' | '轻功' | '绝技' | '杂学'
   | '拳法' | '掌法' | '指法' | '爪法' | '腿法' | '手法'
   | '剑法' | '刀法' | '枪法' | '棍法' | '杖法' | '鞭法' | '斧法' | '锤法' | '奇门' | '暗器';
+/** 武功怎样传授：入门、外门、内门、真传由师门按地位传授；奇遇不靠师门（山洞石壁、前辈遗刻、家传、残谱）。见 docs/menpai.md 第七节 */
+export type SkillTeach = '入门' | '外门' | '内门' | '真传' | '奇遇';
+/** 门内地位：记名弟子 → 外门 → 内门 → 真传 */
+export type SectRank = '记名' | '外门' | '内门' | '真传';
 /** 性质相克：柔克刚、刚克阴、阴克阳、阳克柔；中正不克也不被克 */
 export type SkillNature = '刚' | '柔' | '阴' | '阳' | '中正';
 /** 兵器长短：一寸长一寸强，一寸短一寸险 */
@@ -306,6 +318,14 @@ export interface SkillDef {
   combos?: ComboDef[];
   /** 怎样学到：写给人看的说明，例如「少林寺达摩院首座传授」 */
   learn: string;
+  /** 怎样传授（师门按地位，或奇遇）。江湖散学不写。见 docs/menpai.md 第七节 */
+  teach?: SkillTeach;
+  /** 前置武学：先把这些武功练到第几重（0 起，即 REALMS 的序号），才能学这一门 */
+  requires?: { skill: SkillId; realm: number }[];
+  /** 属性门槛，例如 { 悟性: 20 } */
+  needAttr?: Partial<Record<AttrKey, number>>;
+  /** 绝招、杀招、合璧要用哪些内功来使：不写为本门任意内功；写 '任意' 表示不挑内功（只给有高前置的奇遇武功） */
+  roots?: string[];
 }
 
 export interface ItemDef { id: string; name: string; desc: string; usable?: boolean; hidden?: boolean }

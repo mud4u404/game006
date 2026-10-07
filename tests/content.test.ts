@@ -8,7 +8,7 @@ import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
 import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
-import { ACTIVE_MAX, EFFICIENCY_BAND, REALM_STEP, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
+import { ACTIVE_MAX, EFFICIENCY_BAND, JIANGHU_RULE, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
 import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
 
 const roomIds = new Set(ROOMS.map(r => r.id));
@@ -29,6 +29,8 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   if (c.rel && !npcIds.has(c.rel.npc)) errs.push(`${where}：条件里的人物「${c.rel.npc}」不存在`);
   if (c.learned && !skillIds.has(c.learned)) errs.push(`${where}：条件里的武功「${c.learned}」不存在`);
   if (c.notLearned && !skillIds.has(c.notLearned)) errs.push(`${where}：条件里的武功「${c.notLearned}」不存在`);
+  if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
+  if (c.sect && !SCHOOL_STYLE[c.sect.school]) errs.push(`${where}：条件里的门派「${c.sect.school}」没有定位（见 SCHOOL_STYLE）`);
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
 }
 
@@ -49,6 +51,7 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
       case 'move': if (!roomIds.has(e.to)) errs.push(`${w}：地点「${e.to}」不存在`); break;
       case 'fight': if (!foeIds.has(e.foe)) errs.push(`${w}：对手「${e.foe}」不存在`); break;
       case 'story': if (!storyIds.has(e.id)) errs.push(`${w}：剧情「${e.id}」不存在`); break;
+      case 'sect': if (!SCHOOL_STYLE[e.school]) errs.push(`${w}：门派「${e.school}」没有定位（见 SCHOOL_STYLE）`); break;
       default: break;
     }
   }
@@ -57,7 +60,16 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
 function checkBranches(bs: Branch[] | undefined, where: string, errs: string[], needFallback: boolean): void {
   if (!bs) return;
   if (!bs.length) errs.push(`${where}：分支列表是空的`);
-  bs.forEach((b, i) => { checkCond(b.if, `${where}[${i}]`, errs); checkEffects(b.do, `${where}[${i}]`, errs); });
+  bs.forEach((b, i) => {
+    checkCond(b.if, `${where}[${i}]`, errs);
+    checkEffects(b.do, `${where}[${i}]`, errs);
+    // 门派武功有前置、师门、门规，学不学得成要先判断，并给学不成的情形留一个分支（见 docs/menpai.md 第七节）
+    for (const e of b.do || []) {
+      if (e.type !== 'learn') continue;
+      const k = SKILLS.find(x => x.id === e.skill);
+      if (k && k.school !== JIANGHU_RULE.school && b.if?.canLearn !== e.skill) errs.push(`${where}[${i}]：教「${k.name}」的分支要带条件 canLearn: '${e.skill}'，学不成的情形另写一个分支`);
+    }
+  });
   if (needFallback && bs.length && bs[bs.length - 1].if) errs.push(`${where}：最后一个分支必须不带 if，保证总有回应`);
 }
 

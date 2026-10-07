@@ -4,6 +4,7 @@ import { OUTER } from '../../content/skills';
 import type { SkillDef, Slot } from '../../content/types';
 import { RESP, huohou } from '../../engine/formulas';
 import { RESP_SLOT, xiuwei } from '../../engine/wuxue';
+import { canPerform, realmCap } from '../../engine/shicheng';
 
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
 
@@ -38,15 +39,18 @@ function skillCard(k: SkillDef): string {
   const s = S.skills[k.id]!;
   const need = REALM_NEED[s.r];
   const pct = Math.min(100, Math.round((s.p / need) * 100));
+  // 外功受内功所限：攒够了熟练却突破不了，就是到了瓶颈（见 docs/menpai.md 第七节）
+  const stuck = s.p >= need && s.r < REALMS.length - 1 && s.r >= realmCap(S, k);
   const slot = (Object.keys(SLOT_NAME) as Slot[]).find(x => S.loadout[x] === k.id);
   const resp = slot && slot !== 'ult' ? RESP.find(r => RESP_SLOT[r.k] === slot) : undefined;
   return `<section class="card sk-card">
     <div class="sk-h"><b>${k.name}</b><span class="tag g-${GRADE_CLS[k.grade]}">${k.grade}</span><span class="tag">${kind(k)}</span>${slot ? `<span class="tag accent">${slot === 'main' || slot === 'off' ? SLOT_NAME[slot] : '已搭配'}</span>` : ''}</div>
-    <div class="realm"><span>${REALMS[s.r]}</span><small>熟练 ${s.p} / ${need}</small></div>
+    <div class="realm"><span>${REALMS[s.r]}</span><small>${stuck ? '瓶颈 · 内功根基不够' : `熟练 ${s.p} / ${need}`}</small></div>
     <div class="tr2"><i style="width:${pct}%"></i></div>
     <p class="sk-d">${k.desc}</p>
     ${k.moves ? `<div class="moves">${k.moves.map(m => `<span class="tag"${(m.realm ?? 0) > s.r ? ' style="opacity:.4"' : ''}>${m.name}</span>`).join('')}</div>` : ''}
     <p class="muted">${useText(k, s.r)}</p>
+    ${(k.performs?.length || k.ult) && !canPerform(S, k) ? '<p class="muted">没有本门内功打底，绝招、杀招使不出来，只剩普通招式。</p>' : ''}
     ${resp ? `<div class="d-h"><span class="tag accent">见招拆招 · ${resp.act}</span><small>当前火候 ${huohou(S, resp.k)}</small></div>` : ''}
   </section>`;
 }

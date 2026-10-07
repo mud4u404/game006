@@ -6,9 +6,11 @@ import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
 import { advanceMin } from '../core/time';
 import { pick } from '../core/util';
-import { NEWS } from '../content';
+import { NEWS, skillById } from '../content';
+import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
+import { canLearn } from './shicheng';
 
 export function test(c?: Cond): boolean {
   if (!c) return true;
@@ -40,6 +42,11 @@ export function test(c?: Cond): boolean {
     const inside = from <= to ? h >= from && h < to : h >= from || h < to;
     if (!inside) return false;
   }
+  if (c.canLearn) {
+    const d = skillById(c.canLearn);
+    if (!d || !canLearn(S, d).ok) return false;
+  }
+  if (c.sect && (S.sect?.school !== c.sect.school || (c.sect.rank && SECT_RANKS.indexOf(S.sect.rank) < SECT_RANKS.indexOf(c.sect.rank)))) return false;
   if (c.any && !c.any.some(x => test(x))) return false;
   return true;
 }
@@ -77,6 +84,14 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       }
       case 'prof': out.breaks.push(...gainProf(e.skill, e.amount)); break;
       case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0)); break;
+      // 拜师或升地位，只升不降；身在别派时无效（要先出师或叛门）
+      case 'sect':
+        if (!S.sect) S.sect = { school: e.school, rank: e.rank };
+        else if (S.sect.school === e.school && SECT_RANKS.indexOf(e.rank) > SECT_RANKS.indexOf(S.sect.rank)) S.sect.rank = e.rank;
+        break;
+      case 'leaveSect':
+        if (S.sect) { (S.pastSects ??= []).push({ school: S.sect.school, how: e.how }); delete S.sect; }
+        break;
       case 'attr': S.attr[e.key] += e.delta; break;
       case 'xia': S.xia += e.delta; break;
       case 'eming': S.eming = Math.max(0, S.eming + e.delta); break;
