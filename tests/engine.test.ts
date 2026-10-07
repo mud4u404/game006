@@ -330,41 +330,80 @@ describe('师承与前置', () => {
 });
 
 describe('缉拿草上飞走得完', () => {
-  beforeEach(() => setState(skipToYangzhou()));
-  it('揭榜 → 棋痴指路 → 渔家老汉 → 夜里破船 → 放走或拿下 → 回府衙交差', async () => {
-    const { FOES } = await import('../src/content');
+  beforeEach(() => {
+    setState(skipToYangzhou());
     S.flags.boss = true;
     act('fuya_zhou', '交谈');
     act('fuya_zhou', '揭榜');
+  });
+  const night = (): void => { S.min = 21 * 60; };
+
+  it('线索两条路：帮渔家老汉一把他才开口；悟性够的人自己细看破船', () => {
     expect(S.quests.side_caoshangfei).toBe(1);
     expect(act('qichi', '交谈').text).toContain('茱萸湾');
     expect(pathTo('dukou', 'zhuyuwan')).toEqual(['zhuyuwan']);
-    act('zy_yuweng', '交谈');
+    expect(act('zy_yuweng', '交谈').text).toContain('又是府衙的');
+    expect(S.flags.csf_clue2).toBeFalsy();
+    S.attr.悟性 = 12;
+    expect(act('zy_poshuan', '细看').text).toContain('问问村里的人');
+    S.silver = 50;
+    act('zy_yuweng', '买鱼');
+    expect(S.silver).toBe(20);
+    expect(act('zy_yuweng', '交谈').text).toContain('破船');
+    expect(S.flags.csf_clue2).toBe(true);
+    // 另一条路：悟性够，自己看出来
+    delete S.flags.csf_clue2;
+    S.attr.悟性 = 15;
+    expect(act('zy_poshuan', '细看').text).toContain('铁爪');
+    expect(S.flags.csf_clue2).toBe(true);
     S.min = 12 * 60;
     expect(roomNpcs('zhuyuwan')).not.toContain('zy_csf');
-    S.min = 21 * 60;
+    night();
     expect(roomNpcs('zhuyuwan')).toContain('zy_csf');
-    // 拿下：打赢以后押回府衙
-    const won = FOES.find(f => f.id === 'zy_csf')!.results.win.do!;
-    run(won);
+  });
+
+  it('拿下：打赢押回府衙，账房先生出狱', async () => {
+    const { FOES } = await import('../src/content');
+    S.flags.csf_clue2 = true;
+    night();
+    run(FOES.find(f => f.id === 'zy_csf')!.results.win.do!);
     expect(S.quests.side_caoshangfei).toBe(2);
+    expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
     expect(verbsOf(NPCS_BY.zhou())).toContain('交差');
     const silver = S.silver;
     act('fuya_zhou', '交差');
     expect(S.quests.side_caoshangfei).toBe(3);
     expect(S.silver).toBe(silver + 2000);
+    expect(roomNpcs('yz_fuya')).not.toContain('zy_zhangfang');
+    expect(act('zy_yuweng', '交谈').text).toContain('官爷的事');
   });
-  it('放走：听他说完才能放，回府衙周捕头不追问', () => {
-    S.flags.boss = true;
-    act('fuya_zhou', '交谈');
-    act('fuya_zhou', '揭榜');
-    act('zy_yuweng', '交谈');
-    S.min = 21 * 60;
+
+  it('劝他自首：先去牢里见过账房，侠义或胆魄够才劝得动', () => {
+    S.flags.csf_clue2 = true;
+    night();
+    act('zy_csf', '交谈');
+    expect(verbsOf(NPCS_BY.csf())).not.toContain('劝他自首');
+    act('zy_zhangfang', '交谈');
+    expect(verbsOf(NPCS_BY.csf())).toContain('劝他自首');
+    S.xia = 0; S.attr.胆魄 = 10;
+    expect(act('zy_csf', '劝他自首').text).toContain('凭什么让我信你');
+    expect(S.quests.side_caoshangfei).toBe(1);
+    S.xia = 20;
+    act('zy_csf', '劝他自首');
+    expect(S.quests.side_caoshangfei).toBe(2);
+    expect(act('fuya_zhou', '交差').text).toContain('文书');
+    expect(S.flags.csf_zhangfang_free).toBe(true);
+  });
+
+  it('放走：听他说完才能放；回府衙周捕头不追问，可账房还关着', () => {
+    S.flags.csf_clue2 = true;
+    night();
     expect(verbsOf(NPCS_BY.csf())).not.toContain('放他走');
     act('zy_csf', '交谈');
-    expect(verbsOf(NPCS_BY.csf())).toContain('放他走');
     act('zy_csf', '放他走');
     expect(S.quests.side_caoshangfei).toBe(3);
-    expect(act('fuya_zhou', '交差').text).toContain('就当他跑了');
+    expect(act('fuya_zhou', '交差').text).toContain('他就出不来');
+    expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
+    expect(act('zy_zhangfang', '交谈').text).toContain('三天又三天');
   });
 });

@@ -19,16 +19,25 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '揭榜', { verb: '交差', if: { quest: { id: 'side_caoshangfei', atLeast: 2 } } }],
     actions: {
       交差: [
-        { if: { quest: { id: 'side_caoshangfei', is: 2 } },
-          text: '周捕头一拍桌子站起来：「好！」他亲自给草上飞上了枷，又把你让到上座。「五十两赏银，要等府台批下来。」他从自己腰间解下钱袋，倒出二两碎银推给你：「这是我的一点心意，少侠先拿着。」说罢又看了一眼堂下的草上飞，低声道：「刘家地窖里的二百两，我会去起出来。茱萸湾那边……我不去搜。」',
+        { if: { quest: { id: 'side_caoshangfei', is: 2 }, flag: 'csf_surrender' },
+          text: '草上飞跟在你身后走进正堂，自己跪下了。周捕头愣了半晌，转身去后院开了牢门，账房先生跌跌撞撞地跑出来，扑通一声给你磕了个头。周捕头铺开文书，一笔一笔地写：「劫银三百两，一百两济茱萸湾灾民，余银二百两起获归还。」他搁下笔：「府台那里，我替他说话。」又从自己腰间解下钱袋，倒出二两碎银推给你：「赏银要等府台批，这是我的心意。」',
           do: [
-            { type: 'quest', id: 'side_caoshangfei', stage: 3 }, { type: 'silver', delta: 2000 }, { type: 'xia', delta: 10 },
+            { type: 'quest', id: 'side_caoshangfei', stage: 3 }, { type: 'flag', flag: 'csf_zhangfang_free' },
+            { type: 'silver', delta: 2000 }, { type: 'xia', delta: 15 },
             { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交', '初识', '旧识'] },
-            { type: 'feed', tag: '江湖', text: '你押草上飞回了府衙。周捕头先垫了二两赏银，说剩下的要等府台批。' }
+            { type: 'feed', tag: '江湖', text: '草上飞自首，账房先生出狱。周捕头在文书上写明了那一百两的去处，要在府台面前替他求情。' }
+          ] },
+        { if: { quest: { id: 'side_caoshangfei', is: 2 } },
+          text: '周捕头一拍桌子站起来：「好！」他亲自给草上飞上了枷，又吩咐衙役去后院放人。账房先生出来时腿都软了，拉着你的袖子说不出话。周捕头从自己腰间解下钱袋，倒出二两碎银推给你：「五十两赏银，要等府台批下来，这是我的一点心意。」他看了一眼堂下的草上飞，没再说什么。',
+          do: [
+            { type: 'quest', id: 'side_caoshangfei', stage: 3 }, { type: 'flag', flag: 'csf_zhangfang_free' },
+            { type: 'silver', delta: 2000 }, { type: 'xia', delta: 5 },
+            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交', '初识', '旧识'] },
+            { type: 'feed', tag: '江湖', text: '你押草上飞回了府衙，刘家的账房先生出了狱。周捕头先垫了二两赏银。' }
           ] },
         { if: { flag: 'csf_freed', notFlag: 'csf_reported' },
-          text: '你说草上飞从茱萸湾跑了。周捕头盯着你看了半晌，没有追问。他把那张画像慢慢卷起来，塞进卷宗最底下：「茱萸湾那几户人家，今年冬天倒是没饿死人。」他叹了口气：「这案子，我就当他跑了。」',
-          do: [{ type: 'flag', flag: 'csf_reported' }, { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交', '初识', '旧识'] }] },
+          text: '你说草上飞从茱萸湾跑了。周捕头盯着你看了半晌，没有追问。他把那张画像慢慢卷起来，塞进卷宗最底下：「茱萸湾那几户人家，今年冬天倒是没饿死人。」他叹了口气，朝后院努了努嘴：「只是刘家咬定账房是内应。贼拿不着，他就出不来。」',
+          do: [{ type: 'flag', flag: 'csf_reported' }] },
         { text: '周捕头点点头：「草上飞的案子结了，少侠辛苦。」' }
       ],
       观察: [{ text: '他手背上有一道旧刀伤，从虎口一直划到腕子上。卷宗里夹着一张画像，画着个短打汉子，左手缺了个小指。' }],
