@@ -367,6 +367,8 @@ export interface QuestDef {
 export interface StoryChoice {
   label: string;
   sub?: string;
+  /** 条件成立才出现，例如悟性够了才看得出破绽；每张卡片至少留一个不带条件的选择 */
+  if?: Cond;
   do?: Effect[];
   /** 选完之后先显示的结果文字；不写则直接进入下一步 */
   result?: string;
@@ -394,7 +396,27 @@ export interface StoryDef {
 
 export interface NewsDef { if?: Cond; text: string }
 
-export interface RegionDef { name: string; note: string }
+/** 地区；order 是地图上地区标签的先后，小的在前 */
+export interface RegionDef { name: string; note: string; order?: number }
+
+/**
+ * 路遇：赶路时在路上遇到的事（engine/encounter.ts，docs/content-guide.md「路遇」）。
+ * 内容是一段剧情卡片：有人物动机、两难、代价，和别的任务一样不能潦草（宪章 P9）。
+ */
+export interface EncounterDef {
+  id: string;
+  /** 走进这些地区的地点时，路上可能遇到 */
+  region: string[];
+  /** 只在走进这些地点的路上遇到；不写为地区里任何一段路 */
+  to?: string[];
+  if?: Cond;
+  /** 抽中的分量，默认 1；稀罕的奇遇写小些 */
+  weight?: number;
+  /** 一生只遇一次（奇遇）；不写的，同一条七天内不再遇 */
+  once?: boolean;
+  /** 遇到时打开的剧情卡片 */
+  story: string;
+}
 
 /**
  * 内容包：src/content/packs/ 下每个文件默认导出一个内容包，系统自动收录。
@@ -410,4 +432,5 @@ export interface ContentPack {
   items?: ItemDef[];
   news?: NewsDef[];
   skills?: SkillDef[];
+  encounters?: EncounterDef[];
 }

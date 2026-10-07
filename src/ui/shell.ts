@@ -22,7 +22,8 @@ export function registerHandlers(map: Record<string, Handler>): void { Object.as
 /** 战斗和剧情模块在加载时把自己挂到这里，避免模块之间循环引用 */
 export const hooks = {
   startFight: (_foe: string): void => {},
-  openStory: (_id: string): void => {}
+  /** onDone：剧情正常读完时调用（中途开打或接到别的剧情时不调用），赶路途中的路遇用它接着走 */
+  openStory: (_id: string, _onDone?: () => void): void => {}
 };
 
 /** 统一处理一次动作产生的后果：先剧情，再开打，否则刷新画面 */

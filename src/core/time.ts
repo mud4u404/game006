@@ -31,6 +31,11 @@ export interface Clock { month: number; day: number; min: number }
 
 export function dateStr(c: Clock): string { return MONTHS[c.month - 1] + '月' + dayName(c.day); }
 
+/** 一年里的第几天（每月三十天），算间隔用；跨年时会变小，调用方把负数当作「很久以前」 */
+export const dayNo = (c: Pick<Clock, 'month' | 'day'>): number => (c.month - 1) * 30 + c.day;
+/** 一年里的第几分钟 */
+export const absMin = (c: Clock): number => dayNo(c) * 1440 + c.min;
+
 export function advanceDays(c: Clock, n: number): void {
   c.day += n;
   while (c.day > 30) { c.day -= 30; c.month = (c.month % 12) + 1; }

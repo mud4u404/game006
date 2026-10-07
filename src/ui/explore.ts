@@ -11,41 +11,57 @@ import { gainProf } from '../engine/growth';
 import { growAttr } from '../engine/gengu';
 import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
 import { retreatPlan } from '../engine/lilian';
-import { afterOutcome, closeSheet, openSheet, registerHandlers, render, toast } from './shell';
+import { markEncounter, rollEncounter } from '../engine/encounter';
+import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
+import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
 
 let traveling = false;
 export const isTraveling = (): boolean => traveling;
 
 export function travelTo(dest: string, onArrive?: () => void): void {
-  if (traveling || dest === S.loc || !$('#fightLayer')?.hidden) return;
+  if (traveling || dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
   const path = pathTo(S.loc, dest);
   if (!path.length) { toast('从这里去不了那儿'); return; }
   traveling = true;
   S.tab = 'jianghu';
   render();
   const bar = $('#travel')!;
+  const arrive = (): void => {
+    $('#main')!.scrollTop = 0;
+    const out = enter(S.loc);
+    if (out) afterOutcome(out);
+    onArrive?.();
+  };
   const step = (): void => {
     const nx = path.shift();
     if (!nx) {
       traveling = false;
       bar.hidden = true;
-      $('#main')!.scrollTop = 0;
-      const out = enter(S.loc);
-      if (out) afterOutcome(out);
-      onArrive?.();
+      arrive();
       return;
     }
-    const ex = room(S.loc).exits.find(x => x[1] === nx);
+    const from = S.loc;
+    const ex = room(from).exits.find(x => x[1] === nx);
     bar.innerHTML = `<b>往${ex ? ex[0] : ''} · ${room(nx).name}</b><small>${roadText(nx)}</small><div class="tb"><i></i></div>`;
     bar.hidden = false;
     window.setTimeout(() => {
-      const m = travelMin(hopMin(S.loc, nx));
+      const m = travelMin(hopMin(from, nx));
       S.min += m;
       if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
       S.loc = nx; S.sel = null; S.reply = null;
+      // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
+      const enc = rollEncounter(from, nx);
+      if (enc) {
+        markEncounter(enc);
+        traveling = false;
+        bar.hidden = true;
+        render();
+        hooks.openStory(enc.story, () => { if (S.loc === dest) arrive(); else travelTo(dest, onArrive); });
+        return;
+      }
       render();
       step();
     }, reduceMotion ? 250 : 760);
@@ -102,6 +118,7 @@ function retreat(days: number): void {
 }
 
 registerHandlers({
+  mapRegion: v => { setMapRegion(v); render(); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
   do: v => doAct(v as Verb),

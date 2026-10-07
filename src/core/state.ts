@@ -48,6 +48,9 @@ export interface GameState {
   lilian: number;
   /** 和每个对手最近交手的记录：七天内反复打同一人，历练一次比一次少 */
   foeLog?: Record<string, { n: number; day: number }>;
+  /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */
+  encLog: Record<string, number>;
+  lastEnc: number;
   feed: FeedEntry[];
   /** 战后说书，供说书人复述 */
   story: string;
@@ -66,7 +69,7 @@ export function newGame(): GameState {
     silver: 30, items: { jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
     flags: {}, rel: { jiangbo: '相依为命' }, title: '', xia: 0, eming: 0,
-    attr: { 体魄: 13, 根骨: 11, 身法: 14, 悟性: 13, 胆魄: 10 }, lilian: 0,
+    attr: { 体魄: 13, 根骨: 11, 身法: 14, 悟性: 13, 胆魄: 10 }, lilian: 0, encLog: {}, lastEnc: -1e9,
     // 渔家少年：江伯只教过几招防身的粗浅功夫，都还没入门（从零练起，见 docs/audit.md）
     skills: { hanjiang: { r: 0, p: 0 }, xinfa: { r: 0, p: 0 }, taxue: { r: 0, p: 0 } },
     loadout: { neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang' },
@@ -84,7 +87,7 @@ export function skipToYangzhou(): GameState {
     quests: { prologue: 3, main1: 0 }, track: 'main1',
     flags: { skipped: true }, rel: { liu: '素不相识' }, title: '', xia: 12, eming: 0,
     // 历练：序章了结 300，加上那一夜两场被江伯救下的恶战 26 + 180（engine/lilian.ts）
-    attr: { ...ATTR0 }, lilian: 506,
+    attr: { ...ATTR0 }, lilian: 506, encLog: {}, lastEnc: -1e9,
     skills: { hanjiang: { r: 0, p: 120 }, taxue: { r: 0, p: 50 }, xinfa: { r: 0, p: 80 }, duanshui: { r: 0, p: 10 } },
     loadout: { neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang', ult: 'duanshui' },
     feed: [
