@@ -147,7 +147,8 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
   const A = (t: number) => (acc[t] ??= { inc: 0, cost: 0, hours: 0 });
   const R = (): number => realmOf(xp.main, p.needK);
   const tier = (): number => tierOfR(R());
-  const tierI = (): number => Math.floor(tier() + 1e-9);
+  // 档次封在宗师（第五档）；不封的话主修练过 10 重会算出第六档（验证报告的图上查出来的）
+  const tierI = (): number => Math.min(5, Math.floor(tier() + 1e-9));
   const gain = (h: number, what: string): void => { log.gains.push({ hour: h, what }); };
 
   /** 把历练化进三门武功，过瓶颈时卡住 */
