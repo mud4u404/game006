@@ -8,7 +8,7 @@ const SKILLS: SkillDef[] = [
     desc: '漕帮入门心法。运河上讨生活，先要学会在水气里养住一口真气，护住劳碌半生的筋骨。',
     learn: '漕帮入门心法，入帮先立水誓',
     teach: '入门',
-    passive: [{ kind: 'guard', value: 8 }]
+    passive: [{ kind: 'guard', value: 10 }]
   },
   {
     id: 'cl_fenshui', name: '分水刺', grade: '良品', category: '奇门', school: '漕帮', nature: '柔', reach: '短',
@@ -61,7 +61,7 @@ const SKILLS: SkillDef[] = [
     desc: '绿林汉子的横练底子。皮肉糙、骨头硬，山寨里从小挨打，挨出这一身挨得起的骨架。',
     learn: '绿林寨子里人人打底的横练',
     teach: '入门',
-    passive: [{ kind: 'guard', value: 8 }]
+    passive: [{ kind: 'guard', value: 10 }]
   },
   {
     id: 'cl_chuanlin', name: '穿林步', grade: '良品', category: '轻功', school: '绿林', nature: '刚',

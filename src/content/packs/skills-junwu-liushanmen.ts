@@ -8,14 +8,14 @@ const SKILLS: SkillDef[] = [
     desc: '六扇门捕快的入门心法。缉事拿人讲究耳聪目明、气沉胆壮，练的是暗夜里也不慌的那一口气息。',
     learn: '六扇门捕快入门心法，师爷带教',
     teach: '入门',
-    passive: [{ kind: 'guard', value: 8 }]
+    passive: [{ kind: 'guard', value: 10 }]
   },
   {
     id: 'jl_tiejigong', name: '铁脊功', grade: '良品', category: '内功', school: '军伍', nature: '刚',
     desc: '九边将士的打底横练。脊背挺得像枪杆，气血练得像铁石，风沙里站上两个时辰，面不改色。',
     learn: '边军操练场人人过关的底子',
     teach: '入门',
-    passive: [{ kind: 'guard', value: 8 }]
+    passive: [{ kind: 'guard', value: 10 }]
   },
   {
     id: 'jl_changqiang', name: '边军大枪', grade: '良品', category: '枪法', school: '军伍', nature: '刚', reach: '长',
