@@ -53,6 +53,13 @@ const SKILLS: SkillDef[] = [
     ]
   },
   {
+    id: 'jl_xingjunbu', name: '行军步', grade: '良品', category: '轻功', school: '军伍', nature: '刚',
+    desc: '九边将士的赶路功夫。负甲行军一日百里，落脚生根，喘息不乱，追击撤退都靠它。',
+    learn: '九边行伍赶路功夫，新兵操典第一课',
+    teach: '入门',
+    passive: [{ kind: 'haste', value: 10 }]
+  },
+  {
     id: 'jl_changquan', name: '军中长拳', grade: '凡品', category: '拳法', school: '军伍', nature: '刚', reach: '徒手',
     desc: '新兵操典里的拳脚。一招一式简简单单，千万人练下来，也自有一股行伍的杀伐气。',
     learn: '军中长拳，新兵操典第一课',
