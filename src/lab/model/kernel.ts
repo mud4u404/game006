@@ -10,13 +10,13 @@
  */
 import { mulberry32, type Rng } from '../../engine/rng';
 
-export type RespKey = 'block' | 'dodge' | 'parry' | 'rush' | 'duizhang';
-/** 四种基本应对（对掌是第五种，单独算） */
-export type BaseResp = Exclude<RespKey, 'duizhang'>;
+export type RespKey = 'block' | 'dodge' | 'parry' | 'rush' | 'duizhang' | 'kanpo';
+/** 四种基本应对（对掌、识破虚招另算） */
+export type BaseResp = Exclude<RespKey, 'duizhang' | 'kanpo'>;
 export const RESP_KEYS: BaseResp[] = ['block', 'dodge', 'parry', 'rush'];
 /** 重招的四项强度：力、速、巧、隙。硬接比力，闪避比速，拆招比巧，抢攻比隙 */
 export interface Pw { li: number; su: number; qiao: number; xi: number }
-export const RESP_PW: Record<RespKey, keyof Pw> = { block: 'li', dodge: 'su', parry: 'qiao', rush: 'xi', duizhang: 'li' };
+export const RESP_PW: Record<RespKey, keyof Pw> = { block: 'li', dodge: 'su', parry: 'qiao', rush: 'xi', duizhang: 'li', kanpo: 'qiao' };
 /** 三处伤：手、足、内息 */
 export type Zone = 'hand' | 'foot' | 'inner';
 export type Wounds = Record<Zone, number>;
@@ -63,11 +63,28 @@ export interface Rules {
    * 第九、十轮发现：伤在这一场当中起作用，落后的人翻不了身（翻盘从一成七降到一成一）；带到下一场则不伤体感。
    */
   woundWhen: 'fight' | 'after';
+  /**
+   * 虚实（第三版）：对手的重招有几成是虚招（二流以上的对手才用足，三流用一半，不入流不用）。0 为不开。
+   * 预兆的文字不分虚实（免得玩家背下来）；虚实只体现在成算上：玩家看出来的虚实有几成把握，按双方的眼力算。
+   * 多一种应对「识破」：识破了虚招，白得一个破绽；把实招当成虚招，结结实实挨一记。
+   * 照常应对的话，碰上虚招就扑了空，被对手顺势带一下。
+   */
+  xushi: number;
+  /**
+   * 虚实的做法：kanpo 为多一个「识破」按钮（第二十四轮：同档看虚实只有七成五的准头，把握从来不够，没人点它，虚招成了白挨的打）；
+   * adapt 为不加按钮，四种应对各自吃不吃虚招不一样（硬接最怕虚招，拆招最能随机应变），虚实并进每个按钮的成算。
+   */
+  xushiMode: 'kanpo' | 'adapt';
+  /** 看虚实的尺度：双方眼力差多少，看对的几率从七成五变到约八成七（越大，境界在这里占的分量越小） */
+  yanScale: number;
+  /** 胆魄定开局的势：双方先天胆魄每差一点，势偏半格（限在 35 到 65） */
+  danMom: boolean;
 }
 
 export const CURRENT_RULES: Rules = {
   logistic: false, scale: 12, suppress: false, supBase: 2 / 3, wounds: false, woundHh: 6,
-  strain: false, jiali: false, bipin: false, jieli: false, wuzhao: false, fury: 0, mpProp: false, crowdEff: 0.5, morale: 0, holdImmune: 2, foeWoundK: 0, woundFrom: 'all', woundWhen: 'fight'
+  strain: false, jiali: false, bipin: false, jieli: false, wuzhao: false, fury: 0, mpProp: false, crowdEff: 0.5, morale: 0, holdImmune: 2, foeWoundK: 0, woundFrom: 'all', woundWhen: 'fight',
+  xushi: 0, xushiMode: 'adapt', yanScale: 26, danMom: false
 };
 
 /**
@@ -78,13 +95,16 @@ export const CURRENT_RULES: Rules = {
  * - 耗内力按内力上限的比例；
  * - 围攻：围着的人出手打三五折；乌合之众见同伙倒下会溜（按对手写 morale）；
  * - 点穴冲开后三合之内不再被点中。
- * 去掉的：越用力越伤、加力比深浅、借力打力、无招、对掌、困兽犹斗（体感没有改善，或者变差）。
+ * - 第三版：胆魄定开局的势（先天胆魄每差一点，势偏半格）。
+ * 去掉的：越用力越伤、加力比深浅、借力打力、无招、对掌、困兽犹斗（体感没有改善，或者变差）；看虚实靠眼力（第三版，见 README）。
+ * 待定的：虚实（xushi），利弊参半，要负责人在手机上凭手感判断。
  */
 export const NEW_RULES: Rules = {
   ...CURRENT_RULES,
   logistic: true, scale: 26, suppress: true, supBase: 2 / 3,
   wounds: true, woundHh: 9, woundFrom: 'heavy', woundWhen: 'after',
-  mpProp: true, crowdEff: 0.35, morale: 0, holdImmune: 3
+  mpProp: true, crowdEff: 0.35, morale: 0, holdImmune: 3,
+  danMom: true
 };
 
 /** 玩家这一方（主角，或者用玩家流程打斗的人） */
@@ -118,6 +138,11 @@ export interface Hero {
   wu: number;
   /** 开打时身上已有的伤（上一场带来的） */
   pre?: Wounds;
+  /** 后天胆魄（定开局的势）、眼力（看破虚招） */
+  dan?: number;
+  /** 怒气涨得快慢的倍数（先天胆魄） */
+  rageK?: number;
+  yan?: number;
 }
 
 /** 对手这一方 */
@@ -136,6 +161,9 @@ export interface Foe {
   firstTell?: number;
   /** 备战：气血、出手、重招的倍数（已经叠好） */
   prep?: { hp: number; atk: number; big: number };
+  dan?: number;
+  /** 眼力：虚招使得多真，看它 */
+  yan?: number;
 }
 
 /** 应对的打法 */
@@ -149,7 +177,7 @@ export interface Policy {
   performs: boolean;
 }
 
-export interface Opt { k: RespKey; p: number; cost: number; dis: boolean }
+export interface Opt { k: RespKey; p: number; cost: number; dis: boolean; /** 不考虑虚实时的成算 */ raw?: number }
 
 /** 以己之长：挑看到的成算最高的一项 */
 export const SKILLED: Policy = {
@@ -166,6 +194,12 @@ export const ROTE: Policy = {
     const o = opts.find(x => x.k === want && !x.dis) ?? opts.find(x => !x.dis);
     return o ? o.k : null;
   },
+  openTake: 0.85, performs: true
+};
+/** 不管虚实：只按对实招的成算挑（看不出、也不去想虚招的人） */
+export const NAIVE: Policy = {
+  name: '不管虚实',
+  pick: opts => { const o = opts.filter(x => !x.dis).sort((a, b) => (b.raw ?? b.p) - (a.raw ?? a.p))[0]; return o ? o.k : null; },
   openTake: 0.85, performs: true
 };
 /** 随手乱选 */
@@ -197,6 +231,11 @@ export interface FightLog {
   maxHeld: number;
   /** 受伤让最好的应对改变的次数 */
   bestShift: number;
+  /** 虚实：对手出了几次虚招；玩家识破了几次、上当了几次、把实招错当虚招几次 */
+  feints: number;
+  saw: number;
+  fooled: number;
+  misread: number;
   /** 对掌的次数 */
   bipin: number;
   /** 这一场新落下的伤（打完以后起作用） */
@@ -222,14 +261,21 @@ export function suppress(rules: Rules, atkTier: number, defTier: number): number
   return d <= 1 ? 1 : Math.pow(rules.supBase, (d - 1) * (d - 1));
 }
 
-const ZONE_OF: Record<RespKey, Zone> = { block: 'inner', dodge: 'foot', parry: 'hand', rush: 'hand', duizhang: 'inner' };
+const ZONE_OF: Record<RespKey, Zone> = { block: 'inner', dodge: 'foot', parry: 'hand', rush: 'hand', duizhang: 'inner', kanpo: 'inner' };
+
+/** 对手出虚招的几率：二流以上用足，三流一半，不入流不用（虚招是会家子的本事） */
+export const feintRate = (rules: Rules, foeTier: number): number => rules.xushi * clamp(foeTier / 2, 0, 1);
+/** 看虚实看得对的几率：眼力相当七成五，高出很多接近十成，差得多接近瞎猜（五成） */
+export const readAcc = (rules: Rules, yan: number, foeYan: number): number => 0.5 + 0.5 * sig((yan - foeYan) / rules.yanScale);
+/** 碰上虚招，各种应对还能应付过去的几率：全力硬接最容易扑空，拆招讲究看清来势再动，最不怕虚招 */
+export const VS_FEINT: Record<BaseResp, number> = { block: 0.1, rush: 0.3, dodge: 0.5, parry: 0.7 };
 const woundLv = (dmgFrac: number): number => (dmgFrac >= 0.5 ? 3 : dmgFrac >= 0.3 ? 2 : dmgFrac >= 0.15 ? 1 : 0);
 
 /** 打一场：hero 用 policy 应对 */
 /** 围攻：对手一共几个人，同时最多几个人出手（不写为一对一） */
 export interface Crowd { n: number; maxAtk: number }
 
-const RESP_NAME: Record<RespKey, string> = { block: '硬接', dodge: '闪避', parry: '拆招', rush: '抢攻', duizhang: '对掌' };
+const RESP_NAME: Record<RespKey, string> = { block: '硬接', dodge: '闪避', parry: '拆招', rush: '抢攻', duizhang: '对掌', kanpo: '识破' };
 const cn = (p: number): string => `${Math.max(1, Math.min(9, Math.round(p * 10)))}成`;
 
 /** trace：给了就把这一场的经过写成一行行的战报（重放给人看体感用） */
@@ -238,8 +284,10 @@ export function fight(hero: Hero, foe: Foe, policy: Policy, rules: Rules, seed: 
   const say = (x: string): void => { if (trace) trace.push(`第${tick}合 ${x}`); };
   const bar = (): string => `（你 ${Math.max(0, Math.round((hp / hero.hpMax) * 100))}% · ${foe.name} ${Math.max(0, Math.round((ehp / (foe.hpMax * prep.hp)) * 100))}%）`;
   const rng = mulberry32(seed);
-  const log: FightLog = { win: false, ticks: 0, decisions: 0, prompts: 0, openings: 0, dealt: {}, last: null, swings: 0, deficit: 0, maxHeld: 0, bestShift: 0, bipin: 0, taken: { hand: 0, foot: 0, inner: 0 } };
-  let hp = hero.hpMax, mp = hero.mpMax * 0.8, rage = hero.rage0, mom = 50;
+  const log: FightLog = { win: false, ticks: 0, decisions: 0, prompts: 0, openings: 0, dealt: {}, last: null, swings: 0, deficit: 0, maxHeld: 0, bestShift: 0, feints: 0, saw: 0, fooled: 0, misread: 0, bipin: 0, taken: { hand: 0, foot: 0, inner: 0 } };
+  let hp = hero.hpMax, mp = hero.mpMax * 0.8, rage = hero.rage0;
+  const rk = hero.rageK ?? 1;
+  let mom = rules.danMom && hero.dan !== undefined && foe.dan !== undefined ? clamp(50 + 0.5 * (hero.dan - foe.dan), 35, 65) : 50;
   const prep = foe.prep ?? { hp: 1, atk: 1, big: 1 };
   let ehp = foe.hpMax * prep.hp;
   const floor = foe.spar ? hero.hpMax * 0.3 : hero.floor;
@@ -276,7 +324,7 @@ export function fight(hero: Hero, foe: Foe, policy: Policy, rules: Rules, seed: 
       foeBy[z] += (d / foe.hpMax) * rules.foeWoundK;
     }
     log.dealt[src] = (log.dealt[src] ?? 0) + d;
-    rage = Math.min(100, rage + 4);
+    rage = Math.min(100, rage + (4) * rk);
     if (ehp <= efloor) {
       if (left > 0) {
         // 倒下一个：剩下的人各自可能溜走；还有人在，就补上来
@@ -292,7 +340,7 @@ export function fight(hero: Hero, foe: Foe, policy: Policy, rules: Rules, seed: 
     d = Math.max(0, d * suppress(rules, foe.tier, hero.tier));
     hp -= d;
     const wsum = rules.wounds ? woundLv(hurtBy.hand) + woundLv(hurtBy.foot) + woundLv(hurtBy.inner) : 0;
-    rage = Math.min(100, rage + 8 * (1 + rules.fury * wsum));
+    rage = Math.min(100, rage + (8 * (1 + rules.fury * wsum)) * rk);
     if (rules.wounds && zone && (rules.woundFrom === 'all' || src === 'big')) hurtBy[zone] += d / hero.hpMax;
     if (hp <= floor) { over = true; log.win = false; log.last = src; }
   };
@@ -331,7 +379,7 @@ export function fight(hero: Hero, foe: Foe, policy: Policy, rules: Rules, seed: 
     log.openings++;
     log.decisions++;
     if (rng() < policy.openTake) {
-      rage = Math.min(100, rage + 10);
+      rage = Math.min(100, rage + (10) * rk);
       mom = clamp(mom + 12, 5, 95);
       dealt(rr(rng, hero.open), 'open');
       say(`${foe.name}露出破绽，你看得真切，一击得手。${bar()}`);
@@ -358,8 +406,28 @@ export function fight(hero: Hero, foe: Foe, policy: Policy, rules: Rules, seed: 
       seen = { li: pw.li + j(), su: pw.su + j(), qiao: pw.qiao + j(), xi: pw.xi + j() };
     }
     const w = wl();
-    const optsSeen = options(seen, w);
-    const optsTrue = options(pw, w);
+    // 虚实：这一招是不是虚招；玩家看出来几成把握（pF：自己判断它是虚招的把握）
+    const fr = feintRate(rules, foe.tier);
+    const feint = !side && fr > 0 && rng() < fr;
+    let pF = 0;
+    if (!side && fr > 0) {
+      const a = readAcc(rules, hero.yan ?? 0, foe.yan ?? 0);
+      const right = rng() < a;
+      const saysFeint = feint === right;
+      pF = saysFeint ? (fr * a) / (fr * a + (1 - fr) * (1 - a)) : (fr * (1 - a)) / (fr * (1 - a) + (1 - fr) * a);
+    }
+    // 成算并进虚实
+    // kanpo：照常应对，要它是实招才算数；识破，要它真是虚招
+    // adapt：每种应对的成算 = 是实招的把握 × 对实招的成算 + 是虚招的把握 × 应付虚招的几率
+    const vs = (k: RespKey): number => VS_FEINT[k as BaseResp] ?? 0;
+    const merge = (os: Opt[]): Opt[] => {
+      if (!(fr > 0 && !side)) return os;
+      if (rules.xushiMode === 'adapt') return os.map(o => ({ ...o, raw: o.p, p: (1 - pF) * o.p + pF * vs(o.k) }));
+      return [...os.map(o => ({ ...o, p: o.p * (1 - pF) })), { k: 'kanpo' as RespKey, p: pF, cost: 0, dis: false }];
+    };
+    const optsSeen = merge(options(seen, w));
+    const optsTrue = merge(options(pw, w));
+    if (feint) log.feints++;
     if (woundsOn) {
       const best = (os: Opt[]): RespKey | undefined => os.filter(x => !x.dis).sort((a, b) => b.p - a.p)[0]?.k;
       const clean = options(pw, { hand: 0, foot: 0, inner: 0 });
@@ -379,17 +447,47 @@ export function fight(hero: Hero, foe: Foe, policy: Policy, rules: Rules, seed: 
       hurt(foe.big * prep.big * 1.2, 'inner', 'big');
       return;
     }
+    if (o.k === 'kanpo') {
+      if (feint) {
+        log.saw++;
+        rage = Math.min(100, rage + (12) * rk); mom = clamp(mom + 15, 5, 95);
+        dealt(rr(rng, hero.open), 'open');
+        say(`你看破这是虚招，乘虚而入！${bar()}`);
+      } else {
+        log.misread++;
+        mom = clamp(mom - 12, 5, 95);
+        hurt(foe.big * prep.big * 1.2, 'inner', 'big');
+        say(`你只当是虚招，不料这一招是实的，结结实实挨了一记。${bar()}`);
+      }
+      return;
+    }
     mp = Math.max(0, mp - o.cost);
+    if (feint && rules.xushiMode === 'adapt' && rng() < vs(o.k)) {
+      // 应付过去了：看破虚招，乘虚而入
+      log.saw++;
+      rage = Math.min(100, rage + (12) * rk); mom = clamp(mom + 12, 5, 95);
+      say(`${foe.name}这一招原来是虚的，你${RESP_NAME[o.k]}之际看得分明，乘虚而入。${bar()}`);
+      maybeOpening(1);
+      return;
+    }
+    if (feint) {
+      // 照常应对，扑了空：对手虚晃一招，顺势带了你一下
+      log.fooled++;
+      mom = clamp(mom - 8, 5, 95);
+      hurt(foe.big * prep.big * 0.6, ZONE_OF[o.k], 'big');
+      say(`原来是虚招，你${RESP_NAME[o.k]}扑了个空，被他顺势带了一下。${bar()}`);
+      return;
+    }
     if (rules.strain && (o.k === 'block') && w.inner > 0) hurt(hero.hpMax * 0.03 * w.inner, null, 'strain');
     if (over) return;
     if (o.k === 'duizhang') {
       log.bipin++;
-      if (rng() < o.p) { rage = Math.min(100, rage + 15); mom = clamp(mom + 20, 5, 95); dealt(rr(rng, hero.counter.block) * 2.5, 'bipin'); }
+      if (rng() < o.p) { rage = Math.min(100, rage + (15) * rk); mom = clamp(mom + 20, 5, 95); dealt(rr(rng, hero.counter.block) * 2.5, 'bipin'); }
       else { mom = clamp(mom - 18, 5, 95); hurt(foe.big * prep.big * 1.5, 'inner', 'big'); }
       return;
     }
     if (rng() < o.p) {
-      rage = Math.min(100, rage + 12);
+      rage = Math.min(100, rage + (12) * rk);
       if (side) { mom = clamp(mom + 4, 5, 95); say('拆开了。'); return; }
       say(`${RESP_NAME[o.k]}得手！${bar()}`);
       if (o.k === 'block') { mom = clamp(mom + 15, 5, 95); dealt(rr(rng, hero.counter.block), 'counter'); }
@@ -400,8 +498,8 @@ export function fight(hero: Hero, foe: Foe, policy: Policy, rules: Rules, seed: 
         dealt(rr(rng, hero.counter.parry) * k2, 'counter');
       } else { mom = clamp(mom + 15, 5, 95); dealt(rr(rng, hero.counter.rush), 'counter'); }
     } else {
-      const mul = { block: 0.8, dodge: 1, parry: 1.1, rush: 1.3, duizhang: 1.5 }[o.k];
-      const dm = { block: 10, dodge: 8, parry: 12, rush: 15, duizhang: 18 }[o.k];
+      const mul = { block: 0.8, dodge: 1, parry: 1.1, rush: 1.3, duizhang: 1.5, kanpo: 1.2 }[o.k];
+      const dm = { block: 10, dodge: 8, parry: 12, rush: 15, duizhang: 18, kanpo: 12 }[o.k];
       mom = clamp(mom - dm, 5, 95);
       let d = foe.big * prep.big * mul * (1 - 0.1 * fw().hand);
       if (rules.jiali && o.k === 'block' && hero.gongli < foe.gongli * 0.5) d *= 1.3; // 反震
@@ -508,6 +606,11 @@ export interface Summary {
   bestShift: number;
   bestShiftAny: number;
   bipin: number;
+  /** 虚实：每场平均出几次虚招，识破、上当、错当虚招各几次 */
+  feints: number;
+  saw: number;
+  fooled: number;
+  misread: number;
 }
 
 export function many(hero: Hero, foe: Foe, policy: Policy, rules: Rules, n: number, salt = 0, crowd?: Crowd): Summary {
@@ -530,6 +633,7 @@ export function many(hero: Hero, foe: Foe, policy: Policy, rules: Rules, n: numb
     comeback: wins.length ? wins.filter(l => l.deficit >= 0.25).length / wins.length : 0,
     maxHeld: Math.max(0, ...logs.map(l => l.maxHeld)),
     bestShift: avg(l => l.bestShift), bestShiftAny: logs.filter(l => l.bestShift > 0).length / n,
-    bipin: avg(l => l.bipin)
+    bipin: avg(l => l.bipin),
+    feints: avg(l => l.feints), saw: avg(l => l.saw), fooled: avg(l => l.fooled), misread: avg(l => l.misread)
   };
 }

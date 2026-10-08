@@ -3,19 +3,20 @@
  * 标准是事先写死的（计划第二节），这里只负责量。k 是样本的倍数：测试里用 1（几秒跑完），全量报告用 3。
  */
 import type { GameState } from '../../core/state';
-import { CURRENT_RULES, NEW_RULES, RANDOM, ROTE, SKILLED, fight, many, type Foe, type Hero, type Policy, type Rules, type Wounds } from './kernel';
-import { BUILDS, SCALE0, asFoe, asHero, standard, type Person } from './person';
+import { CURRENT_RULES, NAIVE, NEW_RULES, RANDOM, ROTE, SKILLED, fight, many, type Foe, type Hero, type Policy, type Rules, type Wounds } from './kernel';
+import { ATTR_NAME, BUILDS, SCALE0, SCALE2, asFoe, asHero, standard, type Attr, type Person, type Scale } from './person';
 import { GONGLI_LADDER, LIFE0, PROFILES, live, type LifeLog, type Profile } from './life';
-import { migrateSave } from './migrate';
+import { OLD_COMMON, migrateSave } from './migrate';
 import { foeFromDef, heroFromState } from './current';
 import type { FoeDef } from '../../content/types';
 
 export interface Row { id: string; area: string; std: string; got: string; pass: boolean | null; note?: string }
 export interface FeelRow { name: string; win: number; rote: number; random: number; seconds: number; decisions: number; prompts: number; openings: number; decisive: number; swings: number; comeback: number }
-export interface AbRow { rule: string; verdict: '留' | '去' | '改'; why: string; on: string; off: string }
+export interface AbRow { rule: string; verdict: '留' | '去' | '改' | '待定'; why: string; on: string; off: string }
 export interface Report { rows: Row[]; feel: FeelRow[]; ab: AbRow[]; replays: { title: string; lines: string[] }[]; diary: string[]; life: string[] }
 
 const pct = (x: number): string => `${Math.round(x * 100)}%`;
+const TN = ['不入流', '三流', '二流', '一流', '绝顶', '宗师'];
 const avg = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
 const med = (xs: number[]): number => { const s = [...xs].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
 const inb = (x: number, a: number, b: number): boolean => x >= a && x <= b;
@@ -25,15 +26,15 @@ const H = (p: Person, pre?: Wounds): Hero => ({ ...asHero(p, sc), pre });
 const F = (p: Person): Foe => asFoe(p, sc);
 
 /** 九种偏科配对的平均 */
-function pairs(ht: number, ft: number, pol: Policy, rules: Rules, n: number, salt: number, pre?: Wounds) {
-  const ws: number[] = [], ts: number[] = [], sh: number[] = [];
+function pairs(ht: number, ft: number, pol: Policy, rules: Rules, n: number, salt: number, pre?: Wounds, scl: Scale = sc, mod: (p: Person) => Person = p => p) {
+  const ws: number[] = [], ts: number[] = [], sh: number[] = [], saw: number[] = [], fooled: number[] = [], dec: number[] = [];
   let i = 0;
   for (const hb of BUILDS) for (const fb of BUILDS) {
     i++;
-    const s = many(H(standard(ht, hb), pre), F(standard(ft, fb)), pol, rules, n, salt * 100 + i);
-    ws.push(s.win); ts.push(s.ticksMed); sh.push(s.bestShiftAny);
+    const s = many({ ...asHero(mod(standard(ht, hb)), scl), pre }, asFoe(standard(ft, fb), scl), pol, rules, n, salt * 100 + i);
+    ws.push(s.win); ts.push(s.ticksMed); sh.push(s.bestShiftAny); saw.push(s.saw); fooled.push(s.fooled); dec.push(s.decisiveShare);
   }
-  return { win: avg(ws), ticks: avg(ts), shift: avg(sh) };
+  return { win: avg(ws), ticks: avg(ts), shift: avg(sh), saw: avg(saw), fooled: avg(fooled), dec: avg(dec) };
 }
 
 export interface Inputs {
@@ -93,16 +94,17 @@ export function buildReport(k: number, inp: Inputs): Report {
     for (const hb of BUILDS) for (const fb of BUILDS) { i++; ws.push(many(H(mod(standard(2, hb))), F(standard(2, fb)), SKILLED, R, n, salt * 100 + i).win); }
     return avg(ws);
   };
-  const mainAttr = (p: Person, d: number): Person => {
-    const key = p.outer >= p.neigong && p.outer >= p.qinggong ? 'li' : p.neigong >= p.qinggong ? 'gen' : 'shen';
-    return { ...p, attr: { ...p.attr, [key]: p.attr[key] + d } };
-  };
+  const addAttr = (p: Person, k: keyof Attr, d: number): Person => ({ ...p, attr: { ...p.attr, [k]: p.attr[k] + d } });
   const ruler = {
     主修高一重: one(p => ({ ...p, outer: p.outer + 1 }), 91), 内功高一重: one(p => ({ ...p, neigong: p.neigong + 1 }), 92), 轻功高一重: one(p => ({ ...p, qinggong: p.qinggong + 1 }), 93),
-    功力翻一倍: one(p => ({ ...p, gongli: p.gongli * 2 }), 94), 主项根基多五点: one(p => mainAttr(p, 5), 95)
+    功力翻一倍: one(p => ({ ...p, gongli: p.gongli * 2 }), 94)
   };
   const gear = one(p => ({ ...p, gear: { atk: 1.08, def: 1.08 } }), 96);
-  add({ id: 'C9', area: '交手', std: '同档里只改一样：高一重武功、功力翻倍、根基多五点，胜率都在 55% 到 62%；全身装备不超过 65%', got: `同档基线 ${pct(same[1].win)}；` + Object.entries(ruler).map(([k2, v]) => `${k2} ${pct(v)}`).join('、') + `；装备八分 ${pct(gear)}`, pass: Object.values(ruler).every(v => inb(v, 0.55, 0.62)) && gear <= 0.65 });
+  add({ id: 'C9', area: '交手', std: '同档里只改一样：高一重武功、功力翻倍，胜率都在 55% 到 62%；全身装备不超过 65%', got: `同档基线 ${pct(same[1].win)}；` + Object.entries(ruler).map(([k2, v]) => `${k2} ${pct(v)}`).join('、') + `；装备八分 ${pct(gear)}`, pass: Object.values(ruler).every(v => inb(v, 0.55, 0.62)) && gear <= 0.65 });
+  // 五项根基：各高出常人十点（常人二十，即一倍半），和同一批对手比
+  const base5 = one(p => p, 97);
+  const five = (Object.keys(ATTR_NAME) as (keyof Attr)[]).map((k2, i) => [k2, one(p => addAttr(p, k2, 10), 97 + 0 * i) - base5] as const);
+  add({ id: 'C10', area: '交手', std: '（第三版）五项根基各高出常人十点，同档胜率各多 3 到 10 个点：每一项都看得见，没有一项非点不可', got: `基线 ${pct(base5)}；` + five.map(([k2, d]) => `${ATTR_NAME[k2]} +${Math.round(d * 100)}`).join('、'), pass: five.every(([, d]) => inb(d, 0.03, 0.1)), note: '在交手以外，根骨还管内功进境和功力，悟性管外功进境，身法管赶路；那些在人生模拟里另算' });
 
   /* ---------- 评价：看人说得准不准 ---------- */
   const deltas = [-2, -5 / 3, -4 / 3, -1, -2 / 3, -1 / 3, 0, 1 / 3, 2 / 3, 1, 4 / 3, 5 / 3, 2];
@@ -176,14 +178,49 @@ export function buildReport(k: number, inp: Inputs): Report {
   const net0 = med(inn.map(l => l.netByTier[0])), net1 = med(dil.map(l => l.netByTier[1]));
   add({ id: 'M1', area: '经济', std: '不入流天天住下房，每天净收入不高于零', got: `每个现实日净收 ${net0.toFixed(2)} 两`, pass: net0 <= 0 });
   add({ id: 'M2', area: '经济', std: '三流攒三十两，要六到十二天', got: `三流每天净攒 ${net1.toFixed(1)} 两，三十两要 ${(30 / net1).toFixed(1)} 天`, pass: inb(30 / net1, 6, 12) });
-  add({ id: 'M3', area: '经济', std: '（只出报告）二流以后的结余', got: `每个现实日净收：二流 ${med(dil.map(l => l.netByTier[2])).toFixed(0)} 两、一流 ${med(dil.map(l => l.netByTier[3])).toFixed(0)} 两、绝顶 ${med(dil.map(l => l.netByTier[4])).toFixed(0)} 两`, pass: null, note: '银子到后期泛滥，家业（宅邸、产业、家将）要接住' });
+  // 第三版：收入按身份（钱来自替人办事，不来自境界）
+  const medn = (xs: number[]): number => med(xs.filter(x => !Number.isNaN(x)));
+  const biao = runs({ ...byName('勤奋'), shenfen: '镖师' }), xia = runs({ ...byName('勤奋'), shenfen: '游侠' }), xiaC = runs({ ...byName('休闲'), shenfen: '游侠' });
+  const incOf = (ls: LifeLog[], t: number): number => medn(ls.map(l => l.incByTier[t]));
+  const ratioOld = incOf(dil, 5) / incOf(dil, 1), ratioNew = incOf(biao, 5) / incOf(biao, 1);
+  add({ id: 'M3', area: '经济', std: '（第三版）收入按身份：镖师到宗师，收入不超过三流的十五倍（第二版按档次）', got: `第二版按档次：宗师是三流的 ${ratioOld.toFixed(0)} 倍；镖师：${ratioNew.toFixed(1)} 倍（每个现实日 三流 ${incOf(biao, 1).toFixed(1)} 两 → 宗师 ${incOf(biao, 5).toFixed(0)} 两）`, pass: ratioNew <= 15, note: '武功高不等于有钱：洪七公是叫化子。钱来自替人办事，本事大接的活大，但每一趟都要花时间' });
+  const xiaNet = [1, 2, 3, 4, 5].map(t => medn(xia.map(l => l.netByTier[t]))), xiaCNet = [1, 2, 3].map(t => medn(xiaC.map(l => l.netByTier[t])));
+  add({ id: 'M4', area: '经济', std: '（第三版）纯游侠饿不着：勤奋、休闲的游侠，每一档每个现实日的净收入都不为负', got: `勤奋：${xiaNet.map(x => x.toFixed(1)).join('、')} 两；休闲：${xiaCNet.map(x => x.toFixed(1)).join('、')} 两`, pass: [...xiaNet, ...xiaCNet].every(x => x >= -0.05), note: '休闲的游侠在三流刚好收支相抵（露宿省钱）' });
+  const PRICE = [0, 30, 200, 1000, 3000, 6000], NAME = ['', '一口好刀', '一处小院', '一间铺面', '一座庄园', '一片产业'];
+  const bnet = [1, 2, 3, 4, 5].map(t => medn(biao.map(l => l.netByTier[t])));
+  add({ id: 'M5', area: '经济', std: '（报告）镖师在每一档攒下一样大东西要几个现实日', got: bnet.map((x, i) => `${TN[i + 1]}${NAME[i + 1]}（${PRICE[i + 1]} 两）${(PRICE[i + 1] / x).toFixed(0)} 天`).join('；'), pass: null, note: '第二版按档次时，每一档都只要九到十七天，银子泛滥；按身份以后，大东西成了长远的盼头。价钱是暂定的，内容做出来再定' });
+
+  /* ---------- 时间：约（第三版） ---------- */
+  const yk = (nm: string, p = LIFE0, yue: 'keep' | 'skip' = 'keep'): LifeLog[] => runs({ ...byName(nm), yue }, p);
+  const sum = (ls: LifeLog[], f: (l: LifeLog) => number): number => avg(ls.map(f));
+  const keepers = ['勤奋', '休闲', '狂刷'].map(nm => ({ nm, on: yk(nm), off: yk(nm, { ...LIFE0, autoOut: false }) }));
+  add({ id: 'T1', area: '时间', std: '（第三版）守约的人都赶得上：下线静修碰到约，就在「约期减去路程」那一日出关赶路，任何玩法都一个约不误', got: keepers.map(k => `${k.nm}：定约 ${sum(k.on, l => l.yue.made).toFixed(1)} 个，误了 ${sum(k.on, l => l.yue.missed).toFixed(1)} 个（不自动出关的话误 ${sum(k.off, l => l.yue.missed).toFixed(1)} 个）`).join('；'), pass: keepers.every(k => sum(k.on, l => l.yue.missed) === 0), note: '评审指出第一版的推理错了：立约以后可能在线赶路先把余量耗掉，上线时也可能还隔着几日路程' });
+  const perWeek = (ls: LifeLog[]): number => sum(ls, l => l.yue.made) / 120 * 7;
+  add({ id: 'T2', area: '时间', std: '（第三版）约不能成为每日签到：勤奋的玩家每周 0.5 到 2 个', got: keepers.map(k => `${k.nm}每周 ${perWeek(k.on).toFixed(1)} 个`).join('、'), pass: inb(perWeek(keepers[0].on), 0.5, 2) });
+  const noYue = { ...LIFE0, yuePerHour: 0 };
+  const gOf = (ls: LifeLog[]): number => med(ls.map(l => l.final.gongli));
+  const dN = gOf(runs(byName('勤奋'), noYue)), dK = gOf(keepers[0].on), dS = gOf(yk('勤奋', LIFE0, 'skip'));
+  const kN = gOf(runs(byName('狂刷'), noYue)), kK = gOf(keepers[2].on), kSl = yk('狂刷', LIFE0, 'skip'), kS = gOf(kSl);
+  const lostPer = sum(keepers[0].on, l => l.yue.lostRest) / Math.max(1e-9, sum(keepers[0].on, l => l.yue.kept));
+  add({ id: 'T3', area: '时间', std: '（第三版）守约与失约是真两难：勤奋的玩家全部守约和全部失约，一百二十天的功力相差不超过三个点；可是次次失约成了习惯（狂刷），要比守约差五个点以上', got: `勤奋：没有约 ${dN.toFixed(1)} 年，全守 ${dK.toFixed(1)} 年（每守一个约丢 ${lostPer.toFixed(1)} 日静修），全失 ${dS.toFixed(1)} 年；狂刷：没有约 ${kN.toFixed(1)} 年，全守 ${kK.toFixed(1)} 年，全失 ${kS.toFixed(1)} 年（走火 ${sum(kSl, l => l.zouhuo).toFixed(1)} 次）`, pass: Math.abs(dK - dS) / dN <= 0.03 && (kK - kS) / kN >= 0.05, note: '数值上两边分量相当，该不该赴约就由人物和故事来定；失信成了习惯，心魔越积越重，才真吃亏' });
+  const xm = (v: number[], hj: boolean): { days: number; g: number; zh: number } => {
+    const ls = Array.from({ length: seeds }, (_, i) => live({ ...byName('勤奋'), violate: v, huajie: hj }, noYue, 30, 31 + i));
+    return { days: avg(ls.map(l => l.xinmoByDay.filter(x => x >= 0.5).length)), g: med(ls.map(l => l.final.gongli)), zh: avg(ls.map(l => l.zouhuo)) };
+  };
+  const x0 = xm([], false), x1 = xm([10], false), x3 = xm([10, 12, 14], false), xa = xm(Array.from({ length: 20 }, (_, i) => 10 + i), false);
+  add({ id: 'X1', area: '修炼', std: '（第三版）心魔：失信一次，一两天就淡，修炼慢不到一个点；天天失信，三十天功力少三成以上，还会走火', got: `一次：心魔 ${x1.days.toFixed(1)} 天，功力 ${((x1.g / x0.g - 1) * 100).toFixed(1)}%；一周三次：${x3.days.toFixed(1)} 天，${((x3.g / x0.g - 1) * 100).toFixed(1)}%；天天：${xa.days.toFixed(0)} 天，${((xa.g / x0.g - 1) * 100).toFixed(0)}%，走火 ${xa.zh.toFixed(1)} 次`, pass: x1.days <= 2 && x1.g / x0.g >= 0.99 && xa.g / x0.g <= 0.7 && xa.zh >= 1, note: '偶尔失手代价很小，成了习惯才伤根本：修炼就是修心' });
+  const news = (ls: LifeLog[]): number => avg(ls.map(l => l.newsLogins / Math.max(1, l.logins)));
+  add({ id: 'T4', area: '体感', std: '（报告）每次上线，邸报上有没有新东西：只算修炼的长进和约', got: keepers.map(k => `${k.nm} ${pct(news(k.on))}`).join('、'), pass: null, note: '修炼和约只能让一半多的上线有新事；剩下的要靠人和事来填（传言、书信、人物找上门）。这是给内容定的量：大约每两次上线，要有一条人和事' });
 
   /* ---------- 资产 ---------- */
   const mig = inp.saves.map(s => ({ ...s, m: migrateSave(s.state) }));
   add({ id: 'A1', area: '资产', std: '迁移后，银两、物品、任务、旗标、人情原样不变', got: mig.map(x => x.file).join('、') + ' 全部原样', pass: mig.every(x => JSON.stringify(x.m.kept) === JSON.stringify({ silver: x.state.silver, items: x.state.items, quests: x.state.quests, flags: x.state.flags, rel: x.state.rel })) });
-  add({ id: 'A2', area: '资产', std: '根基四项相加等于 80，每项在 10 到 30 之间', got: mig.map(x => `${x.file}：膂${x.m.attr.li} 根${x.m.attr.gen} 身${x.m.attr.shen} 悟${x.m.attr.wu}`).join('；'), pass: mig.every(x => { const a = x.m.attr; return a.li + a.gen + a.shen + a.wu === 80 && [a.li, a.gen, a.shen, a.wu].every(v => inb(v, 10, 30)); }) });
+  const ratioOk = (x: (typeof mig)[number]): boolean => (Object.entries(OLD_COMMON) as [keyof typeof OLD_COMMON, number][]).every(([k, c]) => {
+    const key = ({ 体魄: 'ti', 根骨: 'gen', 身法: 'shen', 悟性: 'wu', 胆魄: 'dan' } as const)[k];
+    return Math.abs(x.m.attr[key] / 20 - x.state.attr[k] / c) < 0.01;
+  });
+  add({ id: 'A2', area: '资产', std: '根基五项一一对应，相对常人的比例不变', got: mig.map(x => `${x.file}：` + (Object.keys(ATTR_NAME) as (keyof typeof ATTR_NAME)[]).map(k => `${ATTR_NAME[k]}${x.m.attr[k]}`).join(' ')).join('；'), pass: mig.every(ratioOk), note: '第二版折成四项、总和 80，把胆魄并进了悟性；第三版改回五项' });
   add({ id: 'A3', area: '资产', std: '功力等于原来的内力上限除以 100', got: mig.map(x => `${x.file} ${x.state.mpMax} → ${x.m.gongli} 年`).join('；'), pass: mig.every(x => x.m.gongli === x.state.mpMax / 100) });
-  const TN = ['不入流', '三流', '二流', '一流', '绝顶', '宗师'];
   add({ id: 'A4', area: '资产', std: '显示的档次不低于迁移前', got: mig.map(x => `${x.file} ${TN[x.oldTier]} → ${TN[x.m.tier]}`).join('；'), pass: mig.every(x => x.m.tier >= x.oldTier), note: '档次看身上练得最高的那一门；只看主修的话，老玩家会掉档' });
   add({ id: 'A5', area: '资产', std: '加上「年」以后，路遇和对手记录的间隔，换算前后一致', got: '旧存档都算景和元年，绝对日数等于旧的「一年里的第几天」，间隔不变', pass: mig.every(x => x.m.absDay(67) - x.m.absDay(60) === 7) });
 
@@ -215,6 +252,24 @@ export function buildReport(k: number, inp: Inputs): Report {
     { rule: '功力：岁月曲线（代替饱和曲线）', verdict: '改', why: '饱和曲线下功力跟着内功重数走，地利、大周天都没用，「功力看岁月」落空；岁月曲线下地利多三成，慢的人内力反而深', on: '寒潭静修功力多 29%', off: '（饱和）多 2% 到 10%' },
     { rule: '一次离开最多算十日', verdict: '改', why: '一天只上线一次的人静修少了四成；改成十六日', on: '休闲玩家功力是勤奋的 69%', off: '54%' }
   ];
+
+  /* ---------- 第三版的规则开关（现算） ---------- */
+  const nab = Math.max(20, n);
+  const X: Rules = { ...R, xushi: 0.25 };
+  const os = pairs(2, 2, SKILLED, R, nab, 401), or = pairs(2, 2, ROTE, R, nab, 402), ow = pairs(2, 3, SKILLED, R, nab, 404);
+  const xs = pairs(2, 2, SKILLED, X, nab, 401), xr = pairs(2, 2, ROTE, X, nab, 402), xn = pairs(2, 2, NAIVE, X, nab, 403), xw = pairs(2, 3, SKILLED, X, nab, 404);
+  const kp = pairs(2, 2, SKILLED, { ...X, xushiMode: 'kanpo' }, nab, 401);
+  const eyeMid = pairs(3, 2, SKILLED, X, nab, 405), eyeBlind = pairs(3, 2, SKILLED, { ...X, yanScale: 1e9 }, nab, 405), eyeSharp = pairs(3, 2, SKILLED, { ...X, yanScale: 1 }, nab, 405);
+  const oldC: Scale = { ...sc, counter: SCALE2.counter };
+  const cs = pairs(2, 2, SKILLED, R, nab, 406, undefined, oldC), cr = pairs(2, 2, ROTE, R, nab, 407, undefined, oldC), cu = pairs(3, 2, SKILLED, R, nab, 408, undefined, oldC);
+  const ns = pairs(2, 2, SKILLED, R, nab, 406), nr = pairs(2, 2, ROTE, R, nab, 407), nu = pairs(3, 2, SKILLED, R, nab, 408);
+  ab.push(
+    { rule: '五项根基（改回）', verdict: '改', why: '第二版照侠客行改成四项、总和 80，把胆魄并掉了。改回五项：后天只进火候和气血，多出来的天赋另算（护体、闪避、怒气、开局的势），境界不会被多算一遍', on: rows.find(r => r.id === 'C10')?.got ?? '', off: '（第二版）主项根基多五点，同档胜率几乎不变' },
+    { rule: '应对得手的反击加大', verdict: '留', why: '战报里看得出：拆招得手还的一剑和随手一击差不多。加大以后，选对应对更值钱，高一档的胜率用每重火候压回来', on: `以己之长比套路高 ${Math.round((ns.win - nr.win) * 100)} 点，决定性时刻占伤害 ${pct(ns.dec)}，高一档 ${pct(nu.win)}`, off: `高 ${Math.round((cs.win - cr.win) * 100)} 点，${pct(cs.dec)}，高一档 ${pct(cu.win)}` },
+    { rule: '虚实：多一个「识破」按钮', verdict: '去', why: '同档看虚实只有七成五的准头，把握从来不够，几乎没人点；虚招成了白挨的打', on: `以己之长 ${pct(kp.win)}，每场识破 ${kp.saw.toFixed(2)} 次、上当 ${kp.fooled.toFixed(2)} 次`, off: `${pct(os.win)}` },
+    { rule: '虚实：随机应变（四种应对各自吃不吃虚招不一样）', verdict: '待定', why: '利弊参半。好处：每场一次左右「看破虚招、乘虚而入」，以弱胜强多了；考虑虚实的人比不管的人多赢几个点。坏处：找规律的打法也沾光，决断的分量反而小了一点。要在手机上凭手感定', on: `以己之长 ${pct(xs.win)}、套路 ${pct(xr.win)}、不管虚实 ${pct(xn.win)}；以弱胜强 ${pct(xw.win)}；每场看破 ${xs.saw.toFixed(2)} 次、上当 ${xs.fooled.toFixed(2)} 次`, off: `以己之长 ${pct(os.win)}、套路 ${pct(or.win)}；以弱胜强 ${pct(ow.win)}` },
+    { rule: '看虚实靠眼力（境界就是眼界）', verdict: '去', why: '眼力看得准不准，几乎不改变该选哪种应对，胜负也不变。成算本来就由火候算，火候就是眼力；再单列一个眼力，等于把境界又算一遍', on: `高一档：眼力照算 ${pct(eyeMid.win)}，眼力极敏感 ${pct(eyeSharp.win)}`, off: `眼力不起作用 ${pct(eyeBlind.win)}` }
+  );
 
   /* ---------- 战报 ---------- */
   const replays: Report['replays'] = [];
@@ -267,9 +322,9 @@ export function sensitivity(k: number): SensRow[] {
   const rows: SensRow[] = [];
   const fs: [string, (f: number) => [typeof SCALE0, Rules]][] = [
     ['成算的尺度（26）', f => [SCALE0, { ...NEW_RULES, scale: 26 * f }]],
-    ['每重火候（6）', f => [{ ...SCALE0, hhPerRealm: 6 * f }, NEW_RULES]],
+    ['每重火候（5.5）', f => [{ ...SCALE0, hhPerRealm: 5.5 * f }, NEW_RULES]],
     ['招式强度拉开（2.5 倍）', f => [{ ...SCALE0, tellSpread: 2.5 * f }, NEW_RULES]],
-    ['对手气血的厚度（5.5）', f => [{ ...SCALE0, foeHp: 5.5 * f }, NEW_RULES]],
+    ['对手气血的厚度（5.6）', f => [{ ...SCALE0, foeHp: 5.6 * f }, NEW_RULES]],
     ['差距压制的底数（2/3）', f => [SCALE0, { ...NEW_RULES, supBase: Math.min(0.95, (2 / 3) * f) }]],
     ['偏科（6 点）', f => [{ ...SCALE0, bias: 6 * f }, NEW_RULES]]
   ];

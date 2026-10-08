@@ -12,6 +12,12 @@
  * - 功力：打坐一日，补上「天花板 − 现有功力」的 k；天花板由内功重数定；大周天快一倍，有走火的风险。
  *
  * 经济：每在线一小时按档次挣银两；每个江湖日要嚼用（下房一钱，露宿不花钱）。
+ *
+ * 第三版加了：
+ * - 约：人物和你定约（几十日以后，在几日路程以外）。在线时自己赶路；下线静修时，结算碰到约，
+ *   就在「约期减去路程」那一日出关，静修里的日子改成赶路，正好赶到。也可以选闭关不赴约。
+ * - 收入按身份：钱来自替人办事，不来自境界；境界高，接的活大一些（收入随档次涨十来倍，不是两百多倍）。
+ * - 心魔：做了违背信条的事（重诺的人失了约），静修的成效打折；不化解，四十来日才慢慢淡；重了会走火。
  */
 import { mulberry32, type Rng } from '../../engine/rng';
 
@@ -57,13 +63,40 @@ export interface LifeParams {
   slack: number;
   /** 根骨每高常人一点，打坐快几成（第二十二轮：岁月曲线下 3% 太大，根骨 10 和 30 功力差八成） */
   genRate: number;
+  /** 约：每在线一小时有几成机会有人和你定约；定下以后多少日到期；在几日路程以外；同时最多几个 */
+  yuePerHour: number;
+  yueLead: [number, number];
+  yueDist: [number, number];
+  yueMax: number;
+  /** 静修碰到约，就在「约期减去路程」那一日出关，改成赶路（第三版要验的规则） */
+  autoOut: boolean;
+  /** 身份的收入：每档每在线小时多少两（不写就用 income，按档次） */
+  shenfenIncome?: Record<string, number[]>;
+  /** 心魔：每一层让静修的成效打几折；不化解，每个江湖日淡多少层；化解的事，每在线小时办成的几率；几层以上会走火，走火一次功力掉几成 */
+  xinmoK: number;
+  xinmoDecay: number;
+  huajieP: number;
+  zouhuoAt: number;
+  zouhuoP: number;
 }
 
 /** 验证下来定的数（每一个怎样标出来的，见 src/lab/model/README.md） */
 export const LIFE0: LifeParams = {
   needK: 39, lilianBase: 100, lilianGrowth: 1.2, opening: 1300, digestBase: 17, openingGongli: 2, medicine: 0.3, onlineDigest: 0.1,
   dazuoK: 0.01, gongliMode: 'years', rate: 0.04, ceilK: 2.5, jiyuanP: 0.15,
-  income: [0.5, 2.2, 8, 25, 60, 120], living: 0.1, awayCap: 16, slack: 10, genRate: 0.01
+  income: [0.5, 2.2, 8, 25, 60, 120], living: 0.1, awayCap: 16, slack: 10, genRate: 0.01,
+  yuePerHour: 0.06, yueLead: [20, 90], yueDist: [1, 8], yueMax: 2, autoOut: true,
+  xinmoK: 0.2, xinmoDecay: 1 / 40, huajieP: 0.3, zouhuoAt: 2, zouhuoP: 0.02
+};
+
+/**
+ * 收入按身份（第三版）：每档每在线小时多少两。
+ * - 镖师：本事越大，接的镖越大；三流和第二版一样（攒三十两要一周上下），到宗师是三流的九倍。
+ * - 游侠：赏金、路见不平的谢礼、旧日人情的回报；比镖师少，但够过日子。
+ */
+export const SHENFEN_INCOME: Record<string, number[]> = {
+  镖师: [0.5, 2.2, 5, 9, 14, 20],
+  游侠: [0.5, 1.6, 3, 4.5, 6, 7.5]
 };
 
 /** 一天里什么时候在线：[开始的钟点, 时长（小时）] */
@@ -88,6 +121,13 @@ export interface Profile {
   lodging: 'inn' | 'thrifty';
   /** 在线时想把江湖历往前拨（连点歇息），每在线小时想拨几日 */
   skip?: number;
+  /** 约：赴约，还是闭关不赴约（失约算违背信条，生心魔） */
+  yue?: 'keep' | 'skip';
+  /** 身份：按身份算收入（不写按档次，第二版的做法） */
+  shenfen?: string;
+  /** 在第几个现实日做了违背信条的事（测心魔用）；化不化解 */
+  violate?: number[];
+  huajie?: boolean;
 }
 
 const P0 = { dazuoShare: 'parallel' as const, zhoutian: 'never' as const, gen: 20, wu: 20, lodging: 'thrifty' as const };
@@ -117,6 +157,16 @@ export interface LifeLog {
   netByTier: number[];
   zouhuo: number;
   bottlenecks: number;
+  /** 约：定了几个、赶上几个、失了几个；守约丢掉的静修日数；违背信条几次 */
+  yue: { made: number; kept: number; missed: number; lostRest: number; dueHours: number[] };
+  violations: number;
+  /** 心魔：每个现实日结束时的层数 */
+  xinmoByDay: number[];
+  /** 每次上线时，邸报上有没有东西（离开这段时间里的长进、到期的约） */
+  logins: number;
+  newsLogins: number;
+  /** 各档每个现实日的收入（不扣开销） */
+  incByTier: number[];
   final: { R: number; inner: number; gongli: number; tier: number; silver: number };
   /** 每个现实日结束时的样子（写江湖日记用） */
   daily: { day: number; R: number; inner: number; gongli: number; tier: number; silver: number; jh: number; wound: number }[];
@@ -136,7 +186,23 @@ const realmOf = (xp: number, k: number): number => Math.max(1, Math.cbrt(xp / k)
 
 export function live(pr: Profile, p: LifeParams, days: number, seed: number): LifeLog {
   const rng: Rng = mulberry32(seed);
-  const log: LifeLog = { profile: pr.name, reach: [], gains: [], maxAhead: 0, blockedH: 0, maxBacklog: 0, netByTier: [], zouhuo: 0, bottlenecks: 0, final: { R: 1, inner: 1, gongli: 0, tier: 0, silver: 0 }, daily: [] };
+  const log: LifeLog = { profile: pr.name, reach: [], gains: [], maxAhead: 0, blockedH: 0, maxBacklog: 0, netByTier: [], zouhuo: 0, bottlenecks: 0, final: { R: 1, inner: 1, gongli: 0, tier: 0, silver: 0 }, daily: [],
+    yue: { made: 0, kept: 0, missed: 0, lostRest: 0, dueHours: [] }, violations: 0, xinmoByDay: [], logins: 0, newsLogins: 0, incByTier: [] };
+  /** 约：到期的江湖日、还剩几日路程 */
+  const yues: { due: number; left: number }[] = [];
+  let xinmo = 0;
+  const violate = (): void => { log.violations++; xinmo = Math.min(3, xinmo + 1); };
+  // 约用自己的随机数，免得打乱原来各项的抽样（前后好对比）
+  const ry: Rng = mulberry32((seed * 2654435761) >>> 0);
+  const uni = (r: [number, number]): number => r[0] + ry() * (r[1] - r[0]);
+  /** 江湖历走到 jh 以后，结掉到期的约 */
+  const settleYue = (h: number): void => {
+    for (let i = yues.length - 1; i >= 0; i--) {
+      const y = yues[i];
+      if (y.left <= 1e-9 && jh >= y.due - 1e-9) { log.yue.kept++; log.yue.dueHours.push(h); yues.splice(i, 1); }
+      else if (jh > y.due + 1e-9) { log.yue.missed++; log.yue.dueHours.push(h); yues.splice(i, 1); violate(); }
+    }
+  };
   const xp = { main: 0, inner: 0, light: 0 };
   let pool = 0, gongli = 1.5, silver = 0.03, jh = 0, onlineH = 0, wound = 0, tierSeen = 0;
   let neck: number | null = null; // 正卡在哪个瓶颈（5.5 或 8.5）
@@ -190,14 +256,25 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
   };
 
   let away = 0; // 这一次离开了几小时
+  const violatedDays = new Set<number>();
   for (let h = 0; h < days * 24; h++) {
     const hourOfDay = h % 24;
     const on = pr.sessions.some(([s, d]) => hourOfDay >= Math.floor(s) && hourOfDay < Math.floor(s) + Math.max(1, Math.ceil(d)));
     const frac = pr.sessions.find(([s, d]) => hourOfDay >= Math.floor(s) && hourOfDay < Math.floor(s) + Math.max(1, Math.ceil(d)))?.[1] ?? 0;
     const onFrac = on ? Math.min(1, frac) : 0;
     if (on) {
-      // 回来：结算这一次静修
-      if (away > 0) { rest(Math.min(away, p.awayCap), h); away = 0; }
+      // 回来：结算这一次静修；邸报上有没有东西
+      if (away > 0) {
+        const g0 = log.gains.length, k0 = log.yue.kept + log.yue.missed;
+        rest(Math.min(away, p.awayCap), h); away = 0;
+        log.logins++;
+        if (log.gains.length > g0 || log.yue.kept + log.yue.missed > k0 || yues.some(y => y.due - jh <= p.awayCap)) log.newsLogins++;
+      }
+      // 违背信条（测心魔用）：这一天第一次上线时
+      const dayNo = Math.floor(h / 24) + 1;
+      if (pr.violate?.includes(dayNo) && !violatedDays.has(dayNo)) { violatedDays.add(dayNo); violate(); }
+      // 化解：在线办成一件化解的事（还诺、赔罪），心魔去一层
+      if (pr.huajie && xinmo >= 1 && rng() < p.huajieP * onFrac) xinmo = Math.max(0, xinmo - 1);
       // 行走：江湖过半日（想多拨的，被铁律拦下）
       const want = 0.5 * onFrac + (pr.skip ?? 0) * onFrac;
       const limit = h + 1 + p.slack - jh;
@@ -206,6 +283,16 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
       jh += step;
       liveDays(step);
       onlineH += onFrac;
+      // 约：在线时有人和你定约（勤奋的玩家一周一个上下）
+      if (onlineH > 3 && yues.length < p.yueMax && ry() < p.yuePerHour * onFrac) { yues.push({ due: jh + uni(p.yueLead), left: uni(p.yueDist) }); log.yue.made++; }
+      // 赶路：离约期只剩路程加三日，就动身（在线赶路受铁律约束）
+      for (const y of yues) {
+        if ((pr.yue ?? 'keep') !== 'keep' || y.left <= 0 || y.due - jh > y.left + 3) continue;
+        const lim = Math.max(0, h + 1 + p.slack - jh);
+        const go = Math.min(y.left, lim);
+        if (go > 0) { y.left -= go; jh += go; liveDays(go); }
+      }
+      settleYue(h);
       // 开篇的历练：剧情里有一场闭关，直接化开
       if (onlineH <= 3) { pool += p.opening / 3 * onFrac; digest(p.opening / 3 * onFrac, h); }
       const opening = 0;
@@ -213,8 +300,9 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
       const t = tierI();
       if (pr.fights || onlineH <= 3) {
         pool += (p.lilianBase * p.lilianGrowth ** t * (1 - 0.05 * wound)) * onFrac + opening;
-        silver += p.income[t] * onFrac;
-        A(t).inc += p.income[t] * onFrac;
+        const inc = (pr.shenfen && (p.shenfenIncome ?? SHENFEN_INCOME)[pr.shenfen] ? (p.shenfenIncome ?? SHENFEN_INCOME)[pr.shenfen][t] : p.income[t]) * onFrac;
+        silver += inc;
+        A(t).inc += inc;
         // 打斗受伤：每在线一小时三成机会落一级伤
         if (rng() < 0.3 * onFrac) wound = Math.min(3, wound + 1);
       }
@@ -232,9 +320,10 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
     log.maxAhead = Math.max(log.maxAhead, jh - (h + 1));
     log.maxBacklog = Math.max(log.maxBacklog, pool);
     if (log.silverAt30 === undefined && silver >= 30) log.silverAt30 = h / 24;
-    if (hourOfDay === 23) log.daily.push({ day: Math.floor(h / 24) + 1, R: R(), inner: realmOf(xp.inner, p.needK), gongli, tier: tierSeen, silver, jh, wound });
+    if (hourOfDay === 23) { log.daily.push({ day: Math.floor(h / 24) + 1, R: R(), inner: realmOf(xp.inner, p.needK), gongli, tier: tierSeen, silver, jh, wound }); log.xinmoByDay.push(xinmo); }
   }
   log.netByTier = [0, 1, 2, 3, 4, 5].map(t => (acc[t] && acc[t].hours >= 24 ? ((acc[t].inc - acc[t].cost) / acc[t].hours) * 24 : NaN));
+  log.incByTier = [0, 1, 2, 3, 4, 5].map(t => (acc[t] && acc[t].hours >= 24 ? (acc[t].inc / acc[t].hours) * 24 : NaN));
   log.final = { R: R(), inner: realmOf(xp.inner, p.needK), gongli, tier: tier(), silver };
   return log;
 
@@ -249,10 +338,40 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
   /** 静修：现实 hours 小时，算江湖 hours 日（受铁律约束） */
   function rest(hours: number, h: number): void {
     const limit = h + p.slack - jh;
-    const d = Math.max(0, Math.min(hours, limit));
+    let d = Math.max(0, Math.min(hours, limit));
+    // 约：静修碰到约，在「约期减去路程」那一日出关，改成赶路；赶到了，钟停在约期
+    if ((pr.yue ?? 'keep') === 'keep' && p.autoOut) {
+      const y = yues.filter(x => x.left > 0 || x.due > jh).sort((a, b) => a.due - b.due)[0];
+      if (y) {
+        const restDays = Math.max(0, y.due - y.left - jh);
+        if (d > restDays) {
+          const travel = Math.min(d - restDays, y.left);
+          const stop = restDays + travel + (y.left - travel <= 1e-9 ? Math.max(0, Math.min(d - restDays - travel, y.due - jh - restDays - travel)) : 0);
+          log.yue.lostRest += d - restDays;
+          d = restDays;
+          // 先静修 restDays 日，再赶路
+          restCore(d, h);
+          y.left -= travel;
+          jh += stop - restDays;
+          liveDays(stop - restDays);
+          settleYue(h);
+          return;
+        }
+      }
+    }
+    restCore(d, h);
+    settleYue(h);
+  }
+
+  function restCore(d: number, h: number): void {
     jh += d;
     liveDays(d);
-    let left = d;
+    // 心魔：随日子慢慢淡；重了，静修时有走火的险
+    const xm = xinmo;
+    xinmo = Math.max(0, xinmo - p.xinmoDecay * d);
+    const eff = 1 - p.xinmoK * (xm + xinmo) / 2;
+    if (xm >= p.zouhuoAt) for (let i = 0; i < Math.round(d); i++) if (rng() < p.zouhuoP) { gongli *= 0.9; log.zouhuo++; }
+    let left = d * eff;
     // 先养伤：一级伤养三日
     const heal = Math.min(left, wound * 3);
     wound = Math.max(0, wound - Math.floor(heal / 3));
