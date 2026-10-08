@@ -27,19 +27,33 @@ export function dayName(d: number): string {
   return '三十';
 }
 
-export interface Clock { month: number; day: number; min: number }
+/** 江湖历：景和元年起（year 为 0），每月三十天，一年十二个月（docs/foundation.md 第三节第三条） */
+export interface Clock { year?: number; month: number; day: number; min: number }
 
 export function dateStr(c: Clock): string { return MONTHS[c.month - 1] + '月' + dayName(c.day); }
 
-/** 一年里的第几天（每月三十天），算间隔用；跨年时会变小，调用方把负数当作「很久以前」 */
-export const dayNo = (c: Pick<Clock, 'month' | 'day'>): number => (c.month - 1) * 30 + c.day;
-/** 一年里的第几分钟 */
+/** 景和元年、景和二年…… */
+export const yearStr = (c: Pick<Clock, 'year'>): string => '景和' + ((c.year ?? 0) === 0 ? '元' : cn((c.year ?? 0) + 1)) + '年';
+export const fullDate = (c: Clock): string => yearStr(c) + dateStr(c);
+
+/** 从景和元年正月初一起的第几天（算间隔用）。旧存档都算景和元年，和改版前「一年里的第几天」一样 */
+export const dayNo = (c: Pick<Clock, 'year' | 'month' | 'day'>): number => (c.year ?? 0) * 360 + (c.month - 1) * 30 + c.day;
+/** 从景和元年起的第几分钟 */
 export const absMin = (c: Clock): number => dayNo(c) * 1440 + c.min;
 
 export function advanceDays(c: Clock, n: number): void {
   c.day += n;
-  while (c.day > 30) { c.day -= 30; c.month = (c.month % 12) + 1; }
+  while (c.day > 30) {
+    c.day -= 30;
+    c.month++;
+    if (c.month > 12) { c.month = 1; c.year = (c.year ?? 0) + 1; }
+  }
 }
+
+/** 现实的钟（毫秒）。测试里可以换掉 */
+let clock = (): number => Date.now();
+export const nowMs = (): number => clock();
+export const setNowMs = (f: () => number): void => { clock = f; };
 
 export function advanceMin(c: Clock, m: number): void {
   c.min += m;

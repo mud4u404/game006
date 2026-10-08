@@ -14,6 +14,7 @@ import { viewRenwu } from './views/renwu';
 import { viewWugong } from './views/wugong';
 import { viewXingnang } from './views/xingnang';
 import { viewDitu } from './views/ditu';
+import { checkYue } from '../engine/shiguang';
 
 type Handler = (v: string, el: HTMLElement) => void;
 const handlers: Record<string, Handler> = {};
@@ -93,6 +94,8 @@ const VIEWS: Record<Tab, () => string> = { jianghu: viewJianghu, renwu: viewRenw
 const TABS: [Tab, string][] = [['jianghu', '江湖'], ['renwu', '人物'], ['wugong', '武功'], ['xingnang', '行囊'], ['ditu', '地图']];
 
 export function render(): void {
+  // 过了约期还没赴的约，算失约（engine/shiguang.ts）：失约的后果、心魔，都记进见闻
+  for (const m of checkYue(S)) toast(m);
   const r = room(S.loc);
   const bar = $('#appbar'), main = $('#main'), tabs = $('#tabs');
   if (!bar || !main || !tabs) return;

@@ -35,8 +35,10 @@ export interface Cond {
   notLearned?: SkillId;
   /** 某门武功练到第几重（0 起）：atLeast 不低于，below 低于（没学会算低于任何一重） */
   realm?: { skill: SkillId; atLeast?: number; below?: number };
-  /** 属性不低于 */
+  /** 后天根基不低于（常人二十，见 engine/ren.ts） */
   attr?: { key: AttrKey; atLeast: number };
+  /** 今天是这个约的约期，约还没了结（engine/shiguang.ts） */
+  yue?: string;
   /** 侠义、恶名不低于 */
   xia?: number;
   eming?: number;
@@ -83,6 +85,14 @@ export type Effect =
   | { type: 'feedReset' }
   /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
   | { type: 'news' }
+  /**
+   * 定约：npc 和你约好 inDays 日后在 at 见（docs/foundation.md 第三节第三条）。下线静修碰到约期会提前出关。
+   * 到了那一日在那里了结它（`yueDone`）；过了那一日还没了结，就是失约：执行 miss，再生一层心魔。
+   */
+  | { type: 'yue'; id: string; npc: string; at: string; inDays: number; text: string; miss?: Effect[] }
+  | { type: 'yueDone'; id: string }
+  /** 心魔：做了违背信条的事加一层，化解了减一层（还诺、赔罪、了却） */
+  | { type: 'xinmo'; delta: number; why?: string }
   /** 开打：战斗结束后由对手定义里的 results 决定后续 */
   | { type: 'fight'; foe: string }
   /** 打开一段剧情卡片 */

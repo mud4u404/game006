@@ -34,8 +34,12 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   if (c.realm && !skillIds.has(c.realm.skill)) errs.push(`${where}：条件里的武功「${c.realm.skill}」不存在`);
   if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
   if (c.sect && !SCHOOL_STYLE[c.sect.school]) errs.push(`${where}：条件里的门派「${c.sect.school}」没有定位（见 SCHOOL_STYLE）`);
+  if (c.yue !== undefined) yueRead.add(c.yue);
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
 }
+
+/** 约：定下的约、读约的条件、了结的约，最后对一遍账 */
+const yueSet = new Set<string>(), yueRead = new Set<string>(), yueDone = new Set<string>();
 
 function checkEffects(list: Effect[] | undefined, where: string, errs: string[]): void {
   for (const e of list || []) {
@@ -58,6 +62,15 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
       case 'fight': if (!foeIds.has(e.foe)) errs.push(`${w}：对手「${e.foe}」不存在`); break;
       case 'story': if (!storyIds.has(e.id)) errs.push(`${w}：剧情「${e.id}」不存在`); break;
       case 'sect': if (!SCHOOL_STYLE[e.school]) errs.push(`${w}：门派「${e.school}」没有定位（见 SCHOOL_STYLE）`); break;
+      case 'yue':
+        yueSet.add(e.id);
+        if (!npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
+        if (!roomIds.has(e.at)) errs.push(`${w}：地点「${e.at}」不存在`);
+        if (!(e.inDays >= 1 && Number.isInteger(e.inDays))) errs.push(`${w}：inDays 要是一以上的整数`);
+        if (!e.text) errs.push(`${w}：要写 text，告诉玩家约的是什么`);
+        checkEffects(e.miss, `${w} 的 miss`, errs);
+        break;
+      case 'yueDone': yueDone.add(e.id); break;
       default: break;
     }
   }
@@ -521,3 +534,16 @@ describe('文风与剧透', () => {
   });
 });
 
+
+describe('约', () => {
+  // 放在最后：前面的检查把所有效果、条件都过了一遍，这里对账
+  it('定下的约，都有地方赴（条件 yue）、有地方了结（yueDone）；读约的条件，都有人定过这个约', () => {
+    const errs: string[] = [];
+    for (const id of yueSet) {
+      if (!yueRead.has(id)) errs.push(`约「${id}」：没有任何地方用条件 { yue: '${id}' } 让玩家赴约`);
+      if (!yueDone.has(id)) errs.push(`约「${id}」：没有任何地方用 yueDone 了结它，守约的人也会被算成失约`);
+    }
+    for (const id of yueRead) if (!yueSet.has(id)) errs.push(`条件 { yue: '${id}' }：没有任何地方定过这个约`);
+    report(errs);
+  });
+});

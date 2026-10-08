@@ -56,26 +56,23 @@ export function questDone(s: GameState, q: QuestDef): number {
  * 闭关：base 是闭门造车也有的一点进境，cap 是这段日子最多消化多少历练。
  * 一月闭关、历练充足时，和改版前闭关一月的进境相当；没有历练，只有一成多。
  */
-export const RETREAT: Record<number, { base: number; cap: number }> = {
-  1: { base: 6, cap: 120 },
-  7: { base: 42, cap: 700 },
-  30: { base: 180, cap: 2400 }
-};
+export const retreatOf = (days: number): { base: number; cap: number } => ({ base: Math.round(6 * days), cap: Math.round(120 * Math.pow(days, 0.9)) });
+export const RETREAT: Record<number, { base: number; cap: number }> = { 1: retreatOf(1), 7: retreatOf(7), 30: retreatOf(30) };
 /** 消化出来的功夫怎么分：出手的那门外功最多，内功次之，轻功、另一门外功再次 */
 const SHARE: ['outer' | 'other' | Slot, number][] = [['outer', 0.45], ['neigong', 0.3], ['qinggong', 0.15], ['other', 0.1]];
 
 export interface RetreatPlan { used: number; gains: [SkillId, number][] }
 
 /** 算出闭关的收获，不改存档（界面按它扣历练、加熟练） */
-export function retreatPlan(s: Pick<GameState, 'lilian' | 'loadout' | 'skills' | 'gear'>, days: number): RetreatPlan {
-  const r = RETREAT[days];
+export function retreatPlan(s: Pick<GameState, 'lilian' | 'loadout' | 'skills' | 'gear'>, days: number, eff = 1): RetreatPlan {
+  const r0 = retreatOf(days), r = { base: r0.base * eff, cap: Math.round(r0.cap * eff) };
   const used = Math.min(s.lilian ?? 0, r.cap);
   const outer = activeOuter(s)?.id;
   const other = [s.loadout.weapon, s.loadout.fist].find(id => id && id !== outer);
   const idOf = (k: (typeof SHARE)[number][0]): string | undefined => (k === 'outer' ? outer : k === 'other' ? other : s.loadout[k]);
   const slots = SHARE.filter(([k]) => { const id = idOf(k); return !!id && !!s.skills[id]; });
   const sum = slots.reduce((a, [, w]) => a + w, 0);
-  const total = r.base + used;
+  const total = Math.round(r.base + used);
   return { used, gains: slots.map(([k, w]) => [idOf(k)!, Math.round((total * w) / sum)]) };
 }
 
@@ -96,7 +93,7 @@ export function gongliCeiling(s: GameState): number {
 export interface JingxiuPlan { healed: Partial<Record<'hand' | 'foot' | 'inner', number>>; gongli: number; dazuoDays: number }
 
 /** 算出静修 days 日养好的伤、长的功力，不改存档 */
-export function jingxiuPlan(s: GameState, days: number): JingxiuPlan {
+export function jingxiuPlan(s: GameState, days: number, eff = 1): JingxiuPlan {
   const w = { ...s.wounds };
   const healed: JingxiuPlan['healed'] = {};
   let left = days;
@@ -109,6 +106,6 @@ export function jingxiuPlan(s: GameState, days: number): JingxiuPlan {
   const R = (s.skills[s.loadout.neigong ?? '']?.r ?? 0) + 1;
   const per = DAZUO.rate * (0.7 + 0.06 * R) * (1 + 0.01 * (s.attr.根骨 - 20));
   const cap = gongliCeiling(s);
-  const g = Math.max(0, Math.min(cap - s.gongli, per * left));
+  const g = Math.max(0, Math.min(cap - s.gongli, per * left * eff));
   return { healed, gongli: Math.round(g * 100) / 100, dazuoDays: left };
 }

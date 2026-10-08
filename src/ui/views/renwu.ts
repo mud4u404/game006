@@ -5,6 +5,8 @@ import { ROOMS } from '../../content';
 import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
 import { gongliText, houtianOf, tierNow } from '../../engine/ren';
+import { yueText } from '../../engine/shiguang';
+import { fullDate } from '../../core/time';
 import { ZONE_NAME } from '../../engine/duel';
 import { cn } from '../../core/util';
 import { cloudRowHTML } from './account-link';
@@ -25,6 +27,13 @@ function renqingHTML(): string {
   const casual = groups.萍水相逢.length
     ? `<details class="rq-more"><summary><span>萍水相逢 ${groups.萍水相逢.length} 人</span><small>展开</small></summary>${groups.萍水相逢.map(row).join('')}</details>` : '';
   return shown || casual ? shown + casual : '<p class="muted">还没有结识什么人。</p>';
+}
+
+/** 约与心事：答应过谁、哪天在哪里；心中有愧的事（docs/foundation.md 第三节第三、九条） */
+function yueHTML(): string {
+  const rows = S.yue.slice().sort((a, b) => a.due - b.due).map(y => `<div><span class="tag warn">约</span><span>${yueText(S, y)}</span></div>`);
+  if (S.xinmo.n >= 0.05) rows.push(`<div><span class="tag danger">心魔</span><span>心中有愧（${S.xinmo.why}），静修打${cn(Math.round((1 - 0.2 * S.xinmo.n) * 10))}折。还诺、赔罪、了却这件事，才化得开；不化解，也会随日子慢慢淡。</span></div>`);
+  return rows.length ? `<section class="card here"><div class="sec-h"><h2>约与心事</h2></div><div class="news">${rows.join('')}</div></section>` : '';
 }
 
 let confirmRestart = false;
@@ -52,7 +61,9 @@ export function viewRenwu(): string {
     <div><span>伤</span><b>${hurt || '无'}</b></div><div><span>历练</span><b>${S.lilian}</b></div>
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
+    <div><span>江湖历</span><b>${fullDate(S)}</b></div>
   </div></section>
+  ${yueHTML()}
   <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${meaningful}</span></div>${renqingHTML()}</section>
   <section class="card here"><div class="sec-h"><h2>存档</h2></div>
     ${saveCardHTML()}

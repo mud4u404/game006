@@ -9,6 +9,7 @@ import { storyById } from '../content';
 import type { StoryDef } from '../content/types';
 import { newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
 import { afterOutcome, hooks, registerHandlers, render } from './shell';
+import { welcomeBack } from './chuguan';
 
 /* ---------- 剧情卡片 ---------- */
 
@@ -167,7 +168,8 @@ registerHandlers({
     if (!saved) return;
     setState(saved);
     hideTitle();
-    render();
+    // 下线就是静修：离开的时辰算成静修的日子，先读出关邸报（ui/chuguan.ts）。要在 render 之前算：render 会存档，把「上次在线」记成现在
+    if (!welcomeBack()) render();
   },
   tNew: v => titleButtons(load(), v === 'skip' ? 'skip' : 'new'),
   tBack: () => titleButtons(load()),

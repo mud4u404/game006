@@ -54,6 +54,12 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '请教', '切磋', '赠礼', '偷窃'],
     actions: {
       交谈: [
+        { if: { yue: 'liu_again' },
+          text: '柳寒舟果然撑伞立在石桥边，见你来了，笑了笑：「兄台守信。」他抽出伞中剑，把那天赢你的几剑一招招放慢了拆给你看：哪一剑是虚的，哪一剑该硬接，哪一剑该退。拆完，他收剑入伞：「这几剑，柳某只拆给守约的人看。」',
+          do: [{ type: 'yueDone', id: 'liu_again' }, { type: 'flag', flag: 'liuName' },
+            { type: 'rel', npc: 'liu', value: '知交', from: ['点头之交', '相谈甚欢'], note: '守了三日之约，他把剑招拆给你看' },
+            { type: 'prof', skill: 'hanjiang', amount: 120 }, { type: 'lilian', amount: 80 },
+            { type: 'feed', tag: '江湖', text: '你守了柳寒舟的三日之约。他把赢你的那几剑，一招招拆给你看。' }] },
         { if: { flag: 'liu_saw_hanjiang' },
           text: '柳寒舟收了伞，看了你许久：「兄台渡口那一剑……是跟谁学的？」不等你回答，他又笑了笑：「当我没问。改日请兄台喝酒。」',
           do: [{ type: 'flag', flag: 'liuName' }] },
@@ -315,8 +321,12 @@ const FOES: FoeDef[] = [
         story: '柳寒舟收剑入伞，笑道：「兄台的剑，比你的人还要冷。改日渡口若有事，柳某也想去看看热闹。」',
         do: [LIU_REL, { type: 'prof', skill: 'hanjiang', amount: 80 }] },
       lose: { tag: '切磋 · 负', title: '棋差一着', growth: true, button: '回到湖畔',
-        story: '柳寒舟收剑入伞：「兄台底子不差，只是火候未到。我出重手时，你该挑自己最有把握的法子应对，而不是最好看的。」',
-        do: [LIU_REL, { type: 'prof', skill: 'hanjiang', amount: 40 }] },
+        story: '柳寒舟收剑入伞：「兄台底子不差，只是火候未到。我出重手时，你该挑自己最有把握的法子应对，而不是最好看的。」他顿了顿，伞尖在青石上一点：「三日后此时，还在这里。柳某等你。」',
+        // 约（docs/foundation.md 第三节第三条）：守了约，他把那几剑拆给你看；失了约，他记着
+        do: [LIU_REL, { type: 'prof', skill: 'hanjiang', amount: 40 },
+          { type: 'yue', id: 'liu_again', npc: 'liu', at: 'hu', inDays: 3, text: '湖畔再见，柳寒舟要把那几剑拆给你看',
+            miss: [{ type: 'rel', npc: 'liu', value: '点头之交', from: ['相谈甚欢'], note: '失了三日之约' },
+              { type: 'feed', tag: '江湖', text: '柳寒舟在湖畔等了你一整天，天黑才收伞走了。' }] }] },
       yield: LIU_YIELD,
       flee: LIU_YIELD
     } }
