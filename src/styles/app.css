@@ -313,6 +313,8 @@ svg{display:block}
 .ro.low{background:var(--danger-soft);color:var(--danger)}
 .ropt .rx{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
 .ropt:disabled{opacity:.45}
+.ropt.fate{grid-template-columns:auto minmax(0,1fr)}
+.ropt.fate .rx{white-space:normal;line-height:1.5}
 .pb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .sk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .skb{position:relative;height:50px;border-radius:12px;background:var(--chip);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;overflow:hidden;padding:0 2px;min-width:0}

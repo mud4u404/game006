@@ -5,8 +5,10 @@
  * 存档始终先存本机；这里出任何错，都不影响游戏。
  */
 import { EMAIL_DOMAIN, SUPABASE_KEY, SUPABASE_URL } from './config';
+import { PROTO } from '../core/proto';
 
-export const cloudEnabled = (): boolean => !!(SUPABASE_URL && SUPABASE_KEY);
+/** 原型（?proto=1）里关掉云存档：原型的进度不能同步上去，盖了正式的 */
+export const cloudEnabled = (): boolean => !!(SUPABASE_URL && SUPABASE_KEY) && !PROTO;
 
 export interface Session { access: string; refresh: string; expires: number; uid: string; username: string }
 export interface CloudSave { data: unknown; version: number; summary: string; updated: number }

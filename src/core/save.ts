@@ -16,6 +16,7 @@ import type { Loadout } from '../engine/wuxue';
 import type { Slot } from '../content/types';
 import { newGame, skipToYangzhou, type GameState } from './state';
 import { dateStr } from './time';
+import { PROTO } from './proto';
 
 export const SAVE_VERSION = 3;
 export const KEY = 'jhyy-save-v2';
@@ -36,8 +37,21 @@ export interface SaveStore {
 
 let store: SaveStore | null = null;
 const browserStore = (): SaveStore | null => {
-  try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
+  try { return typeof localStorage === 'undefined' ? null : PROTO ? prefixed(localStorage, 'jhyy-proto:') : localStorage; } catch { return null; }
 };
+
+/** 原型（?proto=1）用单独的一套存档（键名加前缀），不碰正式的进度 */
+export function prefixed(s: SaveStore, p: string): SaveStore {
+  const own = (): string[] => {
+    const ks: string[] = [];
+    for (let i = 0; i < s.length; i++) { const k = s.key(i); if (k?.startsWith(p)) ks.push(k.slice(p.length)); }
+    return ks;
+  };
+  return {
+    getItem: k => s.getItem(p + k), setItem: (k, v) => s.setItem(p + k, v), removeItem: k => s.removeItem(p + k),
+    key: i => own()[i] ?? null, get length() { return own().length; }
+  };
+}
 /** 测试用：换一个存储 */
 export const useStore = (s: SaveStore | null): void => { store = s; };
 const st = (): SaveStore | null => store ?? browserStore();
