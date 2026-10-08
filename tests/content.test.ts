@@ -556,7 +556,7 @@ describe('后果看得见', () => {
    */
   const DEBT = [
     'zhou', 'yh_guanbao', 'yh_ya', 'yh_caught', 'cangjing_juan', 'fuya_jiang_truth', 'fuya_jiang_hide', 'mem3_ask',
-    'ly_maishen_walk', 'ly_maishen_yanhao', 'ly_xiaozei_walk', 'ly_tongchuan',
+    'ly_maishen_walk', 'ly_xiaozei_walk', 'ly_tongchuan',
     'ly_jiang_cha_qian', 'ly_jiang_cha_kan', 'ly_jiang_duju_chai', 'ly_jiang_duju_gen', 'ly_jiang_yanye_he', 'ly_jiang_tun_xiang',
     'ly_yz_jianke_bye', 'ly_yz_tangzi', 'ly_yz_tangzi_bye', 'ly_yz_zhuifei_walk', 'ly_yz_huji_cao', 'ly_yz_huji_yanhao', 'ly_yz_huji_none',
     'ly_yz_zouhai_alone', 'ly_yz_suanming_chai', 'ly_yz_shusheng_pay', 'ly_yz_shusheng_walk'

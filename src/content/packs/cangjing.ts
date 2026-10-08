@@ -96,7 +96,7 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '指认'],
     actions: {
       交谈: [
-        { if: { flag: 'cangjing_solved' },
+        { if: { flag: 'cangjing_solved', notFlag: 'cangjing_wrong_fakong' },
           text: '张四啧了一声：「小师父的事，听说了。那卷《药师经》，老夫收的时候可是花了真金白银——一百文，一页都不少。」' },
         { if: { flag: 'clue_jiaoyin' },
           text: '「脚印？」张四把新布鞋抬起来给你看，「昨夜老夫宿在城外渡口船上，等今早头班船，摆渡的老周亲眼所见。再说了，老夫这双鞋走一夜路都得磨破，哪还敢光脚下地。」' },
