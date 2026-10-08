@@ -3,7 +3,7 @@
  * 「同等投入」：同一时期，所有门派的境界、气血、内力相同，能用的武功由传授方式（teach）决定。
  */
 import { SKILLS } from '../content';
-import { JIANGHU_RULE, OUTER, SCHOOL_STYLE, STYLES } from '../content/skills';
+import { FIST, JIANGHU_RULE, OUTER, SCHOOL_STYLE, STYLES, WEAPON } from '../content/skills';
 import type { FxDef, FxKind, SkillDef, SkillGrade, SkillTeach } from '../content/types';
 import type { Kit, Move } from './combat';
 import { rootsOn } from './shicheng';
@@ -37,9 +37,20 @@ export function available(school: string, st: Stage): SkillDef[] {
   return SKILLS.filter(k => (k.school === school || k.school === JIANGHU_RULE.school) && ok(k));
 }
 
-export interface Build { school: string; stage: Stage; neigong?: SkillDef; qinggong?: SkillDef; main?: SkillDef; off?: SkillDef; ult?: SkillDef }
+/**
+ * 一套搭配。拳脚、兵刃两个位置，模拟里只放一门：同一时间只使一门外功（docs/zhuangbei.md 第二节），
+ * 兵刃武功默认手里有对得上的兵器。
+ */
+export interface Build { school: string; stage: Stage; neigong?: SkillDef; qinggong?: SkillDef; fist?: SkillDef; weapon?: SkillDef; ult?: SkillDef }
 
-const toMove = (k: SkillDef, p: NonNullable<SkillDef['performs']>[number]): Move => ({
+/** 出手的那门外功 */
+export const outerOf = (b: Pick<Build, 'fist' | 'weapon'>): SkillDef | undefined => b.weapon ?? b.fist;
+/** 把一门外功放进它该去的位置 */
+const withOuter = <T extends Pick<Build, 'fist' | 'weapon'>>(b: T, k: SkillDef | undefined): T =>
+  ({ ...b, fist: k && FIST.includes(k.category) ? k : undefined, weapon: k && WEAPON.includes(k.category) ? k : undefined });
+
+/** 绝招算成战斗内核的一招（实战和模拟共用） */
+export const toMove = (k: SkillDef, p: NonNullable<SkillDef['performs']>[number]): Move => ({
   name: `${k.name}「${p.name}」`, mp: p.mp, cd: p.cd, hits: p.hits, dmg: p.dmg, acc: p.acc, fx: p.fx || [],
   // 蓄势的重招（只有刚猛的门派写，docs/menpai.md 第五节）
   heavy: !!p.charge && p.hits === 1
@@ -57,10 +68,9 @@ export const gradePoints = (k?: SkillDef): number => (k ? RANK.indexOf(k.grade) 
 
 /** 搭配的分量（配招用的粗估）：外功和绝招、杀招、内功、轻功的功力与被动 */
 function buildScore(b: Omit<Build, 'school' | 'stage'>, st: Stage): number {
-  const ng = b.neigong;
+  const ng = b.neigong, outer = outerOf(b);
   let v = 0;
-  if (b.main) v += outerScore(b.main, ng, st);
-  if (b.off) v += 0.6 * outerScore(b.off, ng, st);
+  if (outer) v += outerScore(outer, ng, st);
   if (b.ult?.ult && (!ng || rootsOn(b.ult, ng))) v += 0.5 * ultBudget(b.ult.ult);
   if (ng) v += 4 * skillPower(ng, st.realm) + 5 * passiveCost(ng.passive);
   if (b.qinggong) v += 2 * skillPower(b.qinggong, st.realm) + 5 * passiveCost(b.qinggong.passive);
@@ -79,12 +89,11 @@ export function bestBuild(school: string, st: Stage): Build {
   for (const neigong of ngs) for (const qinggong of qgs) for (const ult of ults) {
     const used = gradePoints(neigong) + gradePoints(qinggong) + gradePoints(ult);
     if (used > st.budget) continue;
-    const mains = top(outers, k => outerScore(k, neigong, st), 6);
-    for (const main of mains) for (const off of mains) {
-      if (off && off === main) continue;
-      if (used + gradePoints(main) + gradePoints(off) > st.budget) continue;
-      const v = buildScore({ neigong, qinggong, main, off, ult }, st);
-      if (v > bestV) { bestV = v; best = { school, stage: st, neigong, qinggong, main, off, ult }; }
+    for (const outer of top(outers, k => outerScore(k, neigong, st), 6)) {
+      if (used + gradePoints(outer) > st.budget) continue;
+      const b = withOuter<Omit<Build, 'school' | 'stage'>>({ neigong, qinggong, ult }, outer);
+      const v = buildScore(b, st);
+      if (v > bestV) { bestV = v; best = { school, stage: st, ...b }; }
     }
   }
   return best;
@@ -102,7 +111,8 @@ export function kitOf(b: Build): Kit {
   const openers: FxDef[] = [];
   let hit = 0;
   // 合璧：两门都搭配在身上才生效；效果里的增益算被动，减益开战时施加给对手
-  const worn = [ng, b.qinggong, b.main, b.off, b.ult].filter((k): k is SkillDef => !!k);
+  const outer = outerOf(b);
+  const worn = [ng, b.qinggong, b.fist, b.weapon, b.ult].filter((k): k is SkillDef => !!k);
   for (const k of worn) for (const cb of k.combos || []) {
     const pair = cb.with.startsWith('门派:') ? worn.some(x => x !== k && x.school === cb.with.slice(3)) : worn.some(x => x.id === cb.with);
     if (!pair || !rooted(k)) continue;
@@ -110,10 +120,10 @@ export function kitOf(b: Build): Kit {
     for (const fx of cb.fx || []) (PASSIVE_KINDS.includes(fx.kind) ? add(fx) : openers.push(fx));
   }
   const moves: Move[] = [];
-  for (const k of [b.main, b.off]) if (k && rooted(k)) for (const p of k.performs || []) if ((p.realm ?? 0) <= st.realm) moves.push(toMove(k, p));
-  const mainPow = b.main ? skillPower(b.main, st.realm) : 0;
+  if (outer && rooted(outer)) for (const p of outer.performs || []) if ((p.realm ?? 0) <= st.realm) moves.push(toMove(outer, p));
+  const mainPow = outer ? skillPower(outer, st.realm) : 0;
   const avg = 60 + mainPow * 1.2;
-  const basic: Move = { name: b.main ? `${b.main.name}的普通招式` : '拳脚', mp: 0, cd: 0, hits: 1, dmg: [avg * 0.8, avg * 1.2], acc: 0.85, fx: [] };
+  const basic: Move = { name: outer ? `${outer.name}的普通招式` : '拳脚', mp: 0, cd: 0, hits: 1, dmg: [avg * 0.8, avg * 1.2], acc: 0.85, fx: [] };
   const ult = b.ult?.ult && rooted(b.ult) ? { name: `${b.ult.name}（杀招）`, mp: 0, cd: 0, hits: 1, dmg: b.ult.ult.dmg, acc: 1, fx: b.ult.ult.fx || [], sure: true } : undefined;
   const qg = b.qinggong;
   const dodge = 0.08 + (qg ? skillPower(qg, st.realm) / 400 : 0) + (qg?.passive || []).filter(f => f.kind === 'haste').reduce((a, f) => a + (f.value ?? 0), 0) / 100;
@@ -123,12 +133,12 @@ export function kitOf(b: Build): Kit {
   return {
     name: b.school, hpMax: st.hp, mpMax: st.mp,
     mpRegen: Math.round(st.mp * 0.04 + (ng ? skillPower(ng, st.realm) / 2 : 0)),
-    nature: b.main?.nature, dodge, hit, passive, openers, moves, basic, ult, bias
+    nature: outer?.nature, dodge, hit, passive, openers, moves, basic, ult, bias
   };
 }
 
 /**
- * 混搭：以 root 为根基门派（内功、绝技不动），主手或副手换成一门外来的武功。
+ * 混搭：以 root 为根基门派（内功、绝技不动），出手的外功换成一门外来的武功。
  * 不是本门弟子，只学得到别派的奇遇武功和江湖散学（docs/menpai.md 第七节）；门规严的门派只能兼修江湖散学，禁修的打法不能碰。
  * 别派外功没有本门内功打底，只剩普通招式；roots 写「任意」的奇遇武功例外。
  */
@@ -143,5 +153,5 @@ export function mixedBuilds(root: string, st: Stage): Build[] {
     const style = SCHOOL_STYLE[k.school]?.main;
     return !(style && pos?.forbid?.includes(style));
   });
-  return foreign.flatMap(k => [{ ...base, off: k }, { ...base, main: k, off: base.main }]).filter(b => b.main !== b.off);
+  return foreign.map(k => withOuter(base, k));
 }

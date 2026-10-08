@@ -86,7 +86,8 @@ async function fight(tag, pickBest = true) {
       continue;
     }
     if (await p.$('#opening:not([hidden])')) { await p.click('#opening').catch(() => {}); continue; }
-    for (const s of ['#skUlt', '#skGu', '#skJh']) { const el = await p.$(s + ':not([disabled])'); if (el) { await el.click().catch(() => {}); break; } }
+    // 杀招、绝招：按钮由搭配生成（engine/zhaoshi.ts）
+    for (const s of ['#skUlt', '#skP0', '#skP1', '#skP2']) { const el = await p.$(s + ':not([disabled])'); if (el) { await el.click().catch(() => {}); break; } }
   }
   return 'timeout';
 }

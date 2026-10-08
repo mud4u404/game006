@@ -2,12 +2,15 @@ import { S } from '../../core/state';
 import { ITEMS } from '../../content';
 
 export function viewXingnang(): string {
-  const rows: string[] = [
-    `<div class="item"><div class="ii"><b>青锋剑</b><p>寻常青钢长剑，剑脊上刻着一个「沈」字。</p></div><span class="cnt">兵器 · 装备中</span></div>`
-  ];
+  const rows: string[] = [];
   for (const it of ITEMS) {
     const n = S.items[it.id] || 0;
     if (!n || it.hidden) continue;
+    if (it.equip) {
+      const on = S.gear.weapon === it.id;
+      rows.push(`<div class="item"><div class="ii"><b>${it.name}</b><p>${it.desc}</p></div><span class="cnt">${it.equip.weapon} · ${on ? '装备中' : '在行囊里'}</span><button class="use" data-act="wield:${on ? '' : it.id}">${on ? '卸下' : '装备'}</button></div>`);
+      continue;
+    }
     const useBtn = it.usable ? `<button class="use" data-act="use:${it.id}"${S.hp >= S.hpMax ? ' disabled' : ''}>服用</button>` : '';
     rows.push(`<div class="item"><div class="ii"><b>${it.name}</b><p>${it.desc}</p></div><span class="cnt">×${n}</span>${useBtn}</div>`);
   }

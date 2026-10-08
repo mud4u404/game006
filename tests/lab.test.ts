@@ -4,14 +4,15 @@ import { buildState, oddsTable, performReport } from '../src/lab/calc';
 
 describe('试算台', () => {
   it('按搭配和境界构造状态', () => {
-    const s = buildState({ neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang' }, { xinfa: 3, taxue: 2, hanjiang: 4 });
-    expect(s.loadout.main).toBe('hanjiang');
+    const s = buildState({ neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, { xinfa: 3, taxue: 2, hanjiang: 4 });
+    expect(s.loadout.weapon).toBe('hanjiang');
+    expect(s.gear.weapon).toBe('qingfeng');
     expect(s.skills.hanjiang?.r).toBe(4);
     expect(s.skills.xinfa?.r).toBe(3);
   });
 
   it('成算表：每种应对一行，境界越高成算越高', () => {
-    const lo = { neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang', off: 'jinghong' };
+    const lo = { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' };
     const pw = { li: 40, su: 40, qiao: 40, xi: 40 };
     const low = oddsTable(buildState(lo, { xinfa: 1, taxue: 1, hanjiang: 1, jinghong: 1 }), pw);
     const high = oddsTable(buildState(lo, { xinfa: 6, taxue: 6, hanjiang: 6, jinghong: 6 }), pw);
@@ -20,7 +21,7 @@ describe('试算台', () => {
   });
 
   it('克制会体现在成算表里', () => {
-    const s = buildState({ main: 'hanjiang' }, { hanjiang: 3 });
+    const s = buildState({ weapon: 'hanjiang' }, { hanjiang: 3 });
     const pw = { li: 30, su: 30, qiao: 30, xi: 30 };
     const plain = oddsTable(s, pw).find(r => r.k === 'parry')!.p;
     const vsHard = oddsTable(s, pw, { nature: '刚' }).find(r => r.k === 'parry')!.p;

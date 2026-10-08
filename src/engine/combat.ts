@@ -257,7 +257,8 @@ function startOfRound(c: Combat, f: Fighter): void {
   if (!TUNE.chillSlowsCd || !f.st.chill || c.round % 2 === 0) f.cd = f.cd.map(x => Math.max(0, x - 1));
 }
 
-function endOfRound(f: Fighter): void {
+/** 合末：这一合新上的状态不减，其余各减一合；势回落（实战界面每合也调用） */
+export function endOfRound(f: Fighter): void {
   for (const k of Object.keys(f.st) as Timed[]) {
     if (k === 'busy') continue; // 点穴按「跳过几次出手」计
     const s = f.st[k]!;
