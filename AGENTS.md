@@ -10,6 +10,8 @@
 - 剧情与人物见 [docs/story.md](docs/story.md)。
 - **写内容必读** [docs/content-guide.md](docs/content-guide.md)。
 - **写武功必读** [docs/menpai.md](docs/menpai.md)（门派打法与相克）和 [docs/wuxue.md](docs/wuxue.md)（单门武功的写法与数值）。
+- **写门派内容必读** [docs/lizu.md](docs/lizu.md)（门派的立身之道：特权、帮手、生计、差事、软肋）。
+- **任务**不论大小都不能潦草：人物要有动机，选择要有两难和代价，结局要有余味（宪章 P9）。示范见 `src/content/packs/caoshangfei.ts` 开头的注释。
 - **根本原则**见 [docs/charter.md](docs/charter.md)。任何内容和功能都不能违反它；拿不准就在 Issue 里问。
 - 已经定下的事见 [docs/decisions.md](docs/decisions.md)，开发顺序见 [docs/roadmap.md](docs/roadmap.md)。
 

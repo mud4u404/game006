@@ -12,5 +12,5 @@ export function viewXingnang(): string {
     rows.push(`<div class="item"><div class="ii"><b>${it.name}</b><p>${it.desc}</p></div><span class="cnt">×${n}</span>${useBtn}</div>`);
   }
   return `<section class="card"><div class="rows">${rows.join('')}</div></section>
-    <section class="card"><div class="kv"><div><span>银两</span><b>${S.silver} 文</b></div><div><span>负重</span><b>轻便</b></div></div></section>`;
+    <section class="card"><div class="kv"><div><span>银两</span><b>${S.silver} 文</b></div></div></section>`;
 }

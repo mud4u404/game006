@@ -9,6 +9,15 @@ export function shichen(min: number): string {
   return SHICHEN[Math.floor(((h + 1) % 24) / 2)] + '时';
 }
 
+/**
+ * 时辰加刻，例如 15:50 → 申时三刻。一个时辰两个钟头、八刻，每刻十五分钟；整时辰只说时辰。
+ * 顶栏用它，玩家每做一件事都看得到时间在走。
+ */
+export function shichenKe(min: number): string {
+  const ke = Math.floor((((min + 60) % 120) + 120) % 120 / 15);
+  return shichen(min) + (ke ? cn(ke) + '刻' : '');
+}
+
 /** 1–30 → 初一 … 三十 */
 export function dayName(d: number): string {
   if (d <= 10) return '初' + (d === 10 ? '十' : cn(d));
@@ -21,6 +30,11 @@ export function dayName(d: number): string {
 export interface Clock { month: number; day: number; min: number }
 
 export function dateStr(c: Clock): string { return MONTHS[c.month - 1] + '月' + dayName(c.day); }
+
+/** 一年里的第几天（每月三十天），算间隔用；跨年时会变小，调用方把负数当作「很久以前」 */
+export const dayNo = (c: Pick<Clock, 'month' | 'day'>): number => (c.month - 1) * 30 + c.day;
+/** 一年里的第几分钟 */
+export const absMin = (c: Clock): number => dayNo(c) * 1440 + c.min;
 
 export function advanceDays(c: Clock, n: number): void {
   c.day += n;

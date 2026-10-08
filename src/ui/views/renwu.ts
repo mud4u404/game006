@@ -1,22 +1,43 @@
 import { S, fullName } from '../../core/state';
 import type { AttrKey } from '../../content/types';
-import { npcName } from '../../engine/world';
+import { npcName, roomNpcs } from '../../engine/world';
+import { ROOMS } from '../../content';
+import { attrLines } from '../../engine/gengu';
+import { relGroup, type RelGroup } from '../../engine/renqing';
 import { xiuwei } from '../../engine/wuxue';
 import { cloudRowHTML } from './account-link';
 
-const AD: Record<AttrKey, string> = { 体魄: '气血 · 外功', 根骨: '内力 · 硬接', 身法: '轻身 · 闪避', 悟性: '领悟 · 拆招', 胆魄: '胆气 · 抢攻' };
+const ATTRS: AttrKey[] = ['体魄', '根骨', '身法', '悟性', '胆魄'];
+
+/** 人情：有意义的人分组列出，萍水相逢的收起来（docs/audit.md 第四节） */
+function renqingHTML(): string {
+  const groups: Record<RelGroup, [string, string][]> = { 至亲至交: [], 交好: [], 恩怨: [], 萍水相逢: [] };
+  for (const [id, v] of Object.entries(S.rel)) groups[relGroup(v)].push([id, v]);
+  const row = ([id, v]: [string, string]): string => {
+    const where = ROOMS.find(r => roomNpcs(r.id).includes(id))?.name;
+    const note = S.relNote?.[id];
+    return `<div class="rq"><div class="rq-h"><b>${npcName(id)}</b><span class="tag">${v}</span></div>${where ? `<small>常在${where}</small>` : ''}${note ? `<p>${note}</p>` : ''}</div>`;
+  };
+  const shown = (['至亲至交', '交好', '恩怨'] as RelGroup[]).filter(g => groups[g].length)
+    .map(g => `<div class="rq-g">${g}</div>${groups[g].map(row).join('')}`).join('');
+  const casual = groups.萍水相逢.length
+    ? `<details class="rq-more"><summary><span>萍水相逢 ${groups.萍水相逢.length} 人</span><small>展开</small></summary>${groups.萍水相逢.map(row).join('')}</details>` : '';
+  return shown || casual ? shown + casual : '<p class="muted">还没有结识什么人。</p>';
+}
 
 let confirmRestart = false;
 export const setConfirmRestart = (v: boolean): void => { confirmRestart = v; };
 
 export function viewRenwu(): string {
-  const attrs = (Object.keys(AD) as AttrKey[]).map(a => `<div class="attr"><b>${S.attr[a]}</b><span>${a}</span><small>${AD[a]}</small></div>`).join('');
-  const rels = Object.entries(S.rel).map(([id, v]) => `<div class="row"><span>${npcName(id)}</span><span class="tag">${v}</span></div>`).join('');
+  const attrs = ATTRS.map(a => `<div class="attr"><b>${S.attr[a]}</b><span>${a}</span></div>`).join('');
+  const lines = attrLines(S);
+  const effects = ATTRS.map(a => `<div class="row"><span>${a}</span><small class="muted">${lines[a]}</small></div>`).join('');
+  const meaningful = Object.values(S.rel).filter(v => relGroup(v) !== '萍水相逢').length;
   // 和江湖页一致：没有名号时显示修为档
   const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : '游侠 · ' + xiuwei(S).rank;
   return `
   <section class="card status"><span class="ava t-accent">沈</span><div class="who"><b>${fullName()}</b><small>${who}</small></div></section>
-  <section class="card here"><div class="sec-h"><h2>根基</h2></div><div class="attrs">${attrs}</div></section>
+  <section class="card here"><div class="sec-h"><h2>根基</h2></div><div class="attrs">${attrs}</div><div class="rows">${effects}</div></section>
   <section class="card"><div class="kv">
     <div><span>气血</span><b>${S.hp} / ${S.hpMax}</b></div><div><span>内力</span><b>${S.mp} / ${S.mpMax}</b></div>
     <div><span>身份</span><b>${S.chapter === 0 ? '渔家' : '游侠'}</b></div><div><span>门派</span><b>无门无派</b></div>
@@ -24,7 +45,7 @@ export function viewRenwu(): string {
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
   </div></section>
-  <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${Object.keys(S.rel).length}</span></div><div class="rows">${rels}</div></section>
+  <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${meaningful}</span></div>${renqingHTML()}</section>
   <section class="card here"><div class="sec-h"><h2>存档</h2></div>
     ${saveCardHTML()}
     ${confirmRestart

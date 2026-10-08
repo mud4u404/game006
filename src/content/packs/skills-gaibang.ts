@@ -19,9 +19,9 @@ const SKILLS: SkillDef[] = [
       { name: '震惊百里', text: '你一声长啸，双掌齐出，掌风轰然如雷，震得{foe}{part}一麻。', wound: '内伤', realm: 3 },
       { name: '或跃在渊', text: '你腾身而起又骤然落下，掌力自高而下砸向{foe}{part}。', wound: '瘀伤', realm: 4 },
       { name: '密云不雨', text: '你双掌蓄势不发，掌力沉沉如积雨之云，压得{foe}透不过气。', wound: '内伤', realm: 5 },
-      { name: '损则有孚', text: '你先退半步卸去来势，再顺{foe}之力反手一送，掌力直透{part}。', wound: '瘀伤', realm: 5 },
-      { name: '龙战于野', text: '你双掌翻飞，一刚一柔交替而出，掌影如龙血战于旷野。', wound: '内伤', realm: 7 },
-      { name: '神龙摆尾', text: '你身子一转，右掌自背后横扫而出，掌风兜头罩下{foe}{part}。', wound: '瘀伤', realm: 8 }
+      { name: '飞龙在天', text: '你腾身跃起，半空中双掌自上而下猛击，势如龙腾九霄，直取{foe}{part}。', wound: '内伤', realm: 6 },
+      { name: '龙战于野', text: '你双掌翻飞，一刚一柔交替而出，如二龙血战于野，掌影尽落{foe}{part}。', wound: '内伤', realm: 7 },
+      { name: '神龙摆尾', text: '你身子一拧，右掌自背后甩出，如神龙摆尾，掌缘横扫{foe}{part}。', wound: '瘀伤', realm: 8 }
     ],
     performs: [
       { name: '亢龙有悔', text: '你一掌推出，掌力未尽，后劲又至，一重叠一重压向{foe}{part}，正是「亢龙有悔」！',
@@ -30,7 +30,7 @@ const SKILLS: SkillDef[] = [
         mp: 50, cd: 4, hits: 2, dmg: [175, 230], acc: 0.75, fx: [{ kind: 'fear', value: 15 }] }
     ],
     combos: [
-      { with: 'gb_dagou', name: '刚柔并济', text: '你左掌右棒，亢龙之势与打狗之巧互为表里，{foe}顾此失彼。', bonus: 5 }
+      { with: 'gb_dagou', name: '刚柔并济', text: '你左掌右棒，亢龙之势与打狗之巧互为表里，{foe}顾此失彼，你的气势却越战越盛。', bonus: 5, fx: [{ kind: 'rage', value: 5 }] }
     ]
   },
   {
@@ -38,23 +38,23 @@ const SKILLS: SkillDef[] = [
     desc: '丐帮帮主代代相传的棒法，只凭一根青竹棒。棒走轻灵，以绊、劈、缠、戳、挑、引、封、转八字为纲，专破刚猛一路。',
     learn: '丐帮帮主亲传，非帮主不得全授',
     moves: [
-      { name: '绊字诀·拦路', text: '你竹棒贴地一绊，{foe}脚下一个踉跄，{part}先吃了一记。', wound: '瘀伤' },
-      { name: '劈字诀·劈头', text: '你棒梢一沉，当头劈落，竹影闪处直取{foe}{part}。', wound: '砸伤' },
-      { name: '缠字诀·绕树', text: '你手腕一翻，棒身如藤缠树，绕上{foe}臂膀，缠住{part}。', wound: '瘀伤' },
-      { name: '戳字诀·夺杖', text: '你棒尖一点，快如蛇信，戳向{foe}{part}。', wound: '刺伤', realm: 2 },
-      { name: '挑字诀·朝天', text: '你自下往上一挑，竹棒挑起{foe}{part}，使其门户大开。', wound: '瘀伤', realm: 2 },
-      { name: '引字诀·入巷', text: '你故意露个破绽，引{foe}来攻，顺势一带，棒走{part}。', wound: '瘀伤', realm: 3 },
-      { name: '封字诀·闭户', text: '你棒影一圈，封住{foe}进路，再进半步取{part}。', wound: '砸伤', realm: 3 },
-      { name: '转字诀·如轮', text: '你棒身急转如轮，绞得{foe}兵刃脱手，棒头扫中{part}。', wound: '瘀伤', realm: 4 },
-      { name: '绊字诀·横扫', text: '你抡棒横扫，棒风成片，绊倒{foe}，{part}重重着地。', wound: '砸伤', realm: 4 },
-      { name: '缠字诀·叠丝', text: '你棒势一圈紧似一圈，缠得{foe}手脚俱滞，{part}受制。', wound: '瘀伤', realm: 5 },
-      { name: '挑字诀·千斤', text: '你聚力一挑，四两拨千斤，将{foe}挑得立足不稳。', wound: '瘀伤', realm: 6 },
-      { name: '转字诀·棒影漫天', text: '你棒影漫天，千百道竹光兜头罩下，{foe}{part}无处可避。', wound: '砸伤', realm: 7 }
+      { name: '绊字诀·棒打双犬', text: '你竹棒贴地连绊，如棒打双犬，{foe}两腿接连吃绊，{part}跟着吃亏。', wound: '瘀伤' },
+      { name: '劈字诀·斜打狗背', text: '你棒梢斜落，不打头不打脸，专敲{foe}背脊，如斜打狗背。', wound: '砸伤' },
+      { name: '缠字诀·獒口夺杖', text: '你棒身一绕一夺，如獒口夺杖，缠住{foe}兵刃往怀里一带。', wound: '瘀伤' },
+      { name: '戳字诀·恶犬拦路', text: '你棒尖疾点，如恶犬拦路，点向{foe}{part}。', wound: '瘀伤', realm: 2 },
+      { name: '挑字诀·拨狗朝天', text: '你棒头一挑，将{foe}兵刃拨上半空，如拨狗朝天。', wound: '瘀伤', realm: 2 },
+      { name: '引字诀·按狗低头', text: '你虚晃一棒引{foe}来攻，顺势按落，如按狗低头，压其{part}。', wound: '瘀伤', realm: 3 },
+      { name: '封字诀·犬牙交错', text: '你棒影交错成篱，如犬牙交错，封死{foe}进路，反点其{part}。', wound: '瘀伤', realm: 3 },
+      { name: '转字诀·反截狗臀', text: '你转棒回身，反手一截，如反截狗臀，正打在{foe}{part}。', wound: '瘀伤', realm: 4 },
+      { name: '绊字诀·丧家之犬', text: '你绊势连绵不绝，{foe}跌跌撞撞，狼狈得如丧家之犬，{part}连连吃棒。', wound: '瘀伤', realm: 5 },
+      { name: '缠字诀·群狗争骨', text: '你棒缠{foe}兵刃不放，如群狗争骨，夺也夺不下，甩也甩不脱，{part}受制。', wound: '瘀伤', realm: 5 },
+      { name: '挑字诀·狗急跳墙', text: '你挑势骤急，逼得{foe}如狗急跳墙，腾身躲闪，{part}露出老大破绽。', wound: '瘀伤', realm: 6 },
+      { name: '转字诀·棒打狗头', text: '你棒转如轮，末了一棒正打在{foe}头上，如棒打狗头，快意非常。', wound: '瘀伤', realm: 7 }
     ],
     performs: [
-      { name: '缠字诀', text: '你竹棒先绊后缠，一圈圈绕住{foe}手脚，{part}一麻，兵刃几乎脱手。',
+      { name: '缠字诀', text: '你竹棒先绊后缠，一圈圈绕住{foe}手腕，一夺一送——兵刃当真脱手飞出，{part}一麻，动弹不得。',
         mp: 20, cd: 3, hits: 1, dmg: [30, 40], acc: 0.8, fx: [{ kind: 'busy', rounds: 1 }, { kind: 'disarm', rounds: 2 }] },
-      { name: '劈字诀', text: '你棒走刚猛，当头一劈，竹影压顶，{foe}{part}如遭棒喝。',
+      { name: '劈字诀', text: '你竹棒轻飘飘当头一压，看着不着力，棒上巧劲却尽数压向{foe}{part}，如遭棒喝。',
         mp: 40, cd: 1, hits: 1, dmg: [120, 150], acc: 0.85 },
       { name: '转字诀', realm: 5, text: '你棒转如轮，连绞带打，{foe}兵刃一偏，{part}接连中棒。',
         mp: 50, cd: 4, hits: 2, dmg: [160, 200], acc: 0.8, fx: [{ kind: 'break', value: 10, rounds: 2 }] }
@@ -118,17 +118,17 @@ const SKILLS: SkillDef[] = [
     moves: [
       { name: '缠丝绕腕', text: '你五指搭上{foe}手腕，轻轻一绕，如蚕丝缠腕。', wound: '瘀伤' },
       { name: '金丝缠臂', text: '你指腕并用，顺{foe}臂而上，缠锁其{part}。', wound: '瘀伤' },
-      { name: '顺手牵羊', text: '你顺着{foe}来势一牵一带，使其身不由己撞向{part}。', wound: '瘀伤' },
+      { name: '顺手牵羊', text: '你顺着{foe}来势一带一牵，{foe}收脚不住，自己撞上你递过去的另一只手。', wound: '瘀伤' },
       { name: '回身反锁', text: '你回身一扣，反锁{foe}{part}，令其动弹不得。', wound: '瘀伤', realm: 2 },
-      { name: '擒龙拿脉', text: '你五指如钩，扣住{foe}{part}脉门，内劲一吐。', wound: '内伤', realm: 2 },
+      { name: '擒龙拿脉', text: '你五指如钩，扣住{foe}腕上脉门，内劲一吐，其半条手臂登时酥了。', wound: '内伤', realm: 2 },
       { name: '分筋错骨', text: '你手腕一错，分{foe}{part}之筋，令其臂膀一软。', wound: '内伤', realm: 3 },
-      { name: '锁喉扣腕', text: '你欺身而进，一手扣腕，一手探向{foe}{part}。', wound: '瘀伤', realm: 4 },
+      { name: '锁喉扣腕', text: '你欺身而进，一手锁喉，一手扣腕，两下齐施，{foe}动弹不得。', wound: '瘀伤', realm: 4 },
       { name: '反手缠丝', text: '你反手一缠，将{foe}整条臂膀缠住，顺势一送。', wound: '瘀伤', realm: 5 }
     ],
     performs: [
       { name: '缠丝锁腕', text: '你指腕如丝，一圈圈缠上{foe}腕脉，{part}一麻，再也抬不起手。',
         mp: 40, cd: 2, hits: 1, dmg: [60, 75], acc: 0.8, fx: [{ kind: 'busy', rounds: 1 }] },
-      { name: '金丝缠腕', text: '你欺身扣住{foe}{part}，借力一拧，只听得骨节轻响。',
+      { name: '金丝缠腕', text: '你欺身扣住{foe}手腕，借力一拧，只听得骨节轻响。',
         mp: 30, cd: 1, hits: 1, dmg: [70, 90], acc: 0.85 }
     ]
   },

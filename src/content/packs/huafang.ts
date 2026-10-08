@@ -30,10 +30,10 @@ const NPCS: NpcDef[] = [
       交谈: [
         { if: { flag: 'huafang_pay' },
           text: '云娘把琵琶拢在怀里，勉强笑了笑：「利钱是清了，可身契还押在汪家。公子莫笑奴家不知足——只是下一期呢？奴家夜夜都在想。」',
-          do: [{ type: 'rel', npc: 'yunnian', value: '心存感激', from: ['素不相识', '点头之交'] }] },
+          do: [{ type: 'rel', npc: 'yunnian', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '画舫上的歌女，心存感激' }] },
         { if: { flag: 'huafang_force' },
           text: '云娘朝你福了一礼，眼里又是敬又是怕：「汪家的护院都近不得公子的身。只是汪少爷临走脸色很不好，公子往后在扬州行船走桥，多个心眼。」',
-          do: [{ type: 'rel', npc: 'yunnian', value: '知恩图报', from: ['素不相识', '点头之交'] }] },
+          do: [{ type: 'rel', npc: 'yunnian', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '画舫上的歌女，说要知恩图报' }] },
         { if: { flag: 'huafang_nianhao' },
           text: '云娘抱着琵琶，声音低下去：「公子名号一报，汪少爷是走了，走前却撂下话，说下月的利钱翻倍。奴家多谢公子——只是这份愁，一时半会儿散不了。」' },
         { if: { notFlag: 'huafang_started', hour: { from: 19, to: 5 } },

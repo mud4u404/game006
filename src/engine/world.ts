@@ -3,6 +3,9 @@ import { fmt } from '../core/util';
 import { npc, questById, room } from '../content';
 import type { Cond, NpcDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
+import { advanceMin, shichen } from '../core/time';
+import { attrEffects } from './gengu';
+import { warmer } from './renqing';
 
 const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
   (list || []).filter(x => typeof x === 'string' || test(x.if)).map(x => (typeof x === 'string' ? x : x.id));
@@ -66,7 +69,32 @@ export function npcName(id: string): string {
 export const verbsOf = (n: NpcDef): Verb[] => n.verbs.flatMap(v => (typeof v === 'string' ? [v] : test(v.if) ? [v.verb] : []));
 
 /** 对人物或物品做一个动作，返回要显示的文字和产生的后果 */
+/** 实际赶路的分钟数：身法好的人走得快（engine/gengu.ts） */
+export const travelMin = (m: number): number => Math.max(1, Math.round(m * attrEffects(S).travel));
+
+/**
+ * 每个动作花多少时间（分钟）。分支里写了 time 效果的，以分支为准；开打、开剧情的，由战斗、剧情自己算时间。
+ * 没列出的动作算十分钟。这样在城里走动、和人说话，时辰也会慢慢过去。
+ */
+export const VERB_MIN: Record<string, number> = { 观察: 5, 细看: 5, 推门: 2, 交谈: 10, 购买: 5, 打赏: 5, 赠礼: 5, 抓药: 10, 偷窃: 5, 请教: 30 };
+const DEFAULT_MIN = 10;
+
+/** 天色转换时记一句见闻 */
+const DUSK: Record<string, string> = { 酉时: '日头偏西，天色向晚。', 戌时: '天黑了，街上点起了灯。', 子时: '夜深了，四下里静悄悄的。', 卯时: '天蒙蒙亮了。' };
+
+/** 对人物、物件做一个动作：执行分支，再按动作花掉时间 */
 export function act(id: string, verb: Verb): { text: string; out: Outcome } {
+  const r = doAct(id, verb);
+  if (!r.timed && !r.out.fight && !r.out.story && npc(id)) {
+    const before = shichen(S.min);
+    advanceMin(S, VERB_MIN[verb] ?? DEFAULT_MIN);
+    const now = shichen(S.min);
+    if (now !== before && DUSK[now]) pushFeed('江湖', DUSK[now]);
+  }
+  return { text: r.text, out: r.out };
+}
+
+function doAct(id: string, verb: Verb): { text: string; out: Outcome; timed?: boolean } {
   const n = npc(id);
   if (!n) return { text: '', out: newOutcome() };
   if (verb === '观察') {
@@ -74,12 +102,12 @@ export function act(id: string, verb: Verb): { text: string; out: Outcome } {
     const b = pickBranch(n.actions['观察']);
     const out = b ? run(b.do) : newOutcome();
     const more = b?.text ? '\n' + fmt(b.text, { ...textVars(), ...out.vars }) : '';
-    return { text: fmt(n.look, textVars()) + more, out };
+    return { text: fmt(n.look, textVars()) + more, out, timed: b?.do?.some(e => e.type === 'time') };
   }
   const b = pickBranch(n.actions[verb as keyof typeof n.actions]);
   if (b) {
     const out = run(b.do);
-    return { text: fmt(b.text ?? '', { ...textVars(), ...out.vars }), out };
+    return { text: fmt(b.text ?? '', { ...textVars(), ...out.vars }), out, timed: b.do?.some(e => e.type === 'time') };
   }
   const who = npcName(id);
   const out = newOutcome();
@@ -87,8 +115,7 @@ export function act(id: string, verb: Verb): { text: string; out: Outcome } {
     case '赠礼':
       if ((S.items.flower || 0) > 0) {
         S.items.flower--;
-        const cur = S.rel[id];
-        if (cur && cur !== '心存芥蒂') S.rel[id] = '颇有好感';
+        S.rel[id] = warmer(S.rel[id]);
         return { text: n.gift || `${who}收下了杏花，神色和缓了许多。`, out };
       }
       return { text: '你身上没有合适的礼物。', out };

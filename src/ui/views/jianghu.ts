@@ -1,7 +1,7 @@
 import { S, fullName } from '../../core/state';
 import { minLabel } from '../../core/time';
 import { npc, room } from '../../content';
-import { curQuest, hopMin, npcName, pathMin, roomDesc, roomNpcs, roomObjs, verbsOf } from '../../engine/world';
+import { curQuest, hopMin, npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { xiuwei } from '../../engine/wuxue';
@@ -18,7 +18,7 @@ export function viewJianghu(): string {
   // 横幅标签按任务种类：序章、主线（main 开头）、其余都是支线
   const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
   const quest = !q ? '' : q.to
-    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(pathMin(S.loc, q.to))}</span>${IC.chev}</button>`
+    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(travelMin(pathMin(S.loc, q.to)))}</span>${IC.chev}</button>`
     : `<div class="card quest"><span class="tag accent">${kind}</span><span class="qt">${q.title}</span></div>`;
   const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="任务簿" title="任务簿">${IC.quest}</button></div>`;
   const who = S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : '游侠 · ' + xiuwei(S).rank;
@@ -57,5 +57,5 @@ function detail(id: string): string {
 }
 
 function exitBtn(d: string, id: string, solo: boolean, questTo?: string): string {
-  return `<button class="exit${solo ? ' solo' : ''}" data-act="travel:${id}"><span class="dir">${d}</span><span class="en"><b>${room(id).name}</b><small>${minLabel(hopMin(S.loc, id))}</small></span>${questTo === id ? '<span class="tag info">主线</span>' : ''}</button>`;
+  return `<button class="exit${solo ? ' solo' : ''}" data-act="travel:${id}"><span class="dir">${d}</span><span class="en"><b>${room(id).name}</b><small>${minLabel(travelMin(hopMin(S.loc, id)))}</small></span>${questTo === id ? '<span class="tag info">主线</span>' : ''}</button>`;
 }

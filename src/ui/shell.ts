@@ -4,7 +4,7 @@
  */
 import { S, save, type Tab } from '../core/state';
 import { on } from '../core/bus';
-import { dateStr, shichen } from '../core/time';
+import { dateStr, shichenKe } from '../core/time';
 import { $ } from '../core/util';
 import { room } from '../content';
 import type { Outcome } from '../engine/dsl';
@@ -22,7 +22,8 @@ export function registerHandlers(map: Record<string, Handler>): void { Object.as
 /** 战斗和剧情模块在加载时把自己挂到这里，避免模块之间循环引用 */
 export const hooks = {
   startFight: (_foe: string): void => {},
-  openStory: (_id: string): void => {}
+  /** onDone：剧情正常读完时调用（中途开打或接到别的剧情时不调用），赶路途中的路遇用它接着走 */
+  openStory: (_id: string, _onDone?: () => void): void => {}
 };
 
 /** 统一处理一次动作产生的后果：先剧情，再开打，否则刷新画面 */
@@ -95,7 +96,7 @@ export function render(): void {
   const r = room(S.loc);
   const bar = $('#appbar'), main = $('#main'), tabs = $('#tabs');
   if (!bar || !main || !tabs) return;
-  bar.innerHTML = `<div><h1>${r.name}</h1><div class="sub">${r.area} · ${dateStr(S)}</div></div><div class="timepill">${IC.rain}${shichen(S.min)} · ${S.weather}</div>`;
+  bar.innerHTML = `<div><h1>${r.name}</h1><div class="sub">${r.area} · ${dateStr(S)}</div></div><div class="timepill">${IC.rain}${shichenKe(S.min)} · ${S.weather}</div>`;
   main.innerHTML = (VIEWS[S.tab] || viewJianghu)();
   tabs.innerHTML = TABS.map(([k, l]) => `<button class="tab" data-act="tab:${k}"${S.tab === k ? ' aria-current="page"' : ''}>${IC[k]}${l}</button>`).join('');
   save();

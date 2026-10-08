@@ -3,13 +3,14 @@
  * 报错信息会指出是哪个文件里的哪一条数据有问题。
  */
 import { describe, expect, it } from 'vitest';
-import { FOES, ITEMS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
+import { ENCOUNTERS, FOES, ITEMS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
 import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
 import { ACTIVE_MAX, EFFICIENCY_BAND, JIANGHU_RULE, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
 import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
+import { REL_WORDS } from '../src/engine/renqing';
 
 const roomIds = new Set(ROOMS.map(r => r.id));
 const npcIds = new Set(NPCS.map(n => n.id));
@@ -27,8 +28,10 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   if (c.item && !itemIds.has(c.item.id)) errs.push(`${where}：条件里的物品「${c.item.id}」不存在`);
   if (c.noItem && !itemIds.has(c.noItem)) errs.push(`${where}：条件里的物品「${c.noItem}」不存在`);
   if (c.rel && !npcIds.has(c.rel.npc)) errs.push(`${where}：条件里的人物「${c.rel.npc}」不存在`);
+  for (const w of [...(c.rel?.is ?? []), ...(c.rel?.not ?? [])]) if (!REL_WORDS.includes(w)) errs.push(`${where}：关系「${w}」不在关系阶梯里（见 engine/renqing.ts），味道写进 rel 效果的 note`);
   if (c.learned && !skillIds.has(c.learned)) errs.push(`${where}：条件里的武功「${c.learned}」不存在`);
   if (c.notLearned && !skillIds.has(c.notLearned)) errs.push(`${where}：条件里的武功「${c.notLearned}」不存在`);
+  if (c.realm && !skillIds.has(c.realm.skill)) errs.push(`${where}：条件里的武功「${c.realm.skill}」不存在`);
   if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
   if (c.sect && !SCHOOL_STYLE[c.sect.school]) errs.push(`${where}：条件里的门派「${c.sect.school}」没有定位（见 SCHOOL_STYLE）`);
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
@@ -46,7 +49,10 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
       }
       case 'track': if (!quests.has(e.id)) errs.push(`${w}：任务「${e.id}」不存在`); break;
       case 'item': if (!itemIds.has(e.id)) errs.push(`${w}：物品「${e.id}」不存在`); break;
-      case 'rel': if (!npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`); break;
+      case 'rel':
+        if (!npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
+        for (const x of [e.value, ...(e.from ?? [])]) if (!REL_WORDS.includes(x)) errs.push(`${w}：关系「${x}」不在关系阶梯里（见 engine/renqing.ts），味道写进 note`);
+        break;
       case 'prof': case 'learn': if (!skillIds.has(e.skill)) errs.push(`${w}：武功「${e.skill}」不存在`); break;
       case 'move': if (!roomIds.has(e.to)) errs.push(`${w}：地点「${e.to}」不存在`); break;
       case 'fight': if (!foeIds.has(e.foe)) errs.push(`${w}：对手「${e.foe}」不存在`); break;
@@ -195,6 +201,18 @@ describe('人物与物品', () => {
 });
 
 describe('任务、剧情、对手', () => {
+  it('任务走得完：每一阶段都有内容能推进到下一阶段（不留断头任务）', () => {
+    // 草上飞的教训：任务有三个阶段，却没有任何内容能推进到最后一段，玩家卡死
+    const all = JSON.stringify({ ROOMS, NPCS, STORIES, FOES });
+    const errs: string[] = [];
+    for (const q of QUESTS) {
+      const reached = [...all.matchAll(new RegExp(`"type":"quest","id":"${q.id}","stage":(\\d+)`, 'g'))].map(m => Number(m[1]));
+      if (!reached.length) errs.push(`任务 ${q.id}「${q.name}」：没有任何内容开启它`);
+      for (let s = 0; s < q.stages.length - 1; s++) if (!reached.some(x => x > s)) errs.push(`任务 ${q.id}「${q.name}」：第 ${s} 阶段「${q.stages[s].title}」之后，没有任何内容能推进下去，玩家会卡死`);
+    }
+    report(errs);
+  });
+
   it('任务阶段的目的地存在', () => {
     const errs: string[] = [];
     for (const q of QUESTS) q.stages.forEach((s, i) => { if (s.to && !roomIds.has(s.to)) errs.push(`任务 ${q.id} 第 ${i} 阶段：目的地「${s.to}」不存在`); });
@@ -207,9 +225,11 @@ describe('任务、剧情、对手', () => {
       if (!s.cards.length) errs.push(`剧情 ${s.id}：没有卡片`);
       s.cards.forEach((c, i) => {
         if (!c.choices.length) errs.push(`剧情 ${s.id} 第 ${i} 张：没有选项`);
+        else if (c.choices.every(ch => ch.if)) errs.push(`剧情 ${s.id} 第 ${i} 张：选项都带条件，条件都不成立时玩家会卡住；至少留一个不带 if 的`);
         c.choices.forEach((ch, k) => {
           const w = `剧情 ${s.id} 第 ${i} 张第 ${k} 个选项`;
           if (ch.next !== undefined && ch.next !== -1 && (ch.next < 0 || ch.next >= s.cards.length)) errs.push(`${w}：next 指向不存在的卡片`);
+          checkCond(ch.if, w, errs);
           checkEffects(ch.do, w, errs);
         });
       });
@@ -234,6 +254,45 @@ describe('任务、剧情、对手', () => {
         checkEffects(r.then, `${w} 的结算 ${k} 的 then`, errs);
       }
       if (!f.spar && !f.script && !f.results.lose) errs.push(`${w}：会输的战斗需要 lose 结算`);
+      // 备战：每一项要有叙述；单项最多削四成，全部叠满也不能低于对手的一半
+      let hpAll = 1, atkAll = 1;
+      (f.prep ?? []).forEach((p, i) => {
+        const pw = `${w} 的备战 ${i}`;
+        checkCond(p.if, pw, errs);
+        checkEffects(p.win, `${pw} 的 win`, errs);
+        if (!p.text) errs.push(`${pw}：要写 text，开打时告诉玩家这项准备起了作用`);
+        for (const k of ['hp', 'atk', 'big'] as const) if (p[k] !== undefined && (p[k]! < 0.6 || p[k]! > 1)) errs.push(`${pw}：${k} 要在 0.6 到 1 之间`);
+        hpAll *= p.hp ?? 1; atkAll *= p.atk ?? 1;
+      });
+      if (hpAll < 0.5 || atkAll < 0.5) errs.push(`${w}：备战全部叠满，对手的气血、出手不能低于一半`);
+    }
+    report(errs);
+  });
+
+  it('路遇有效：剧情、地区、地点都存在；历练不超过上限', () => {
+    const errs: string[] = [];
+    const seen = new Set<string>();
+    for (const e of ENCOUNTERS) {
+      const w = `路遇 ${e.id}`;
+      if (seen.has(e.id)) errs.push(`${w}：id 重复`);
+      seen.add(e.id);
+      const st = STORIES.find(x => x.id === e.story);
+      if (!st) errs.push(`${w}：剧情「${e.story}」不存在`);
+      if (!e.region.length) errs.push(`${w}：至少写一个地区`);
+      for (const r of e.region) if (!REGIONS[r]) errs.push(`${w}：地区「${r}」不存在`);
+      for (const t of e.to ?? []) {
+        const r = ROOMS.find(x => x.id === t);
+        if (!r) errs.push(`${w}：地点「${t}」不存在`);
+        else if (!e.region.includes(r.region)) errs.push(`${w}：地点「${t}」不在它的地区里`);
+      }
+      if (e.weight !== undefined && !(e.weight > 0)) errs.push(`${w}：weight 要大于 0`);
+      checkCond(e.if, w, errs);
+      // 一条路上最多拿到的历练：每张卡片取给得最多的那个选项，加起来
+      if (st) {
+        const most = st.cards.reduce((sum, c) => sum + Math.max(0, ...c.choices.map(ch => (ch.do ?? []).reduce((a, x) => a + (x.type === 'lilian' ? x.amount : 0), 0))), 0);
+        const cap = e.once ? 200 : 40;
+        if (most > cap) errs.push(`${w}：一次最多给历练 ${most}，${e.once ? '奇遇' : '能反复遇的路遇'}不超过 ${cap}`);
+      }
     }
     report(errs);
   });

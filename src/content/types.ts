@@ -33,6 +33,8 @@ export interface Cond {
   rel?: { npc: string; is?: string[]; not?: string[] };
   learned?: SkillId;
   notLearned?: SkillId;
+  /** 某门武功练到第几重（0 起）：atLeast 不低于，below 低于（没学会算低于任何一重） */
+  realm?: { skill: SkillId; atLeast?: number; below?: number };
   /** 属性不低于 */
   attr?: { key: AttrKey; atLeast: number };
   /** 侠义、恶名不低于 */
@@ -57,8 +59,11 @@ export type Effect =
   | { type: 'silver'; delta: number }
   | { type: 'item'; id: string; delta: number }
   /** 设置关系；写了 from 时，只有当前关系在 from 里才改 */
-  | { type: 'rel'; npc: string; value: string; from?: string[] }
+  /** 改关系：value 只用关系阶梯里的词（engine/renqing.ts）；note 是人情备注，写为什么记得这个人 */
+  | { type: 'rel'; npc: string; value: string; from?: string[]; note?: string }
   | { type: 'prof'; skill: SkillId; amount: number }
+  /** 历练：江湖上的见识与实战，闭关时化为武功进境（engine/lilian.ts）。高人指点、奇遇用它；打架、了结任务由引擎自动给 */
+  | { type: 'lilian'; amount: number }
   | { type: 'learn'; skill: SkillId; realm?: number; prof?: number }
   /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先出师或叛门 */
   | { type: 'sect'; school: string; rank: SectRank }
@@ -196,6 +201,25 @@ export interface FoeDef {
   win: string;
   lose: string;
   results: { win: FightResult; lose?: FightResult; flee?: FightResult; yield?: FightResult };
+  /**
+   * 备战：开打前做过的准备，条件成立就生效，可以叠加（engine/beizhan.ts）。
+   * 打听到对手的底细、找来帮手、占了地利……弱小的人靠这些也能以弱胜强。
+   */
+  prep?: PrepDef[];
+}
+
+export interface PrepDef {
+  if: Cond;
+  /** 开打时的叙述，例如「你记着船夫的话，专往他左边走」 */
+  text: string;
+  /** 对手气血、普通招式、重招的倍数，例如 0.85 */
+  hp?: number;
+  atk?: number;
+  big?: number;
+  /** 战后说书里的一句，写成完整的句子 */
+  story?: string;
+  /** 带着这项准备打赢时，额外执行的效果（准备的代价、后果写在这里） */
+  win?: Effect[];
 }
 
 /* ---------- 武功（武学库，详见 docs/wuxue.md） ---------- */
@@ -332,11 +356,19 @@ export interface SkillDef {
 
 export interface ItemDef { id: string; name: string; desc: string; usable?: boolean; hidden?: boolean }
 
-export interface QuestDef { id: string; name: string; stages: { title: string; to?: string }[] }
+export interface QuestDef {
+  id: string;
+  name: string;
+  stages: { title: string; to?: string }[];
+  /** 了结时给的历练；不写按阶段数算，每阶段 100（engine/lilian.ts） */
+  lilian?: number;
+}
 
 export interface StoryChoice {
   label: string;
   sub?: string;
+  /** 条件成立才出现，例如悟性够了才看得出破绽；每张卡片至少留一个不带条件的选择 */
+  if?: Cond;
   do?: Effect[];
   /** 选完之后先显示的结果文字；不写则直接进入下一步 */
   result?: string;
@@ -364,7 +396,27 @@ export interface StoryDef {
 
 export interface NewsDef { if?: Cond; text: string }
 
-export interface RegionDef { name: string; note: string }
+/** 地区；order 是地图上地区标签的先后，小的在前 */
+export interface RegionDef { name: string; note: string; order?: number }
+
+/**
+ * 路遇：赶路时在路上遇到的事（engine/encounter.ts，docs/content-guide.md「路遇」）。
+ * 内容是一段剧情卡片：有人物动机、两难、代价，和别的任务一样不能潦草（宪章 P9）。
+ */
+export interface EncounterDef {
+  id: string;
+  /** 走进这些地区的地点时，路上可能遇到 */
+  region: string[];
+  /** 只在走进这些地点的路上遇到；不写为地区里任何一段路 */
+  to?: string[];
+  if?: Cond;
+  /** 抽中的分量，默认 1；稀罕的奇遇写小些 */
+  weight?: number;
+  /** 一生只遇一次（奇遇）；不写的，同一条七天内不再遇 */
+  once?: boolean;
+  /** 遇到时打开的剧情卡片 */
+  story: string;
+}
 
 /**
  * 内容包：src/content/packs/ 下每个文件默认导出一个内容包，系统自动收录。
@@ -380,4 +432,5 @@ export interface ContentPack {
   items?: ItemDef[];
   news?: NewsDef[];
   skills?: SkillDef[];
+  encounters?: EncounterDef[];
 }

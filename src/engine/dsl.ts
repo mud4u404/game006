@@ -6,11 +6,13 @@ import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
 import { advanceMin } from '../core/time';
 import { pick } from '../core/util';
-import { NEWS, skillById } from '../content';
+import { NEWS, questById, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { canLearn } from './shicheng';
+import { syncAttr } from './gengu';
+import { addLilian, questDone } from './lilian';
 
 export function test(c?: Cond): boolean {
   if (!c) return true;
@@ -33,6 +35,11 @@ export function test(c?: Cond): boolean {
   }
   if (c.learned && !S.skills[c.learned]) return false;
   if (c.notLearned && S.skills[c.notLearned]) return false;
+  if (c.realm) {
+    const r = S.skills[c.realm.skill]?.r ?? -1;
+    if (c.realm.atLeast !== undefined && r < c.realm.atLeast) return false;
+    if (c.realm.below !== undefined && r >= c.realm.below) return false;
+  }
   if (c.attr && S.attr[c.attr.key] < c.attr.atLeast) return false;
   if (c.xia !== undefined && S.xia < c.xia) return false;
   if (c.eming !== undefined && S.eming < c.eming) return false;
@@ -70,7 +77,14 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
     switch (e.type) {
       case 'flag': S.flags[e.flag] = e.value ?? true; break;
       // 只升不降：开启任务的效果常写在交谈或进门时，重复触发不能把已有进度打回去
-      case 'quest': S.quests[e.id] = Math.max(S.quests[e.id] ?? -1, e.stage); break;
+      case 'quest': {
+        const was = S.quests[e.id] ?? -1;
+        S.quests[e.id] = Math.max(was, e.stage);
+        // 推到最后一个阶段，这件事就了结了：给历练
+        const q = questById(e.id);
+        if (q && e.stage === q.stages.length - 1 && was < e.stage) questDone(S, q);
+        break;
+      }
       case 'track': S.track = e.id; break;
       case 'feed': pushFeed(e.tag, e.text); break;
       case 'feedReset': S.feed = []; break;
@@ -80,9 +94,11 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'rel': {
         const cur = S.rel[e.npc] ?? '素不相识';
         if (!e.from || e.from.includes(cur)) S.rel[e.npc] = e.value;
+        if (e.note) (S.relNote ??= {})[e.npc] = e.note;
         break;
       }
       case 'prof': out.breaks.push(...gainProf(e.skill, e.amount)); break;
+      case 'lilian': addLilian(S, e.amount); break;
       case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0)); break;
       // 拜师或升地位，只升不降；身在别派时无效（要先出师或叛门）
       case 'sect':
@@ -92,7 +108,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'leaveSect':
         if (S.sect) { (S.pastSects ??= []).push({ school: S.sect.school, how: e.how }); delete S.sect; }
         break;
-      case 'attr': S.attr[e.key] += e.delta; break;
+      case 'attr': S.attr[e.key] += e.delta; syncAttr(S); break;
       case 'xia': S.xia += e.delta; break;
       case 'eming': S.eming = Math.max(0, S.eming + e.delta); break;
       case 'title': S.title = e.value; break;

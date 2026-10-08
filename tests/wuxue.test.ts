@@ -57,7 +57,9 @@ describe('搭配', () => {
   beforeEach(() => setState(skipToYangzhou()));
 
   it('老存档按已学武功排出与原来一样的组合', () => {
-    expect(defaultLoadout(S.skills)).toEqual({ neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang', off: 'jinghong', ult: 'duanshui' });
+    // 改版前跳过序章的存档：学过惊鸿剑
+    const old = { hanjiang: { r: 1, p: 340 }, jinghong: { r: 0, p: 80 }, taxue: { r: 2, p: 120 }, xinfa: { r: 1, p: 260 }, duanshui: { r: 0, p: 10 } };
+    expect(defaultLoadout(old)).toEqual({ neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang', off: 'jinghong', ult: 'duanshui' });
     expect(defaultLoadout(newGame().skills)).toEqual({ neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang' });
   });
 
@@ -78,6 +80,8 @@ describe('搭配', () => {
   });
 
   it('应对显示的是槽位里那门武功', () => {
+    S.skills.jinghong = { r: 0, p: 0 };
+    S.loadout.off = 'jinghong';
     const o = respOptions(S, { li: 30, su: 30, qiao: 30, xi: 30 }).find(x => x.k === 'rush')!;
     expect(o.sname).toBe('惊鸿剑');
     expect(o.skill).toBe('jinghong');
@@ -100,11 +104,14 @@ describe('搭配', () => {
 });
 
 describe('修为', () => {
-  it('新人是三流，苦练到头可成宗师', () => {
+  it('新人不入流；家传武功练到头是绝顶，再有江湖上得来的武功才成宗师', () => {
     setState(newGame());
-    expect(xiuwei(S).rank).toBe('三流');
+    expect(xiuwei(S).rank).toBe('不入流');
     setState(skipToYangzhou());
     for (const id of Object.keys(S.skills)) S.skills[id]!.r = 8;
+    expect(xiuwei(S).rank).toBe('绝顶');
+    S.skills.jinghong = { r: 8, p: 0 };
+    S.loadout.off = 'jinghong';
     expect(xiuwei(S).rank).toBe('宗师');
   });
   it('境界越高，修为越高', () => {

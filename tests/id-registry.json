@@ -6,13 +6,18 @@
    "daming",
    "daming_cangjing",
    "dukou",
+   "gz_duchuan",
+   "gz_fen",
    "gz_home",
+   "gz_kechuan",
    "gz_pier",
    "gz_town",
    "hu",
    "huafang",
    "jinshan",
-   "yz_fuya"
+   "yz_fuya",
+   "zhuyuwan",
+   "zj_xijin"
   ],
   "npcs": [
    "ayp",
@@ -33,6 +38,10 @@
    "fuya_yayi",
    "fuya_zhou",
    "guanshi",
+   "gz_dc_chuanjia",
+   "gz_fenmu",
+   "gz_kc_chuanjia",
+   "gz_shijiu",
    "huagu",
    "huichun",
    "jiangbo",
@@ -48,17 +57,24 @@
    "yaopu",
    "yunnian",
    "zhao_tieyi",
-   "zhike"
+   "zhike",
+   "zj_daiduting",
+   "zy_csf",
+   "zy_poshuan",
+   "zy_yuweng",
+   "zy_zhangfang"
   ],
   "items": [
    "badge",
    "blade",
+   "fangzi",
    "fhs",
    "flower",
    "huadiao",
    "jade",
    "jcy",
    "med",
+   "mujian",
    "scroll"
   ],
   "foes": [
@@ -66,7 +82,9 @@
    "heiyi2",
    "huafang_guard",
    "liu",
-   "tu"
+   "ly_xiaozei",
+   "tu",
+   "zy_csf"
   ],
   "quests": [
    "main1",
@@ -76,6 +94,14 @@
    "side_huafang"
   ],
   "skills": [
+   "cw_bengxue",
+   "cw_cangwu",
+   "cw_dengyun",
+   "cw_lieshi",
+   "cw_poyun",
+   "cw_qingya",
+   "cw_tiegu",
+   "cw_tingyun",
    "duanshui",
    "eh_dugu",
    "eh_huashan",
@@ -94,7 +120,24 @@
    "gb_xianglong",
    "gb_xiaoyaoyou",
    "hanjiang",
+   "jh_bagua",
+   "jh_taizu",
+   "jh_tantui",
+   "jh_tuna",
+   "jh_wuhu",
+   "jh_xingyi",
+   "jh_yanqing",
+   "jh_yingzhua",
    "jinghong",
+   "jl_changqiang",
+   "jl_changquan",
+   "jl_fulong",
+   "jl_pozhendao",
+   "jl_suolian",
+   "jl_tiechi",
+   "jl_tieji",
+   "jl_tiejigong",
+   "jl_zhuifeng",
    "mr_canhe",
    "mr_douzhuan",
    "mr_pixie",
@@ -147,15 +190,31 @@
    "xm_zhaixing"
   ],
   "stories": [
+   "cangjing_verdict",
+   "fuya_jiangjia",
+   "ly_maishen",
+   "ly_tongchuan",
+   "ly_xiaozei",
+   "ly_xiaozei_beat",
+   "ly_xiaozei_fed",
+   "ly_xiaozei_scared",
    "p_after1",
    "p_death",
    "p_night",
    "p_open"
+  ],
+  "encounters": [
+   "luyu_maishen",
+   "luyu_tongchuan",
+   "luyu_xiaozei",
+   "luyu_xiaozei_beat",
+   "luyu_xiaozei_fed",
+   "luyu_xiaozei_scared"
   ]
  },
  "stages": {
   "side_cangjing": 4,
-  "side_caoshangfei": 3,
+  "side_caoshangfei": 4,
   "side_huafang": 3,
   "prologue": 4,
   "main1": 4

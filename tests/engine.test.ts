@@ -1,16 +1,24 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { cn, cleanName, fmt, liang } from '../src/core/util';
-import { dayName, minLabel, shichen } from '../src/core/time';
+import { dayName, minLabel, shichen, shichenKe } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
 import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
 import type { NpcDef } from '../src/content/types';
 import { autoSlot } from '../src/engine/wuxue';
+import { npc as npcDef } from '../src/content';
+const NPCS_BY = { zhou: () => npcDef('fuya_zhou')!, csf: () => npcDef('zy_csf')! };
 import { canLearn, canPerform, realmCap } from '../src/engine/shicheng';
+import { COMMON, attrEffects, attrLines, growAttr } from '../src/engine/gengu';
+import { relGroup, warmer } from '../src/engine/renqing';
 import { gainProf, learnSkill } from '../src/engine/growth';
 import { SKILLS } from '../src/content';
 import type { SkillDef } from '../src/content/types';
-import { cheng, huohou, odds, respOptions } from '../src/engine/formulas';
+import { cheng, huohou, odds, realmPow, respOptions } from '../src/engine/formulas';
+import { FOE_WINDOW, RETREAT, fightLilian, retreatPlan } from '../src/engine/lilian';
+import { prepFoe } from '../src/engine/beizhan';
+import { ENC_GAP, ENC_REPEAT_DAYS, eligible, encounterChance, markEncounter, rollEncounter } from '../src/engine/encounter';
+import { ENCOUNTERS } from '../src/content';
 
 describe('文字与时间', () => {
   it('中文数字', () => {
@@ -25,6 +33,13 @@ describe('文字与时间', () => {
     expect(dayName(7)).toBe('初七');
     expect(dayName(10)).toBe('初十');
     expect(dayName(21)).toBe('廿一');
+  });
+  it('时辰加刻：整时辰只说时辰，一刻十五分钟', () => {
+    expect(shichenKe(15 * 60)).toBe('申时');
+    expect(shichenKe(15 * 60 + 50)).toBe('申时三刻');
+    expect(shichenKe(16 * 60 + 45)).toBe('申时七刻');
+    expect(shichenKe(23 * 60 + 15)).toBe('子时一刻');
+    expect(shichenKe(0)).toBe('子时四刻');
   });
   it('赶路耗时', () => {
     expect(minLabel(10)).toBe('片刻');
@@ -46,7 +61,10 @@ describe('世界', () => {
     expect(pathTo('hu', 'hu')).toEqual([]);
     expect(hopMin('hu', 'daming')).toBe(30);
     expect(pathMin('jinshan', 'daming')).toBe(40);
-    expect(pathTo('hu', 'gz_home')).toEqual([]);
+    // 扬州和瓜洲由运河客船连着，单程约两个时辰
+    expect(pathTo('dukou', 'gz_pier')).toEqual(['gz_kechuan', 'gz_pier']);
+    expect(pathMin('dukou', 'gz_pier')).toBe(120);
+    expect(pathTo('gz_pier', 'zj_xijin')).toEqual(['gz_duchuan', 'zj_xijin']);
   });
   it('屠千山只在接到任务后出现在渡口', () => {
     expect(roomNpcs('dukou')).not.toContain('tu');
@@ -148,6 +166,17 @@ describe('条件与效果', () => {
     expect(S.feed.filter(e => e.x.includes('「善本经卷失窃」')).length).toBe(1);
     expect(S.feed.filter(e => e.x.includes('还是那幅模样')).length).toBe(1);
   });
+  it('做事花时间：交谈十分钟、请教半个时辰；天色变了记一句见闻', () => {
+    S.loc = 'daming';
+    const m0 = S.min;
+    act('liaochen', '观察');
+    expect(S.min).toBe(m0 + 5);
+    act('liaochen', '交谈');
+    expect(S.min).toBe(m0 + 15);
+    S.min = 16 * 60 + 55;
+    act('liaochen', '观察');
+    expect(S.feed[0].x).toBe('日头偏西，天色向晚。');
+  });
   it('暗器、杂学不会被自动放进主手、副手', () => {
     const s = { loadout: {} };
     autoSlot(s, { id: 'yishu', category: '杂学' } as SkillDef);
@@ -186,6 +215,8 @@ describe('见招拆招成算', () => {
     expect(cheng(0.2)).toBe('两成');
   });
   it('火候由境界和属性决定', () => {
+    S.skills.taxue = { r: 2, p: 0 };
+    S.skills.hanjiang = { r: 1, p: 0 };
     expect(huohou(S, 'dodge')).toBe(2 * 10 + 16);
     expect(huohou(S, 'parry')).toBe(1 * 10 + 15);
   });
@@ -248,12 +279,12 @@ describe('师承与前置', () => {
 
   it('学不成时不学，只记一条见闻；条件 canLearn 跟着变', () => {
     delete S.skills.duanshui;
-    S.skills.hanjiang = { r: 0, p: 0 };
+    delete S.skills.hanjiang;
     expect(cond({ canLearn: 'duanshui' })).toBe(false);
     expect(learnSkill('duanshui')).toEqual([]);
     expect(S.skills.duanshui).toBeUndefined();
     expect(S.feed[0].x).toContain('根基未到');
-    S.skills.hanjiang = { r: 1, p: 0 };
+    S.skills.hanjiang = { r: 0, p: 0 };
     expect(cond({ canLearn: 'duanshui' })).toBe(true);
     expect(learnSkill('duanshui')).toEqual(['习得「断水」']);
   });
@@ -282,6 +313,7 @@ describe('师承与前置', () => {
   });
 
   it('外功不能比内功高出一重以上；到了瓶颈熟练照涨，内功突破后跟着突破', () => {
+    S.attr = { ...COMMON }; // 常人根基：练功不加不减，数字才好算
     S.skills.xinfa = { r: 1, p: 0 };
     S.skills.hanjiang = { r: 2, p: 0 };
     const hj = SKILLS.find(k => k.id === 'hanjiang')!;
@@ -306,5 +338,345 @@ describe('师承与前置', () => {
       S.pastSects = [{ school: '少林', how: '出师' }];
       expect(realmCap(S, k)).toBe(8);
     } finally { SKILLS.pop(); }
+  });
+});
+
+describe('缉拿草上飞走得完', () => {
+  beforeEach(() => {
+    setState(skipToYangzhou());
+    S.flags.boss = true;
+    act('fuya_zhou', '交谈');
+    act('fuya_zhou', '揭榜');
+  });
+  const night = (): void => { S.min = 21 * 60; };
+
+  it('线索两条路：帮渔家老汉一把他才开口；悟性够的人自己细看破船', () => {
+    expect(S.quests.side_caoshangfei).toBe(1);
+    expect(act('qichi', '交谈').text).toContain('茱萸湾');
+    expect(pathTo('dukou', 'zhuyuwan')).toEqual(['zhuyuwan']);
+    expect(act('zy_yuweng', '交谈').text).toContain('又是府衙的');
+    expect(S.flags.csf_clue2).toBeFalsy();
+    S.attr.悟性 = 12;
+    expect(act('zy_poshuan', '细看').text).toContain('问问村里的人');
+    S.silver = 50;
+    act('zy_yuweng', '买鱼');
+    expect(S.silver).toBe(20);
+    expect(act('zy_yuweng', '交谈').text).toContain('破船');
+    expect(S.flags.csf_clue2).toBe(true);
+    // 另一条路：悟性够，自己看出来
+    delete S.flags.csf_clue2;
+    S.attr.悟性 = 15;
+    expect(act('zy_poshuan', '细看').text).toContain('铁爪');
+    expect(S.flags.csf_clue2).toBe(true);
+    S.min = 12 * 60;
+    expect(roomNpcs('zhuyuwan')).not.toContain('zy_csf');
+    night();
+    expect(roomNpcs('zhuyuwan')).toContain('zy_csf');
+  });
+
+  it('拿下：打赢押回府衙，账房先生出狱', async () => {
+    const { FOES } = await import('../src/content');
+    S.flags.csf_clue2 = true;
+    night();
+    run(FOES.find(f => f.id === 'zy_csf')!.results.win.do!);
+    expect(S.quests.side_caoshangfei).toBe(2);
+    expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
+    expect(verbsOf(NPCS_BY.zhou())).toContain('交差');
+    const silver = S.silver;
+    act('fuya_zhou', '交差');
+    expect(S.quests.side_caoshangfei).toBe(3);
+    expect(S.silver).toBe(silver + 2000);
+    expect(roomNpcs('yz_fuya')).not.toContain('zy_zhangfang');
+    expect(act('zy_yuweng', '交谈').text).toContain('官爷的事');
+  });
+
+  it('劝他自首：先去牢里见过账房，侠义或胆魄够才劝得动', () => {
+    S.flags.csf_clue2 = true;
+    night();
+    act('zy_csf', '交谈');
+    expect(verbsOf(NPCS_BY.csf())).not.toContain('劝他自首');
+    act('zy_zhangfang', '交谈');
+    expect(verbsOf(NPCS_BY.csf())).toContain('劝他自首');
+    S.xia = 0; S.attr.胆魄 = 10;
+    expect(act('zy_csf', '劝他自首').text).toContain('凭什么让我信你');
+    expect(S.quests.side_caoshangfei).toBe(1);
+    S.xia = 20;
+    act('zy_csf', '劝他自首');
+    expect(S.quests.side_caoshangfei).toBe(2);
+    expect(act('fuya_zhou', '交差').text).toContain('文书');
+    expect(S.flags.csf_zhangfang_free).toBe(true);
+  });
+
+  it('放走：听他说完才能放；回府衙周捕头不追问，可账房还关着', () => {
+    S.flags.csf_clue2 = true;
+    night();
+    expect(verbsOf(NPCS_BY.csf())).not.toContain('放他走');
+    act('zy_csf', '交谈');
+    act('zy_csf', '放他走');
+    expect(S.quests.side_caoshangfei).toBe(3);
+    expect(act('fuya_zhou', '交差').text).toContain('他就出不来');
+    expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
+    expect(act('zy_zhangfang', '交谈').text).toContain('三天又三天');
+  });
+});
+
+describe('根基有实效', () => {
+  beforeEach(() => { setState(skipToYangzhou()); S.attr = { ...COMMON }; S.attrApplied = undefined; S.hpMax = 1000; S.mpMax = 800; });
+
+  it('体魄长气血上限，根骨长内力上限；加了根基马上生效，不会重复加', () => {
+    run([{ type: 'attr', key: '体魄', delta: 2 }]);
+    expect(S.hpMax).toBe(1080);
+    run([{ type: 'attr', key: '根骨', delta: 1 }]);
+    expect(S.mpMax).toBe(830);
+    run([{ type: 'attr', key: '体魄', delta: -1 }]);
+    expect(S.hpMax).toBe(1040);
+  });
+
+  it('悟性管外功、根骨管内功练得快慢；身法管赶路', () => {
+    S.skills.hanjiang = { r: 0, p: 0 };
+    S.attr.悟性 = COMMON.悟性 + 5;
+    gainProf('hanjiang', 100);
+    expect(S.skills.hanjiang!.p).toBe(115);
+    S.attr.身法 = COMMON.身法 + 10;
+    expect(attrEffects(S).travel).toBeCloseTo(0.8);
+    S.attr.身法 = COMMON.身法 + 40;
+    expect(attrEffects(S).travel).toBe(0.7);
+  });
+
+  it('武功练到第四重，根基跟着长，每一重只长一次', () => {
+    S.skills.xinfa = { r: 1, p: 0 };
+    gainProf('xinfa', 600 + 1200);
+    expect(S.skills.xinfa!.r).toBe(3);
+    expect(S.attr.根骨).toBe(COMMON.根骨 + 1);
+    expect(S.feed.some(e => e.x.includes('根骨加一'))).toBe(true);
+    growAttr(S, '根骨', 100, '测试');
+    expect(S.attr.根骨).toBe(30);
+  });
+
+  it('人物页写的是实际的数，不是空话', () => {
+    S.attr.体魄 = COMMON.体魄 + 2;
+    expect(attrLines(S).体魄).toBe('气血上限 +80');
+    expect(attrLines(S).胆魄).toBe('开战怒气 +0 · 抢攻');
+  });
+});
+
+describe('人情', () => {
+  it('赠礼最多送到相谈甚欢；有过节的不因一份礼就和好', () => {
+    expect(warmer(undefined)).toBe('点头之交');
+    expect(warmer('点头之交')).toBe('相谈甚欢');
+    expect(warmer('相谈甚欢')).toBe('相谈甚欢');
+    expect(warmer('有隙')).toBe('有隙');
+  });
+  it('萍水相逢的人收起来，有意义的人分组', () => {
+    expect(relGroup('点头之交')).toBe('萍水相逢');
+    expect(relGroup('相谈甚欢')).toBe('交好');
+    expect(relGroup('仇敌')).toBe('恩怨');
+    expect(relGroup('阴阳两隔')).toBe('至亲至交');
+  });
+});
+
+describe('从零练武：成长从江湖上来', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+
+  it('开局不入流：寒江三门都在初窥门径；出手轻重随境界，初窥门径打八成，大乘一倍六', () => {
+    const g = newGame();
+    expect(Object.values(g.skills).every(x => x!.r === 0 && x!.p === 0)).toBe(true);
+    expect(realmPow(S, 'hanjiang')).toBeCloseTo(0.8);
+    S.skills.hanjiang!.r = 8;
+    expect(realmPow(S, 'hanjiang')).toBeCloseTo(1.6);
+    expect(realmPow(S, 'jinghong')).toBeCloseTo(0.8);
+  });
+
+  it('内功每突破一重，气血上限 +60、内力上限 +40；外功突破不加', () => {
+    const hp = S.hpMax, mp = S.mpMax;
+    S.skills.xinfa = { r: 0, p: 0 };
+    gainProf('xinfa', 300);
+    expect(S.skills.xinfa.r).toBe(1);
+    expect(S.hpMax).toBe(hp + 60);
+    expect(S.mpMax).toBe(mp + 40);
+    S.skills.taxue = { r: 0, p: 0 };
+    gainProf('taxue', 300);
+    expect(S.hpMax).toBe(hp + 60);
+  });
+
+  it('打一架攒历练：赢了得对手气血的一成，输了一半，逃跑没有；七天内反复打同一人，一次减半', () => {
+    S.lilian = 0;
+    const foe = { id: 'tu', hp: 3000 };
+    expect(fightLilian(S, foe, 'lose')).toBe(150);
+    expect(fightLilian(S, foe, 'lose')).toBe(75);
+    expect(fightLilian(S, foe, 'win')).toBe(75);
+    expect(S.lilian).toBe(300);
+    S.day += FOE_WINDOW;
+    expect(fightLilian(S, foe, 'win')).toBe(300);
+    expect(fightLilian(S, { id: 'liu', hp: 1400 }, 'flee')).toBe(0);
+  });
+
+  it('一件事了结时给历练，只给一次', () => {
+    S.lilian = 0;
+    run([{ type: 'quest', id: 'side_huafang', stage: 1 }]);
+    expect(S.lilian).toBe(0);
+    run([{ type: 'quest', id: 'side_huafang', stage: 2 }]);
+    expect(S.lilian).toBe(200);
+    run([{ type: 'quest', id: 'side_huafang', stage: 2 }]);
+    expect(S.lilian).toBe(200);
+  });
+
+  it('闭关消化历练；没有历练，闭门造车，进境只有一点', () => {
+    S.lilian = 0;
+    const idle = retreatPlan(S, 30);
+    expect(idle.used).toBe(0);
+    expect(idle.gains.reduce((a, [, v]) => a + v, 0)).toBeLessThanOrEqual(RETREAT[30].base + 2);
+    S.lilian = 5000;
+    const full = retreatPlan(S, 30);
+    expect(full.used).toBe(RETREAT[30].cap);
+    expect(full.gains.map(([k]) => k)).toEqual(['hanjiang', 'xinfa', 'taxue']);
+    expect(full.gains[0][1]).toBeGreaterThan(full.gains[1][1]);
+    expect(retreatPlan(S, 1).used).toBe(RETREAT[1].cap);
+  });
+
+  it('备战：条件成立的准备都生效，可以叠加；没有准备就是原来的对手', async () => {
+    const { FOES } = await import('../src/content');
+    const tu = FOES.find(f => f.id === 'tu')!;
+    expect(prepFoe(tu).foe).toBe(tu);
+    S.flags.tu_scar = true;
+    S.flags.tu_allies = true;
+    const { foe, active } = prepFoe(tu);
+    expect(active).toHaveLength(2);
+    expect(foe.hp).toBe(Math.round(tu.hp * 0.75));
+    expect(foe.big).toBe(Math.round(tu.big * 0.85));
+  });
+});
+
+describe('渡口一剑：弱小的少年怎么赢', () => {
+  beforeEach(() => {
+    setState(skipToYangzhou());
+    S.quests.main1 = 1;
+  });
+
+  it('了尘不叫你闭关，而是点你去找船夫、漕帮、柳寒舟', () => {
+    const t = act('liaochen', '交谈').text;
+    expect(t).toContain('船夫');
+    expect(t).toContain('漕帮');
+    expect(t).not.toContain('闭关');
+  });
+
+  it('知彼：先看出他左臂有伤，船夫才肯说那道伤的来历', () => {
+    expect(act('chuanfu', '交谈').text).toContain('什么都没看见');
+    act('tu', '观察');
+    expect(S.flags.tu_saw_arm).toBe(true);
+    expect(act('chuanfu', '交谈').text).toContain('分水刺');
+    expect(S.flags.tu_scar).toBe(true);
+    expect(act('liaochen', '交谈').text).toContain('没有白走');
+  });
+
+  it('帮手：侠义够了，漕帮管事才肯违了帮主的令；打赢以后他丢了差事', async () => {
+    const g = (): NpcDef => npcDef('guanshi')!;
+    S.xia = 12;
+    expect(verbsOf(g())).not.toContain('请他帮忙');
+    expect(act('guanshi', '交谈').text).toContain('谁也不认得少侠');
+    S.xia = 20;
+    expect(verbsOf(g())).toContain('请他帮忙');
+    act('guanshi', '请他帮忙');
+    expect(S.flags.tu_allies).toBe(true);
+    const { FOES } = await import('../src/content');
+    const tu = FOES.find(f => f.id === 'tu')!;
+    run([...tu.results.win.do!, ...prepFoe(tu).active.flatMap(p => p.win ?? [])]);
+    expect(S.flags.tu_with_allies).toBe(true);
+    expect(act('guanshi', '交谈').text).toContain('撑篙');
+  });
+
+  it('掠阵：和柳寒舟交好了，他才肯去渡口；打完以后，他问起你的剑法', async () => {
+    expect(act('liu', '交谈').text).not.toContain('算我一个');
+    S.rel.liu = '相谈甚欢';
+    expect(act('liu', '交谈').text).toContain('算我一个');
+    expect(S.flags.tu_liu).toBe(true);
+    const { FOES } = await import('../src/content');
+    run(prepFoe(FOES.find(f => f.id === 'tu')!).active.flatMap(p => p.win ?? []));
+    S.quests.main1 = 2;
+    expect(act('liu', '交谈').text).toContain('跟谁学的');
+  });
+});
+
+describe('路遇', () => {
+  beforeEach(() => { setState(skipToYangzhou()); S.min = 10 * 60; });
+  const always = (): number => 0;
+  const never = (): number => 0.99;
+
+  it('路越长越容易遇上，最多四成', () => {
+    expect(encounterChance(15)).toBeCloseTo(0.1);
+    expect(encounterChance(60)).toBeCloseTo(0.4);
+    expect(encounterChance(300)).toBe(0.4);
+  });
+
+  it('骰子没中、序章里、没有合适的路遇，都不遇', () => {
+    expect(rollEncounter('hu', 'cheng', never)).toBeNull();
+    expect(rollEncounter('hu', 'daming', always)).toBeNull();
+    S.chapter = 0;
+    expect(rollEncounter('hu', 'cheng', always)).toBeNull();
+  });
+
+  it('遇上了按地区和目的地挑；奇遇一生一次；两次路遇隔两个时辰', () => {
+    const e = rollEncounter('hu', 'cheng', always)!;
+    expect(e.id).toBe('luyu_maishen');
+    markEncounter(e);
+    expect(rollEncounter('hu', 'cheng', always)).toBeNull();
+    S.min += ENC_GAP;
+    expect(rollEncounter('hu', 'cheng', always)!.id).toBe('luyu_xiaozei');
+    expect(eligible('cheng').map(x => x.id)).not.toContain('luyu_maishen');
+  });
+
+  it('能反复遇的，七天之内不再遇', () => {
+    ENCOUNTERS.push({ id: 't_repeat', region: ['yz'], to: ['daming'], story: 'ly_maishen' });
+    try {
+      const e = rollEncounter('hu', 'daming', always)!;
+      expect(e.id).toBe('t_repeat');
+      markEncounter(e);
+      S.min += ENC_GAP;
+      expect(rollEncounter('hu', 'daming', always)).toBeNull();
+      S.day += ENC_REPEAT_DAYS;
+      expect(rollEncounter('hu', 'daming', always)!.id).toBe('t_repeat');
+    } finally { ENCOUNTERS.pop(); }
+  });
+
+  it('那个孩子：你当初怎么待他，渡口再遇时他就是什么样子', () => {
+    const kid = (): string[] => eligible('dukou').map(x => x.id).filter(id => id.startsWith('luyu_xiaozei'));
+    expect(kid()).toEqual([]);
+    S.flags.ly_xiaozei_fed = true;
+    expect(kid()).toEqual(['luyu_xiaozei_fed']);
+  });
+
+  it('同船的老人只在夜里的客船上', () => {
+    expect(eligible('gz_kechuan').map(x => x.id)).toEqual([]);
+    S.min = 22 * 60;
+    expect(eligible('gz_kechuan').map(x => x.id)).toEqual(['luyu_tongchuan']);
+  });
+});
+
+describe('重回瓜洲', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+
+  it('序章以后，小屋是焦土，生船不见了，镇上的人记得江伯', () => {
+    expect(roomNpcs('gz_pier')).toContain('shaogong');
+    expect(act('chatan', '交谈').text).toContain('还敢回来');
+    expect(act('ayp', '交谈').text).toContain('坟');
+    expect(S.relNote?.ayp).toContain('照看江伯的坟');
+  });
+
+  it('石臼底下的小木剑，回春堂的旧方子，都只给一次', () => {
+    act('gz_shijiu', '细看');
+    expect(S.items.mujian).toBe(1);
+    expect(act('gz_shijiu', '细看').text).toContain('空了');
+    act('huichun', '交谈');
+    act('huichun', '交谈');
+    expect(S.items.fangzi).toBe(1);
+  });
+
+  it('坟前祭拜：斗败屠千山以后，有话要对江伯说', () => {
+    expect(act('gz_fenmu', '祭拜').text).toContain('磕了三个头');
+    S.flags.boss = true;
+    expect(act('gz_fenmu', '祭拜').text).toContain('渡口那一剑');
+    S.items.huadiao = 1;
+    expect(act('gz_fenmu', '祭拜').text).toContain('花雕');
+    expect(S.items.huadiao).toBe(0);
   });
 });
