@@ -224,7 +224,7 @@ const STORIES: StoryDef[] = [
             { type: 'rel', npc: 'liaochen', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '藏经阁一案，了尘感念你的高义' },
             { type: 'feed', tag: '江湖', text: '你把偷经卷的小沙弥送了官，领了二百文酬金。藏经阁从此换人扫拂。' }
           ], next: 1 },
-        { label: '替他娘出药钱', sub: '银两 −100，侠义 +5',
+        { if: { silver: 100 }, label: '替他娘出药钱', sub: '银两 −100，侠义 +5',
           result: '你把一百文塞进他手里：「先给你娘抓药，别的往后再说。」明心愣了半天，朝你重重磕了两个头。法空别过脸去，抬袖子擦了擦眼睛。',
           do: [
             { type: 'flag', flag: 'cangjing_med' }, { type: 'flag', flag: 'cangjing_solved' },
@@ -240,7 +240,7 @@ const STORIES: StoryDef[] = [
         '张四在旁咳嗽一声：「诸位，那卷《药师经》，老夫可是花一百文收的善本，字纸无冤无佛……」'
       ],
       choices: [
-        { label: '掏一百二十文赎回', sub: '银两 −120，侠义 +3',
+        { if: { silver: 120 }, label: '掏一百二十文赎回', sub: '银两 −120，侠义 +3',
           result: '你数出一百二十文。张四把钱收了，经卷用蓝布包好递来。法空双手接过，抱在怀里，朝你深深合十。',
           do: [
             { type: 'flag', flag: 'cangjing_juan' },

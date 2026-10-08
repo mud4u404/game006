@@ -134,7 +134,7 @@ const STORIES: StoryDef[] = [
             { type: 'lilian', amount: 30 },
             { type: 'feed', tag: '江湖', text: '你带着一个被后爹打出来的孩子到府衙报了官。' }
           ], next: -1 },
-        { label: '给他钱，教他去投亲', sub: '银两 −20',
+        { if: { silver: 20 }, label: '给他钱，教他去投亲', sub: '银两 −20',
           result: '「你外祖家可还在城里？」孩子点头。你给他二十文，教他天亮就去投外祖。他把银镯子攥得更紧了，一步三回头地走进了夜色。',
           do: [
             { type: 'silver', delta: -20 }, { type: 'xia', delta: 1 },
@@ -179,7 +179,7 @@ const STORIES: StoryDef[] = [
         '你抬脚要走，他又拉：「且慢！贫道观公子行走坐卧，是练家子——这一卦，不灵不要钱。」'
       ],
       choices: [
-        { label: '听他胡诌', sub: '历练 +20',
+        { if: { silver: 20 }, label: '听他胡诌', sub: '历练 +20',
           result: '他闭着眼掐指一算，从你祖上说到前程，居然真说对了你佩剑的习惯。是江湖上眼线多，还是真有点道行？你给了他二十文润口。',
           do: [
             { type: 'silver', delta: -20 }, { type: 'lilian', amount: 20 },
@@ -201,7 +201,7 @@ const STORIES: StoryDef[] = [
       ],
       choices: [
         { label: '细看那段绸子', sub: '悟性', if: { attr: { key: '悟性', atLeast: 22 } }, next: 1 },
-        { label: '替他赔钱了事', sub: '银两 −30',
+        { if: { silver: 30 }, label: '替他赔钱了事', sub: '银两 −30',
           result: '你替书生赔了绸缎钱。掌柜的收钱放人。书生朝你长揖到地：「君子可欺以其方……但终究是多谢。」他抱着书箱，狼狈地走了。',
           do: [{ type: 'silver', delta: -30 }, { type: 'flag', flag: 'ly_yz_shusheng_pay' }], next: -1 },
         { label: '少管闲事',

@@ -42,7 +42,7 @@ function yingshengHTML(): string {
   if (S.chapter === 0) return '';
   return `<section class="card here"><div class="sec-h"><h2>营生</h2><span class="count">${shenfenText(S)}</span></div>
     <p class="muted">${shenfenOf(S).desc}</p>
-    <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文）；钱不够就露宿，不花钱，伤好得慢。</span></div></div></section>`;
+    <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文），身上留${cn(LODGING.keep)}文盘缠不动；钱不够就露宿，不花钱，伤好得慢。</span></div></div></section>`;
 }
 
 let confirmRestart = false;

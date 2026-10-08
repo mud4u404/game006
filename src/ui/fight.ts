@@ -4,18 +4,19 @@
  * 对手的台词、预兆、帮手的话、胜负以后的去路和结算，都来自 src/content/packs/ 下各内容包的 foes 字段。
  */
 import { S, save } from '../core/state';
-import { advanceMin, dateStr, shichen } from '../core/time';
+import { dateStr, shichen } from '../core/time';
 import { $, H, M, MO, buzz, cn, fmt, liang, pick, reduceMotion } from '../core/util';
 import { REALMS, foeById, itemById, jobById, room, skillById } from '../content';
-import type { AfterDef, AfterOpt, Effect, FightResult, FoeDef, PrepDef, TellDef } from '../content/types';
-import { run, test, textVars } from '../engine/dsl';
+import type { AfterDef, AfterOpt, Effect, FoeDef, PrepDef, TellDef } from '../content/types';
+import { run, textVars } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
-import { fightLilian } from '../engine/lilian';
 import { Duel, ZONE_NAME, type DuelRes, type Ev, type Opt, type RespKey, type Wounds } from '../engine/duel';
 import { RESP_ACT, cheng, chengN, judgeText } from '../engine/formulas';
 import { respSkill } from '../engine/wuxue';
 import { npcName } from '../engine/world';
 import { SHENFEN, jobPay } from '../engine/shenfen';
+import { brace, fateOpts, settle, takeWounds } from '../engine/jiesuan';
+import { checkYue } from '../engine/shiguang';
 import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, weaponWord, type FightKit } from '../engine/zhaoshi';
 import { IC } from './icons';
 import { mb } from './widgets';
@@ -73,8 +74,7 @@ export function startFight(fid: string): void {
   if (C || !f) return;
   const prep = activePrep(f);
   const kit = fightKit(S);
-  // 剧本战：撑不住时有人出手，开打时至少留一口气撑一阵
-  if (f.script) S.hp = Math.max(S.hp, Math.round(S.hpMax * 0.25) + 300);
+  brace(f);
   const d = new Duel(heroSpec(S, kit, f), foeSpec(f, prep), { rng: Math.random, allies: alliesOf(prep) });
   C = {
     f, d, kit, prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
@@ -743,19 +743,14 @@ function endFight(res: DuelRes): void {
   setPromptUI(false);
   cancelCharge();
   sync();
-  // 这一场吃重招落下的伤，打完才起作用，带到下一场（切磋点到为止、剧本战不落伤）
-  if (!c.f.spar && !c.f.script) {
-    const hurt: Partial<Wounds> = {};
-    for (const [z, n] of Object.entries(c.d.log.taken) as [keyof Wounds, number][]) if (n > 0) { S.wounds[z] = Math.min(3, S.wounds[z] + n); hurt[z] = n; }
-    c.hurt = hurt;
-  }
+  // 这一场吃重招落下的伤，打完才起作用，带到下一场（engine/jiesuan.ts）
+  c.hurt = takeWounds(c.f, c.d.log.taken);
   if (res === 'win' && c.f.win) bubble('foe', c.f.win);
   else if (res === 'lose' && c.f.lose) bubble('sys', c.f.lose);
   updAll();
   // 胜负以后：打倒对手，先问怎样处置他，再出结算
-  const a = res === 'win' ? c.f.results.win.after : undefined;
-  const opts = a ? a.opts.filter(o => test(o.if)) : [];
-  c.after = a && opts.length ? { plea: a.plea, opts } : null;
+  const opts = fateOpts(c.f, res);
+  c.after = opts.length ? { plea: c.f.results.win.after!.plea, opts } : null;
   window.setTimeout(c.after ? showAftermath : showResult, reduceMotion ? 300 : 1300);
 }
 
@@ -838,23 +833,15 @@ function alliesHTML(c: Fight): string {
 function showResult(): void {
   const c = C;
   if (!c || !c.res) return;
-  const results = c.f.results;
-  const r: FightResult | undefined = results[c.res] ?? (c.res === 'yield' ? results.flee : c.res === 'flee' ? results.yield : undefined) ?? results.lose;
-  if (!r) { closeFight(); return; }
-  // 历练：打了这一架学到的东西（engine/lilian.ts）；剧本战是被人救下的，只算输
-  const ll = fightLilian(S, c.f, c.f.script ? 'lose' : c.res);
-  // 带着某项准备打赢时，准备的后果；胜负以后选的那条路的后果
-  const extra = c.res === 'win' ? c.prep.flatMap(p => p.win ?? []) : [];
+  // 结算：历练、结算效果、备战的后果、胜负以后那条路的后果（engine/jiesuan.ts）
   const pk = c.pick;
-  if (pk?.do) extra.push(...pk.do);
+  const { r, ll, out, effects } = settle(c.f, c.res, c.prep, pk);
+  if (!r) { closeFight(); return; }
   if (r.silent) {
-    run([...(r.do ?? []), ...extra]);
     closeFight();
     afterOutcome(run(r.then));
     return;
   }
-  advanceMin(S, 15);
-  const out = run([...(r.do ?? []), ...extra]);
   let story = pk?.story ?? (r.story || '');
   if (story === '@compose') { story = composeStory(c); S.story = story; }
   else story = fmt(story, textVars());
@@ -864,7 +851,7 @@ function showResult(): void {
   const hurt = Object.entries(c.hurt ?? {}) as [keyof Wounds, number][];
   const WHAT: Record<keyof Wounds, string> = { hand: '拆招、抢攻差一截，出手轻一成', foot: '闪避差一截', inner: '硬接差一截，内力回得慢' };
   const hurtLine = hurt.length ? `<div class="r-sub">落下的伤</div><div class="news">${hurt.map(([z]) => `<div><span class="tag danger">${ZONE_NAME[z]}伤 ${liang(S.wounds[z])}级</span><span>${WHAT[z]}。闭关养伤，一级三日。</span></div>`).join('')}</div>` : '';
-  const chips = rewardChips([...(r.do ?? []), ...extra, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])]).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
+  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])]).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
   c.then = r.then;
   save();
   openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${pk?.title ?? (r.title || '')}</h2></div>
@@ -896,6 +883,8 @@ registerHandlers({
     const then = C?.then;
     closeSheet();
     closeFight();
+    // 打完一架时辰走了一刻，过了约期的算失约（engine/shiguang.ts）
+    checkYue(S);
     if (then) afterOutcome(run(then));
   }
 });

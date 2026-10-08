@@ -9,7 +9,7 @@ import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { jingxiu, restDays, skillName, yueText } from '../engine/shiguang';
+import { checkYue, jingxiu, restDays, skillName, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
 import { markEncounter, rollEncounter } from '../engine/encounter';
@@ -20,6 +20,12 @@ import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
 
 let traveling = false;
+
+/** 过了约期还在线的：赶路、做事以后就算失约，不必等到下一次闭关（机器玩家摸底时发现） */
+function lateYue(): void {
+  const missed = checkYue(S);
+  if (missed.length) toast(missed[0]);
+}
 export const isTraveling = (): boolean => traveling;
 
 export function travelTo(dest: string, onArrive?: () => void): void {
@@ -54,6 +60,7 @@ export function travelTo(dest: string, onArrive?: () => void): void {
       S.min += m;
       if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
       S.loc = nx; S.sel = null; S.reply = null;
+      lateYue();
       // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
       const enc = rollEncounter(from, nx);
       if (enc) {
@@ -75,6 +82,7 @@ function doAct(verb: Verb): void {
   const id = S.sel;
   if (!id) return;
   const { text, out } = act(id, verb);
+  lateYue();
   if (out.story || out.fight) { afterOutcome(out); return; }
   S.reply = text ? { id, text } : null;
   render();
