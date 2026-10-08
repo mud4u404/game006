@@ -107,11 +107,21 @@
    "shaogong",
    "shengchuan",
    "shuoshu",
+   "ss_aqi",
+   "ss_gengfu",
+   "ss_heiying",
+   "ss_jiaowu",
+   "ss_shuili",
    "tu",
    "wangshao",
    "xiaoer",
    "xs_bang",
    "xs_hezei",
+   "xsb_bang",
+   "xsb_gufu",
+   "xsb_liehu",
+   "xsb_shifu",
+   "xsb_zhuren",
    "yaopu",
    "yh_bizhang",
    "yh_menfang",
@@ -197,8 +207,12 @@
    "ly_xiaozei",
    "ly_yz_jianke",
    "ly_yz_tangzi",
+   "ss_jiaowu",
    "tu",
    "xs_hezei",
+   "xsb_jiaofei",
+   "xsb_xiongfan",
+   "xsb_xunren",
    "zb_jie_fei",
    "zy_csf"
   ],
@@ -389,7 +403,8 @@
    "p_after1",
    "p_death",
    "p_night",
-   "p_open"
+   "p_open",
+   "ss_zei_gen"
   ],
   "encounters": [
    "luyu_jiang_chabang",
@@ -421,6 +436,22 @@
    "luyu_yz_zouhai_a",
    "luyu_yz_zouhai_af",
    "luyu_yz_zouhai_b"
+  ],
+  "shi": [
+   "ss_matou",
+   "ss_matou.dongduo",
+   "ss_matou.duizhi",
+   "ss_matou.guanfu",
+   "ss_matou.huobing",
+   "ss_matou.qi",
+   "ss_matou.tiaoting",
+   "ss_matou.xiduo",
+   "ss_zei",
+   "ss_zei.bang",
+   "ss_zei.huanle",
+   "ss_zei.qi",
+   "ss_zei.songguan",
+   "ss_zei.zhuo"
   ]
  },
  "stages": {

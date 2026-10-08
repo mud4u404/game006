@@ -7,9 +7,11 @@ import { advanceMin, shichen } from '../core/time';
 import { attrEffects } from './gengu';
 import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
+import { dating, seeShi } from './shishi';
 
+/** 此刻在场的：带条件的（作息、剧情）按条件挑；同一人写了几处作息的，只算一次 */
 const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
-  (list || []).filter(x => typeof x === 'string' || test(x.if)).map(x => (typeof x === 'string' ? x : x.id));
+  [...new Set((list || []).filter(x => typeof x === 'string' || test(x.if)).map(x => (typeof x === 'string' ? x : x.id)))];
 
 export const roomNpcs = (id: string): string[] => present(room(id).npcs);
 export const roomObjs = (id: string): string[] => present(room(id).objs);
@@ -66,9 +68,13 @@ export function npcName(id: string): string {
   return n.altName && test(n.altName.if) ? n.altName.name : n.name;
 }
 
-/** 人物此刻能点的动作：带 if 的只在条件成立时出现；当铺（service 有「当」）自动有「典当」 */
+/**
+ * 人物此刻能点的动作：带 if 的只在条件成立时出现。
+ * 人人都有的（docs/huojianghu.md 第三节第三条）：说得上话的人都能打听；当铺（service 有「当」）能典当
+ */
 export function verbsOf(n: NpcDef): Verb[] {
   const vs = n.verbs.flatMap(v => (typeof v === 'string' ? [v] : test(v.if) ? [v.verb] : []));
+  if (!n.obj && vs.includes('交谈') && !vs.includes('打听')) vs.splice(vs.indexOf('交谈') + 1, 0, '打听');
   if (isPawnshop(n) && !vs.includes('典当')) vs.push('典当');
   return vs;
 }
@@ -81,7 +87,7 @@ export const travelMin = (m: number): number => Math.max(1, Math.round(m * attrE
  * 每个动作花多少时间（分钟）。分支里写了 time 效果的，以分支为准；开打、开剧情的，由战斗、剧情自己算时间。
  * 没列出的动作算十分钟。这样在城里走动、和人说话，时辰也会慢慢过去。
  */
-export const VERB_MIN: Record<string, number> = { 观察: 5, 细看: 5, 推门: 2, 交谈: 10, 购买: 5, 打赏: 5, 赠礼: 5, 抓药: 10, 偷窃: 5, 请教: 30 };
+export const VERB_MIN: Record<string, number> = { 观察: 5, 细看: 5, 推门: 2, 交谈: 10, 打听: 10, 购买: 5, 打赏: 5, 赠礼: 5, 抓药: 10, 偷窃: 5, 请教: 30 };
 const DEFAULT_MIN = 10;
 
 /** 天色转换时记一句见闻 */
@@ -123,6 +129,8 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
     // 赠礼、典当：从行囊里挑一件（engine/daoju.ts）。送了人物喜欢的，关系升一级
     case '赠礼': return { text: giveGift(n, who, arg), out };
     case '典当': return { text: pawn(who, arg), out };
+    // 打听：这一带的世事和传闻（engine/shishi.ts）
+    case '打听': return { text: dating(id, who), out };
     case '请教': return { text: `${who}摇摇头：「我没什么可教你的。」`, out };
     case '切磋': return { text: `${who}连连摆手：「不敢不敢。」`, out };
     case '偷窃': return { text: `你的手刚伸出去，${who}就警觉地看了过来。你只好装作整理衣襟。`, out };
@@ -132,6 +140,8 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
 
 /** 进入地点时的触发 */
 export function enter(id: string): Outcome | null {
+  // 这里正在发生的世事，走进来就看见了（engine/shishi.ts）
+  seeShi(id);
   const b = pickBranch(room(id).onEnter);
   if (!b) return null;
   const out = run(b.do);

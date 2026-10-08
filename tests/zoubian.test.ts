@@ -10,16 +10,17 @@
 import { describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { advanceDays, advanceMin, dayNo, setNowMs } from '../src/core/time';
-import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, STORIES, foeById, jobById, npc, questById, room, storyById } from '../src/content';
+import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, SHI, STORIES, foeById, jobById, npc, questById, room, storyById } from '../src/content';
 import { run, test, type Outcome } from '../src/engine/dsl';
 import { act, curQuest, enter, hopMin, pathTo, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
 import { Duel, RANDOM, SKILLED, simulate, type DuelRes, type Policy } from '../src/engine/duel';
 import { activePrep, alliesOf, fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
 import { brace, fateOpts, settle, takeWounds } from '../src/engine/jiesuan';
-import { checkYue, jingxiu, nextYue } from '../src/engine/shiguang';
+import { XIEJIAO, checkYue, jingxiu, nextYue, waitMin } from '../src/engine/shiguang';
 import { mulberry32 } from '../src/engine/rng';
 import { tierNow } from '../src/engine/ren';
+import { tickShi } from '../src/engine/shishi';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const VERBOSE = !!env.ZOUBIAN;
@@ -38,7 +39,9 @@ const RUNS: Run[] = Array.from({ length: 10 }, (_, i) => i + 1).flatMap(i => [
 /** 全部局下来的覆盖 */
 const cov = {
   branch: new Set<string>(), choice: new Set<string>(), enc: new Set<string>(), enter: new Set<string>(),
-  foe: new Map<string, Set<DuelRes>>(), fate: new Set<string>(), quest: new Map<string, number>(), room: new Set<string>()
+  foe: new Map<string, Set<DuelRes>>(), fate: new Set<string>(), quest: new Map<string, number>(), room: new Set<string>(),
+  /** 世事走到过的步：「事.步」 */
+  shi: new Set<string>()
 };
 const errs = new Map<string, number>();
 const warns = new Map<string, number>();
@@ -161,6 +164,28 @@ function nearestNew(): string | null {
   return null;
 }
 
+/** 此刻各处能点、还没点过的动作 */
+function untriedNow(): Set<string> {
+  const out = new Set<string>();
+  for (const r of ROOMS) for (const id of [...roomNpcs(r.id), ...roomObjs(r.id)]) {
+    const n = npc(id);
+    if (n) for (const v of verbsOf(n)) { const k = branchKey(id, v); if (!cov.branch.has(k)) out.add(k); }
+  }
+  return out;
+}
+
+/** 等到哪个钟点，会冒出眼下没有、也没点过的动作（只在夜里出来的人、只在白天开张的铺子） */
+function newAtHour(): number | null {
+  const now = S.min, base = untriedNow();
+  try {
+    for (const [h] of XIEJIAO) {
+      S.min = h * 60;
+      for (const k of untriedNow()) if (!base.has(k)) return h;
+    }
+  } finally { S.min = now; }
+  return null;
+}
+
 /** 挑一件事做：没做过的优先，跟着任务走的其次；伤重了去闭关 */
 function choose(list: Act[], seen: Set<string>): Act {
   const w = list.map(a => {
@@ -202,7 +227,12 @@ function step(seen: Set<string>): void {
     const { out } = act(a.id, a.v);
     handle(out, 0);
   } else if (a.k === 'go') travel(a.to);
-  else if (a.k === 'wait') advanceMin(S, 120);
+  // 歇一会儿，或者歇脚等到某个钟点（ui/explore.ts 的 xiejiao；铁律跟现实时间走，机器玩家不受它管）。
+  // 好奇的玩家听说夜里有人出没，会等到夜里去看看：等到那个钟点，就有没点过的动作冒出来
+  else if (a.k === 'wait') {
+    const h = rng() < 0.7 ? newAtHour() : null;
+    advanceMin(S, h !== null ? waitMin(S, h) : rng() < 0.5 ? 120 : waitMin(S, pickOne(XIEJIAO)[0]));
+  }
   else {
     // 闭关碰到约期，那天一早就出关（engine/shiguang.ts 的 restDays；铁律跟现实时间走，机器玩家不受它管）
     const want = 1 + Math.floor(rng() * 3), y = nextYue(S);
@@ -244,7 +274,9 @@ function play(r: Run): void {
     if (r.focus && S.quests[r.focus] !== undefined) S.track = r.focus;
     if (r.focus && S.quests[r.focus] === questById(r.focus)!.stages.length - 1) break;
     const where = `第 ${r.seed} 局第 ${i} 步（${room(S.loc).name}）`;
-    try { step(seen); checkYue(S); } catch (e) { err(`${where}报错：${(e as Error).message}`); }
+    // 照 ui/shell.ts 的 render：失约、江湖往前走
+    try { step(seen); checkYue(S); tickShi(); } catch (e) { err(`${where}报错：${(e as Error).message}`); }
+    for (const [id, st] of Object.entries(S.shi ?? {})) cov.shi.add(`${id}.${st.at}`);
     // 过了约期的约不该还挂着（界面上会一直写「今日」）
     if (S.yue.some(y => y.due < dayNo(S))) err('过了约期的约还挂着');
     check(where.replace(/第 \d+ 步/, '某一步'));
@@ -270,6 +302,8 @@ describe('机器玩家走遍江湖', () => {
   const missEnc = ENCOUNTERS.filter(e => !cov.enc.has(e.id)).map(e => e.id);
   const missFoe = FOES.filter(f => !cov.foe.has(f.id)).map(f => f.id);
   const missRoom = ROOMS.filter(r => !cov.room.has(r.id)).map(r => r.id);
+  const allShi = SHI.flatMap(d => Object.keys(d.steps).map(k => `${d.id}.${k}`));
+  const missShi = allShi.filter(k => !cov.shi.has(k));
   const unfinished = QUESTS.filter(q => (cov.quest.get(q.id) ?? -1) < q.stages.length - 1).map(q => `${q.id}（最远到第 ${(cov.quest.get(q.id) ?? -1) + 1} 阶段，共 ${q.stages.length}）`);
   const report = [
     `走了 ${RUNS.length} 局、${RUNS.reduce((a, r) => a + r.steps, 0)} 步，用时 ${ms} 毫秒`,
@@ -278,14 +312,15 @@ describe('机器玩家走遍江湖', () => {
     `没去过的地点：${missRoom.join('、') || '无'}`,
     `没碰上的对手：${missFoe.join('、') || '无'}`,
     `没碰上的路遇：${missEnc.join('、') || '无'}`,
+    `世事 ${allShi.length - missShi.length}/${allShi.length} 步，没走到的：${missShi.join('、') || '无'}`,
     `提醒：\n${[...warns].map(([m, n]) => `  ${m}（${n} 次）`).join('\n') || '  无'}`
   ];
   if (PREFIX) {
     const mine = (k: string): boolean => k.startsWith(PREFIX);
     const own = (all: string[], miss: string[]): string => `${all.filter(mine).length - miss.filter(mine).length}/${all.filter(mine).length}`;
     report.push(`\n—— 前缀「${PREFIX}」的内容 ——`,
-      `分支 ${own(allBranches, missBranch)}，剧情选项 ${own(allChoices, missChoice)}，对手 ${own(FOES.map(f => f.id), missFoe)}，路遇 ${own(ENCOUNTERS.map(e => e.id), missEnc)}，地点 ${own(ROOMS.map(r => r.id), missRoom)}`,
-      `没走到的：\n  ${[...missBranch, ...missChoice, ...missFoe, ...missEnc, ...missRoom].filter(mine).join('\n  ') || '无'}`,
+      `分支 ${own(allBranches, missBranch)}，剧情选项 ${own(allChoices, missChoice)}，对手 ${own(FOES.map(f => f.id), missFoe)}，路遇 ${own(ENCOUNTERS.map(e => e.id), missEnc)}，地点 ${own(ROOMS.map(r => r.id), missRoom)}，世事 ${own(allShi, missShi)}`,
+      `没走到的：\n  ${[...missBranch, ...missChoice, ...missFoe, ...missEnc, ...missRoom, ...missShi].filter(mine).join('\n  ') || '无'}`,
       '（没走到的不一定是错：可能要很高的根基、很多钱、特定的选择。逐条想一想玩家怎样才能走到；想不出来，就是写错了。）');
   }
   if (VERBOSE && !PREFIX) {
@@ -296,6 +331,10 @@ describe('机器玩家走遍江湖', () => {
 
   it('每个任务都走得完', () => {
     expect(unfinished, '这些任务机器玩家走了几十局也没走完，多半有地方卡住了').toEqual([]);
+  });
+
+  it('每件世事的每一步都有人走到（不管它的那条路，和每一种插手）', () => {
+    expect(missShi, '这些世事的步机器玩家走了几十局也没走到，多半是插手的条件太苛、人不在、或者时辰对不上').toEqual([]);
   });
 
   it('不报错，存档里的数不出格，不卡死', () => {

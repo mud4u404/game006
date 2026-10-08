@@ -15,6 +15,7 @@ import { viewWugong } from './views/wugong';
 import { viewXingnang } from './views/xingnang';
 import { viewDitu } from './views/ditu';
 import { checkYue } from '../engine/shiguang';
+import { tickShi } from '../engine/shishi';
 import { isPreview } from '../core/preview';
 
 type Handler = (v: string, el: HTMLElement) => void;
@@ -108,6 +109,8 @@ const TABS: [Tab, string][] = [['jianghu', '江湖'], ['renwu', '人物'], ['wug
 export function render(): void {
   // 过了约期还没赴的约，算失约（engine/shiguang.ts）：失约的后果、心魔，都记进见闻
   for (const m of checkYue(S)) toast(m);
+  // 江湖自己往前走（engine/shishi.ts）：该起头的起头，到日子的往下走
+  tickShi();
   const r = room(S.loc);
   const bar = $('#appbar'), main = $('#main'), tabs = $('#tabs');
   if (!bar || !main || !tabs) return;

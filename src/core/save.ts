@@ -8,7 +8,7 @@
  * - 每天留一份备份，最多三份；重新开始前也先留一份。
  * - 内容里的 id 只增不删（tests/ids.test.ts 把关）；万一存档里的地点已经不存在，送回安全的地方。
  */
-import { ROOMS, SKILLS, itemById } from '../content';
+import { ROOMS, SKILLS, itemById, shiById } from '../content';
 import { defaultLoadout, fits } from '../engine/wuxue';
 import { GEAR_KEYS, fitsGear } from '../engine/zhuangbei';
 import { syncBody } from '../engine/ren';
@@ -142,6 +142,8 @@ function repair(s: GameState): GameState {
   const fr = rec as { hpFrac?: number; mpFrac?: number };
   if (fr.hpFrac !== undefined) { s.hp = Math.max(1, Math.round(s.hpMax * fr.hpFrac)); delete fr.hpFrac; }
   if (fr.mpFrac !== undefined) { s.mp = Math.round(s.mpMax * fr.mpFrac); delete fr.mpFrac; }
+  // 世事：内容改过、认不得的事或步，丢掉（下一回按条件重新起头）
+  if (s.shi) for (const [id, st] of Object.entries(s.shi)) if (!shiById(id)?.steps[st?.at]) delete s.shi[id];
   // 地点没了，送回这一回的起点
   if (!ROOMS.some(r => r.id === s.loc)) s.loc = s.chapter === 0 ? newGame().loc : skipToYangzhou().loc;
   // 搭配里指向没学会、或已经没有的武功，就空出来

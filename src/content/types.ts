@@ -65,6 +65,8 @@ export interface Cond {
    * 拜师的分支先用它拦下叛出、被逐出本门的人：这两种人 sect 效果拜不回去（engine/shicheng.ts 的 barredFrom）
    */
   pastSect?: { school: string; how?: LeaveHow };
+  /** 世事（engine/shishi.ts）眼下在这几步之一（at）；不在这几步（not，还没起头也算不在） */
+  shi?: { id: string; at?: string[]; not?: string[] };
   any?: Cond[];
 }
 
@@ -73,6 +75,8 @@ export type Effect =
   | { type: 'flag'; flag: string; value?: boolean }
   | { type: 'quest'; id: string; stage: number }
   | { type: 'track'; id: string }
+  /** 玩家插手世事：把它推到 to 这一步（engine/shishi.ts）；不写 to，只是让玩家知道了这件事眼下怎样 */
+  | { type: 'shi'; id: string; to?: string }
   | { type: 'feed'; tag: FeedTag; text: string }
   | { type: 'toast'; text: string }
   | { type: 'silver'; delta: number }
@@ -160,14 +164,18 @@ export interface RoomDef {
 /** 基础服务：医馆（看伤）、客栈（住店）、兵器铺、当铺、杂货铺。tests/content.test.ts「基础设施」按它查各地齐不齐 */
 export type Service = '医' | '宿' | '兵' | '当' | '杂';
 
+export interface NpcAt { room: string; if?: Cond }
+
 export interface NpcDef {
   id: string;
   name: string;
   /**
    * 把人物放进某个已有地点，免得去改那个地点的文件。
    * 物品（obj: true）放进 objs，人物放进 npcs。
+   * 作息（docs/huojianghu.md 第三节第二条）：写成几处，各带时辰条件，例如白天在东关街、夜里在望江楼；
+   * 哪一处的条件成立，他此刻就在哪儿，都不成立就是不在外头。开店的、约人的、派差事的不跟作息走（CI 查）。
    */
-  at?: { room: string; if?: Cond };
+  at?: NpcAt | NpcAt[];
   /** 条件成立时改用另一个名字，例如通报姓名之后 */
   altName?: { if: Cond; name: string };
   /** 头像上的单字；物品用 icon */
@@ -573,6 +581,39 @@ export interface EncounterDef {
 }
 
 /**
+ * 世事：江湖上自己在走的一件事（docs/huojianghu.md 第三节第一条，engine/shishi.ts）。
+ * 分几步，每一步写眼下怎样、传开的话、没人管的话几天后走到哪一步、走到这一步时世界上变了什么。
+ * 玩家不插手，事情照样走到结局；插手写在人物的动作、剧情卡里：条件 { shi: { id, at } }，效果 { type: 'shi', id, to }。
+ * 每件事至少三个结局：没人管的一个，插手的至少两个，结局之间世界的样子看得出不同。
+ */
+export interface ShiDef {
+  id: string;
+  name: string;
+  /** 在哪个地区：人在这个地区时听得到传开的话，这里的人打听得到 */
+  region: string;
+  /** 什么时候起头；不写就是一开局已经在走 */
+  start?: Cond;
+  /** 起头那一步 */
+  first: string;
+  steps: Record<string, ShiStep>;
+  /** 了结以后过几天重新起头（年年有的事：漕粮北上、庙会……）；不写的只有一回 */
+  again?: number;
+}
+
+export interface ShiStep {
+  /** 见闻簿上的一句：这件事眼下怎样（只写玩家看得见、听得到的） */
+  now: string;
+  /** 走到这一步时传开的话：人在这个地区就听得到，打听也问得到 */
+  news?: string;
+  /** 事情在哪儿：走进这个地点，就知道了这一步 */
+  where?: string;
+  /** 没人插手时，过几天自己走到哪一步（半天写 0.5）；不写的是结局 */
+  next?: { days: number; to: string };
+  /** 走到这一步时世界上变的事（旗标、关系……）。玩家插手引起的变化写在玩家的选择里 */
+  do?: Effect[];
+}
+
+/**
  * 内容包：src/content/packs/ 下每个文件默认导出一个内容包，系统自动收录。
  * 新增内容时新建自己的内容包文件，尽量不要改别人的文件。
  */
@@ -633,4 +674,5 @@ export interface ContentPack {
   encounters?: EncounterDef[];
   jobs?: JobDef[];
   eyes?: EyeDef[];
+  shi?: ShiDef[];
 }

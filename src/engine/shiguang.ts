@@ -5,8 +5,9 @@
  * - 静修：先养伤，再打坐长功力、参悟化历练（engine/lilian.ts）。心魔每一层，成效打八折；重了会走火。
  * - 约：人物和你定约。静修碰到约期，就在约期那天一早出关；过了约期还没了结，就是失约，生一层心魔。
  */
+import { tickShi } from './shishi';
 import { pushFeed, type GameState, type Yue } from '../core/state';
-import { advanceDays, dayNo, nowMs } from '../core/time';
+import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
 import { NEWS, room, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { run, test } from './dsl';
@@ -44,6 +45,25 @@ export function restDays(s: GameState, want: number): { days: number; why?: 'tie
   const y = nextYue(s);
   if (y && y.due - dayNo(s) < days) { days = Math.max(0, y.due - dayNo(s)); why = 'yue'; yue = y; }
   return { days, why, yue };
+}
+
+/** 歇脚能等到的几个钟点（docs/huojianghu.md 第三节第二条：人有作息，玩家要等得到夜里、等得到天亮） */
+export const XIEJIAO: [number, string][] = [[6, '天亮'], [12, '晌午'], [17, '傍晚'], [21, '入夜']];
+
+/** 从现在等到 hour 点要几分钟（今天过了就是明天） */
+export const waitMin = (s: Pick<GameState, 'min'>, hour: number): number => {
+  const m = hour * 60 - s.min;
+  return m > 0 ? m : m + 1440;
+};
+/** 等得了吗：跨过半夜要多用一个江湖日，铁律还有余裕才行 */
+export const canWait = (s: GameState, hour: number): boolean => s.min + waitMin(s, hour) < 1440 || allowance(s) >= 1;
+
+/** 歇脚：在原地等到某个钟点。等不了（江湖跑不过现实）返回零，否则返回等了几分钟 */
+export function waitUntil(s: GameState, hour: number): number {
+  if (!canWait(s, hour)) return 0;
+  const m = waitMin(s, hour);
+  advanceMin(s, m);
+  return m;
 }
 
 export interface RestReport {
@@ -87,11 +107,14 @@ export function jingxiu(s: GameState, days: number, rng: () => number = Math.ran
   advanceDays(s, days);
   s.min = 7 * 60 + 10;
   s.hp = s.hpMax; s.mp = s.mpMax;
-  // 静修的日子里，江湖上的传闻
+  // 静修的日子里，江湖自己往前走（engine/shishi.ts）：这一带的事传到耳朵里的先写，再补几句闲话传闻
+  const heard = tickShi();
   const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
-  const news: string[] = [];
-  for (let i = 0; i < Math.min(3, Math.ceil(days / 5)) && pool.length; i++) news.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
-  news.slice().reverse().forEach(n => pushFeed('传闻', n));
+  const news: string[] = [...heard];
+  const more: string[] = [];
+  for (let i = 0; i < Math.min(3, Math.ceil(days / 5)) - heard.length && pool.length; i++) more.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  more.slice().reverse().forEach(n => pushFeed('传闻', n));
+  news.push(...more);
   const missed = checkYue(s);
   return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed, lodging: lusuDays ? 'lusu' : 'inn', cost, lusuDays };
 }

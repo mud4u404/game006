@@ -5,8 +5,8 @@
 import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
 import { advanceMin, dayNo } from '../core/time';
-import { liang, pick } from '../core/util';
-import { NEWS, jobById, questById, skillById } from '../content';
+import { liang } from '../core/util';
+import { jobById, questById, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
@@ -14,6 +14,7 @@ import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
 import { houtianOf } from './ren';
 import { SHENFEN, jobOpen, jobPay } from './shenfen';
+import { hearsay, learnShi, moveShi } from './shishi';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
 
@@ -71,6 +72,12 @@ export function test(c?: Cond): boolean {
   if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
   if (c.job !== undefined && S.job?.id !== c.job) return false;
   if (c.jobOpen !== undefined && !jobOpen(S, c.jobOpen)) return false;
+  // 世事（engine/shishi.ts）：眼下在哪一步；还没起头的，哪一步都不在
+  if (c.shi) {
+    const at = S.shi?.[c.shi.id]?.at;
+    if (c.shi.at && !(at !== undefined && c.shi.at.includes(at))) return false;
+    if (c.shi.not && at !== undefined && c.shi.not.includes(at)) return false;
+  }
   if (c.hour) {
     const h = Math.floor(S.min / 60);
     const { from, to } = c.hour;
@@ -116,6 +123,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         break;
       }
       case 'track': S.track = e.id; break;
+      case 'shi': if (e.to) moveShi(e.id, e.to); else learnShi(e.id); break;
       case 'feed': pushFeed(e.tag, e.text); break;
       case 'feedReset': S.feed = []; break;
       case 'toast': emit('toast', e.text); break;
@@ -179,13 +187,8 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
         break;
       }
-      case 'news': {
-        const pool = NEWS.filter(n => test(n.if));
-        const n = pick(pool).text;
-        pushFeed('传闻', n);
-        out.vars.news = n;
-        break;
-      }
+      // 江湖上的话：这一带你还不知道的世事先说，没有再说闲话传闻（engine/shishi.ts 的 hearsay）
+      case 'news': out.vars.news = hearsay() ?? '这几日太平得很，没听说什么。'; break;
       case 'yue':
         S.yue = S.yue.filter(y => y.id !== e.id).concat({ id: e.id, npc: e.npc, at: e.at, due: dayNo(S) + e.inDays, text: e.text, miss: e.miss });
         pushFeed('江湖', `定了约：${e.text}`);

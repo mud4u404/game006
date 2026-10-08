@@ -7,6 +7,7 @@ import { syncBody } from '../engine/ren';
 export interface SkillProg { r: number; p: number }
 /** 约：npc 在 at 等你，due 是哪一个江湖日（core/time.ts 的 dayNo）；miss 是失约的后果 */
 export interface Yue { id: string; npc: string; at: string; due: number; text: string; miss?: Effect[] }
+export interface ShiState { at: string; since: number; seen?: string; done?: number }
 export interface FeedEntry { t: FeedTag; x: string; n: number }
 export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
 /** 纸娃娃六个装备位在存档里的键：兵器、冠、衣、靴、佩、饰 */
@@ -79,6 +80,13 @@ export interface GameState {
   lilian: number;
   /** 和每个对手最近交手的记录：七天内反复打同一人，历练一次比一次少 */
   foeLog?: Record<string, { n: number; day: number }>;
+  /**
+   * 世事（engine/shishi.ts，docs/huojianghu.md）：每件事走到哪一步、哪一刻走到的（core/time.ts 的 absMin）、
+   * 玩家知道到哪一步（没有就是还不知道）、了结过几回。还没起头的事不在这里
+   */
+  shi?: Record<string, ShiState>;
+  /** 打听：每个人今天问过没有（江湖日） */
+  asked?: Record<string, number>;
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */
   encLog: Record<string, number>;
   lastEnc: number;

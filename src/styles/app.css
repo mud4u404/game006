@@ -129,6 +129,8 @@ svg{display:block}
 .d-h small{margin-left:auto;font-size:12px;color:var(--muted)}
 .acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .act{height:44px;border-radius:12px;background:var(--chip);font-size:14px;font-weight:500}
+.acts.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.act:disabled{opacity:.45}
 .act.danger{background:var(--danger-soft);color:var(--danger)}
 .act.strong{background:var(--danger-fill);color:var(--on-danger);font-weight:700}
 .act.spar{background:var(--accent-soft);color:var(--accent);font-weight:700}

@@ -7,7 +7,7 @@ const BOSS_HERE = { quest: { id: 'main1', is: 1 }, notFlag: 'boss' };
 const ROOMS: RoomDef[] = [
   { id: 'hu', name: '瘦西湖畔', area: '扬州 · 瘦西湖', region: 'yz', t: 0, map: [50, 50],
     desc: '垂柳如烟，画舫在细雨中缓缓靠岸。茶棚里三个佩刀汉子压低声音说着什么；石桥那头，一个青衫书生撑伞而立，似在等人。',
-    npcs: ['caobang', 'liu', 'huagu'], objs: ['bei'],
+    npcs: ['caobang', 'liu'], objs: ['bei'],
     exits: [['北', 'daming'], ['东', 'dukou'], ['南', 'cheng'], ['西', 'jinshan']],
     road: '你折回湖畔，柳丝拂过肩头……' },
   { id: 'daming', name: '大明寺', area: '扬州 · 蜀冈', region: 'yz', t: 30, map: [50, 14],
@@ -17,14 +17,33 @@ const ROOMS: RoomDef[] = [
   { id: 'dukou', name: '运河渡口', area: '扬州 · 东关', region: 'yz', t: 15, map: [79, 50],
     desc: [
       { if: BOSS_HERE, text: '运河上帆樯林立，三条漕船被几艘黑篷快船团团围住。一个虬髯大汉立在码头当中，手按鬼头刀，正吆喝喽啰往岸上搬盐包。' },
+      // 码头空出来以后（packs/shishi-yangzhou.ts）：不管它，西舵占了码头；插手的，各有各的样子
+      { if: { shi: { id: 'ss_matou', at: ['qi'] } }, text: '码头上又热闹起来，可脚夫们卸货时都不说话，三三两两地往北头瞟：那里多了几个生面孔，抱着胳膊，什么活也不干。' },
+      { if: { shi: { id: 'ss_matou', at: ['duizhi'] } }, text: '码头像被人从当中劈成了两半：北头几十个短打汉子守着盐包，领头的是个精瘦的黄脸汉子；南头是东舵的人，老管事也在里头。脚夫们蹲在远处，谁也不敢上工。' },
+      { if: { shi: { id: 'ss_matou', at: ['huobing'] } }, text: '码头上的血还没冲干净，缆桩边扔着几把卷了刃的刀。北头的西舵人多了一倍，东舵的人缩在南头的船上，伤号躺了一排。' },
+      { if: { shi: { id: 'ss_matou', at: ['xiduo'] } }, text: '码头归了西舵。焦五的人守着跳板，过一回船先交二十文。北头堆着些没有盐引的麻包，用油布盖得严严实实。' },
+      { if: { shi: { id: 'ss_matou', at: ['dongduo'] } }, text: '东舵的旗子插回了缆桩上，码头上又热闹起来。老管事背着手在跳板边转悠，见了你，远远就拱手。' },
+      { if: { shi: { id: 'ss_matou', at: ['tiaoting'] } }, text: '码头当中钉了一根木桩，桩上刻着「东」「西」两个字。白天东舵的船靠南头，夜里西舵的船靠北头，各走各的。' },
+      { if: { shi: { id: 'ss_matou', at: ['guanfu'] } }, text: '码头口新搭了一座税棚，府衙的税吏坐在棚下记账。漕帮两舵的人都不大来了，脚夫少了一半。' },
       { if: { flag: 'boss' }, text: '码头上又热闹起来，脚夫们扛着盐包来来往往。几个船夫蹲在缆桩边，一见你便笑着招手。' },
       { text: '运河上帆樯林立，漕船首尾相接。码头上脚夫扛着盐包来来往往，几个船夫蹲在缆桩边，不时朝江面张望。' }
     ],
     npcs: [{ id: 'tu', if: BOSS_HERE }, 'chuanfu', 'guanshi'], exits: [['西', 'hu']],
     road: '你穿过几条小巷，河风里带着咸腥的盐味……' },
   { id: 'cheng', name: '东关街', area: '扬州城', region: 'yz', t: 15, map: [50, 86],
-    desc: '青石长街两旁店铺林立，绸缎庄、药铺、酒楼的幌子在细雨里轻轻摇晃。街角一个说书人正讲到精彩处，引得众人连声叫好。',
-    npcs: ['shuoshu', 'yaopu', 'xiaoer'], exits: [['北', 'hu']],
+    desc: [
+      // 夜里（packs/shishi-yangzhou.ts 的更夫、黑影只在夜里出来）
+      { if: { hour: { from: 21, to: 5 }, shi: { id: 'ss_zei', at: ['qi', 'bang'] } },
+        text: '店铺都上了门板，只有望江楼还亮着灯。药铺后墙新钉了几块木板，掌柜说接连几夜遭了贼。更夫的梆子声从巷子那头远远传来。' },
+      { if: { hour: { from: 21, to: 5 } }, text: '店铺都上了门板，长街上黑漆漆的，只有望江楼还亮着灯。更夫的梆子声从巷子那头远远传来。' },
+      { if: { hour: { from: 18, to: 21 } }, text: '天擦黑了，店铺陆续上了门板。街角说书的场子已经散了，听说说书人晚上在望江楼接着说。' },
+      { if: { shi: { id: 'ss_zei', at: ['qi', 'bang'] } },
+        text: '青石长街两旁店铺林立，绸缎庄、药铺、酒楼的幌子在细雨里轻轻摇晃。药铺掌柜站在门口骂街，说昨夜又丢了药；街角的说书人拿这事编了段子，引得众人哄笑。' },
+      { if: { shi: { id: 'ss_zei', at: ['zhuo'] }, flag: 'ss_zei_fang' },
+        text: '青石长街两旁店铺林立。街坊们还在说那个挨了板子的孩子。你想起那夜龙王庙后头草棚里的咳嗽声。' },
+      { text: '青石长街两旁店铺林立，绸缎庄、药铺、酒楼的幌子在细雨里轻轻摇晃。街角一个说书人正讲到精彩处，引得众人连声叫好。' }
+    ],
+    npcs: ['yaopu', 'xiaoer'], exits: [['北', 'hu']],
     road: '你穿过高高的城门洞，市声渐渐近了……' },
   { id: 'jinshan', name: '小金山', area: '瘦西湖 · 湖心', region: 'yz', t: 10, map: [20, 50],
     desc: '湖心小岛上亭台错落，风亭立在山顶，凭栏可望尽一湖烟雨。亭中石桌上摆着一局残棋，一个老人对着棋盘出神。',
@@ -79,6 +98,8 @@ const NPCS: NpcDef[] = [
         do: [{ type: 'rel', npc: 'liu', value: '心存芥蒂' }] }]
     } },
   { id: 'huagu', name: '卖花姑娘', ini: '花', tone: 'amber', brief: '挎着花篮',
+    // 作息：天亮出来卖花，天黑回家
+    at: { room: 'hu', if: { hour: { from: 6, to: 18 } } },
     look: '十五六岁年纪，篮里是新折的杏花，还带着雨水。',
     gift: '姑娘扑哧一笑：「公子，这本来就是我的花呀。」',
     likes: ['flower'],
@@ -153,6 +174,11 @@ const NPCS: NpcDef[] = [
     look: '黝黑的脸膛，一双手全是老茧，正闷头抽着旱烟。',
     verbs: ['交谈', '观察'],
     actions: { 交谈: [
+      { if: { shi: { id: 'ss_matou', at: ['duizhi', 'huobing'] } }, text: '「两舵要打起来了，客官离码头远些。」船夫把烟锅往鞋底一磕，「刀子不长眼。」' },
+      { if: { shi: { id: 'ss_matou', at: ['xiduo'] } }, text: '「过一回船二十文，焦五定的。」船夫往北头啐了一口，「屠千山劫船，焦五收钱，换汤不换药。」' },
+      { if: { shi: { id: 'ss_matou', at: ['dongduo'] } }, text: '「东舵的旗子又插回来了！」船夫咧嘴直笑，「客官坐船，分文不取。」' },
+      { if: { shi: { id: 'ss_matou', at: ['tiaoting'] } }, text: '「白天南头，夜里北头，倒也相安无事。」船夫慢悠悠地抽着烟。' },
+      { if: { shi: { id: 'ss_matou', at: ['guanfu'] } }, text: '「税棚一搭，船家倒要先养活官老爷。」船夫闷头抽烟，不再说话。' },
       { if: { flag: 'boss' }, text: '「托您的福，码头又能开船了！客官要坐船，不收钱！」' },
       { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_scar' }, text: '「记住了，往他左边走。」船夫闷头抽烟，不再多说。' },
       { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_saw_arm' },
@@ -170,9 +196,24 @@ const NPCS: NpcDef[] = [
         { if: { flag: 'tu_with_allies', notFlag: 'paid' },
           text: '管事的算盘不在腰后了。他苦笑一声：「帮主撤了我的管事，叫我回船上撑篙。」他从怀里摸出一串钱塞给你：「这是我自己的一点心意。三船盐回来了，兄弟们的血汗没白流，值。」（银两 +100 文）',
           do: [{ type: 'flag', flag: 'paid' }, { type: 'silver', delta: 100 }, { type: 'rel', npc: 'guanshi', value: '相谈甚欢', note: '渡口一战，他违了帮主的令，带兄弟替你截住喽啰' }, { type: 'toast', text: '银两 +100 文' }] },
-        { if: { flag: 'tu_with_allies' }, text: '「撑篙也挺好。」他笑了笑，「运河上的事，我照样替你打听。」' },
         { if: { flag: 'boss', notFlag: 'paid' }, text: '管事一揖到地：「恩公！这是漕帮的一点心意，万望收下。」（银两 +100 文）',
           do: [{ type: 'flag', flag: 'paid' }, { type: 'silver', delta: 100 }, { type: 'rel', npc: 'guanshi', value: '相谈甚欢', note: '你斗败屠千山，夺回了漕帮的三船盐' }, { type: 'toast', text: '银两 +100 文' }] },
+        // 码头空出来以后（packs/shishi-yangzhou.ts）
+        { if: { shi: { id: 'ss_matou', at: ['qi'] } },
+          text: '管事望着北头那几个生面孔，眉头拧成了疙瘩：「西舵的人。屠千山一倒，焦五就盯上了这块码头。他跟盐号走得近，码头落到他手里，夜里就要走私盐了。」' },
+        { if: { shi: { id: 'ss_matou', at: ['duizhi'] } },
+          text: '「焦五带人占了北头，说码头是西舵打下来的。」管事咬着牙，「打下来？屠千山是少侠打跑的！帮主远在淮安，管不到这头。」他看着你，欲言又止：「少侠说一句话，焦五兴许肯听。」' },
+        { if: { shi: { id: 'ss_matou', at: ['huobing'] } },
+          text: '管事胳膊上缠着布，血渗了出来：「昨夜火并，东舵折了三个兄弟。再拖两天，码头就是焦五的了。」' },
+        { if: { shi: { id: 'ss_matou', at: ['xiduo'] } },
+          text: '管事坐在船头，算盘也不打了：「码头归了西舵，东舵的船过一回也要给焦五交钱。」他苦笑一声，「少侠哪天要替兄弟们出这口气，焦五就在码头上。」' },
+        { if: { shi: { id: 'ss_matou', at: ['dongduo'] } },
+          text: '「东舵的兄弟都记着少侠。」管事拍着胸口，「往后在运河上行船，报东舵的名号便是。」' },
+        { if: { shi: { id: 'ss_matou', at: ['tiaoting'] } },
+          text: '「东一半，西一半。」管事叹了口气，又笑了，「总比见血强。少侠这份面子，两舵都记着。」' },
+        { if: { shi: { id: 'ss_matou', at: ['guanfu'] } },
+          text: '管事看你的眼神有些复杂：「官府插了一手，码头谁也没占着，税倒先收上了。」他顿了顿，「听说，是有人去府衙报的信。」' },
+        { if: { flag: 'tu_with_allies' }, text: '「撑篙也挺好。」他笑了笑，「运河上的事，我照样替你打听。」' },
         { if: { flag: 'boss' }, text: '「恩公以后在运河上行船，报漕帮的名号便是。」' },
         { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_allies' }, text: '管事朝盐包那边努努嘴：「兄弟们都在后头候着。少侠一动手，我们就截住那帮喽啰。」' },
         { if: { quest: { id: 'main1', is: 1 }, xia: 20 },
@@ -186,6 +227,8 @@ const NPCS: NpcDef[] = [
       ]
     } },
   { id: 'shuoshu', name: '说书人', ini: '说', tone: 'purple', brief: '醒木一拍',
+    // 作息：白天在东关街街角，晚上在望江楼，夜深了回家
+    at: [{ room: 'cheng', if: { hour: { from: 7, to: 18 } } }, { room: 'cheng_tavern', if: { hour: { from: 18, to: 23 } } }],
     look: '一袭旧长衫，折扇上题着「江湖夜雨」四个字。',
     verbs: ['交谈', '观察', '打赏'],
     actions: {
@@ -204,7 +247,14 @@ const NPCS: NpcDef[] = [
     look: '精瘦的老头，药柜上百个抽屉，他闭着眼也能抓对。',
     verbs: ['交谈', '观察', '购买'],
     actions: {
-      交谈: [{ text: '「金疮药，二十文一包，止血生肌，童叟无欺。」' }],
+      交谈: [
+        // 东关街夜里闹贼（packs/shishi-yangzhou.ts）
+        { if: { shi: { id: 'ss_zei', at: ['qi', 'bang'] } }, text: '「昨夜又丢了两包药！专挑治咳嗽的拿，你说这贼是不是有病？」掌柜把算盘拍得山响，「金疮药二十文一包，看好了再买。」' },
+        { if: { shi: { id: 'ss_zei', at: ['zhuo'] } }, text: '掌柜叹了口气：「贼拿住了，是个孩子，偷药给他娘治咳嗽。二十板子……早知道，我送他两副也就是了。」' },
+        { if: { shi: { id: 'ss_zei', at: ['songguan'] } }, text: '「是少侠拿住的那个贼？」掌柜看了你一眼，没再往下说，低头拨算盘，「金疮药，二十文一包。」' },
+        { if: { shi: { id: 'ss_zei', at: ['huanle'] } }, text: '「少侠替那孩子赔了药钱，老朽脸上发烧。」掌柜从柜里取出一包药推过来，「他娘的方子，老朽另配了一副，劳烦少侠带给阿七，不收钱。」' },
+        { text: '「金疮药，二十文一包，止血生肌，童叟无欺。」' }
+      ],
       购买: [
         { if: { silver: 20 }, text: '掌柜麻利地包好一包金疮药递过来。（银两 −20 文）',
           do: [{ type: 'silver', delta: -20 }, { type: 'item', id: 'jcy', delta: 1 }, { type: 'toast', text: '金疮药 +1' }] },

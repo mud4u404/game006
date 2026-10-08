@@ -1,11 +1,11 @@
 /**
  * 内容 id 只增不删。
- * 玩家的存档里记着地点、人物、物品、任务、武功、路遇的 id；删掉或改名，朋友们的存档就会出问题。
+ * 玩家的存档里记着地点、人物、物品、任务、武功、路遇、世事的 id；删掉或改名，朋友们的存档就会出问题。
  * id-registry.json 记着已经发出去的 id，这里检查它们都还在。新增的 id 不用管；
  * 维护者每天审查时运行 `npm run ids` 把新 id 记进来。
  */
 import { describe, expect, it } from 'vitest';
-import { ENCOUNTERS, FOES, ITEMS, NPCS, QUESTS, ROOMS, SKILLS, STORIES } from '../src/content';
+import { ENCOUNTERS, FOES, ITEMS, NPCS, QUESTS, ROOMS, SHI, SKILLS, STORIES } from '../src/content';
 
 type Registry = { ids: Record<string, string[]>; stages: Record<string, number> };
 const RAW = import.meta.glob<string>('./id-registry.json', { query: '?raw', import: 'default', eager: true })['./id-registry.json'];
@@ -20,7 +20,9 @@ const current = (): Record<string, string[]> => ({
   skills: SKILLS.map(x => x.id),
   stories: STORIES.map(x => x.id),
   // 存档里记着遇到过哪些路遇（encLog）
-  encounters: ENCOUNTERS.map(x => x.id)
+  encounters: ENCOUNTERS.map(x => x.id),
+  // 存档里记着每件世事走到哪一步（shi）：事和步都不能改名
+  shi: SHI.flatMap(d => [d.id, ...Object.keys(d.steps).map(k => `${d.id}.${k}`)])
 });
 // 任务的阶段数也只增不减：存档里记着「第几阶段」
 const stages = (): Record<string, number> => Object.fromEntries(QUESTS.map(q => [q.id, q.stages.length]));

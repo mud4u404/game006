@@ -16,8 +16,16 @@ const NPCS: NpcDef[] = [
   {
     id: 'fuya_zhou', name: '周捕头', ini: '周', tone: 'blue', brief: '翻着卷宗',
     look: '四十出头，络腮胡刮得发青，两眼布满血丝。皂衣上打了个补丁，腰牌上刻着一个「周」字，漆快掉光了。他手背上有一道旧刀伤，从虎口一直划到腕子上，卷宗里夹着一张画像，画着个短打汉子，左手缺了个小指。',
-    verbs: ['交谈', '观察', '揭榜', { verb: '交差', if: { quest: { id: 'side_caoshangfei', atLeast: 2 } } }],
+    verbs: ['交谈', '观察', '揭榜', { verb: '交差', if: { quest: { id: 'side_caoshangfei', atLeast: 2 } } },
+      // 码头空出来以后（packs/shishi-yangzhou.ts）：报官是插手的一条路
+      { verb: '报官', if: { shi: { id: 'ss_matou', at: ['qi', 'duizhi', 'huobing'] } } }],
     actions: {
+      报官: [
+        { text: '你把渡口的事说了。周捕头听完，把卷宗一合：「漕帮自家的事，衙门向来不管。可要是见了血，又夹着私盐……」他叫来两个衙役，「封了渡口，搭个税棚。谁的码头？官府的码头。」他看了你一眼，「这事是你报的，漕帮那头，你自己小心。」',
+          do: [{ type: 'shi', id: 'ss_matou', to: 'guanfu' },
+            { type: 'rel', npc: 'fuya_zhou', value: '点头之交', from: ['素不相识'], note: '你来府衙报了漕帮两舵争码头的事' },
+            { type: 'feed', tag: '江湖', text: '你去府衙报了官。府衙封了渡口，搭起税棚，漕帮两舵谁也没占着。' }] }
+      ],
       交差: [
         { if: { quest: { id: 'side_caoshangfei', is: 2 }, flag: 'csf_surrender' },
           text: '草上飞跟在你身后走进正堂，自己跪下了。周捕头愣了半晌，转身去后院开了牢门，账房先生跌跌撞撞地跑出来，扑通一声给你磕了个头。周捕头铺开文书，一笔一笔地写：「劫银三百两，一百两济茱萸湾灾民，余银二百两起获归还。」他搁下笔：「府台那里，我替他说话。」又从自己腰间解下钱袋，倒出二两碎银推给你：「赏银要等府台批，这是我的心意。」',

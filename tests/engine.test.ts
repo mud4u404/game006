@@ -158,11 +158,11 @@ describe('条件与效果', () => {
     expect(t).toContain('络腮胡');
     expect(t).toContain('旧刀伤');
   });
-  it('带条件的动作，条件成立才出现', () => {
+  it('带条件的动作，条件成立才出现；说得上话的人都能打听', () => {
     const n = { verbs: ['交谈', { verb: '求情', if: { flag: 'truth' } }] } as unknown as NpcDef;
-    expect(verbsOf(n)).toEqual(['交谈']);
+    expect(verbsOf(n)).toEqual(['交谈', '打听']);
     S.flags.truth = true;
-    expect(verbsOf(n)).toEqual(['交谈', '求情']);
+    expect(verbsOf(n)).toEqual(['交谈', '打听', '求情']);
   });
   it('进门时的文字记进见闻', () => {
     enter('daming_cangjing');
