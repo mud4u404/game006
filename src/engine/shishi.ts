@@ -126,6 +126,13 @@ export function dating(npcId: string, who: string): string {
   return `${who}${pick(['压低了声音', '左右看了看', '凑近了些', '想了想'])}：「${line}」`;
 }
 
+/** 盘问：捕快亮出腰牌，谁都得答话（docs/lizu.md：六扇门的特权）。不像打听那样一天一回 */
+export function panwen(who: string): string {
+  const line = hearsay();
+  if (!line) return `你亮出腰牌。${who}连连作揖：「官爷，小的什么也不知道，这几日太平得很。」`;
+  return `你亮出腰牌。${who}不敢怠慢，一五一十地说了：「${line}」`;
+}
+
 /** 见闻簿：玩家知道的事，按「还在走」「了结的」分开；写的是玩家知道的那一步，不一定是眼下的 */
 export interface ShiRow { id: string; name: string; region: string; now: string; stale: boolean; ended: boolean }
 export function knownShi(): ShiRow[] {

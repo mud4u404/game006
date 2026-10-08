@@ -76,6 +76,8 @@ const GB_JOIN: Effect[] = [
 
 const LSM_JOIN: Effect[] = [
   { type: 'sect', school: '六扇门', rank: '记名' },
+  // 身份：捕快（engine/shenfen.ts）。腰牌能盘问人人；海捕文书上的人犯见 packs/liushanmen.ts
+  { type: 'shenfen', id: 'bukuai' },
   { type: 'flag', flag: 'bs2_lsm_in' },
   { type: 'item', id: 'bs2_yaopai', delta: 1 },
   { type: 'item', id: 'bs2_tiechi', delta: 1 },
@@ -336,6 +338,8 @@ const NPCS: NpcDef[] = [
       { verb: '请教', if: { sect: LSM } }],
     actions: {
       交谈: [
+        { if: { pastSect: { school: '六扇门', how: '逐出' } },
+          text: '秦教头擦着铁尺，看都不看你：「腰牌是我亲手收回来的。」他顿了顿，「六扇门的门，你这辈子是进不来了。」' },
         { if: { sect: LSM },
           text: '秦教头拿铁尺敲敲你的腰牌：「门规记着：拿人不杀人，人犯交给律法；不收贼赃，不私放人犯。」他顿了顿，「江湖上有人骂你鹰犬，由他骂。恶名一高，这块牌子我亲手收回来。」' },
         { if: { flag: 'csf_freed' },
@@ -387,6 +391,14 @@ const NPCS: NpcDef[] = [
       { verb: '考校', if: { sect: JW, notFlag: 'bs2_jw_wai' } }],
     actions: {
       交谈: [
+        // 海捕文书 · 逃兵熊大（packs/liushanmen.ts）：识破他的一条路，也是一桩两难
+        { if: { shi: { id: 'lsm_xiong', at: ['zaitao', 'zuoan'] }, notFlag: 'lsm_xiong_shipo' },
+          text: '韩什长听你说起熊大，半晌没吭声。「我认得他。九边的兵，右臂上都刺『忠勇』。」他拿白蜡杆在地上划了一道，「那百户克扣军粮，饿死了人，营里谁都知道。」他别过脸去，「当兵的除了杀人，就只会打铁。你去镇江打铁巷看看吧。拿不拿他，你自己定。」',
+          do: [{ type: 'flag', flag: 'lsm_xiong_shipo' }, { type: 'shi', id: 'lsm_xiong' }] },
+        { if: { shi: { id: 'lsm_xiong', at: ['fang', 'taozou'] } },
+          text: '韩什长朝北边望了一眼：「熊大过江了？」他点点头，「九边缺人。他要是换个名字回去，上了阵，也是条好汉。」' },
+        { if: { shi: { id: 'lsm_xiong', at: ['luowang', 'sha'] } },
+          text: '韩什长拿白蜡杆戳着地，一下一下：「熊大的事，我听说了。」他没再往下说。' },
         { if: { sect: JW_OUT },
           text: '韩什长拿白蜡杆戳戳你的枪：「正兵了。上了阵，枪往前扎，人往前走，别回头看。」他顿了顿，「回头的，都没回来。」' },
         { if: { sect: JW },

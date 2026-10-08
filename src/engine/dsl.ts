@@ -6,7 +6,7 @@ import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
 import { advanceMin, dayNo } from '../core/time';
 import { liang } from '../core/util';
-import { jobById, questById, skillById } from '../content';
+import { itemById, jobById, questById, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
@@ -88,6 +88,7 @@ export function test(c?: Cond): boolean {
     const d = skillById(c.canLearn);
     if (!d || !canLearn(S, d).ok) return false;
   }
+  if (c.notSect !== undefined && S.sect?.school === c.notSect) return false;
   if (c.sect && (S.sect?.school !== c.sect.school || (c.sect.rank && SECT_RANKS.indexOf(S.sect.rank) < SECT_RANKS.indexOf(c.sect.rank)))) return false;
   if (c.noSect && S.sect) return false;
   if (c.pastSect && !pastSectsOf(S).some(x => x.school === c.pastSect!.school && (!c.pastSect!.how || x.how === c.pastSect!.how))) return false;
@@ -108,6 +109,21 @@ export interface Outcome {
 }
 
 export const newOutcome = (): Outcome => ({ vars: {}, breaks: [] });
+
+/**
+ * 被东家辞退（地位降到零、恶名太盛）：做回游侠，手上的差事作废；
+ * 身份连着门派的，一并逐出门墙；身份的信物收回（engine/shenfen.ts 的 sect、badge）
+ */
+function dismiss(why: string): void {
+  const sf = SHENFEN[S.shenfen.id];
+  if (!sf) return;
+  const lines = [`${why}不再是${sf.name}，又做回了游侠。`];
+  if (sf.badge && S.items[sf.badge]) { S.items[sf.badge] = 0; lines.push(`${itemById(sf.badge)?.name ?? '信物'}收了回去。`); }
+  if (sf.sect && S.sect?.school === sf.sect) { (S.pastSects ??= []).push({ school: sf.sect, how: '逐出' }); delete S.sect; lines.push(`你被逐出了${sf.sect}。`); }
+  pushFeed('江湖', lines.join(''));
+  S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) };
+  S.job = null;
+}
 
 export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()): Outcome {
   for (const e of effects || []) {
@@ -155,11 +171,23 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       }
       // 离开师门：出师、叛门、逐出都记进来历（engine/shicheng.ts 的 pastSectsOf）
       case 'leaveSect':
-        if (S.sect) { (S.pastSects ??= []).push({ school: S.sect.school, how: e.how }); delete S.sect; }
+        if (S.sect) {
+          const school = S.sect.school;
+          (S.pastSects ??= []).push({ school, how: e.how });
+          delete S.sect;
+          // 身份连着这个门派的（捕快之于六扇门），离了门派，身份也就没了
+          if (SHENFEN[S.shenfen.id]?.sect === school) { pushFeed('江湖', `你离了${school}，不再是${SHENFEN[S.shenfen.id].name}。`); S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) }; S.job = null; }
+        }
         break;
       case 'attr': growAttr(S, e.key, e.delta, '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;
-      case 'eming': S.eming = Math.max(0, S.eming + e.delta); break;
+      case 'eming': {
+        S.eming = Math.max(0, S.eming + e.delta);
+        // 软肋：恶名到了这个身份容不下的地步，被辞退（六扇门收回腰牌）
+        const cap = SHENFEN[S.shenfen.id]?.maxEming;
+        if (cap !== undefined && S.eming >= cap) dismiss('恶名太盛，');
+        break;
+      }
       case 'title': S.title = e.value; break;
       case 'chapter': S.chapter = e.value; break;
       case 'move': S.loc = e.to; S.sel = null; S.reply = null; out.moved = true; break;
@@ -211,11 +239,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         // 游侠、渔家没有东家，谈不上辞退，地位不降到零
         const free = S.shenfen.id === 'youxia' || S.shenfen.id === 'yumin';
         S.shenfen.standing = Math.max(free ? 1 : 0, Math.min(3, S.shenfen.standing + e.delta));
-        if (S.shenfen.standing === 0) {
-          pushFeed('江湖', `你被辞退了，不再是${sf?.name ?? ''}，又做回了游侠。`);
-          S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) };
-          S.job = null;
-        }
+        if (S.shenfen.standing === 0 && sf) dismiss('你被辞退了，');
         break;
       }
       case 'job': {

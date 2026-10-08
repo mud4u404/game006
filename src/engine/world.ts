@@ -7,7 +7,8 @@ import { advanceMin, shichen } from '../core/time';
 import { attrEffects } from './gengu';
 import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
-import { dating, seeShi } from './shishi';
+import { dating, panwen, seeShi } from './shishi';
+import { shenfenOf } from './shenfen';
 
 /** 此刻在场的：带条件的（作息、剧情）按条件挑；同一人写了几处作息的，只算一次 */
 const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
@@ -75,6 +76,8 @@ export function npcName(id: string): string {
 export function verbsOf(n: NpcDef): Verb[] {
   const vs = n.verbs.flatMap(v => (typeof v === 'string' ? [v] : test(v.if) ? [v.verb] : []));
   if (!n.obj && vs.includes('交谈') && !vs.includes('打听')) vs.splice(vs.indexOf('交谈') + 1, 0, '打听');
+  // 身份的特权：捕快对谁都能亮腰牌盘问（engine/shenfen.ts 的 verbs）
+  if (!n.obj && vs.includes('交谈')) for (const v of shenfenOf(S).verbs ?? []) if (!vs.includes(v)) vs.splice(vs.indexOf('打听') + 1, 0, v);
   if (isPawnshop(n) && !vs.includes('典当')) vs.push('典当');
   return vs;
 }
@@ -87,7 +90,7 @@ export const travelMin = (m: number): number => Math.max(1, Math.round(m * attrE
  * 每个动作花多少时间（分钟）。分支里写了 time 效果的，以分支为准；开打、开剧情的，由战斗、剧情自己算时间。
  * 没列出的动作算十分钟。这样在城里走动、和人说话，时辰也会慢慢过去。
  */
-export const VERB_MIN: Record<string, number> = { 观察: 5, 细看: 5, 推门: 2, 交谈: 10, 打听: 10, 购买: 5, 打赏: 5, 赠礼: 5, 抓药: 10, 偷窃: 5, 请教: 30 };
+export const VERB_MIN: Record<string, number> = { 观察: 5, 细看: 5, 推门: 2, 交谈: 10, 打听: 10, 盘问: 10, 购买: 5, 打赏: 5, 赠礼: 5, 抓药: 10, 偷窃: 5, 请教: 30 };
 const DEFAULT_MIN = 10;
 
 /** 天色转换时记一句见闻 */
@@ -131,6 +134,8 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
     case '典当': return { text: pawn(who, arg), out };
     // 打听：这一带的世事和传闻（engine/shishi.ts）
     case '打听': return { text: dating(id, who), out };
+    // 盘问：捕快亮腰牌，谁都得答话，不论今天问没问过（人犯另写「盘问」的分支，问得出破绽）
+    case '盘问': return { text: panwen(who), out };
     case '请教': return { text: `${who}摇摇头：「我没什么可教你的。」`, out };
     case '切磋': return { text: `${who}连连摆手：「不敢不敢。」`, out };
     case '偷窃': return { text: `你的手刚伸出去，${who}就警觉地看了过来。你只好装作整理衣襟。`, out };

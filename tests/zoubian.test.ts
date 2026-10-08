@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { advanceDays, advanceMin, dayNo, setNowMs } from '../src/core/time';
-import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, SHI, STORIES, foeById, jobById, npc, questById, room, storyById } from '../src/content';
+import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, SHI, STORIES, foeById, jobById, npc, questById, room, shiById, storyById } from '../src/content';
 import { run, test, type Outcome } from '../src/engine/dsl';
 import { act, curQuest, enter, hopMin, pathTo, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
@@ -28,7 +28,7 @@ const VERBOSE = !!env.ZOUBIAN;
 const PREFIX = env.ZOUBIAN_PREFIX ?? '';
 
 /** 一局：从哪里开始、走几步、用哪个种子 */
-interface Run { start: 'new' | 'skip'; steps: number; seed: number; focus?: string }
+interface Run { start: 'new' | 'skip'; steps: number; seed: number; focus?: string; shi?: string }
 /** 当前这一局：补跑盯任务时更常打输（有的事要先输一场才开头，例如画舫输了，盐号的事才来） */
 let cur: Run | undefined;
 const RUNS: Run[] = Array.from({ length: 10 }, (_, i) => i + 1).flatMap(i => [
@@ -95,14 +95,17 @@ function fight(fid: string, depth: number): void {
   if (style < 0.08 && !f.script) {
     for (let t = 0; t < 30 && !d.over; t++) d.tick(), f.spar ? d.yieldUp() : d.flee();
   }
-  const idle = cur?.focus ? 0.4 : 0.18;
+  // 盯任务时更常打输（有的事要先输一场才开头）；盯世事时认真打（插手多半要打赢）
+  const idle = cur?.focus ? 0.4 : cur?.shi ? 0.03 : 0.18;
   if (!d.over) simulate(d, style < idle ? IDLE : style < idle + 0.27 ? RANDOM : SKILLED);
   S.hp = Math.max(0, Math.round(d.hp));
   S.mp = Math.max(0, Math.round(d.mp));
   const res = d.res!;
   takeWounds(f, d.log.taken);
   const opts = fateOpts(f, res);
-  const pk = opts.length ? pickOne(opts) : undefined;
+  // 胜负以后的去路：没走过的优先（几局下来每条路都该有人走过）
+  const freshFate = opts.filter(o => !cov.fate.has(`${fid}#${f.results.win.after!.opts.indexOf(o)}`));
+  const pk = opts.length ? pickOne(freshFate.length && rng() < 0.8 ? freshFate : opts) : undefined;
   if (pk) cov.fate.add(`${fid}#${f.results.win.after!.opts.indexOf(pk)}`);
   if (!cov.foe.has(fid)) cov.foe.set(fid, new Set());
   cov.foe.get(fid)!.add(res);
@@ -144,17 +147,36 @@ function actions(): Act[] {
   // 别处有还没点过、眼下点得了的动作：朝最近的那一处走（玩家会到处找事做）
   const far = nearestNew();
   if (far) list.push({ k: 'go', to: far, key: `go|${S.loc}|${far}`, quest: true });
+  // 盯着一件世事：往牵扯到它的人那里走（玩家听说了一件事，会去找那几个人）
+  const near = cur?.shi ? nearestWith(id => SHI_NPC.get(cur!.shi!)!.has(id)) : null;
+  if (near) list.push({ k: 'go', to: near, key: `go|${S.loc}|${near}`, quest: true });
   list.push({ k: 'rest', key: 'rest' }, { k: 'wait', key: 'wait' });
   return list;
 }
 
+/**
+ * 每件世事能被哪些人推动：动作里直接推它的，或者开打、开剧情以后在结算、剧情里推它的（插手的人）。
+ * 盯着一件世事时往这些人那里去（往告示、闲人那里去没用）
+ */
+const pushes = (x: unknown, id: string): boolean => !!x && JSON.stringify(x).includes(`"type":"shi","id":"${id}","to"`);
+const SHI_NPC = new Map(SHI.map(d => [d.id, new Set(NPCS.filter(n => {
+  if (pushes(n.actions, d.id)) return true;
+  const ids = [...JSON.stringify(n.actions).matchAll(/"type":"(?:fight|story)","(?:foe|id)":"([^"]+)"/g)].map(m => m[1]);
+  return ids.some(x => pushes(foeById(x), d.id) || pushes(storyById(x), d.id));
+}).map(n => n.id))]));
+
 /** 从这里出发，最近的一处有没点过的动作的地点，返回往那里走的第一步 */
 function nearestNew(): string | null {
+  return nearestWith(id => { const n = npc(id); return !!n && verbsOf(n).some(v => !cov.branch.has(branchKey(id, v))); });
+}
+
+/** 从这里出发，最近的一处有这样的人的地点，返回往那里走的第一步 */
+function nearestWith(ok: (id: string) => boolean): string | null {
   const prev = new Map<string, string>([[S.loc, '']]);
   const queue = [S.loc];
   while (queue.length) {
     const cur = queue.shift()!;
-    if (cur !== S.loc && [...roomNpcs(cur), ...roomObjs(cur)].some(id => { const n = npc(id); return n && verbsOf(n).some(v => !cov.branch.has(branchKey(id, v))); })) {
+    if (cur !== S.loc && [...roomNpcs(cur), ...roomObjs(cur)].some(ok)) {
       let c = cur;
       while (prev.get(c) !== S.loc) c = prev.get(c)!;
       return c;
@@ -186,13 +208,29 @@ function newAtHour(): number | null {
   return null;
 }
 
+/** 盯着一件世事：等到哪个钟点，能推动它的人会出来（人犯只在白天、夜里出没） */
+function pushers(id: string): (x: string) => boolean { return x => SHI_NPC.get(id)!.has(x); }
+function pusherAtHour(id: string): number | null {
+  const now = S.min;
+  if (roomNpcs(S.loc).some(pushers(id)) || nearestWith(pushers(id))) return null;
+  try {
+    for (const [h] of XIEJIAO) {
+      S.min = h * 60;
+      if (roomNpcs(S.loc).some(pushers(id)) || nearestWith(pushers(id))) return h;
+    }
+  } finally { S.min = now; }
+  return null;
+}
+
 /** 挑一件事做：没做过的优先，跟着任务走的其次；伤重了去闭关 */
 function choose(list: Act[], seen: Set<string>): Act {
   const w = list.map(a => {
-    if (a.k === 'rest') return S.hp < S.hpMax * 0.35 || S.wounds.hand + S.wounds.foot + S.wounds.inner >= 3 ? 20 : 0.2;
-    if (a.k === 'wait') return 0.6;
+    if (a.k === 'rest') return S.hp < S.hpMax * 0.35 || S.wounds.hand + S.wounds.foot + S.wounds.inner >= 3 ? 20 : cur?.shi ? 0.02 : 0.2;
+    // 盯着世事、要找的人眼下不在：多半是时辰不对，歇脚等一等
+    if (a.k === 'wait') return cur?.shi && !roomNpcs(S.loc).some(pushers(cur.shi)) && !nearestWith(pushers(cur.shi)) ? 6 : 0.6;
     let x = a.k === 'go' ? 1 : 2;
     if (!cov.branch.has(a.key) && a.k === 'act') x += 12;
+    if (a.k === 'act' && cur?.shi && SHI_NPC.get(cur.shi)!.has(a.id)) x += 30;
     if (!seen.has(a.key)) x += 4;
     if (a.k === 'go' && a.quest) x += S.yue.length ? 40 : 6;
     if (a.k === 'go' && !cov.room.has(a.to)) x += 5;
@@ -230,12 +268,12 @@ function step(seen: Set<string>): void {
   // 歇一会儿，或者歇脚等到某个钟点（ui/explore.ts 的 xiejiao；铁律跟现实时间走，机器玩家不受它管）。
   // 好奇的玩家听说夜里有人出没，会等到夜里去看看：等到那个钟点，就有没点过的动作冒出来
   else if (a.k === 'wait') {
-    const h = rng() < 0.7 ? newAtHour() : null;
+    const h = rng() < 0.7 ? (cur?.shi ? pusherAtHour(cur.shi) : null) ?? newAtHour() : null;
     advanceMin(S, h !== null ? waitMin(S, h) : rng() < 0.5 ? 120 : waitMin(S, pickOne(XIEJIAO)[0]));
   }
   else {
     // 闭关碰到约期，那天一早就出关（engine/shiguang.ts 的 restDays；铁律跟现实时间走，机器玩家不受它管）
-    const want = 1 + Math.floor(rng() * 3), y = nextYue(S);
+    const want = cur?.shi ? 1 : 1 + Math.floor(rng() * 3), y = nextYue(S);
     const days = y ? Math.min(want, y.due - dayNo(S)) : want;
     if (days >= 1) jingxiu(S, days, rng);
   }
@@ -268,6 +306,13 @@ function play(r: Run): void {
   setState(r.start === 'new' ? newGame() : skipToYangzhou());
   cov.room.add(S.loc);
   if (r.start === 'new') playStory('p_open', 0);
+  // 盯世事的局：先练上两个月，再从这件事刚起头时走起（一件接一件的事，前头的起头条件由 tests/shishi.test.ts、liushanmen.test.ts 管）。
+  // 要验的是每一种插手的路走不走得通：人找不找得到、识不识得破、打不打得过
+  if (r.shi && r.start === 'skip') {
+    S.lilian += 12000; S.silver += 3000;
+    for (let m = 0; m < 4; m++) jingxiu(S, 30, rng);
+    run([{ type: 'shi', id: r.shi, to: shiById(r.shi)!.first }]);
+  }
   const seen = new Set<string>();
   for (let i = 0; i < r.steps; i++) {
     // 盯着一个任务走：它开了头，横幅就一直追踪它（玩家在任务簿里切换追踪）
@@ -277,6 +322,7 @@ function play(r: Run): void {
     // 照 ui/shell.ts 的 render：失约、江湖往前走
     try { step(seen); checkYue(S); tickShi(); } catch (e) { err(`${where}报错：${(e as Error).message}`); }
     for (const [id, st] of Object.entries(S.shi ?? {})) cov.shi.add(`${id}.${st.at}`);
+    if (r.shi && Object.keys(shiById(r.shi)!.steps).every(k => cov.shi.has(`${r.shi}.${k}`))) break;
     // 过了约期的约不该还挂着（界面上会一直写「今日」）
     if (S.yue.some(y => y.due < dayNo(S))) err('过了约期的约还挂着');
     check(where.replace(/第 \d+ 步/, '某一步'));
@@ -292,6 +338,9 @@ describe('机器玩家走遍江湖', () => {
   // 还没走完的任务，专门盯着它再走几局
   const done = (id: string): boolean => (cov.quest.get(id) ?? -1) >= questById(id)!.stages.length - 1;
   for (const q of QUESTS) for (let k = 0; k < 24 && !done(q.id); k++) play({ start: k % 2 ? 'skip' : 'new', steps: 5000, seed: 1000 + k, focus: q.id });
+  // 还有没走到的世事的步，盯着那件事再走几局（往牵扯到它的人那里去，认真打，胜负以后挑没走过的路）
+  const shiLeft = (id: string): boolean => Object.keys(shiById(id)!.steps).some(k => !cov.shi.has(`${id}.${k}`));
+  for (const d of SHI) for (let k = 0; k < 12 && shiLeft(d.id); k++) play({ start: 'skip', steps: 3000, seed: 2000 + k, shi: d.id });
   const ms = Date.now() - t0;
 
   // 覆盖报告

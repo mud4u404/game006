@@ -36,6 +36,7 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   if (c.realm && !skillIds.has(c.realm.skill)) errs.push(`${where}：条件里的武功「${c.realm.skill}」不存在`);
   if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
   if (c.sect && !SCHOOL_STYLE[c.sect.school]) errs.push(`${where}：条件里的门派「${c.sect.school}」没有定位（见 SCHOOL_STYLE）`);
+  if (c.notSect !== undefined && !SCHOOL_STYLE[c.notSect]) errs.push(`${where}：条件里的门派「${c.notSect}」没有定位（见 SCHOOL_STYLE）`);
   if (c.yue !== undefined) yueRead.add(c.yue);
   if (c.shenfen !== undefined && !SHENFEN[c.shenfen]) errs.push(`${where}：条件里的身份「${c.shenfen}」不存在（见 engine/shenfen.ts）`);
   for (const id of [c.job, c.jobOpen]) if (id !== undefined && !jobIds.has(id)) errs.push(`${where}：条件里的差事「${id}」不存在`);

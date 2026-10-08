@@ -16,12 +16,23 @@ export interface ShenfenDef {
   desc: string;
   /** 每在线一小时挣多少两（按档次，不入流到宗师），src/lab/model/life.ts 的 SHENFEN_INCOME */
   pay: number[];
+  /** 这个身份连着哪个门派：被辞退时一并逐出门墙；离开了这个门派，身份也就没了（docs/lizu.md） */
+  sect?: string;
+  /** 身份的信物：被辞退时收回（六扇门的腰牌） */
+  badge?: string;
+  /** 恶名到了这个数就被辞退（软肋：六扇门恶名一高，腰牌收回） */
+  maxEming?: number;
+  /** 特权：对人人都多出来的动作（捕快亮腰牌盘问，engine/world.ts 的 verbsOf） */
+  verbs?: string[];
 }
 
 export const SHENFEN: Record<string, ShenfenDef> = {
   yumin: { name: '渔家', desc: '瓜洲渡的渔家少年，跟着江伯过日子。', pay: [0, 0, 0, 0, 0, 0] },
   youxia: { name: '游侠', desc: '无门无派，靠赏金、谢礼和旧日的人情过日子。府衙的悬赏榜、路见不平，都是营生。', pay: [0.5, 1.6, 3, 4.5, 6, 7.5] },
-  biaoshi: { name: '镖师', desc: '威远镖局的镖师。镖局派镖，按期送到；走镖的路上，镖局的趟子手跟着你。误了镖期要受罚。', pay: [0.5, 2.2, 5, 9, 14, 20] }
+  biaoshi: { name: '镖师', desc: '威远镖局的镖师。镖局派镖，按期送到；走镖的路上，镖局的趟子手跟着你。误了镖期要受罚。', pay: [0.5, 2.2, 5, 9, 14, 20] },
+  // 捕快：本身不怎么能打，可亮腰牌盘问人人，拿人时叫得来官兵、保镖；不能私刑、不能私放，恶名一高腰牌收回（docs/lizu.md 第四节）
+  bukuai: { name: '捕快', desc: '扬州府的捕快。亮腰牌，谁都得答你的话；海捕文书上的人犯，拿住了押进大牢，办差时叫得来官兵。不能私刑，不能私放，恶名一高，腰牌收回。',
+    pay: [0.5, 1.8, 3.6, 6, 9, 12], sect: '六扇门', badge: 'bs2_yaopai', maxEming: 10, verbs: ['盘问'] }
 };
 
 /** 本行里的地位 */

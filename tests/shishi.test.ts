@@ -143,17 +143,22 @@ describe('世事的引擎', () => {
     expect(S.shi?.ss_zei?.seen, '人在瓜洲，听不到扬州的事').toBeUndefined();
     expect(knownShi()).toEqual([]);
     S.loc = 'cheng';
-    const say = dating('yaopu', '药铺掌柜');
-    expect(say).toContain('东关街');
-    expect(knownShi().map(r => r.id)).toEqual(['ss_zei']);
+    // 扬州眼下在走的事不止一件：一个人说一件，问两个人就都知道了
+    const going = Object.keys(S.shi ?? {});
+    expect(going.length).toBeGreaterThan(1);
+    dating('yaopu', '药铺掌柜');
+    expect(knownShi().length).toBe(1);
     expect(dating('yaopu', '药铺掌柜'), '一个人一天只问一回').toContain('改日');
+    for (const who of ['xiaoer', 'shuoshu', 'bs2_hu', 'bj_yazi']) dating(who, who);
+    expect(knownShi().map(r => r.id).sort()).toEqual([...going].sort());
     // 后来又走了一步，见闻簿上还是旧消息，打听一下才知道
     advanceDays(S, 4);
     S.loc = 'gz_town'; tickShi(); S.loc = 'cheng';
-    expect(knownShi()[0].stale).toBe(true);
-    dating('xiaoer', '酒楼小二');
-    expect(knownShi()[0].stale).toBe(false);
-    expect(knownShi()[0].now).toContain('告示');
+    const zei = (): ReturnType<typeof knownShi>[number] => knownShi().find(r => r.id === 'ss_zei')!;
+    expect(zei().stale).toBe(true);
+    for (const who of ['yaopu', 'xiaoer', 'shuoshu', 'bs2_hu']) if (zei().stale) dating(who, who);
+    expect(zei().stale).toBe(false);
+    expect(zei().now).toContain('告示');
   });
 
   it('人在这一带，传开的话就听到了，记进见闻', () => {

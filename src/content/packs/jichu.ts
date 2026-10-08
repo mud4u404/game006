@@ -121,6 +121,10 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '看伤', '调养', '购买'],
     actions: {
       交谈: [
+        // 海捕文书 · 玉面白七郎（packs/liushanmen.ts）：识破他的一条路
+        { if: { shi: { id: 'lsm_bai', at: ['zuoan'] }, notFlag: 'lsm_bai_shipo' },
+          text: '葛郎中把一粒黑药丸拍在桌上：「望江楼那个游方郎中卖的。东关街的老汉吃了它，上吐下泻，差点没了命。我掰开看过，里头掺的是砒霜。」他冷笑一声，「这手法我认得，淮安来的。海捕文书上那个白七郎。」',
+          do: [{ type: 'flag', flag: 'lsm_bai_shipo' }, { type: 'shi', id: 'lsm_bai' }] },
         { if: { wounded: true },
           text: '葛郎中瞥了一眼你走路的样子：「带着伤还到处走？坐下。一处伤一级，一百五十文，治一级算一级。」' },
         { if: { flag: 'boss' },
@@ -219,6 +223,10 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
+        // 海捕文书 · 鬼手钱三（packs/liushanmen.ts）：识破他的一条路
+        { if: { shi: { id: 'lsm_qian', at: ['zaitao', 'zuoan'] }, notFlag: 'lsm_qian_shipo' },
+          text: '吴朝奉往柜台外探了探头，压低声音：「这几日有个瘦高个拿盐引来当，我没收。盐引是官府的东西，收了要吃官司。」他朝桥头努努嘴，「左眉一颗痣，天天白天在桥头转，等着别家收。」',
+          do: [{ type: 'flag', flag: 'lsm_qian_shipo' }, { type: 'shi', id: 'lsm_qian' }] },
         { text: '「本号一律死当，概不回赎。」吴朝奉的算盘珠子拨得飞快，「信物、字纸、来路不明的东西，不收。客官，有货递上来。」' }
       ],
     }

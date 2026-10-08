@@ -60,6 +60,8 @@ export interface Cond {
   sect?: { school: string; rank?: SectRank };
   /** 眼下没有师门（出过师、叛过门、被逐出的也算没有）。拜师的分支用它：一人一师门，身在别派的要另写一个分支 */
   noSect?: true;
+  /** 眼下不是这一派的弟子（没有师门、或在别派都算）。特权的另一面用它：六扇门押走人犯，别人只能扭送府衙 */
+  notSect?: string;
   /**
    * 离开过某派（出师、叛门、逐出），how 写了就只看这一种离开法。眼下还在门中的不算，用 sect。
    * 拜师的分支先用它拦下叛出、被逐出本门的人：这两种人 sect 效果拜不回去（engine/shicheng.ts 的 barredFrom）
