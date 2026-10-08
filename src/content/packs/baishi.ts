@@ -194,6 +194,7 @@ const NPCS: NpcDef[] = [
       { verb: '复命', if: { quest: { id: KAO_GB, is: 0 }, noSect: true } },
       { verb: '请教', if: { sect: GB } },
       { verb: '考校', if: { sect: GB, notFlag: 'bs2_gb_wai' } },
+      { verb: '讨差事', if: { sect: GB } },
       { verb: '打探', if: { sect: GB } }],
     actions: {
       交谈: [
@@ -260,16 +261,31 @@ const NPCS: NpcDef[] = [
           text: '鲍四摆摆手：「记名弟子学到这儿为止。百衲功那口气先养足了，莲花掌、逍遥游的绝招都靠它使。混天气功、缠丝擒拿手，升了外门才传。」' },
         { text: '鲍四烤着火：「丐帮的功夫，只传帮里的人。」' }
       ],
+      讨差事: [
+        // 师门差事（packs/shimen-chaishi.ts）：替分舵出力，攒丐帮贡献
+        { if: { job: 'smcs_gb_xin' }, text: '鲍四烤着火：「信还没送到？瓜洲镇墙根底下那个老叫化，腰上系着三个结的麻绳。」' },
+        { if: { job: 'smcs_gb_zhou' }, text: '鲍四朝门外看了看：「打手是夜里来的。你守着，别走远。」' },
+        { if: { jobOpen: 'smcs_gb_zhou', flag: 'bs2_gb_in' },
+          text: '鲍四把竹杖往地上一顿：「汪家放了话，龙王庙门口不许支粥棚。今晚他们要来砸。」他看着你，「粥棚是逃荒的人活命的。你守一夜。」',
+          do: [{ type: 'job', id: 'smcs_gb_zhou' }] },
+        { if: { jobOpen: 'smcs_gb_xin' },
+          text: '鲍四从怀里摸出一封封了蜡的信：「送到瓜洲镇，墙根底下晒太阳的老叫化。路上别拆，也别让人看见。」',
+          do: [{ type: 'job', id: 'smcs_gb_xin' }] },
+        { text: '鲍四摆摆手：「这几日分舵没有差事。去街上走走，看看有没有饿着的。」' }
+      ],
       考校: [
-        { if: { sect: GB, realm: { skill: 'gb_babu', atLeast: 1 }, xia: 20 },
+        // 升外门要替分舵出过力：丐帮贡献一百（content/skills.ts 的 RANK_GONGXIAN）
+        { if: { sect: GB, realm: { skill: 'gb_babu', atLeast: 1 }, xia: 20, gongxian: 100 },
           text: '鲍四往你手里塞了一只盛满水的破碗：「跑到渡口，再跑回来，碗里的水不许洒。」你回来时，碗里的水还是满的。鲍四点点头，解下背上一只空口袋，缝在你的衣襟上：「一袋弟子，丐帮的外门。」',
           do: [{ type: 'sect', school: '丐帮', rank: '外门' }, { type: 'flag', flag: 'bs2_gb_wai' }, { type: 'time', add: 60 },
             { type: 'feed', tag: '江湖', text: '你升了丐帮外门，做了扬州分舵的一袋弟子。鲍四说，混天气功、缠丝擒拿手，可以学了。' },
             { type: 'toast', text: '丐帮 · 升外门弟子' }] },
+        { if: { sect: GB, realm: { skill: 'gb_babu', atLeast: 1 }, xia: 20 },
+          text: '鲍四点点头：「腿脚、心性都过得去。可丐帮的一袋，是替分舵出过力的人才缝得上。」他用竹杖敲敲地，「分舵的差事，多办几件再来。」' },
         { if: { sect: GB, realm: { skill: 'gb_babu', atLeast: 1 } },
           text: '鲍四看了看你的腿脚：「腿脚利索了。可丐帮看的不光是腿脚。」他用竹杖指指门外，「侠义的事，再多做几件。」' },
         { if: { sect: GB, xia: 20 }, text: '鲍四点点头：「心是正的。腿脚还差火候：八步赶蝉练到略有小成，再来。」' },
-        { if: { sect: GB }, text: '鲍四摇头：「一袋弟子，要腿脚快，心要正。八步赶蝉练到略有小成，侠义的事多做几件，再来。」' },
+        { if: { sect: GB }, text: '鲍四摇头：「一袋弟子，要腿脚快，心要正，还要替分舵出过力。八步赶蝉练到略有小成，侠义的事多做几件，分舵的差事多办几件，再来。」' },
         { text: '鲍四烤着火：「你不是丐帮的人，考校什么？」' }
       ],
       打探: [
@@ -388,7 +404,8 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察',
       { verb: '投军', if: { notFlag: 'bs2_jw_in' } },
       { verb: '请教', if: { sect: JW } },
-      { verb: '考校', if: { sect: JW, notFlag: 'bs2_jw_wai' } }],
+      { verb: '考校', if: { sect: JW, notFlag: 'bs2_jw_wai' } },
+      { verb: '讨差事', if: { sect: JW } }],
     actions: {
       交谈: [
         // 海捕文书 · 逃兵熊大（packs/liushanmen.ts）：识破他的一条路，也是一桩两难
@@ -438,14 +455,28 @@ const NPCS: NpcDef[] = [
         { if: { sect: JW }, text: '韩什长道：「新兵的功夫就这三样。铁脊功、军中长拳都练到略有小成，来找我考校，过了才摸得着枪。」' },
         { text: '韩什长瞥你一眼：「军中的功夫，不教外人。」' }
       ],
+      讨差事: [
+        // 师门差事（packs/shimen-chaishi.ts）：替营里出力，攒军伍贡献
+        { if: { job: 'smcs_jw_xun' }, text: '韩什长道：「巡营是夜里的事。天黑了去驿亭找哨兵对口令。」' },
+        { if: { job: 'smcs_jw_liang' }, text: '韩什长道：「粮车还没到瓜洲？少一袋，营门上又要多挂一颗脑袋。」' },
+        { if: { jobOpen: 'smcs_jw_liang' },
+          text: '韩什长指了指帐后的粮车：「二十袋军粮，押到瓜洲码头，交给粮官。路上有人问，就说是扬州营的。」',
+          do: [{ type: 'job', id: 'smcs_jw_liang' }] },
+        { if: { jobOpen: 'smcs_jw_xun' },
+          text: '韩什长把一块木牌扔给你：「今夜你巡营。天黑以后去驿亭，跟哨兵对口令。官道上来来往往的人多，眼睛放亮些。」',
+          do: [{ type: 'job', id: 'smcs_jw_xun' }] },
+        { text: '韩什长摇头：「营里这几日没有差事。去练你的枪。」' }
+      ],
       考校: [
-        // 两重境界的条件：realm 只能写一个，第二个放进只有一项的 any 里
-        { if: { sect: JW, realm: { skill: 'jl_tiejigong', atLeast: 1 }, any: [{ realm: { skill: 'jl_changquan', atLeast: 1 } }] },
+        // 两重境界的条件：realm 只能写一个，第二个放进只有一项的 any 里。升正兵还要替营里出过力：军伍贡献一百
+        { if: { sect: JW, realm: { skill: 'jl_tiejigong', atLeast: 1 }, any: [{ realm: { skill: 'jl_changquan', atLeast: 1 } }], gongxian: 100 },
           text: '韩什长叫你打一趟军中长拳，背上压着两根白蜡杆。一趟拳打完，杆子一根没掉。韩什长点点头，从帐里拎出一杆白蜡杆枪扔给你：「从今天起，你是边军的正兵，摸得着枪了。」',
           do: [{ type: 'sect', school: '军伍', rank: '外门' }, { type: 'flag', flag: 'bs2_jw_wai' }, { type: 'item', id: 'bs2_qiang', delta: 1 }, { type: 'time', add: 60 },
             { type: 'feed', tag: '江湖', text: '你升了边军正兵，领了一杆白蜡杆枪。韩什长说，边军大枪可以学了。' },
             { type: 'toast', text: '军伍 · 升外门弟子' }] },
-        { if: { sect: JW }, text: '韩什长摇头：「铁脊功、军中长拳，都练到略有小成再来。」' },
+        { if: { sect: JW, realm: { skill: 'jl_tiejigong', atLeast: 1 }, any: [{ realm: { skill: 'jl_changquan', atLeast: 1 } }] },
+          text: '韩什长点点头：「功夫是有了。可边军的正兵，是巡过营、押过粮的人。」他把白蜡杆往地上一顿，「营里的差事，多办几趟再来。」' },
+        { if: { sect: JW }, text: '韩什长摇头：「铁脊功、军中长拳，都练到略有小成，营里的差事也多办几趟，再来。」' },
         { text: '韩什长瞥你一眼：「你不是边军的人。」' }
       ]
     }

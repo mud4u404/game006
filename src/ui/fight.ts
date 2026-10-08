@@ -14,7 +14,7 @@ import { Duel, ZONE_NAME, type DuelRes, type Ev, type Opt, type RespKey, type Wo
 import { RESP_ACT, cheng, chengN, judgeText } from '../engine/formulas';
 import { respSkill } from '../engine/wuxue';
 import { npcName } from '../engine/world';
-import { SHENFEN, jobPay } from '../engine/shenfen';
+import { SHENFEN, jobGongxian, jobPay } from '../engine/shenfen';
 import { brace, fateOpts, settle, takeWounds } from '../engine/jiesuan';
 import { checkYue } from '../engine/shiguang';
 import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, weaponWord, type FightKit } from '../engine/zhaoshi';
@@ -807,7 +807,7 @@ function rewardChips(effects: Effect[] | undefined): string[] {
     else if (e.type === 'title') chips.push(`<span class="tag purple">名号「${e.value}」</span>`);
     else if (e.type === 'heal' && e.hpAtLeast) chips.push(`<span class="tag">气血恢复至${cn(Math.round(e.hpAtLeast * 10))}成</span>`);
     else if (e.type === 'rel') chips.push(`<span class="tag">${npcName(e.npc)} · ${e.value}</span>`);
-    else if (e.type === 'jobDone') { const j = jobById(e.id); if (j) chips.push(`<span class="tag accent">交差 · 银两 +${jobPay(j)} 文</span>`); }
+    else if (e.type === 'jobDone') { const j = jobById(e.id); if (j) chips.push(`<span class="tag accent">交差 · ${j.sect ? `${j.sect}贡献 +${jobGongxian(j)}` : `银两 +${jobPay(j)} 文`}</span>`); }
     else if (e.type === 'jobFail') chips.push('<span class="tag danger">差事办砸了 · 地位降一级</span>');
     else if (e.type === 'standing' && e.delta > 0) chips.push(`<span class="tag accent">地位升一级</span>`);
     else if (e.type === 'shenfen') chips.push(`<span class="tag purple">身份 · ${SHENFEN[e.id]?.name ?? e.id}</span>`);

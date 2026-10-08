@@ -480,6 +480,19 @@ describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
     expect(S.sect?.rank).toBe('记名');
     S.skills.jl_tiejigong!.r = 1;
     S.skills.jl_changquan!.r = 1;
+    // 功夫到了，还要替营里出过力（门派贡献，packs/shimen-chaishi.ts）：巡一夜营
+    expect(act('bs2_han', '考校').text).toContain('营里的差事');
+    act('bs2_han', '讨差事');
+    expect(S.job?.id).toBe('smcs_jw_liang');
+    // 押粮这趟误了（师门差事误了扣贡献，不降身份的地位），隔几天才能再接；先去巡营
+    run([{ type: 'jobFail', id: 'smcs_jw_liang' }]);
+    expect(S.job).toBeNull();
+    act('bs2_han', '讨差事');
+    expect(S.job?.id).toBe('smcs_jw_xun');
+    S.min = 22 * 60;
+    act('smcs_shaobing', '交令');
+    expect(S.gongxian?.军伍).toBe(20);
+    S.gongxian!.军伍 = 160;
     act('bs2_han', '考校');
     expect(S.sect).toEqual({ school: '军伍', rank: '外门' });
     act('bs2_han', '请教');
@@ -544,6 +557,9 @@ describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
     expect(S.sect?.rank).toBe('记名');
     S.skills.gb_babu!.r = 1;
     S.xia = 20;
+    // 腿脚、心性都够了，还要替分舵出过力（门派贡献）
+    expect(act('bs2_bao', '考校').text).toContain('分舵的差事');
+    S.gongxian = { 丐帮: 220 };
     act('bs2_bao', '考校');
     expect(S.sect).toEqual({ school: '丐帮', rank: '外门' });
     // 根基不够：百衲功、莲花掌都还没练到略有小成，混天气功、缠丝擒拿手学不成，鲍四说清楚还差什么

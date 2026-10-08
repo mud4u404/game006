@@ -90,11 +90,12 @@ const BAOBIAO: PrepDef = {
 };
 
 /** 打赢了怎样处置：捕快上锁押走、犯了门规的放和杀要降地位；别人扭送府衙领赏 */
-function fate(id: string, who: string, bounty: number, bountyText: string, say: { ya: string; fang: string; sha: string }, later: { ya: string; fang: string; sha: string }): AfterOpt[] {
+function fate(id: string, who: string, bounty: number, bountyText: string, gx: number, say: { ya: string; fang: string; sha: string }, later: { ya: string; fang: string; sha: string }): AfterOpt[] {
   const toLuowang = [{ type: 'shi' as const, id, to: 'luowang' }, { type: 'silver' as const, delta: bounty }];
   return [
-    { if: { sect: LSM }, label: '上锁押走', sub: `押进府衙大牢，赏银${bountyText}，地位升一级`, say: say.ya,
-      do: [...toLuowang, { type: 'standing', delta: 1 }, { type: 'flag', flag: `${id}_ya` }], later: later.ya },
+    // 捕快押来的人犯，是替六扇门出的力：攒六扇门的贡献（docs/menpai.md 第七节第八条）
+    { if: { sect: LSM }, label: '上锁押走', sub: `押进府衙大牢，赏银${bountyText}，地位升一级，六扇门贡献 +${gx}`, say: say.ya,
+      do: [...toLuowang, { type: 'standing', delta: 1 }, { type: 'gongxian', delta: gx }, { type: 'flag', flag: `${id}_ya` }], later: later.ya },
     { if: NOT_LSM, label: '扭送府衙', sub: `赏银${bountyText}，侠义 +2`, say: say.ya,
       do: [...toLuowang, { type: 'xia', delta: 2 }, { type: 'flag', flag: `${id}_ya` }], later: later.ya },
     { if: { sect: LSM }, label: '当场放了', sub: '私放人犯，犯了门规：地位降一级', say: say.fang,
@@ -133,7 +134,7 @@ const FOES: FoeDef[] = [
         story: '你把散落一地的盐引一张张捡起来，一共二十三张。钱三趴在地上喘气，左眉上那颗痣一跳一跳。',
         after: {
           plea: '钱三捂着胸口：「官爷……小的原是汪家盐号的伙计，他们冤我偷账，打断我两根肋骨赶出门。小的这才真偷了他们的盐引。」',
-          opts: fate('lsm_qian', '钱三', 800, '八百文',
+          opts: fate('lsm_qian', '钱三', 800, '八百文', 40,
             { ya: '你把钱三锁了，押回府衙。周捕头点过盐引，在簿子上记了一笔。', fang: '你把盐引收进怀里，朝桥下努了努嘴。钱三磕了个头，跳上一条船走了。', sha: '你一剑结果了钱三。桥头看热闹的人一哄而散。' },
             { ya: '钱三押在府衙大牢里，牢头那里提审得出东西来。', fang: '钱三欠你一条命。汪家丢的盐引，还有几张没找回来。', sha: '杀人的事传得快，扬州城里说你下手狠。' })
         } },
@@ -161,7 +162,7 @@ const FOES: FoeDef[] = [
         story: '你把那几粒黑药丸包进手帕。葛郎中说过，里头掺的是砒霜。白七郎靠着墙坐着，白净的脸上全是汗。',
         after: {
           plea: '白七郎喘着气，居然还在笑：「我卖的药是毒，可买药的人心里更毒。淮安那三条人命，是有人花钱买的。拿了我，那人照样睡得着。」',
-          opts: fate('lsm_bai', '白七郎', 2000, '二两',
+          opts: fate('lsm_bai', '白七郎', 2000, '二两', 60,
             { ya: '你把白七郎锁了，连人带药箱押回府衙。葛郎中闻讯赶来，把那箱药丸一粒粒验过。', fang: '你踢开药箱，让开了路。白七郎拱了拱手，下楼时脚步还是斯斯文文的。', sha: '你一剑刺穿了他的咽喉。他到死脸上还挂着那副笑。' },
             { ya: '白七郎押在府衙大牢里。淮安那三条人命背后是谁，提审时也许问得出来。', fang: '白七郎还会去别处卖药。', sha: '淮安那桩案子的线头，断在你手里了。' })
         } },
@@ -189,7 +190,7 @@ const FOES: FoeDef[] = [
         story: '熊大没有再起来。他跪在地上，一下一下地喘气，像一头累坏了的牛。',
         after: {
           plea: '熊大抬起头：「那百户克扣军粮，饿死了我营里七个弟兄。我杀他，不后悔。」他顿了顿，「要拿就拿，要杀就杀，熊大不求人。」',
-          opts: fate('lsm_xiong', '熊大', 4000, '四两',
+          opts: fate('lsm_xiong', '熊大', 4000, '四两', 80,
             { ya: '你给熊大上了锁。他自己站起来，跟着你走，一路上一句话也没说。', fang: '你把锤子还给了他。熊大看了你一会儿，抱了抱拳，转身往江边去了。', sha: '你一剑刺进了他的胸口。熊大低头看了看，又抬头看了看你，倒了下去。' },
             { ya: '熊大押在府衙大牢里，秋后问斩。牢里的人说，他夜里常对着墙念那七个人的名字。', fang: '熊大过江北上了。', sha: '打铁巷的人都说，那个大个子是条好汉。' })
         } },

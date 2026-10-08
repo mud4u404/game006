@@ -21,6 +21,20 @@ export const GRADE_COEF: Record<SkillGrade, number> = { 凡品: 0.9, 良品: 1, 
  */
 export const LEARN_LILIAN: Record<SkillGrade, number> = { 凡品: 40, 良品: 100, 上品: 250, 绝品: 600, 神品: 1500, 禁品: 1500 };
 
+/**
+ * 门派贡献（docs/menpai.md 第七节第八条）：替师门办差事攒下，升地位、学外门以上的武功要拿它去换。
+ * 入门的功夫拜进来就教（只花历练）；越往上，越要先替师门出过力。
+ */
+export const RANK_GONGXIAN: Record<SectRank, number> = { 记名: 0, 外门: 100, 内门: 400, 真传: 1200 };
+export const LEARN_GONGXIAN: Record<SkillTeach, number> = { 入门: 0, 外门: 60, 内门: 200, 真传: 600, 奇遇: 0 };
+/** 一件师门差事给多少贡献，按档次（不入流到宗师）；师门差事不给钱 */
+export const JOB_GONGXIAN = [10, 20, 35, 50, 70, 90];
+/**
+ * 还没有师门差事的门派：考校不看贡献、学外门武功不收贡献，免得玩家卡在那里。
+ * 补了师门差事、考校接上了贡献门槛，就从这里删掉（tests/content.test.ts「门派贡献」查）
+ */
+export const GONGXIAN_PENDING: string[] = ['少林', '峨眉', '华山', '武当'];
+
 /** 拳脚：徒手功夫 */
 export const FIST: SkillCategory[] = ['拳法', '掌法', '指法', '爪法', '腿法', '手法'];
 /** 兵刃 */

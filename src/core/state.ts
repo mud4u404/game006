@@ -85,6 +85,8 @@ export interface GameState {
    * 玩家知道到哪一步（没有就是还不知道）、了结过几回。还没起头的事不在这里
    */
   shi?: Record<string, ShiState>;
+  /** 门派贡献：每个门派各记各的（替师门办差攒下，升地位、学外门以上的武功拿它去换；docs/menpai.md 第七节第八条） */
+  gongxian?: Record<string, number>;
   /** 打听：每个人今天问过没有（江湖日） */
   asked?: Record<string, number>;
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */

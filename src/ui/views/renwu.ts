@@ -6,7 +6,7 @@ import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
 import { gongliText, houtianOf, tierNow } from '../../engine/ren';
 import { LODGING, yueText } from '../../engine/shiguang';
-import { shenfenOf, shenfenText } from '../../engine/shenfen';
+import { shenfenOf, shenfenText, gongxianOf } from '../../engine/shenfen';
 import { menguiText, pastSectText, sectText } from '../../engine/shicheng';
 import { fullDate } from '../../core/time';
 import { ZONE_NAME } from '../../engine/duel';
@@ -53,6 +53,8 @@ function shimenHTML(): string {
   if (!S.sect && !past) return '';
   const rows: string[] = [];
   if (S.sect) rows.push(`<div><span class="tag">门规</span><span>${menguiText(S.sect.school)}</span></div>`);
+  // 门派贡献：替师门办差攒下，升地位、学外门以上的武功拿它去换（docs/menpai.md 第七节第八条）
+  if (S.sect) rows.push(`<div><span class="tag">贡献</span><span>${S.sect.school}贡献 ${gongxianOf(S)}。替师门办差事攒下；升地位、学外门以上的武功要拿它去换。</span></div>`);
   if (past) rows.push(`<div><span class="tag">来历</span><span>${past}。</span></div>`);
   return `<section class="card here"><div class="sec-h"><h2>师门</h2><span class="count">${sectText(S)}</span></div><div class="news">${rows.join('')}</div></section>`;
 }
