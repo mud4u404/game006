@@ -12,6 +12,7 @@ import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { advanceDays, advanceMin, dayNo, setNowMs } from '../src/core/time';
 import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, SHI, STORIES, foeById, jobById, npc, questById, room, shiById, storyById } from '../src/content';
 import { run, test, type Outcome } from '../src/engine/dsl';
+import type { Effect } from '../src/content/types';
 import { act, curQuest, enter, hopMin, pathTo, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
 import { Duel, RANDOM, SKILLED, simulate, type DuelRes, type Policy } from '../src/engine/duel';
@@ -70,9 +71,12 @@ function playStory(id: string, depth: number): void {
     const card = def.cards[i];
     const ok = card.choices.map((c, k) => [c, k] as const).filter(([c]) => test(c.if));
     if (!ok.length) { err(`剧情「${id}」第 ${i + 1} 张卡片「${card.title}」此时一个选项都没有，玩家卡死`); return; }
-    // 没选过的选项优先（玩家各有各的选法，几局下来每条路都该有人走过）
+    // 没选过的选项优先（玩家各有各的选法，几局下来每条路都该有人走过）；
+    // 盯着世事的，挑把它推到还没走过那一步的，不挑就此收场的
     const fresh = ok.filter(([, k]) => !cov.choice.has(`${id}#${i}#${k}`));
-    const [c, k] = pickOne(fresh.length && rng() < 0.7 ? fresh : ok);
+    const aim = cur?.shi ? ok.filter(([ch]) => pushesNew(ch.do)) : [];
+    const goOn = cur?.shi ? ok.filter(([ch]) => ch.next !== -1) : [];
+    const [c, k] = aim.length ? pickOne(aim) : goOn.length && !ok.some(([ch]) => pushesNew(ch.do)) && def.cards.some((_, j) => j > i) && rng() < 0.9 && goOn.length < ok.length ? pickOne(goOn) : pickOne(fresh.length && rng() < 0.7 ? fresh : ok);
     cov.choice.add(`${id}#${i}#${k}`);
     if (card.input === 'name' && !S.name) S.name = '孤舟';
     run(c.do, out);
@@ -103,9 +107,10 @@ function fight(fid: string, depth: number): void {
   const res = d.res!;
   takeWounds(f, d.log.taken);
   const opts = fateOpts(f, res);
-  // 胜负以后的去路：没走过的优先（几局下来每条路都该有人走过）
+  // 胜负以后的去路：盯着世事的，挑把它推到还没走过那一步的；其余没走过的优先（几局下来每条路都该有人走过）
+  const aimFate = opts.filter(o => pushesNew(o.do));
   const freshFate = opts.filter(o => !cov.fate.has(`${fid}#${f.results.win.after!.opts.indexOf(o)}`));
-  const pk = opts.length ? pickOne(freshFate.length && rng() < 0.8 ? freshFate : opts) : undefined;
+  const pk = !opts.length ? undefined : aimFate.length ? pickOne(aimFate) : pickOne(freshFate.length && rng() < 0.8 ? freshFate : opts);
   if (pk) cov.fate.add(`${fid}#${f.results.win.after!.opts.indexOf(pk)}`);
   if (!cov.foe.has(fid)) cov.foe.set(fid, new Set());
   cov.foe.get(fid)!.add(res);
@@ -116,12 +121,17 @@ function fight(fid: string, depth: number): void {
   if (st.r?.then) handle(run(st.r.then), depth);
 }
 
+/** 这些效果把盯着的世事推到还没走过的一步 */
+function pushesNew(list: Effect[] | undefined): boolean {
+  return !!cur?.shi && (list ?? []).some(e => e.type === 'shi' && e.id === cur!.shi && !!e.to && !cov.shi.has(`${e.id}.${e.to}`));
+}
+
 /** 不出招、不应对，干挨打：打输了的那些结局也得有人走到 */
 const IDLE: Policy = { name: '不出手', pick: () => null, openTake: 0, performs: false };
 
 /* ---------- 玩家能做的事 ---------- */
 
-type Act = { k: 'act'; id: string; v: string; key: string } | { k: 'go'; to: string; key: string; quest?: boolean } | { k: 'rest'; key: string } | { k: 'wait'; key: string };
+type Act = { k: 'act'; id: string; v: string; key: string } | { k: 'go'; to: string; key: string; quest?: boolean; push?: boolean } | { k: 'rest'; key: string } | { k: 'wait'; key: string };
 
 function branchKey(id: string, v: string): string {
   const n = npc(id)!;
@@ -149,7 +159,7 @@ function actions(): Act[] {
   if (far) list.push({ k: 'go', to: far, key: `go|${S.loc}|${far}`, quest: true });
   // 盯着一件世事：往牵扯到它的人那里走（玩家听说了一件事，会去找那几个人）
   const near = cur?.shi ? nearestWith(id => SHI_NPC.get(cur!.shi!)!.has(id)) : null;
-  if (near) list.push({ k: 'go', to: near, key: `go|${S.loc}|${near}`, quest: true });
+  if (near) list.push({ k: 'go', to: near, key: `go|${S.loc}|${near}`, quest: true, push: true });
   list.push({ k: 'rest', key: 'rest' }, { k: 'wait', key: 'wait' });
   return list;
 }
@@ -233,6 +243,8 @@ function choose(list: Act[], seen: Set<string>): Act {
     if (a.k === 'act' && cur?.shi && SHI_NPC.get(cur.shi)!.has(a.id)) x += 30;
     if (!seen.has(a.key)) x += 4;
     if (a.k === 'go' && a.quest) x += S.yue.length ? 40 : 6;
+    // 盯着世事：能推动它的人就在附近（人犯出没的时辰短），直奔过去
+    if (a.k === 'go' && a.push) x += 40;
     if (a.k === 'go' && !cov.room.has(a.to)) x += 5;
     return x;
   });
@@ -309,8 +321,10 @@ function play(r: Run): void {
   // 盯世事的局：先练上两个月，再从这件事刚起头时走起（一件接一件的事，前头的起头条件由 tests/shishi.test.ts、liushanmen.test.ts 管）。
   // 要验的是每一种插手的路走不走得通：人找不找得到、识不识得破、打不打得过
   if (r.shi && r.start === 'skip') {
-    S.lilian += 12000; S.silver += 3000;
-    for (let m = 0; m < 4; m++) jingxiu(S, 30, rng);
+    S.lilian += 20000;
+    for (let m = 0; m < 6; m++) jingxiu(S, 30, rng);
+    // 练完了再给盘缠（不然住店花光了）：要花钱的插手也得有人走得到
+    S.silver += 3000;
     run([{ type: 'shi', id: r.shi, to: shiById(r.shi)!.first }]);
   }
   const seen = new Set<string>();

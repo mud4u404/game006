@@ -25,6 +25,9 @@
    "jc_zj_kezhan",
    "jc_zj_yiguan",
    "jinshan",
+   "smem_guanyin",
+   "smhs_jianlu",
+   "smsl_jinshan",
    "yz_chuanwu",
    "yz_fuya",
    "yz_guandao",
@@ -111,6 +114,16 @@
    "shaogong",
    "shengchuan",
    "shuoshu",
+   "smem_huian",
+   "smem_tingchao",
+   "smem_xiaoman",
+   "smhs_baizhou",
+   "smhs_lawei",
+   "smhs_shenbo",
+   "smhs_yashu",
+   "smsl_jizhao",
+   "smsl_laoge",
+   "smsl_yuanhui",
    "ss_aqi",
    "ss_gengfu",
    "ss_heiying",
@@ -173,6 +186,7 @@
    "mujian",
    "qingfeng",
    "scroll",
+   "smhs_xin",
    "yh_shenqi",
    "zb_buxie",
    "zb_douli",
@@ -214,6 +228,9 @@
    "ly_xiaozei",
    "ly_yz_jianke",
    "ly_yz_tangzi",
+   "smem_kao",
+   "smhs_kao",
+   "smsl_kao",
    "ss_jiaowu",
    "tu",
    "xs_hezei",
@@ -230,7 +247,10 @@
    "side_cangjing",
    "side_caoshangfei",
    "side_huafang",
-   "side_yanhao"
+   "side_yanhao",
+   "smem_chao",
+   "smhs_mo",
+   "smsl_shui"
   ],
   "skills": [
    "cw_bengxue",
@@ -489,6 +509,9 @@
   "prologue": 4,
   "main1": 4,
   "side_yanhao": 3,
-  "bs2_gb_kao": 2
+  "bs2_gb_kao": 2,
+  "smem_chao": 2,
+  "smhs_mo": 2,
+  "smsl_shui": 2
  }
 }
