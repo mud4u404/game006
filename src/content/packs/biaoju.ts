@@ -365,7 +365,8 @@ const NEWS: NewsDef[] = [
 const pack: ContentPack = {
   rooms: ROOMS, npcs: NPCS, foes: FOES, news: NEWS, jobs: JOBS,
   items: [
-    { id: 'bj_haodao', name: '龙泉刀', desc: '鲨鱼皮的刀鞘，刀镡上錾着云纹。赵老镖头年轻时走镖用过的刀。', equip: { slot: '兵器', weapon: '刀', reach: '短' } }
+    { id: 'bj_haodao', name: '龙泉刀', kind: '装备', price: 30000, desc: '鲨鱼皮的刀鞘，刀镡上錾着云纹。赵老镖头年轻时走镖用过的刀。',
+      equip: { slot: '兵器', weapon: '刀', reach: '短', grade: '上品', stats: { chushou: 4 } } }
   ]
 };
 

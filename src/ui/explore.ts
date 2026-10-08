@@ -1,15 +1,16 @@
 /**
- * 探索相关的操作：切换标签、选人、做动作、赶路、闭关、服药、存档管理。
+ * 探索相关的操作：切换标签、选人、做动作、赶路、闭关、存档管理。
+ * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { advanceDays, dateStr } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
-import { itemById, questById, room, skillById } from '../content';
+import { questById, room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { jingxiu, restDays, skillName, yueText } from '../engine/shiguang';
+import { checkYue, jingxiu, restDays, skillName, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
 import { markEncounter, rollEncounter } from '../engine/encounter';
@@ -18,8 +19,16 @@ import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
+import { eyeLine } from './views/jianghu';
+import { pickItemFirst } from './daoju';
 
 let traveling = false;
+
+/** 过了约期还在线的：赶路、做事以后就算失约，不必等到下一次闭关（机器玩家摸底时发现） */
+function lateYue(): void {
+  const missed = checkYue(S);
+  if (missed.length) toast(missed[0]);
+}
 export const isTraveling = (): boolean => traveling;
 
 export function travelTo(dest: string, onArrive?: () => void): void {
@@ -54,6 +63,7 @@ export function travelTo(dest: string, onArrive?: () => void): void {
       S.min += m;
       if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
       S.loc = nx; S.sel = null; S.reply = null;
+      lateYue();
       // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
       const enc = rollEncounter(from, nx);
       if (enc) {
@@ -74,9 +84,14 @@ export function travelTo(dest: string, onArrive?: () => void): void {
 function doAct(verb: Verb): void {
   const id = S.sel;
   if (!id) return;
-  const { text, out } = act(id, verb);
+  // 赠礼、典当：先从行囊里挑一件（ui/daoju.ts）
+  if (pickItemFirst(id, verb)) return;
+  const { text, out, eyes } = act(id, verb);
+  lateYue();
   if (out.story || out.fight) { afterOutcome(out); return; }
-  S.reply = text ? { id, text } : null;
+  // 根基之眼：观察时根基够了多看出的那一层，跟在描写后面（engine/yan.ts）
+  const seen = eyes.map(e => eyeLine(e)).join('');
+  S.reply = text || seen ? { id, text: text + seen } : null;
   render();
   const rp = document.querySelector('.reply');
   if (rp) rp.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
@@ -123,11 +138,6 @@ registerHandlers({
     closeSheet();
     render();
   },
-  // 兵器：装备、卸下（纸娃娃的其余装备位以后再加）
-  wield: v => {
-    if (v && (S.items[v] ?? 0) > 0 && itemById(v)?.equip) S.gear.weapon = v; else delete S.gear.weapon;
-    render();
-  },
   mapRegion: v => { setMapRegion(v); render(); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
@@ -150,13 +160,6 @@ registerHandlers({
     if (to === S.loc) { toast('就在此处'); return; }
     closeSheet();
     travelTo(to);
-  },
-  use: v => {
-    if (v !== 'jcy' || (S.items.jcy || 0) < 1 || S.hp >= S.hpMax) return;
-    S.items.jcy--;
-    S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * 0.3));
-    toast('气血回复');
-    render();
   },
   retreat: v => retreat(Number(v)),
   sheetClose: () => { closeSheet(); render(); },

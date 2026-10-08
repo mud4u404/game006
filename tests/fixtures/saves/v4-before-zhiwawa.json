@@ -1,0 +1,119 @@
+{
+  "v": 4,
+  "chapter": 1,
+  "name": "孤舟",
+  "loc": "cheng",
+  "year": 0,
+  "month": 3,
+  "day": 9,
+  "min": 865,
+  "weather": "阴",
+  "hp": 560,
+  "hpMax": 705,
+  "mp": 200,
+  "mpMax": 306,
+  "gongli": 3,
+  "wounds": {
+    "hand": 0,
+    "foot": 0,
+    "inner": 0
+  },
+  "real": {
+    "start": 1791300000000,
+    "startDay": 67,
+    "seen": 1791380000000
+  },
+  "yue": [],
+  "xinmo": {
+    "n": 0,
+    "why": ""
+  },
+  "shenfen": {
+    "id": "youxia",
+    "standing": 1,
+    "since": 67
+  },
+  "job": null,
+  "jobLog": {},
+  "silver": 86,
+  "items": {
+    "qingfeng": 1,
+    "jcy": 2,
+    "fhs": 4,
+    "jade": 1,
+    "scroll": 1,
+    "huadiao": 1,
+    "flower": 1
+  },
+  "quests": {
+    "prologue": 3,
+    "main1": 1,
+    "side_huafang": 0
+  },
+  "track": "main1",
+  "flags": {
+    "skipped": true,
+    "bei": true,
+    "huafang_started": true
+  },
+  "rel": {
+    "liu": "相谈甚欢",
+    "liaochen": "点头之交",
+    "yunnian": "点头之交"
+  },
+  "title": "",
+  "xia": 12,
+  "eming": 0,
+  "attr": {
+    "体魄": 22,
+    "根骨": 22,
+    "身法": 23,
+    "悟性": 23,
+    "胆魄": 22
+  },
+  "lilian": 380,
+  "encLog": {},
+  "lastEnc": -1000000000,
+  "skills": {
+    "hanjiang": {
+      "r": 1,
+      "p": 40
+    },
+    "taxue": {
+      "r": 0,
+      "p": 150
+    },
+    "xinfa": {
+      "r": 1,
+      "p": 20
+    },
+    "duanshui": {
+      "r": 0,
+      "p": 10
+    }
+  },
+  "loadout": {
+    "neigong": "xinfa",
+    "qinggong": "taxue",
+    "weapon": "hanjiang",
+    "ult": "duanshui"
+  },
+  "gear": {
+    "weapon": "qingfeng"
+  },
+  "feed": [
+    {
+      "t": "江湖",
+      "x": "湖畔石碑的落款下，竟刻着一个「沈」字。",
+      "n": 1791379000000
+    }
+  ],
+  "story": "",
+  "sel": null,
+  "reply": null,
+  "tab": "jianghu",
+  "relNote": {
+    "liu": "湖畔切磋，不打不相识",
+    "liaochen": "江伯临终让你来找他"
+  }
+}

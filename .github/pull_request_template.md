@@ -21,3 +21,6 @@ Closes #
 - [ ] 只改了 Issue 允许的文件
 - [ ] 符合 `docs/charter.md`（宪章），尤其是任务质量和不剧透
 - [ ] 在浏览器里亲自走过一遍
+- [ ] 对照 `AGENTS.md` 第十一节「常见错误清单」逐条查过
+- [ ] `ZOUBIAN_PREFIX=<id 前缀> npm run zoubian` 的输出贴在下面，没走到的分支逐条写了原因
+- [ ] 列出了读过的别人的文件

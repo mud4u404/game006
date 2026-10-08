@@ -27,7 +27,7 @@ const STORIES: StoryDef[] = [
         { label: '安静站在船边，任他查', sub: '身正不怕影子斜',
           result: '灯笼在你面前停了停。你神色如常。头目盯着你看了一阵，挥挥手放了行——夜里赶路的客人，见得多了。',
           do: [{ type: 'flag', flag: 'ly_jiang_cha' }], next: -1 },
-        { label: '替船家垫上查船的规矩钱', sub: '银两 −20',
+        { if: { silver: 20 }, label: '替船家垫上查船的规矩钱', sub: '银两 −20',
           result: '你把二十文塞给船家。船家会意，双手奉上。头目掂了掂钱袋：「船单齐全，走罢。」船家连声道谢，一路再没敢大声出气。',
           do: [
             { type: 'silver', delta: -20 }, { type: 'flag', flag: 'ly_jiang_cha_qian' },
@@ -139,7 +139,7 @@ const STORIES: StoryDef[] = [
             { type: 'lilian', amount: 20 },
             { type: 'feed', tag: '江湖', text: '西津渡外江豚拜风，有位公子帮船家抢收了帆，一船人平安靠岸。' }
           ], next: -1 },
-        { label: '入乡随俗，帮着添一炷香', sub: '银两 −5',
+        { if: { silver: 5 }, label: '入乡随俗，帮着添一炷香', sub: '银两 −5',
           result: '你依着船家的规矩添了香。风到来时船虽颠簸，总算有惊无险。船家直说这满船的客人都托了江神的福。',
           do: [
             { type: 'silver', delta: -5 }, { type: 'flag', flag: 'ly_jiang_tun_xiang' }

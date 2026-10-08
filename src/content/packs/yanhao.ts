@@ -46,11 +46,11 @@ const NPCS: NpcDef[] = [
             { type: 'quest', id: 'side_yanhao', stage: 2 },
             { type: 'feed', tag: '江湖', text: '你把汪家账上的亏空轻轻放在柜台上。毕掌柜连夜放出了云娘的身契，只求你别去惊动府衙。' }
           ] },
-        { if: { flag: 'yh_zhangmu' },
-          text: '你把账上那笔「漕上使费」轻轻一点，毕掌柜的算盘停了：「客官，账上的事，看看就好。汪家的账，从来经得起查。」手却把账簿合上了。' },
         { if: { flag: 'huafang_taken', quest: { id: 'side_yanhao', is: 0 } },
           text: '你问起云娘的身契。毕掌柜眼皮都没抬：「身契？二十两。汪家的规矩，卖出去的人，想赎回去，也是这个数——一两都不能少。」',
           do: [{ type: 'quest', id: 'side_yanhao', stage: 1 }] },
+        { if: { flag: 'yh_zhangmu' },
+          text: '你把账上那笔「漕上使费」轻轻一点，毕掌柜的算盘停了：「客官，账上的事，看看就好。汪家的账，从来经得起查。」手却把账簿合上了。' },
         { if: { flag: 'huafang_pay' },
           text: '「利钱照收，一文不少。」毕掌柜拨了两颗算盘珠，「下期初三来交。汪家的账，从来不记错——也从来不会少记。」' },
         { if: { flag: 'huafang_nianhao' },
@@ -203,7 +203,7 @@ const NPCS: NpcDef[] = [
     verbs: ['细看'],
     actions: {
       细看: [
-        { if: { notFlag: 'yh_zhangmu', flag: 'huafang_taken' },
+        { if: { flag: 'huafang_taken', quest: { id: 'side_yanhao', below: 1 } },
           text: '你逐行看下去：盐引、船脚、官牙钱，笔笔清楚。只有一笔「漕上使费」月月三千两，去向不明——东支西绌，全靠各处的利钱填着。',
           do: [
             { type: 'flag', flag: 'yh_zhangmu' },
@@ -232,7 +232,7 @@ const pack: ContentPack = {
   npcs: NPCS,
   quests: QUESTS,
   items: [
-    { id: 'yh_shenqi', name: '云娘的身契', desc: '汪家盐号开出的卖身契，朱印齐全。攥在手里，就是攥着一个人的命。', hidden: true }
+    { id: 'yh_shenqi', name: '云娘的身契', kind: '信物', desc: '汪家盐号开出的卖身契，朱印齐全。攥在手里，就是攥着一个人的命。', hidden: true }
   ],
   news: [
     { if: { flag: 'yh_freed' },

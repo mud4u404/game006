@@ -54,6 +54,7 @@ const SKILLS: SkillDef[] = [
     desc: '星宿派轻功。身形飘忽，凌空摘星，一个起落已在数丈之外，落处全无征兆，教人摸不准路数。',
     learn: '星宿派弟子共习，进阶须师门点头',
     teach: '外门',
+    requires: [{ skill: 'xm_fushi', realm: 2 }],
     passive: [{ kind: 'haste', value: 12 }]
   },
   {
@@ -264,7 +265,15 @@ const SKILLS: SkillDef[] = [
     desc: '血刀门内功。至阳至刚的路子，却练得轻快狠戾，气血一到手上，脚下生风，刀法快得邪性。',
     learn: '血刀门秘传，须与刀法同修',
     teach: '外门',
+    requires: [{ skill: 'xm_chixue', realm: 2 }],
     passive: [{ kind: 'haste', value: 5 }]
+  },
+  {
+    id: 'xm_chixue', name: '赤血功', grade: '良品', category: '内功', school: '血刀门', nature: '阳',
+    desc: '血刀门入门的内功。雪地里赤着膊打坐，逼得一身热血往手脚上冲，冻不死的，人就快了。练法粗野，见效却快，正合血刀门快刀放血的路子。',
+    learn: '血刀门入门内功，雪地里熬出来的',
+    teach: '入门',
+    passive: [{ kind: 'haste', value: 6 }]
   }
 ];
 

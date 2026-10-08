@@ -22,6 +22,7 @@ const SKILLS: SkillDef[] = [
     desc: '九边将士的枪术。没有花巧，拦、拿、扎三字练到老；一枪出去，为的是身后整条防线。',
     learn: '九边行伍枪术，队官口传身授',
     teach: '外门',
+    requires: [{ skill: 'jl_changquan', realm: 1 }],
     moves: [
       { name: '中平枪', text: '你一枪平扎，高低远近都不离{foe}{part}——中平枪，枪中王。', wound: '刺伤' },
       { name: '拦拿扎', text: '你枪杆一拦一拿，封住{foe}来势，枪尖顺势扎其{part}。', wound: '刺伤' },

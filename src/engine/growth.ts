@@ -3,7 +3,7 @@ import { emit } from '../core/bus';
 import { REALMS, REALM_NEED, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { autoSlot } from './wuxue';
-import { canLearn, realmCap } from './shicheng';
+import { canLearn, realmCap, rootHint } from './shicheng';
 import { profMul } from './gengu';
 import { syncBody } from './ren';
 
@@ -64,5 +64,8 @@ export function learnSkill(id: SkillId, realm = 0, prof = 0): string[] {
   const msg = `习得「${sk.name}」`;
   pushFeed('突破', msg + '！');
   emit('toast', msg + '！');
+  // 学到本门内功，内功位上却还是别的内功：记一条见闻，换不换由玩家定
+  const hint = rootHint(S, sk);
+  if (hint) pushFeed('江湖', hint);
   return [msg];
 }

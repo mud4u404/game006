@@ -226,7 +226,7 @@ const pack: ContentPack = {
   jobs: JOBS,
   news: NEWS,
   items: [
-    { id: 'zb_huadiao', name: '花雕', desc: '陈年花雕，泥封上的红纸写着「百年陈酿」。' }
+    { id: 'zb_huadiao', name: '花雕', kind: '酒食', price: 80, use: [{ type: 'heal', mpFrac: 0.1 }], desc: '陈年花雕，泥封上的红纸写着「百年陈酿」。' }
   ]
 };
 export default pack;

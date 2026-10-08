@@ -17,7 +17,8 @@
     "retune": "RETUNE=1 vitest run tests/retune.test.ts --silent=false",
     "menpai": "MENPAI=1 vitest run tests/menpai.test.ts --silent=false",
     "balance": "BALANCE=1 vitest run tests/balance.test.ts --silent=false",
-    "model": "MODEL=1 vitest run tests/model.test.ts --silent=false"
+    "model": "MODEL=1 vitest run tests/model.test.ts --silent=false",
+    "zoubian": "ZOUBIAN=1 vitest run tests/zoubian.test.ts --silent=false"
   },
   "devDependencies": {
     "playwright": "1.56.1",

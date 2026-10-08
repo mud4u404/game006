@@ -1,6 +1,14 @@
 import type { ContentPack, SkillDef } from '../types';
 
-/** 武学库：苍梧剑派（本作原创，Issue #29）。定位：主打擒拿、副阴毒——表面中正平和，暗藏带几率的阴狠后手 */
+/**
+ * 武学库：苍梧剑派（本作原创，Issue #29）。定位：主打擒拿、副阴毒——表面中正平和，暗藏带几率的阴狠后手。
+ *
+ * 武学树（docs/menpai.md 第七节）：
+ *   入门：守拙功（内功）、破云剑、裂石掌、登云纵
+ *   外门：苍梧心法、铁骨扇（守拙功融会贯通）、停云剑法（破云剑融会贯通）
+ *   真传：青崖剑法（停云剑法炉火纯青）、崩雪（青崖剑法炉火纯青）
+ * 擒拿、阴毒都没有合适的内功被动（docs/menpai.md 第五节），苍梧的内功不带被动。
+ */
 
 const SKILLS: SkillDef[] = [
   {
@@ -8,7 +16,14 @@ const SKILLS: SkillDef[] = [
     desc: '苍梧根基内功。明面上养的是浩然正气，行气却走阴柔一路；练到深处，真气绵密如茧，寻常刀剑难伤，触之方知厉害。',
     learn: '苍梧外门弟子共习，进境全看心性',
     teach: '外门',
+    requires: [{ skill: 'cw_shouzhuo', realm: 2 }],
     combos: [{ with: 'cw_qingya', name: '青崖同气', bonus: 3, text: '你心法剑法同出一门，真气顺着剑势游走，剑光看着平和，内里一记沉似一记。' }]
+  },
+  {
+    id: 'cw_shouzhuo', name: '守拙功', grade: '良品', category: '内功', school: '苍梧', nature: '中正',
+    desc: '苍梧入门的养气功夫，取「守拙归园田」之意，讲究藏锋守拙，不露圭角。功夫浅，却是苍梧一切武功的底子：剑里要藏得住东西，先得把心事藏住。',
+    learn: '苍梧入门弟子晨课所习',
+    teach: '入门'
   },
   {
     id: 'cw_qingya', name: '青崖剑法', grade: '绝品', category: '剑法', school: '苍梧', nature: '中正', reach: '短',
@@ -36,6 +51,7 @@ const SKILLS: SkillDef[] = [
     desc: '苍梧外门剑法，取《停云》之诗，剑势舒缓平和，与世无争。只是剑光里常裹着一点叫人不舒服的凉意。',
     learn: '苍梧外门剑法，弟子共习',
     teach: '外门',
+    requires: [{ skill: 'cw_poyun', realm: 2 }],
     moves: [
       { name: '停云霭霭', text: '你长剑缓缓推出，剑光凝而不散，如停云霭霭，压向{foe}{part}。', wound: '割伤' },
       { name: '时雨濛濛', text: '你剑尖连点，细密如濛濛时雨，无声无息落在{foe}{part}。', wound: '刺伤' },
@@ -102,6 +118,7 @@ const SKILLS: SkillDef[] = [
     desc: '苍梧门中文士的装点。铁骨折扇开阖有度，扇面题的是山水，扇骨里却暗藏机簧与淬毒的细针。',
     learn: '苍梧文士装点门的功夫，外门以上可学，机簧要自家琢磨',
     teach: '外门',
+    requires: [{ skill: 'cw_shouzhuo', realm: 2 }],
     moves: [
       { name: '优哉游哉', text: '你折扇慢摇，姿态闲适之极，扇沿却悄无声息磕向{foe}{part}。', wound: '瘀伤' },
       { name: '扇底风波', text: '你扇骨一翻，棱角划过{foe}{part}，扇面上山水犹在徐徐展开。', wound: '割伤' },

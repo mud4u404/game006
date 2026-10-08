@@ -4,7 +4,7 @@
  */
 import { S, pushFeed, save } from '../core/state';
 import { fullDate } from '../core/time';
-import { $, liang } from '../core/util';
+import { $, cn, liang } from '../core/util';
 import { room } from '../content';
 import { ZONE_NAME } from '../engine/duel';
 import { gongliText } from '../engine/ren';
@@ -28,7 +28,8 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
     r.gongli > 0 ? `<span class="tag accent">功力深到${gongliText(S.gongli)}</span>` : '',
     healTxt ? `<span class="tag">${healTxt}</span>` : '',
     r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : '',
-    r.lodging === 'inn' ? `<span class="tag">住店 −${r.cost} 文</span>` : '<span class="tag warn">钱不够住店，露宿了几夜，伤好得慢</span>'
+    r.lodging === 'inn' ? `<span class="tag">住店 −${r.cost} 文</span>`
+      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，伤好得慢</span>`
   ].filter(Boolean);
   const y = nextYue(S);
   const lines: string[] = [];
