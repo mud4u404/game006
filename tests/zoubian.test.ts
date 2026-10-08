@@ -28,6 +28,8 @@ const PREFIX = env.ZOUBIAN_PREFIX ?? '';
 
 /** 一局：从哪里开始、走几步、用哪个种子 */
 interface Run { start: 'new' | 'skip'; steps: number; seed: number; focus?: string }
+/** 当前这一局：补跑盯任务时更常打输（有的事要先输一场才开头，例如画舫输了，盐号的事才来） */
+let cur: Run | undefined;
 const RUNS: Run[] = Array.from({ length: 10 }, (_, i) => i + 1).flatMap(i => [
   { start: 'new' as const, steps: 5000, seed: i },
   { start: 'skip' as const, steps: 5000, seed: 100 + i }
@@ -90,7 +92,8 @@ function fight(fid: string, depth: number): void {
   if (style < 0.08 && !f.script) {
     for (let t = 0; t < 30 && !d.over; t++) d.tick(), f.spar ? d.yieldUp() : d.flee();
   }
-  if (!d.over) simulate(d, style < 0.18 ? IDLE : style < 0.45 ? RANDOM : SKILLED);
+  const idle = cur?.focus ? 0.4 : 0.18;
+  if (!d.over) simulate(d, style < idle ? IDLE : style < idle + 0.27 ? RANDOM : SKILLED);
   S.hp = Math.max(0, Math.round(d.hp));
   S.mp = Math.max(0, Math.round(d.mp));
   const res = d.res!;
@@ -230,6 +233,7 @@ function check(where: string): void {
 }
 
 function play(r: Run): void {
+  cur = r;
   rng = mulberry32(r.seed);
   setState(r.start === 'new' ? newGame() : skipToYangzhou());
   cov.room.add(S.loc);
@@ -255,7 +259,7 @@ describe('机器玩家走遍江湖', () => {
   for (const r of RUNS) play(r);
   // 还没走完的任务，专门盯着它再走几局
   const done = (id: string): boolean => (cov.quest.get(id) ?? -1) >= questById(id)!.stages.length - 1;
-  for (const q of QUESTS) for (let k = 0; k < 12 && !done(q.id); k++) play({ start: k % 2 ? 'skip' : 'new', steps: 5000, seed: 1000 + k, focus: q.id });
+  for (const q of QUESTS) for (let k = 0; k < 24 && !done(q.id); k++) play({ start: k % 2 ? 'skip' : 'new', steps: 5000, seed: 1000 + k, focus: q.id });
   const ms = Date.now() - t0;
 
   // 覆盖报告
