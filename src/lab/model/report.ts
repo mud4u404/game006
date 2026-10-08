@@ -3,12 +3,10 @@
  * 标准是事先写死的（计划第二节），这里只负责量。k 是样本的倍数：测试里用 1（几秒跑完），全量报告用 3。
  */
 import type { GameState } from '../../core/state';
-import { CURRENT_RULES, NAIVE, NEW_RULES, RANDOM, ROTE, SKILLED, fight, many, type Foe, type Hero, type Policy, type Rules, type Wounds } from './kernel';
+import { NAIVE, NEW_RULES, RANDOM, ROTE, SKILLED, fight, many, type Foe, type Hero, type Policy, type Rules, type Wounds } from './kernel';
 import { ATTR_NAME, BUILDS, SCALE0, SCALE2, asFoe, asHero, standard, type Attr, type Person, type Scale } from './person';
 import { GONGLI_LADDER, LIFE0, PROFILES, live, type LifeLog, type Profile } from './life';
 import { OLD_COMMON, migrateSave } from './migrate';
-import { foeFromDef, heroFromState } from './current';
-import type { FoeDef } from '../../content/types';
 
 export interface Row { id: string; area: string; std: string; got: string; pass: boolean | null; note?: string }
 export interface FeelRow { name: string; win: number; rote: number; random: number; seconds: number; decisions: number; prompts: number; openings: number; decisive: number; swings: number; comeback: number }
@@ -40,8 +38,6 @@ function pairs(ht: number, ft: number, pol: Policy, rules: Rules, n: number, sal
 export interface Inputs {
   /** 现有的存档样本（JSON 读出来、已经迁移到当前版本的） */
   saves: { file: string; state: GameState; oldTier: number }[];
-  /** 现有实战的基准：玩家存档和屠千山 */
-  baseline?: { state: GameState; foe: FoeDef };
 }
 
 export function buildReport(k: number, inp: Inputs): Report {
@@ -230,7 +226,6 @@ export function buildReport(k: number, inp: Inputs): Report {
     const s = many(h, f, SKILLED, rules, n * 5, salt);
     return { name, win: s.win, rote: many(h, f, ROTE, rules, n * 5, salt + 1).win, random: many(h, f, RANDOM, rules, n * 5, salt + 2).win, seconds: s.seconds, decisions: s.decisions, prompts: s.prompts, openings: s.openings, decisive: s.decisiveShare, swings: s.swings, comeback: s.comeback };
   };
-  if (inp.baseline) feel.push(fr('现在的游戏：扬州的玩家对屠千山', heroFromState(inp.baseline.state), foeFromDef(inp.baseline.foe), CURRENT_RULES, 300));
   feel.push(fr('新规则：二流对二流（外功为主对轻功为主）', H(standard(2, 'outer')), F(standard(2, 'light')), R, 310));
   feel.push(fr('新规则：二流对一流（以弱胜强）', H(standard(2, 'outer')), F(standard(3, 'inner')), R, 320));
   feel.push(fr('新规则：带两级足伤的二流对二流', H(standard(2, 'light'), { hand: 0, foot: 2, inner: 0 }), F(standard(2, 'outer')), R, 330));

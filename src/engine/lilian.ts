@@ -9,6 +9,7 @@ import { dayNo } from '../core/time';
 import { pushFeed, type GameState } from '../core/state';
 import type { FoeDef, QuestDef, SkillId, Slot } from '../content/types';
 import { activeOuter } from './wuxue';
+import { gongliAt } from './person';
 
 export function addLilian(s: GameState, n: number): void {
   if (n > 0) s.lilian = (s.lilian ?? 0) + n;
@@ -20,18 +21,21 @@ const RES_SHARE: Record<FightRes, number> = { win: 1, lose: 0.5, yield: 0.3, fle
 /** 七天之内再打同一个人，历练减半；隔得久了，重新算 */
 export const FOE_WINDOW = 7;
 
+/** 打赢一个对手的历练：不入流一百，每高一档约翻一倍（和功力的阶梯一样）；不是练家子的按比例少 */
+export const foeLilian = (f: Pick<FoeDef, 'rank' | 'weak'>): number => Math.round((100 * gongliAt(f.rank)) / gongliAt(0) * (f.weak ?? 1));
+
 /**
- * 一场架打下来的历练：对手越强越多（气血的十分之一）；赢了全得，输了得一半，认输三成，逃跑没有。
+ * 一场架打下来的历练：对手越强越多；赢了全得，输了得一半，认输三成，逃跑没有。
  * 同一个对手七天内反复打，一次比一次少：该学的已经学到了。
  */
-export function fightLilian(s: GameState, f: Pick<FoeDef, 'id' | 'hp'>, res: FightRes): number {
+export function fightLilian(s: GameState, f: Pick<FoeDef, 'id' | 'rank' | 'weak'>, res: FightRes): number {
   const day = dayNo(s);
   const log = (s.foeLog ??= {});
   const rec = log[f.id];
   const gap = rec ? day - rec.day : Infinity;
   const n = gap >= 0 && gap < FOE_WINDOW ? rec!.n : 0;
   log[f.id] = { n: n + 1, day };
-  const got = Math.round((f.hp / 10) * RES_SHARE[res] * 0.5 ** n);
+  const got = Math.round(foeLilian(f) * RES_SHARE[res] * 0.5 ** n);
   addLilian(s, got);
   return got;
 }

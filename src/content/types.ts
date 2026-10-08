@@ -144,12 +144,39 @@ export interface NpcDef {
   actions: Partial<Record<Verb, Branch[]>>;
 }
 
-/** 对手重招：力、速、巧、隙四项强度，决定玩家各种应对的成算 */
+/**
+ * 对手重招。这一招主要是哪一项：li 力（沉猛，硬接最难）、su 速（快，闪避最难）、qiao 巧（变化多，拆招最难）。
+ * 强度不用写：由对手的档次和路数算出来（engine/duel.ts），同一招在高手手里更难接。
+ */
 export interface TellDef {
   name: string;
   text: string;
-  pw: { li: number; su: number; qiao: number; xi: number };
+  dom: 'li' | 'su' | 'qiao';
   after: string;
+}
+
+/** 胜负以后的一条路：放他走、问话、送官、下杀手……写明后果在哪里回来 */
+export interface AfterOpt {
+  /** 这条路什么时候有（例如事情已经了结过，就不再有）；一条都没有时不问 */
+  if?: Cond;
+  label: string;
+  /** 按钮上的小字：代价或去向 */
+  sub?: string;
+  /** 选了以后，战斗记录里的一句 */
+  say: string;
+  /** 换掉结算页的标题和叙述（原来的结算替玩家定了别的结局时） */
+  title?: string;
+  story?: string;
+  do?: Effect[];
+  /** 结算页上的「以后」：这件事会在哪里回来（传闻、路遇、人物的话） */
+  later: string;
+}
+
+/** 胜负以后：打倒对手以后，由玩家定他的下场 */
+export interface AfterDef {
+  /** 对手倒下以后说的话 */
+  plea: string;
+  opts: AfterOpt[];
 }
 
 export interface FightResult {
@@ -165,6 +192,8 @@ export interface FightResult {
   button?: string;
   /** 输了时是否显示「变强之道」 */
   growth?: boolean;
+  /** 胜负以后：先问玩家怎样处置对手，再出结算（只用在 win 上） */
+  after?: AfterDef;
 }
 
 export interface FoeDef {
@@ -179,13 +208,19 @@ export interface FoeDef {
   /** 武功的性质与兵器长短，用来算克制（见 docs/wuxue.md）；不写就不算克制 */
   nature?: SkillNature;
   reach?: SkillReach;
-  hp: number;
-  atk: [number, number];
-  big: number;
+  /**
+   * 档次：0 不入流、1 三流、2 二流、3 一流、4 绝顶、5 宗师，可以带小数（1.5 是三流里拔尖的）。
+   * 气血、出手、重招的强度都由档次和路数算出来（engine/person.ts 的 standard），不用写数。
+   */
+  rank: number;
+  /** 路数：outer 外功见长（出手重、拆招强）、inner 内功深厚（耐打、硬接强）、light 轻功见长（快、难打中）；不写为均衡 */
+  build?: 'even' | 'outer' | 'inner' | 'light';
+  /** 不是练家子（饿急了的孩子、乌合之众）：气血和出手都乘这个数，例如 0.1；练家子不写 */
+  weak?: number;
   /** 切磋：打到三成气血即止 */
   spar?: boolean;
-  /** 剧本战：不会战死、不能逃跑认输，由 script 决定如何收场 */
-  script?: 'win-at-zero' | 'rescue';
+  /** 剧本战：不会战死、不能逃跑认输。rescue：打到六成（或你撑不住）时由人救下；cup：你撑不住时有人出手 */
+  script?: 'cup' | 'rescue';
   /** 第几合出第一次重招 */
   firstTell?: number;
   tag: string;
@@ -212,14 +247,23 @@ export interface PrepDef {
   if: Cond;
   /** 开打时的叙述，例如「你记着船夫的话，专往他左边走」 */
   text: string;
-  /** 对手气血、普通招式、重招的倍数，例如 0.85 */
-  hp?: number;
+  /** 知彼：对手普通招式、重招的倍数，例如 0.85（打听到底细，专攻他的软肋） */
   atk?: number;
   big?: number;
+  /** 帮手：答应来的人，在战斗里看得见地出手（engine/duel.ts） */
+  ally?: AllyDef;
   /** 战后说书里的一句，写成完整的句子 */
   story?: string;
   /** 带着这项准备打赢时，额外执行的效果（准备的代价、后果写在这里） */
   win?: Effect[];
+}
+
+/** 帮手：share 是他一共替你打掉对手几成气血（0.15 到 0.3），at 是他在第几合出手，say 是每次出手的叙述（按次序用，用完重复最后一句） */
+export interface AllyDef {
+  name: string;
+  share: number;
+  at: number[];
+  say: string[];
 }
 
 /* ---------- 武功（武学库，详见 docs/wuxue.md） ---------- */

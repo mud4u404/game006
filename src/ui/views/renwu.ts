@@ -6,7 +6,6 @@ import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
 import { xiuwei } from '../../engine/wuxue';
 import { cloudRowHTML } from './account-link';
-import { PROTO, xushiOn } from '../../core/proto';
 
 const ATTRS: AttrKey[] = ['体魄', '根骨', '身法', '悟性', '胆魄'];
 
@@ -46,28 +45,12 @@ export function viewRenwu(): string {
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
   </div></section>
-  ${PROTO ? protoHTML() : ''}
   <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${meaningful}</span></div>${renqingHTML()}</section>
   <section class="card here"><div class="sec-h"><h2>存档</h2></div>
     ${saveCardHTML()}
     ${confirmRestart
       ? `<p class="muted">清空前会先另存一份，之后在「找回备份」里还能换回来。</p><div class="btnrow"><button class="btn ghost" data-act="restartNo">算了</button><button class="btn warn" data-act="restartYes">清空存档</button></div>`
       : `<button class="act danger" data-act="restart">清空存档，重新开始</button>`}
-  </section>`;
-}
-
-/** 原型里可以直接试打的对手：前三个打倒以后问放还是杀；草上飞的差事、屠千山的剧情已经定了结局，只试虚实 */
-const PROTO_FOES: [string, string][] = [['ly_xiaozei', '小毛贼'], ['huafang_guard', '汪家护院'], ['cw_shuigui', '水鬼'], ['zy_csf', '草上飞'], ['tu', '屠千山']];
-
-/** 原型（docs/foundation.md 第三版第八节）：只在原型的构建里出现 */
-function protoHTML(): string {
-  const on = xushiOn();
-  return `<section class="card here"><div class="sec-h"><h2>原型</h2><span class="tag warn">试玩用</span></div>
-    <p class="muted">这一版里多了三样，请凭手感判断：打倒有名有姓的对手以后，放还是杀；应对得手以后，硬接、拆招还的那一下更重；还有虚实，可以开关对照着打。</p>
-    <div class="row"><span>虚实（随机应变）</span><small class="muted">${on ? '开着：对手的重招有虚有实，硬接最怕落空，拆招最不怕' : '关着：和正式的游戏一样'}</small></div>
-    <button class="act" data-act="protoXushi">${on ? '关掉虚实' : '打开虚实'}</button>
-    <p class="muted">不用满地图去找，在这里直接试打（原型的存档和正式的游戏分开，不会动你的进度）。打完一场，可以先到客栈歇息，养好伤再打。</p>
-    <div class="btnrow">${PROTO_FOES.map(([id, n]) => `<button class="act" data-act="protoFight:${id}">${n}</button>`).join('')}</div>
   </section>`;
 }
 

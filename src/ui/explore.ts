@@ -3,7 +3,6 @@
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { advanceDays, dateStr } from '../core/time';
-import { PROTO, setXushi, xushiOn } from '../core/proto';
 import { $, reduceMotion } from '../core/util';
 import { NEWS, itemById, questById, room, skillById } from '../content';
 import type { SkillId, Slot, Verb } from '../content/types';
@@ -173,8 +172,6 @@ registerHandlers({
   },
   retreat: v => retreat(Number(v)),
   sheetClose: () => { closeSheet(); render(); },
-  protoXushi: () => { setXushi(!xushiOn()); render(); },
-  protoFight: v => { if (PROTO) hooks.startFight?.(v); },
   restart: () => { setConfirmRestart(true); render(); },
   restartNo: () => { setConfirmRestart(false); render(); },
   restartYes: () => { setConfirmRestart(false); clearSave(); showTitle(false); },

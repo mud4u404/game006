@@ -237,34 +237,50 @@ describe('任务、剧情、对手', () => {
     report(errs);
   });
 
-  it('对手的数值和结算有效', () => {
+  it('对手的档次、重招和结算有效', () => {
     const errs: string[] = [];
     for (const f of FOES) {
       const w = `对手 ${f.id}`;
       if (!f.tells.length) errs.push(`${w}：至少要有一招重招（tells）`);
-      for (const t of f.tells) {
-        if (Object.values(t.pw).some(v => v < 0 || v > 100)) errs.push(`${w} 的「${t.name}」：力速巧隙要在 0 到 100 之间`);
-      }
-      if (f.atk[0] > f.atk[1]) errs.push(`${w}：atk 的下限大于上限`);
+      for (const t of f.tells) if (!['li', 'su', 'qiao'].includes(t.dom)) errs.push(`${w} 的「${t.name}」：dom 只能写 li、su、qiao`);
+      if (!(f.rank >= 0 && f.rank <= 5)) errs.push(`${w}：rank（档次）要在 0 到 5 之间`);
+      if (f.weak !== undefined && !(f.weak > 0 && f.weak <= 1)) errs.push(`${w}：weak 要在 0 到 1 之间`);
       if (!f.moves.length || !f.flourish.length || !f.opening.length || !f.asides.length) errs.push(`${w}：moves、flourish、opening、asides 都不能为空`);
       for (const [k, r] of Object.entries(f.results)) {
         if (!r) continue;
         if (!r.silent && (!r.tag || !r.title || !r.story || !r.button)) errs.push(`${w} 的结算 ${k}：非 silent 的结算需要 tag、title、story、button`);
         checkEffects(r.do, `${w} 的结算 ${k}`, errs);
         checkEffects(r.then, `${w} 的结算 ${k} 的 then`, errs);
+        if (r.after && k !== 'win') errs.push(`${w} 的结算 ${k}：胜负以后（after）只写在 win 上`);
+        if (r.after) {
+          if (!r.after.plea) errs.push(`${w}：胜负以后要写 plea（对手倒下以后说的话）`);
+          if (r.after.opts.length < 2) errs.push(`${w}：胜负以后至少两条路`);
+          r.after.opts.forEach((o, i) => {
+            const ow = `${w} 胜负以后的第 ${i + 1} 条路`;
+            if (!o.label || !o.say || !o.later) errs.push(`${ow}：要写 label、say、later（later 写这件事以后在哪里回来）`);
+            checkCond(o.if, ow, errs);
+            checkEffects(o.do, ow, errs);
+          });
+        }
       }
       if (!f.spar && !f.script && !f.results.lose) errs.push(`${w}：会输的战斗需要 lose 结算`);
-      // 备战：每一项要有叙述；单项最多削四成，全部叠满也不能低于对手的一半
-      let hpAll = 1, atkAll = 1;
+      // 备战：每一项要有叙述；知彼单项最多打八五折（低一档的人备战做满，胜率不超过六成）；帮手一共最多替你打掉四成半
+      let share = 0;
       (f.prep ?? []).forEach((p, i) => {
         const pw = `${w} 的备战 ${i}`;
         checkCond(p.if, pw, errs);
         checkEffects(p.win, `${pw} 的 win`, errs);
         if (!p.text) errs.push(`${pw}：要写 text，开打时告诉玩家这项准备起了作用`);
-        for (const k of ['hp', 'atk', 'big'] as const) if (p[k] !== undefined && (p[k]! < 0.6 || p[k]! > 1)) errs.push(`${pw}：${k} 要在 0.6 到 1 之间`);
-        hpAll *= p.hp ?? 1; atkAll *= p.atk ?? 1;
+        for (const k of ['atk', 'big'] as const) if (p[k] !== undefined && (p[k]! < 0.85 || p[k]! > 1)) errs.push(`${pw}：${k} 要在 0.85 到 1 之间`);
+        if (p.ally) {
+          const a = p.ally;
+          if (!a.name || !a.say.length) errs.push(`${pw}：帮手要写 name 和 say`);
+          if (!(a.share >= 0.1 && a.share <= 0.3)) errs.push(`${pw}：帮手的 share 要在 0.1 到 0.3 之间`);
+          if (!a.at.length || a.at.some((x, j) => !Number.isInteger(x) || x < 1 || (j > 0 && x <= a.at[j - 1]))) errs.push(`${pw}：帮手的 at 是从小到大的合数`);
+          share += a.share;
+        }
       });
-      if (hpAll < 0.5 || atkAll < 0.5) errs.push(`${w}：备战全部叠满，对手的气血、出手不能低于一半`);
+      if (share > 0.45) errs.push(`${w}：帮手一共最多替你打掉四成半气血`);
     }
     report(errs);
   });

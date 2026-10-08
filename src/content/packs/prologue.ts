@@ -99,11 +99,11 @@ const STORIES: StoryDef[] = [
 
 const FOES: FoeDef[] = [
   { id: 'heiyi', name: '黑衣人', title: '夜行人', ini: '黑', tone: 'gray', weapon: '短刀', ws: '刀', tag: '序章',
-    hp: 520, atk: [24, 36], big: 80, script: 'win-at-zero', firstTell: 3,
+    rank: 0, build: 'outer', weak: 0.25, script: 'cup', firstTell: 3,
     moves: ['毒蛇吐信', '反手撩阴', '横抹咽喉'],
     flourish: ['贴身疾刺', '反手一抹', '刀光一闪'],
     tells: [
-      { name: '夺命三刀', text: '黑衣人压低身形，短刀反握，脚下悄无声息地绕向你左侧……', pw: { li: 15, su: 28, qiao: 20, xi: 20 }, after: '刀锋划破了窗纸。' }
+      { name: '夺命三刀', text: '黑衣人压低身形，短刀反握，脚下悄无声息地绕向你左侧……', dom: 'su', after: '刀锋划破了窗纸。' }
     ],
     asides: ['雨水从破了的屋顶漏下来，滴在江伯脸上。', '窗外的雨越下越大。'],
     opening: ['刀势一老', '脚下一滑', '收刀时露了空门'],
@@ -114,12 +114,12 @@ const FOES: FoeDef[] = [
     results: { win: { silent: true, then: [{ type: 'story', id: 'p_after1' }] } } },
 
   { id: 'heiyi2', name: '黑衣首领', title: '腰悬铜牌', ini: '首', tone: 'red', weapon: '雁翎刀', ws: '刀', tag: '序章',
-    hp: 3600, atk: [60, 90], big: 230, script: 'rescue', firstTell: 2,
+    rank: 2, script: 'rescue', firstTell: 2,
     moves: ['夜战八方', '雁落平沙', '斜劈华岳'],
     flourish: ['刀光如匹练', '挟着风雨横扫', '自上而下猛斩'],
     tells: [
-      { name: '夜叉探海', text: '黑衣首领单手拖刀，刀尖在地上划出一串火星，猛地自下而上撩起……', pw: { li: 38, su: 30, qiao: 25, xi: 15 }, after: '桌椅被劈成了两半！' },
-      { name: '鬼影迷踪', text: '黑衣首领身形一晃，竟在雨幕里拖出两道残影……', pw: { li: 20, su: 45, qiao: 35, xi: 20 }, after: '残影散去，墙上多了三道刀痕。' }
+      { name: '夜叉探海', text: '黑衣首领单手拖刀，刀尖在地上划出一串火星，猛地自下而上撩起……', dom: 'li', after: '桌椅被劈成了两半！' },
+      { name: '鬼影迷踪', text: '黑衣首领身形一晃，竟在雨幕里拖出两道残影……', dom: 'su', after: '残影散去，墙上多了三道刀痕。' }
     ],
     asides: ['江伯倒在墙角，胸口微微起伏。', '屋顶漏下的雨水，顺着刀锋往下淌。', '另外两个黑衣人守在门口，一动不动。'],
     opening: ['刀势一老', '回刀稍慢', '用力过猛，身形一晃'],

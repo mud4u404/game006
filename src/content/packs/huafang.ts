@@ -140,14 +140,14 @@ const NPCS: NpcDef[] = [
 const GUARD_FOE: FoeDef = {
   id: 'huafang_guard', name: '汪家护院', title: '拳头上有老茧', ini: '护', tone: 'red',
   weapon: '厚背单刀', ws: '刀', tag: '好手',
-  hp: 1400, atk: [32, 52], big: 130,
+  rank: 0, build: 'outer', weak: 0.9,
   moves: ['泼风刀', '拦腰一斩', '夜战八方', '猛虎下山'],
   flourish: ['刀势沉猛', '借醉力劈', '脚下踉跄却刀刀要命', '刀光在宫灯下一闪'],
   tells: [
     { name: '醉后疯砍', text: '护院眼睛血红，双手握刀高举过顶，酒气扑面而来……',
-      pw: { li: 38, su: 22, qiao: 22, xi: 18 }, after: '他自己脚下先踉跄了一步！' },
+      dom: 'li', after: '他自己脚下先踉跄了一步！' },
     { name: '拦腰横扫', text: '护院借着醉意踉跄退了半步，忽然一刀横扫，带着风声卷向你的腰肋……',
-      pw: { li: 22, su: 40, qiao: 35, xi: 20 }, after: '船板被劈出一道裂口！' }
+      dom: 'su', after: '船板被劈出一道裂口！' }
   ],
   asides: ['云娘捂住嘴，琵琶「哗啦」掉在地上。', '汪少爷脸都白了：「上！给我上！」'],
   opening: ['刀势过老', '脚下打滑', '酒后力竭，收刀慢了半拍'],
@@ -162,9 +162,28 @@ const GUARD_FOE: FoeDef = {
         { type: 'flag', flag: 'huafang_grudge' },
         { type: 'flag', flag: 'huafang_done' },
         { type: 'quest', id: 'side_huafang', stage: 2 },
-        { type: 'xia', delta: 10 },
         { type: 'feed', tag: '江湖', text: '你在画舫上力退汪家护院。汪少爷放了狠话走了，这几日怕是不敢再来讨债。' }
-      ] },
+      ],
+      after: {
+        plea: '护院捂着胸口坐倒在船板上，喘着粗气：「好……好功夫。小的不过是吃汪家这碗饭，犯不着把命搭上。」',
+        opts: [
+          { label: '放他走', sub: '侠义 +10',
+            say: '你收了手。他朝你拱一拱手，被汪家的人扶了下去，走到舱门口，又回头看了你一眼。',
+            do: [{ type: 'xia', delta: 10 }, { type: 'flag', flag: 'huafang_guard_fang' }],
+            later: '他记得你手下留情。汪家的人里，往后也许有一个肯替你说句话。' },
+          { label: '问问汪家的底细', sub: '侠义 +10　问出点东西',
+            say: '「汪少爷常带人到湖上来闹？」他苦笑一声，压低了嗓子：「少爷看上了谁，谁就得上他的船。云娘不是头一个。汪家在城东盐号里还押着两个，说是抵债。」',
+            do: [{ type: 'xia', delta: 10 },
+              { type: 'feed', tag: '江湖', text: '汪家护院说：汪少爷看上了谁，谁就得上他的船。汪家在城东盐号里，还押着两个抵债的姑娘。' }],
+            later: '城东的盐号，你记下了。' },
+          { label: '下杀手', sub: '恶名 +3　汪家告官',
+            say: '你一掌拍在他胸口，他哼也没哼一声，便软倒在船板上。画舫上的丝竹声停了，汪少爷的脸白得像纸。',
+            title: '画舫上的一条人命',
+            story: '护院再也没有起来。汪少爷连滚带爬地上了岸，云娘抱着琵琶，看你的眼神里多了一层怕。湖上的灯一盏一盏地灭了。',
+            do: [{ type: 'eming', delta: 3 }, { type: 'flag', flag: 'huafang_guard_dead' }],
+            later: '汪家不会善罢甘休。扬州府里，汪家也说得上话。' }
+        ]
+      } },
     lose: { tag: '好手 · 负', title: '不敌护院', growth: true, button: '强忍起身',
       story: '你在船板上醒来时，湖上只剩水声。船头那半幅「云娘」的绸帘不见了，汪少爷的人也散了。左肩的伤口还在渗血。',
       do: [
@@ -205,6 +224,10 @@ const pack: ContentPack = {
       text: '画舫的歌女叫汪家接走了，说是抵债；船头那半幅写着「云娘」的绸帘，也摘了下来。' },
     { if: { flag: 'huafang_taken' },
       text: '前几日在画舫上出头的年轻人，叫汪家护院打得爬不起来；那歌女，也叫接走了。' },
+    { if: { flag: 'huafang_guard_fang' },
+      text: '汪家那个护院辞了工，回乡下种地去了。临走前在茶棚里说，画舫上那位少侠，手下留了情。' },
+    { if: { flag: 'huafang_guard_dead' },
+      text: '瘦西湖画舫上出了人命，汪家一纸状子递进了府衙。周捕头说，这案子他压不住。' },
     { if: { flag: 'huafang_force_lose' },
       text: '汪家新近换了位护院，刀比先前那位更沉，据说是为画舫上的事添的防备。' }
   ]

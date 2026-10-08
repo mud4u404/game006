@@ -1,23 +1,21 @@
 /**
  * 武学库的数值规则（纯函数，便于测试）。设计说明见 docs/wuxue.md。
  *
- * - 功力 = 境界 × 10 × 品级系数
- * - 火候 = 负责这种应对的那门武功的功力 + 对应属性 + 同源加成（硬接另加内力充足程度）
+ * - 功力 = 境界 × 10 × 品级系数（排默认搭配、算修为用）
  * - 修为 = 各槽位功力的加权和，分为不入流到宗师六档
+ * - 火候（见招拆招的本钱）在 engine/person.ts：武功的重数、品级，加上对应的根基
  * - 克制：柔克刚、刚克阴、阴克阳、阳克柔；兵器一寸长一寸强，一寸短一寸险
  */
 import type { GameState } from '../core/state';
 import { GRADE_COEF, SLOT_CATS, itemById, skillById } from '../content';
 import { CAT_WEAPON, FX_RULES, PASSIVE_COST } from '../content/skills';
-import type { AttrKey, FxDef, PerformDef, SkillDef, SkillNature, SkillReach, Slot, UltDef, WeaponKind } from '../content/types';
+import type { FxDef, PerformDef, SkillDef, SkillNature, SkillReach, Slot, UltDef, WeaponKind } from '../content/types';
 
 export type Loadout = Partial<Record<Slot, string>>;
 export type RespKey = 'block' | 'dodge' | 'parry' | 'rush';
 /** 算搭配要用到的存档字段；gear 是身上的装备（兵器决定兵刃位的武功使不使得出来） */
 export type Worn = Pick<GameState, 'skills' | 'loadout'> & { gear?: GameState['gear'] };
 
-/** 每种应对看哪项属性 */
-export const RESP_ATTR: Record<RespKey, AttrKey> = { block: '根骨', dodge: '身法', parry: '悟性', rush: '胆魄' };
 const SLOTS: Slot[] = ['neigong', 'qinggong', 'fist', 'weapon', 'ult'];
 
 export const skillPower = (def: SkillDef, realm: number): number => realm * 10 * GRADE_COEF[def.grade];
@@ -72,25 +70,6 @@ export function autoSlot(s: Pick<GameState, 'loadout'>, def: SkillDef): void {
   const lo = (s.loadout ||= {});
   const free = SLOTS.find(slot => fits(def, slot) && !lo[slot]);
   if (free) lo[free] = def.id;
-}
-
-/** 同源加成：内功与出手的外功同出一门且都练到「炉火纯青」，火候 +3；一阴一阳，彼此相冲，火候 −3 */
-export function synergy(s: Worn): number {
-  const ng = slotSkill(s, 'neigong'), mn = activeOuter(s);
-  if (!ng || !mn) return 0;
-  let v = 0;
-  if (ng.school === mn.school && realmOf(s, ng.id) >= 3 && realmOf(s, mn.id) >= 3) v += 3;
-  const yy = new Set([ng.nature, mn.nature]);
-  if (yy.has('阴') && yy.has('阳')) v -= 3;
-  return v;
-}
-
-/** 火候：境界、品级、属性、同源合在一起；硬接另加当前内力的充足程度 0 到 10 */
-export function huohou(s: GameState, k: RespKey): number {
-  const def = respSkill(s, k);
-  let v = (def ? skillPower(def, realmOf(s, def.id)) : 0) + s.attr[RESP_ATTR[k]] + synergy(s);
-  if (k === 'block') v += Math.round((s.mp / s.mpMax) * 10);
-  return Math.round(v);
 }
 
 const BEATS: Record<SkillNature, SkillNature | null> = { 柔: '刚', 刚: '阴', 阴: '阳', 阳: '柔', 中正: null };

@@ -6,8 +6,20 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { skillById } from '../src/content';
 import type { SkillDef } from '../src/content/types';
-import { respOptions } from '../src/engine/formulas';
-import { activeOuter, autoSlot, counterBonus, defaultLoadout, huohou, reachBonus, skillPower, synergy, xiuwei } from '../src/engine/wuxue';
+import { FOES } from '../src/content';
+import { Duel, type Opt } from '../src/engine/duel';
+import { RESP_ACT, huohou } from '../src/engine/formulas';
+import { activeOuter, autoSlot, counterBonus, defaultLoadout, reachBonus, respSkill, skillPower, xiuwei } from '../src/engine/wuxue';
+import { fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
+import { huohouOf } from '../src/engine/person';
+import type { FoeDef } from '../src/content/types';
+
+/** 对屠千山（或换个性质）出一记重招时，各种应对的选项 */
+function opts(nature?: FoeDef['nature']): (Opt & { sname: string })[] {
+  const tu = { ...FOES.find(f => f.id === 'tu')!, nature };
+  const d = new Duel(heroSpec(S, fightKit(S), tu), foeSpec(tu, []), { rng: () => 0.5 });
+  return d.options(d.tells[0]).map(o => ({ ...o, sname: respSkill(S, o.k)?.name ?? RESP_ACT[o.k] }));
+}
 
 const fake = (grade: SkillDef['grade']): SkillDef =>
   ({ id: 'x', name: '测试', grade, category: '剑法', school: '江湖', nature: '中正', reach: '短', desc: '', learn: '' });
@@ -46,10 +58,9 @@ describe('克制', () => {
   });
   it('克制会算进见招拆招的成算', () => {
     setState(skipToYangzhou());
-    const pw = { li: 30, su: 30, qiao: 30, xi: 30 };
-    const plain = respOptions(S, pw).find(o => o.k === 'parry')!.p;
-    const vsHard = respOptions(S, pw, { nature: '刚' }).find(o => o.k === 'parry')!.p;
-    expect(vsHard - plain).toBeCloseTo(0.08);
+    const plain = opts(undefined).find(o => o.k === 'parry')!;
+    const vsHard = opts('刚').find(o => o.k === 'parry')!;
+    expect(vsHard.raw - plain.raw).toBeCloseTo(0.08);
   });
 });
 
@@ -64,21 +75,18 @@ describe('搭配', () => {
     expect(defaultLoadout(newGame().skills)).toEqual({ neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' });
   });
 
-  it('火候与改版前的公式一致（境界 × 10 + 属性）', () => {
-    for (const st of [skipToYangzhou(), newGame()]) {
-      setState(st);
-      const r = (id: string): number => S.skills[id]?.r ?? 0;
-      expect(huohou(S, 'block')).toBe(r('xinfa') * 10 + S.attr.根骨 + Math.round((S.mp / S.mpMax) * 10));
-      expect(huohou(S, 'dodge')).toBe(r('taxue') * 10 + S.attr.身法);
-      expect(huohou(S, 'parry')).toBe(r('hanjiang') * 10 + S.attr.悟性);
-    }
-    // 抢攻改由出手的那门外功负责（改版前看副手）
-    expect(huohou(skipToYangzhou(), 'rush')).toBe(skipToYangzhou().skills.hanjiang!.r * 10 + skipToYangzhou().attr.胆魄);
+  it('火候：硬接看内功和根骨，闪避看轻功和身法，拆招看出手的外功和悟性，抢攻看出手的外功和胆魄', () => {
+    const base = { ...huohouOf({ name: '', attr: { 体魄: 20, 根骨: 20, 身法: 20, 悟性: 20, 胆魄: 20 }, outer: 1, neigong: 1, qinggong: 1, grade: { outer: 1, neigong: 1, qinggong: 1 }, gongli: 1.5 }) };
+    expect(base.block).toBe(base.dodge);
+    expect(base.rush).toBe(base.parry - 10);
+    const h0 = huohou(S, 'block');
+    S.skills.xinfa!.r += 2;
+    expect(huohou(S, 'block')).toBeGreaterThan(h0 + 10);
+    expect(huohou(S, 'parry')).toBe(huohou(skipToYangzhou(), 'parry'));
   });
 
   it('剑在手里，兵刃位的剑法出手；剑不在手里，换拳脚位的功夫；两样都没有，就没有拆招和抢攻', () => {
-    const pw = { li: 30, su: 30, qiao: 30, xi: 30 };
-    const who = (): string[] => respOptions(S, pw).filter(o => o.k === 'parry' || o.k === 'rush').map(o => o.sname);
+    const who = (): string[] => opts().filter(o => o.k === 'parry' || o.k === 'rush').map(o => o.sname);
     expect(activeOuter(S)?.id).toBe('hanjiang');
     expect(who()).toEqual(['寒江剑法', '寒江剑法']);
     S.skills.jh_bagua = { r: 0, p: 0 };
@@ -88,15 +96,15 @@ describe('搭配', () => {
     expect(activeOuter(S)?.id).toBe('jh_bagua');
     expect(who()).toEqual(['八卦掌', '八卦掌']);
     delete S.loadout.fist;
-    expect(respOptions(S, pw).map(o => o.k)).toEqual(['block', 'dodge']);
+    expect(opts().map(o => o.k)).toEqual(['block', 'dodge']);
   });
 
   it('兵刃位换成别的剑法，出手的就是它', () => {
     S.skills.jinghong = { r: 0, p: 0 };
     S.loadout.weapon = 'jinghong';
-    const o = respOptions(S, { li: 30, su: 30, qiao: 30, xi: 30 }).find(x => x.k === 'rush')!;
+    const o = opts().find(x => x.k === 'rush')!;
     expect(o.sname).toBe('惊鸿剑');
-    expect(o.skill).toBe('jinghong');
+    expect(respSkill(S, 'rush')?.id).toBe('jinghong');
   });
 
   it('学会新武功时，对应的位置空着才自动放进去；占着的不动', () => {
@@ -109,12 +117,6 @@ describe('搭配', () => {
     expect(S.loadout.ult).toBe('duanshui');
   });
 
-  it('内功与出手的外功同出一门，都练到炉火纯青才相辅相成', () => {
-    expect(synergy(S)).toBe(0);
-    S.skills.xinfa!.r = 3;
-    S.skills.hanjiang!.r = 3;
-    expect(synergy(S)).toBe(3);
-  });
 });
 
 describe('修为', () => {

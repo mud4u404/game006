@@ -228,12 +228,12 @@ const STORIES: StoryDef[] = [
 const JIANKE: FoeDef = {
   id: 'ly_yz_jianke', name: '使剑的船工', title: '湖上讨生活的老师傅', ini: '船', tone: 'blue',
   weapon: '老剑', ws: '剑', tag: '路遇', spar: true,
-  hp: 900, atk: [24, 40], big: 100, firstTell: 2,
+  rank: 0, build: 'light', weak: 0.6, firstTell: 2,
   moves: ['顺水推舟', '逆流斩', '回头浪'],
   flourish: ['剑势如船橹摇水，绵绵不断', '脚下随着不存在的浪头起伏', '哈哈一笑，剑更快了'],
   tells: [
-    { name: '顺水推舟', text: '船工长剑平送，借着前冲之势直刺，剑走的是水路的巧劲……', pw: { li: 14, su: 30, qiao: 34, xi: 12 }, after: '剑尖擦衣而过，带起一缕布屑！' },
-    { name: '回头浪', text: '船工剑势一老，忽然回锋倒卷，如回头浪打在船头……', pw: { li: 28, su: 16, qiao: 20, xi: 26 }, after: '回锋卷起一片尘土！' }
+    { name: '顺水推舟', text: '船工长剑平送，借着前冲之势直刺，剑走的是水路的巧劲……', dom: 'qiao', after: '剑尖擦衣而过，带起一缕布屑！' },
+    { name: '回头浪', text: '船工剑势一老，忽然回锋倒卷，如回头浪打在船头……', dom: 'li', after: '回锋卷起一片尘土！' }
   ],
   asides: ['湖上有渔船摇过，船家见惯不怪。', '柳絮粘在他的剑穗上。'],
   opening: ['剑势起得慢', '脚步稳', '笑眯眯地活动手腕'],
@@ -255,12 +255,12 @@ const JIANKE: FoeDef = {
 const TANGZI: FoeDef = {
   id: 'ly_yz_tangzi', name: '镖局趟子手', title: '威远镖局的年轻人', ini: '趟', tone: 'amber',
   weapon: '单刀', ws: '刀', tag: '路遇', spar: true,
-  hp: 750, atk: [22, 38], big: 90, firstTell: 2,
+  rank: 0, build: 'outer', weak: 0.5, firstTell: 2,
   moves: ['开山式', '截腰式', '护头式'],
   flourish: ['刀走轻灵，一看就下过苦功', '嘴里念着镖局的口诀', '年轻，劲却足'],
   tells: [
-    { name: '开山裂石', text: '趟子手大喝一声，单刀自上而下全力劈落，刀风扑面……', pw: { li: 32, su: 14, qiao: 12, xi: 20 }, after: '地上的石板被劈出一道白印！' },
-    { name: '缠头裹脑', text: '趟子手刀交左手，刀背护头，刀刃连环横削……', pw: { li: 12, su: 26, qiao: 30, xi: 18 }, after: '刀光绕着脑袋转了一圈！' }
+    { name: '开山裂石', text: '趟子手大喝一声，单刀自上而下全力劈落，刀风扑面……', dom: 'li', after: '地上的石板被劈出一道白印！' },
+    { name: '缠头裹脑', text: '趟子手刀交左手，刀背护头，刀刃连环横削……', dom: 'qiao', after: '刀光绕着脑袋转了一圈！' }
   ],
   asides: ['后巷里有伙计探头看热闹，喊着加油。', '他的刀穗上拴着一枚铜钱，是镖局的记号。'],
   opening: ['起手式扎得稳', '年轻力壮', '刀鞘还没完全出鞘'],
