@@ -4,6 +4,13 @@ import type { ContentPack, SkillDef } from '../types';
 
 const SKILLS: SkillDef[] = [
   {
+    id: 'jl_jishixinfa', name: '缉事心法', grade: '良品', category: '内功', school: '六扇门', nature: '中正',
+    desc: '六扇门捕快的入门心法。缉事拿人讲究耳聪目明、气沉胆壮，练的是暗夜里也不慌的那一口气息。',
+    learn: '六扇门捕快入门心法，师爷带教',
+    teach: '入门',
+    passive: [{ kind: 'guard', value: 8 }]
+  },
+  {
     id: 'jl_tiejigong', name: '铁脊功', grade: '良品', category: '内功', school: '军伍', nature: '刚',
     desc: '九边将士的打底横练。脊背挺得像枪杆，气血练得像铁石，风沙里站上两个时辰，面不改色。',
     learn: '边军操练场人人过关的底子',
@@ -96,7 +103,6 @@ const SKILLS: SkillDef[] = [
     desc: '六扇门捕快的拿人手段。锁、扣、别、缠四字诀，专拿关节穴道，拿住了便似上了枷锁，动弹不得。',
     learn: '六扇门捕快拿人手段，师爷带教',
     teach: '入门',
-    roots: ['jl_tiejigong'],
     moves: [
       { name: '锁腕', text: '你出手如锁，一把扣住{foe}手腕，反拧其{part}。', wound: '瘀伤' },
       { name: '扣肘', text: '你侧身让过{foe}来势，反手扣其肘弯，压得{part}发麻。', wound: '瘀伤' },
@@ -118,7 +124,6 @@ const SKILLS: SkillDef[] = [
     desc: '六扇门定罪拿人的铁尺功。尺不长不短，点的是人身大穴，点住了便如画押，赖不掉也逃不了。',
     learn: '六扇门铁尺功，老捕头逐穴亲点',
     teach: '入门',
-    roots: ['jl_tiejigong'],
     moves: [
       { name: '曲池', text: '你铁尺一探，正点{foe}肘间曲池穴，其{part}登时一麻。', wound: '内伤' },
       { name: '合谷', text: '你尺尾一敲，正中{foe}虎口合谷穴，兵刃几乎拿捏不住。', wound: '内伤' },
@@ -147,7 +152,6 @@ const SKILLS: SkillDef[] = [
     learn: '六扇门镇衙软鞭，须拿过百案方可习练',
     teach: '内门',
     requires: [{ skill: 'jl_suolian', realm: 3 }],
-    roots: ['jl_tiejigong'],
     moves: [
       { name: '缠字诀', text: '你软鞭一抖，鞭梢卷住{foe}{part}，一缠一绞，带得{foe}身形一歪。', wound: '割伤' },
       { name: '鞭扫流云', text: '你长鞭横扫，如鞭扫流云，逼开{foe}门户，抽其{part}。', wound: '割伤' },
