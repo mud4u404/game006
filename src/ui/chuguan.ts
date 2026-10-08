@@ -27,7 +27,8 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
     ...r.breaks.map(x => `<span class="tag info">${x}</span>`),
     r.gongli > 0 ? `<span class="tag accent">功力深到${gongliText(S.gongli)}</span>` : '',
     healTxt ? `<span class="tag">${healTxt}</span>` : '',
-    r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : ''
+    r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : '',
+    r.lodging === 'inn' ? `<span class="tag">住店 −${r.cost} 文</span>` : '<span class="tag warn">钱不够住店，露宿了几夜，伤好得慢</span>'
   ].filter(Boolean);
   const y = nextYue(S);
   const lines: string[] = [];

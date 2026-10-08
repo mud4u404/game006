@@ -231,7 +231,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'tq_yunv', name: '玉女心经', grade: '上品', category: '内功', school: '古墓', nature: '阴',
     desc: '古墓派内功秘要。须二人同修，真气绵绵若存，练成之后身轻如燕，动作如风，最善腾挪闪避。',
-    learn: '古墓派内密，须与同门共修',
+    learn: '古墓派秘传，须与同门共修',
     teach: '内门',
     requires: [{ skill: 'tq_gumuxinfa', realm: 3 }],
     passive: [{ kind: 'haste', value: 13 }],

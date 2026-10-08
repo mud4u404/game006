@@ -84,7 +84,7 @@ const STORIES: StoryDef[] = [
       ],
       choices: [{ label: '登船 · 去扬州', next: -1, do: [
         { type: 'item', id: 'badge', delta: 1 },
-        { type: 'quest', id: 'prologue', stage: 3 }, { type: 'chapter', value: 1 },
+        { type: 'quest', id: 'prologue', stage: 3 }, { type: 'chapter', value: 1 }, { type: 'shenfen', id: 'youxia' },
         { type: 'move', to: 'hu' }, { type: 'time', set: 9 * 60 + 20 }, { type: 'weather', value: '微雨' },
         { type: 'heal', hpAtLeast: 0.8, mp: 'full' },
         { type: 'rel', npc: 'jiangbo', value: '阴阳两隔' }, { type: 'rel', npc: 'liu', value: '素不相识' },
