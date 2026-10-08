@@ -245,7 +245,6 @@ describe('基础设施', () => {
   const branchesOf = (n: Npc): Branch[] => Object.values(n.actions).flatMap(bs => bs ?? []);
   const has = (b: Branch, f: (e: Effect) => boolean): boolean => (b.do ?? []).some(f);
   const pays = (b: Branch): boolean => has(b, e => e.type === 'silver' && e.delta < 0);
-  const gets = (b: Branch): boolean => has(b, e => e.type === 'silver' && e.delta > 0);
   const boughtItems = (b: Branch): string[] => (pays(b) ? (b.do ?? []).flatMap(e => (e.type === 'item' && e.delta > 0 ? [e.id] : [])) : []);
   const servers = NPCS.filter(n => n.service?.length);
 
@@ -280,7 +279,8 @@ describe('基础设施', () => {
           if (!sold.length) errs.push(`${w}：标了「兵」，却没有一个分支收钱卖东西`);
           for (const id of sold) if (!ITEMS.find(i => i.id === id)?.equip) errs.push(`${w}：标了「兵」，卖的「${id}」不是兵器（物品要带 equip）`);
         }
-        if (s === '当' && !bs.some(b => gets(b) && has(b, e => e.type === 'item' && e.delta < 0))) errs.push(`${w}：标了「当」，却没有一个分支是收下东西、给钱`);
+        // 当铺的「典当」由引擎统一提供（engine/daoju.ts，按买价四成收）；不要再一件一个按钮地写，免得和通用的「典当」重复、价钱对不上
+        if (s === '当' && Object.keys(n.actions).some(v => v !== '典当' && v.startsWith('当'))) errs.push(`${w}：标了「当」就自动有「典当」，不要再写「当某某」这样一件一个的动作`);
         if (s === '杂' && !bs.some(b => boughtItems(b).length)) errs.push(`${w}：标了「杂」，却没有一个分支收钱卖东西`);
       }
       // 没伤的人不该花冤枉钱：收钱治伤的分支要带 wounded: true，没伤的情形另写一个分支

@@ -519,11 +519,11 @@ const FOES: FoeDef[] = [
 /* ---------- 物品 ---------- */
 
 const ITEMS: ItemDef[] = [
-  { id: 'bs2_shaobing', name: '烧饼', desc: '胡婶摊上的芝麻烧饼，用油纸包着，还带着炉膛的热气。' },
-  { id: 'bs2_yaopai', name: '六扇门腰牌', desc: '乌木腰牌，正面刻「扬州府」三字，背面刻一个「捕」字，挂着一截褪了色的红绳。' },
-  { id: 'bs2_tiechi', name: '铁尺', desc: '一尺八寸的熟铁尺，尺身方棱，尺尖磨圆了。六扇门拿人点穴的家伙。', equip: { slot: '兵器', weapon: '奇门', reach: '短' } },
-  { id: 'bs2_qiang', name: '白蜡杆枪', desc: '白蜡杆的枪身，韧而不折，枪头是边军的制式。', equip: { slot: '兵器', weapon: '枪', reach: '长' } },
-  { id: 'bs2_pudao', name: '朴刀', desc: '武馆刀枪架上的朴刀，刀身宽厚，刀口开过，磨得雪亮。', equip: { slot: '兵器', weapon: '刀', reach: '短' } }
+  { id: 'bs2_shaobing', name: '烧饼', kind: '酒食', price: 5, use: [{ type: 'heal', hpFrac: 0.1 }], desc: '胡婶摊上的芝麻烧饼，用油纸包着，还带着炉膛的热气。' },
+  { id: 'bs2_yaopai', name: '六扇门腰牌', kind: '信物', desc: '乌木腰牌，正面刻「扬州府」三字，背面刻一个「捕」字，挂着一截褪了色的红绳。' },
+  { id: 'bs2_tiechi', name: '铁尺', kind: '装备', price: 300, desc: '一尺八寸的熟铁尺，尺身方棱，尺尖磨圆了。六扇门拿人点穴的家伙。', equip: { slot: '兵器', weapon: '奇门', reach: '短' } },
+  { id: 'bs2_qiang', name: '白蜡杆枪', kind: '装备', price: 450, desc: '白蜡杆的枪身，韧而不折，枪头是边军的制式。', equip: { slot: '兵器', weapon: '枪', reach: '长' } },
+  { id: 'bs2_pudao', name: '朴刀', kind: '装备', price: 400, desc: '武馆刀枪架上的朴刀，刀身宽厚，刀口开过，磨得雪亮。', equip: { slot: '兵器', weapon: '刀', reach: '短' } }
 ];
 
 /* ---------- 任务：丐帮的入门考验 ---------- */

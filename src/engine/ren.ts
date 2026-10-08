@@ -9,20 +9,34 @@ import { GRADE_COEF } from '../content';
 import type { SkillDef } from '../content/types';
 import { COMMON, gongliAt, houtian, hpMaxOf, mpMaxOf, tierName, tierOf, type Attr, type Person } from './person';
 import { activeOuter, slotSkill } from './wuxue';
+import { gearBonus } from './zhuangbei';
 
 /** 武功的重数：存档里的境界从零起，「人」的重数从一起；没有这门武功算第一重 */
 const R = (s: Pick<GameState, 'skills'>, d?: SkillDef): number => (d ? (s.skills[d.id]?.r ?? 0) + 1 : 1);
 const G = (d?: SkillDef): number => (d ? GRADE_COEF[d.grade] : GRADE_COEF.凡品);
 
-/** 玩家这个「人」：出手的外功、搭配的内功和轻功 */
-export type Body = Pick<GameState, 'name' | 'attr' | 'skills' | 'loadout' | 'gear' | 'gongli'>;
+/** 玩家这个「人」：出手的外功、搭配的内功和轻功、身上的装备（行囊 items 给了就只算还在行囊里的） */
+export type Body = Pick<GameState, 'name' | 'attr' | 'skills' | 'loadout' | 'gear' | 'gongli'> & { items?: GameState['items'] };
 
 export function personOf(s: Body): Person {
   const o = activeOuter(s), ng = slotSkill(s, 'neigong'), qg = slotSkill(s, 'qinggong');
   return {
     name: s.name, attr: { ...s.attr }, outer: R(s, o), neigong: R(s, ng), qinggong: R(s, qg),
-    grade: { outer: G(o), neigong: G(ng), qinggong: G(qg) }, gongli: s.gongli
+    grade: { outer: G(o), neigong: G(ng), qinggong: G(qg) }, gongli: s.gongli, gear: gearBonus(s)
   };
+}
+
+/**
+ * 换了装备：气血、内力上限跟着变，当前值按原来的成数保留。
+ * 不像 syncBody 那样把涨的一截直接补进当前值，免得脱了又穿、穿了又脱白白回血。
+ */
+export function syncGear(s: GameState): void {
+  const fh = s.hpMax > 0 ? s.hp / s.hpMax : 1, fm = s.mpMax > 0 ? s.mp / s.mpMax : 1;
+  const p = personOf(s);
+  s.hpMax = hpMaxOf(p);
+  s.mpMax = mpMaxOf(p);
+  s.hp = Math.max(1, Math.min(s.hpMax, Math.round(s.hpMax * fh)));
+  s.mp = Math.max(0, Math.min(s.mpMax, Math.round(s.mpMax * fm)));
 }
 
 /**

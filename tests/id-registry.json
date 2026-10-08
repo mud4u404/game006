@@ -154,7 +154,22 @@
    "mujian",
    "qingfeng",
    "scroll",
-   "yh_shenqi"
+   "yh_shenqi",
+   "zb_buxie",
+   "zb_douli",
+   "zb_duanda",
+   "zb_huwan",
+   "zb_kuaixue",
+   "zb_mianpao",
+   "zb_pijia",
+   "zb_taofu",
+   "zb_tieyanli",
+   "zb_tongjie",
+   "zb_toujin",
+   "zb_xiangnang",
+   "zb_yangzhi",
+   "zb_yinzhuo",
+   "zb_yunxue"
   ],
   "foes": [
    "bj_jie_gz",

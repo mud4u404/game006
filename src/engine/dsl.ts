@@ -161,6 +161,9 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         } else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
         if (e.mp === 'full') S.mp = S.mpMax; else if (typeof e.mp === 'number') S.mp = Math.min(S.mpMax, S.mp + e.mp);
         if (e.hpAtLeast) S.hp = Math.max(S.hp, Math.round(S.hpMax * e.hpAtLeast));
+        // 按上限的几成回（金疮药回三成，和战斗里服药一样）
+        if (e.hpFrac) S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * e.hpFrac));
+        if (e.mpFrac) S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * e.mpFrac));
         break;
       case 'cure': {
         const got = cureWounds(e.levels);

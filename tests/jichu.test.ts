@@ -150,28 +150,26 @@ describe('兵器铺与当铺', () => {
     expect(S.silver).toBe(700);
     expect(S.items.jc_qimeigun).toBe(1);
   });
-  it('典当：身上有才出现这个动作；当掉屠千山的刀换一千二百文', () => {
-    const verbs = (): string[] => verbsOf(npc('jc_yz_chaofeng')!) as string[];
-    expect(verbs()).not.toContain('当断首刀');
+  it('典当：当铺自动有「典当」；当掉屠千山的刀换一千二百文（买价三千文的四成）', () => {
+    expect(verbsOf(npc('jc_yz_chaofeng')!)).toContain('典当');
     S.items.blade = 1;
-    expect(verbs()).toContain('当断首刀');
     const s0 = S.silver;
-    act('jc_yz_chaofeng', '当断首刀');
+    act('jc_yz_chaofeng', '典当', 'blade');
     expect(S.silver).toBe(s0 + 1200);
     expect(S.items.blade).toBe(0);
-    expect(verbs()).not.toContain('当断首刀');
   });
   it('当铺的价钱是买价的三到五成，买了再当只会亏', () => {
     S.silver = 10000;
-    const PAIRS = [['买刀', '当腰刀', 'jc_yaodao'], ['买剑', '当松纹剑', 'jc_songwen'], ['买枪', '当花枪', 'jc_huaqiang']] as const;
-    for (const [buy, pawn, item] of PAIRS) {
+    const PAIRS = [['买刀', 'jc_yaodao'], ['买剑', 'jc_songwen'], ['买枪', 'jc_huaqiang']] as const;
+    for (const [buy, item] of PAIRS) {
       for (const smith of ['jc_yz_tiejiang', 'jc_zj_tang']) {
         for (const shop of ['jc_yz_chaofeng', 'jc_zj_nie']) {
           const a = S.silver;
           act(smith, buy);
           const cost = a - S.silver;
           expect(S.items[item]).toBe(1);
-          act(shop, pawn);
+          delete S.gear.weapon;
+          act(shop, '典当', item);
           const back = S.silver - (a - cost);
           expect(S.items[item], `${shop} 收下了 ${item}`).toBe(0);
           expect(back / cost, `${smith} 卖、${shop} 当：${item}`).toBeGreaterThanOrEqual(0.3);

@@ -32,7 +32,8 @@ const FIXTURES = import.meta.glob<string>('./fixtures/saves/*.json', { query: '?
 const SENS_FRAGILE: string[] = ['成算的尺度（26）', '对手气血的厚度（5.6）', '熟练系数（39）', '每在线小时的历练（100）'];
 
 function inputs() {
-  const saves = Object.entries(FIXTURES).map(([f, raw]) => {
+  // 资产几条（A1 到 A5）量的是升到第四版时的换算，只拿第四版以前的存档来量；第四版以后的存档在 tests/save.test.ts 里读
+  const saves = Object.entries(FIXTURES).filter(([, raw]) => JSON.parse(raw).v < 4).map(([f, raw]) => {
     const state = migrate(JSON.parse(raw));
     const old = JSON.parse(raw);
     const rank = xiuwei(state).rank;

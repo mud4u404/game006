@@ -8,8 +8,9 @@
  * - 每天留一份备份，最多三份；重新开始前也先留一份。
  * - 内容里的 id 只增不删（tests/ids.test.ts 把关）；万一存档里的地点已经不存在，送回安全的地方。
  */
-import { ROOMS, SKILLS } from '../content';
+import { ROOMS, SKILLS, itemById } from '../content';
 import { defaultLoadout, fits } from '../engine/wuxue';
+import { GEAR_KEYS, fitsGear } from '../engine/zhuangbei';
 import { syncBody } from '../engine/ren';
 import { migrateRel } from '../engine/renqing';
 import type { Loadout } from '../engine/wuxue';
@@ -118,6 +119,14 @@ function repair(s: GameState): GameState {
   // 营生：序章里是渔家，走出瓜洲就是游侠
   if (!rec.shenfen || typeof (rec.shenfen as GameState['shenfen']).id !== 'string') rec.shenfen = { id: s.chapter === 0 ? 'yumin' : 'youxia', standing: 1, since: dayNo(s) };
   for (const k of Object.keys(def)) if (rec[k] === undefined) rec[k] = def[k];
+  // 装备（纸娃娃，docs/zhuangbei.md 第三节）：第四版的旧存档只有兵器，照样读得出来。
+  // 只留认得的位置、放得进这个位置、行囊里还有的；手里的兵器已经不在行囊里了，就空着手。先于算气血上限，装备也算在里头
+  const worn = (rec.gear && typeof rec.gear === 'object' ? rec.gear : {}) as Record<string, unknown>;
+  s.gear = {};
+  for (const k of GEAR_KEYS) {
+    const id = worn[k];
+    if (typeof id === 'string' && (s.items[id] ?? 0) > 0 && fitsGear(itemById(id), k)) s.gear[k] = id;
+  }
   // 关系称谓统一到关系阶梯；气血、内力上限由「人」算出来（都可以反复执行）
   migrateRel(s);
   for (const k of ['hand', 'foot', 'inner'] as const) s.wounds[k] = Math.max(0, Math.min(3, Math.round(Number(s.wounds[k]) || 0)));
@@ -128,8 +137,6 @@ function repair(s: GameState): GameState {
   if (fr.mpFrac !== undefined) { s.mp = Math.round(s.mpMax * fr.mpFrac); delete fr.mpFrac; }
   // 地点没了，送回这一回的起点
   if (!ROOMS.some(r => r.id === s.loc)) s.loc = s.chapter === 0 ? newGame().loc : skipToYangzhou().loc;
-  // 手里的兵器已经不在行囊里了，就空着手
-  if (s.gear.weapon && !(s.items[s.gear.weapon] > 0)) delete s.gear.weapon;
   // 搭配里指向没学会、或已经没有的武功，就空出来
   for (const [slot, id] of Object.entries(s.loadout) as [Slot, string][]) {
     const def = SKILLS.find(k => k.id === id);

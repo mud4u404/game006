@@ -50,15 +50,12 @@ const BUY = (id: string, name: string, cost: number, n = 1): Effect[] => [
   { type: 'silver', delta: -cost }, { type: 'item', id, delta: n }, { type: 'toast', text: `${name} +${n}` }
 ];
 /** 死当：东西交出去，钱拿回来，不赎 */
-const PAWN = (id: string, price: number): Effect[] => [
-  { type: 'item', id, delta: -1 }, { type: 'silver', delta: price }, { type: 'toast', text: `银两 +${price} 文` }
-];
 
 const ITEMS: ItemDef[] = [
-  { id: 'jc_yaodao', name: '腰刀', desc: '雁翎腰刀，刀身窄，刀背厚，挂在腰间不碍事。扬州辕门桥褚家铁铺打的，刀根錾着一个「褚」字。', equip: { slot: '兵器', weapon: '刀', reach: '短' } },
-  { id: 'jc_songwen', name: '松纹剑', desc: '剑身上锻出细密的松针花纹，两面开刃。褚家铁铺难得打一口剑，是打来使的，不是挂墙上的。', equip: { slot: '兵器', weapon: '剑', reach: '短' } },
-  { id: 'jc_qimeigun', name: '齐眉棍', desc: '白蜡杆子，立起来齐眉高，两头包着熟铁。打不死人，打服人够了。', equip: { slot: '兵器', weapon: '棍', reach: '长' } },
-  { id: 'jc_huaqiang', name: '花枪', desc: '白蜡枪杆，一团红缨，枪头照边军的样子打的。一寸长，一寸强。', equip: { slot: '兵器', weapon: '枪', reach: '长' } }
+  { id: 'jc_yaodao', name: '腰刀', kind: '装备', price: 400, desc: '雁翎腰刀，刀身窄，刀背厚，挂在腰间不碍事。扬州辕门桥褚家铁铺打的，刀根錾着一个「褚」字。', equip: { slot: '兵器', weapon: '刀', reach: '短' } },
+  { id: 'jc_songwen', name: '松纹剑', kind: '装备', price: 600, desc: '剑身上锻出细密的松针花纹，两面开刃。褚家铁铺难得打一口剑，是打来使的，不是挂墙上的。', equip: { slot: '兵器', weapon: '剑', reach: '短' } },
+  { id: 'jc_qimeigun', name: '齐眉棍', kind: '装备', price: 300, desc: '白蜡杆子，立起来齐眉高，两头包着熟铁。打不死人，打服人够了。', equip: { slot: '兵器', weapon: '棍', reach: '长' } },
+  { id: 'jc_huaqiang', name: '花枪', kind: '装备', price: 500, desc: '白蜡枪杆，一团红缨，枪头照边军的样子打的。一寸长，一寸强。', equip: { slot: '兵器', weapon: '枪', reach: '长' } }
 ];
 
 const ROOMS: RoomDef[] = [
@@ -219,53 +216,11 @@ const NPCS: NpcDef[] = [
   {
     id: 'jc_yz_chaofeng', name: '吴朝奉', ini: '当', tone: 'gray', brief: '坐在高柜台后头', service: ['当'],
     look: '柜台比人还高，吴朝奉坐在上头往下看，只露出半张脸。东西递上去，他拿手一掂，眼皮都不抬，就报得出价。',
-    verbs: ['交谈', '观察',
-      { verb: '当断首刀', if: { item: { id: 'blade' } } },
-      { verb: '当龙泉刀', if: { item: { id: 'bj_haodao' } } },
-      { verb: '当腰刀', if: { item: { id: 'jc_yaodao' } } },
-      { verb: '当松纹剑', if: { item: { id: 'jc_songwen' } } },
-      { verb: '当齐眉棍', if: { item: { id: 'jc_qimeigun' } } },
-      { verb: '当花枪', if: { item: { id: 'jc_huaqiang' } } }],
+    verbs: ['交谈', '观察'],
     actions: {
       交谈: [
         { text: '「本号只收刀枪剑棍，一律死当，概不回赎。」吴朝奉的算盘珠子拨得飞快，「信物、字纸、来路不明的东西，不收。客官，有货递上来。」' }
       ],
-      当断首刀: [
-        { if: { item: { id: 'blade' } },
-          text: '吴朝奉接过鬼头刀，九个铁环哗啦一响，他的手顿了顿：「黑风寨的刀……」他翻来覆去看了半天，「钢是好钢，就是沾的血太多，没人敢买。一千二百文，死当。」（银两 +1200 文）',
-          do: PAWN('blade', 1200) },
-        { text: '「东西呢？」吴朝奉的眼皮抬了抬。' }
-      ],
-      当龙泉刀: [
-        { if: { item: { id: 'bj_haodao' } },
-          text: '吴朝奉把龙泉刀抽出半截，眼皮头一回抬了起来：「威远镖局兵器架上那一口？」他把刀推回鞘里，「好刀。可当铺不是镖局，十二两，死当。」（银两 +12000 文）',
-          do: PAWN('bj_haodao', 12000) },
-        { text: '「东西呢？」吴朝奉的眼皮抬了抬。' }
-      ],
-      当腰刀: [
-        { if: { item: { id: 'jc_yaodao' } },
-          text: '「褚铁匠打的？」吴朝奉在刀背上敲了敲，「铁是好铁。一百六十文。」（银两 +160 文）',
-          do: PAWN('jc_yaodao', 160) },
-        { text: '「东西呢？」吴朝奉的眼皮抬了抬。' }
-      ],
-      当松纹剑: [
-        { if: { item: { id: 'jc_songwen' } },
-          text: '吴朝奉看了看剑身上的松纹：「剑没卷刃，鞘磨了。二百四十文。」（银两 +240 文）',
-          do: PAWN('jc_songwen', 240) },
-        { text: '「东西呢？」吴朝奉的眼皮抬了抬。' }
-      ],
-      当齐眉棍: [
-        { if: { item: { id: 'jc_qimeigun' } },
-          text: '「棍子？」吴朝奉把棍往墙角一靠，「木头不值钱，值钱的是两头的铁。一百二十文。」（银两 +120 文）',
-          do: PAWN('jc_qimeigun', 120) },
-        { text: '「东西呢？」吴朝奉的眼皮抬了抬。' }
-      ],
-      当花枪: [
-        { if: { item: { id: 'jc_huaqiang' } },
-          text: '吴朝奉掂了掂枪头：「枪杆子不值钱，只算枪头的铁——罢了，一并算你二百文。」（银两 +200 文）',
-          do: PAWN('jc_huaqiang', 200) },
-        { text: '「东西呢？」吴朝奉的眼皮抬了抬。' }
-      ]
     }
   },
   {
@@ -445,53 +400,11 @@ const NPCS: NpcDef[] = [
   {
     id: 'jc_zj_nie', name: '聂朝奉', ini: '当', tone: 'gray', brief: '把耳朵凑到柜台边', service: ['当'],
     look: '七十多岁，耳朵背。柜台上摆着一杆戥子，称了一辈子银子，戥子杆都磨亮了。',
-    verbs: ['交谈', '观察',
-      { verb: '当断首刀', if: { item: { id: 'blade' } } },
-      { verb: '当龙泉刀', if: { item: { id: 'bj_haodao' } } },
-      { verb: '当腰刀', if: { item: { id: 'jc_yaodao' } } },
-      { verb: '当松纹剑', if: { item: { id: 'jc_songwen' } } },
-      { verb: '当齐眉棍', if: { item: { id: 'jc_qimeigun' } } },
-      { verb: '当花枪', if: { item: { id: 'jc_huaqiang' } } }],
+    verbs: ['交谈', '观察'],
     actions: {
       交谈: [
         { text: '聂朝奉把手拢在耳朵后头：「啊？当东西？」你说了三遍他才听清，「本号只收刀枪剑棍，死当，不赎。」可一说到价钱，他的耳朵比谁都灵。' }
       ],
-      当断首刀: [
-        { if: { item: { id: 'blade' } },
-          text: '聂朝奉把鬼头刀搁在戥子旁边，九个铁环哗啦一响，他像是没听见：「啊？黑风寨？没听说过。」手指头却比划出一个数，「一千文，死当。」（银两 +1000 文）',
-          do: PAWN('blade', 1000) },
-        { text: '「啊？东西呢？」' }
-      ],
-      当龙泉刀: [
-        { if: { item: { id: 'bj_haodao' } },
-          text: '聂朝奉抽刀出鞘，对着光看了半晌，耳朵忽然不背了：「龙泉的钢，鲨鱼皮的鞘。」他把刀收好，「十两，死当。」（银两 +10000 文）',
-          do: PAWN('bj_haodao', 10000) },
-        { text: '「啊？东西呢？」' }
-      ],
-      当腰刀: [
-        { if: { item: { id: 'jc_yaodao' } },
-          text: '「腰刀？」聂朝奉在刀根上摸到一个「褚」字，「扬州货。一百四十文。」（银两 +140 文）',
-          do: PAWN('jc_yaodao', 140) },
-        { text: '「啊？东西呢？」' }
-      ],
-      当松纹剑: [
-        { if: { item: { id: 'jc_songwen' } },
-          text: '聂朝奉眯眼看了看剑上的松纹：「好剑。二百一十文。」你说少了，他把手拢在耳朵后头：「啊？」（银两 +210 文）',
-          do: PAWN('jc_songwen', 210) },
-        { text: '「啊？东西呢？」' }
-      ],
-      当齐眉棍: [
-        { if: { item: { id: 'jc_qimeigun' } },
-          text: '「棍子也来当？」聂朝奉摇摇头，还是收了，「一百文。」（银两 +100 文）',
-          do: PAWN('jc_qimeigun', 100) },
-        { text: '「啊？东西呢？」' }
-      ],
-      当花枪: [
-        { if: { item: { id: 'jc_huaqiang' } },
-          text: '聂朝奉把花枪靠在柜台边，比他人还高出一大截：「一百七十文。」（银两 +170 文）',
-          do: PAWN('jc_huaqiang', 170) },
-        { text: '「啊？东西呢？」' }
-      ]
     }
   }
 ];
