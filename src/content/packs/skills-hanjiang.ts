@@ -27,6 +27,8 @@ const SKILLS: SkillDef[] = [
     id: 'jinghong', name: '惊鸿剑', grade: '上品', category: '剑法', school: '江湖', nature: '柔', reach: '短',
     desc: '三剑连环，剑影如惊鸿掠水。起点高，修炼也慢。',
     learn: '从小金山棋痴的「雁回」残局中悟出',
+    // 残局里的剑意，悟性不够的人看半天也只是黑白交错（棋痴「请教」那里把关）
+    needAttr: { 悟性: 26 },
     moves: [
       { name: '翩若惊鸿', text: '剑随身起，轻飘飘一剑点向{foe}{part}，快得不留影子。' },
       { name: '轻云蔽月', text: '剑光一晃，遮住{foe}眼前，剑尖却已到了{part}。' },

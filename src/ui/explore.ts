@@ -10,7 +10,7 @@ import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { checkYue, jingxiu, restDays, skillName, yueText } from '../engine/shiguang';
+import { XIEJIAO, checkYue, jingxiu, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
 import { markEncounter, rollEncounter } from '../engine/encounter';
@@ -162,6 +162,15 @@ registerHandlers({
     travelTo(to);
   },
   retreat: v => retreat(Number(v)),
+  // 歇脚：等到某个钟点（engine/shiguang.ts 的 waitUntil）
+  xiejiao: v => {
+    if (traveling) return;
+    const h = Number(v), label = XIEJIAO.find(([x]) => x === h)?.[1] ?? '';
+    if (!waitUntil(S, h)) { toast('江湖跑不过现实：今日不能再往后拖了'); return; }
+    pushFeed('江湖', `你找了个地方歇脚，一直歇到${label}。`);
+    render();
+    lateYue();
+  },
   sheetClose: () => { closeSheet(); render(); },
   restart: () => { setConfirmRestart(true); render(); },
   restartNo: () => { setConfirmRestart(false); render(); },

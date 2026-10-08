@@ -306,8 +306,8 @@ describe('赠礼、典当', () => {
 
   it('当铺（service 有「当」）自动有「典当」；按买价四成收，信物不收，身上穿着的最后一件先卸下', () => {
     const shop: NpcDef = { id: 'test_dang', name: '朝奉', brief: '', look: '', verbs: ['交谈'], actions: { 交谈: [{ text: '' }] }, service: ['当'] };
-    expect(verbsOf(shop)).toEqual(['交谈', '典当']);
-    expect(verbsOf({ ...shop, service: ['医'] })).toEqual(['交谈']);
+    expect(verbsOf(shop)).toEqual(['交谈', '打听', '典当']);
+    expect(verbsOf({ ...shop, service: ['医'] })).toEqual(['交谈', '打听']);
     expect(pawnPrice(itemById('blade')!)).toBe(Math.floor(3000 * 0.4));
     expect(pawnPrice(itemById('jade')!)).toBe(0);
     S.items.blade = 1;

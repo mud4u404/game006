@@ -13,6 +13,8 @@
 - **最新版本**：https://mud4u404.github.io/game006/
   - `main` 每次更新后自动部署。
   - 需要先在仓库 Settings → Pages 里把 Source 设为「GitHub Actions」。
+- **试玩预览**：https://mud4u404.github.io/game006/preview/
+  - 维护者分支的最新构建，合并之前先玩。存档与正式版分开，不连云存档（见 `docs/maintainer.md`「试玩预览」）。
 - **早期单文件原型**：https://claude.ai/artifact/X6NYxuUWqFRvfd94GSHUDt ，源文件在 [prototype/](prototype/)。
 
 目前可玩的内容：

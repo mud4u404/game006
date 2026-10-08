@@ -1,6 +1,6 @@
 import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
-import { foeById, npc, room } from '../../content';
+import { foeById, npc, questById, room } from '../../content';
 import { curQuest, hopMin, npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
@@ -9,7 +9,7 @@ import { kanren } from '../../engine/zhaoshi';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef } from '../../content/types';
 import { fmt } from '../../core/util';
-import { nextYue, yueText } from '../../engine/shiguang';
+import { XIEJIAO, canWait, nextYue, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
 import { test, textVars } from '../../engine/dsl';
 
@@ -19,7 +19,9 @@ export function viewJianghu(): string {
   const r = room(S.loc);
   const all = roomNpcs(S.loc).concat(roomObjs(S.loc));
   if (!S.sel || !all.includes(S.sel)) { S.sel = all[0] || null; S.reply = null; }
-  const q = curQuest();
+  // 横幅只挂记挂着、还没了结的心事（docs/huojianghu.md 第三节第四条）
+  const cq = curQuest();
+  const q = cq && (S.quests[S.track] ?? 0) < (questById(S.track)?.stages.length ?? 0) - 1 ? cq : null;
   const feed = S.feed.slice(0, 2).map(e =>
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
   // 横幅标签按任务种类：序章、主线（main 开头）、其余都是支线
@@ -27,7 +29,7 @@ export function viewJianghu(): string {
   const quest = !q ? '' : q.to
     ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(travelMin(pathMin(S.loc, q.to)))}</span>${IC.chev}</button>`
     : `<div class="card quest"><span class="tag accent">${kind}</span><span class="qt">${q.title}</span></div>`;
-  const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="任务簿" title="任务簿">${IC.quest}</button></div>`;
+  const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button></div>`;
   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
   const y = nextYue(S);
   // 点了就赶去约定的地方
@@ -49,7 +51,15 @@ export function viewJianghu(): string {
     <div class="avas">${all.map(avaBtn).join('')}</div>
     ${S.sel ? detail(S.sel) : ''}
   </section>` : ''}
-  <section class="go"><h2>去处</h2><div class="exits">${r.exits.map(([d, id]) => exitBtn(d, id, r.exits.length === 1, q?.to)).join('')}</div></section>`;
+  <section class="go"><h2>去处</h2><div class="exits">${r.exits.map(([d, id]) => exitBtn(d, id, r.exits.length === 1, q?.to)).join('')}</div></section>
+  ${xiejiaoHTML()}`;
+}
+
+/** 歇脚：等到天亮、晌午、傍晚、入夜（人有作息，有的人、有的事只在夜里）。序章里不歇 */
+function xiejiaoHTML(): string {
+  if (S.chapter === 0) return '';
+  return `<section class="go"><h2>歇脚</h2><div class="acts four">${XIEJIAO.map(([h, l]) =>
+    `<button class="act" data-act="xiejiao:${h}"${canWait(S, h) ? '' : ' disabled'}>到${l}</button>`).join('')}</div></section>`;
 }
 
 function avaBtn(id: string): string {

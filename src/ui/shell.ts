@@ -15,6 +15,8 @@ import { viewWugong } from './views/wugong';
 import { viewXingnang } from './views/xingnang';
 import { viewDitu } from './views/ditu';
 import { checkYue } from '../engine/shiguang';
+import { tickShi } from '../engine/shishi';
+import { isPreview } from '../core/preview';
 
 type Handler = (v: string, el: HTMLElement) => void;
 const handlers: Record<string, Handler> = {};
@@ -63,6 +65,17 @@ export function buildShell(): void {
   on('toast', toast);
 }
 
+/** 试玩预览（/preview/）：页面顶上挂一行提示，画面整体往下让出这一行，不盖住任何按钮（样式见 app.css「试玩预览」） */
+export function previewBar(): void {
+  if (!isPreview() || document.querySelector('.pv-bar')) return;
+  document.documentElement.classList.add('preview');
+  const bar = document.createElement('div');
+  bar.className = 'pv-bar';
+  bar.setAttribute('role', 'note');
+  bar.textContent = '试玩预览：存档与正式版分开';
+  document.body.prepend(bar);
+}
+
 let toastTimer = 0;
 export function toast(text: string): void {
   const el = $('#toast');
@@ -96,6 +109,8 @@ const TABS: [Tab, string][] = [['jianghu', '江湖'], ['renwu', '人物'], ['wug
 export function render(): void {
   // 过了约期还没赴的约，算失约（engine/shiguang.ts）：失约的后果、心魔，都记进见闻
   for (const m of checkYue(S)) toast(m);
+  // 江湖自己往前走（engine/shishi.ts）：该起头的起头，到日子的往下走
+  tickShi();
   const r = room(S.loc);
   const bar = $('#appbar'), main = $('#main'), tabs = $('#tabs');
   if (!bar || !main || !tabs) return;

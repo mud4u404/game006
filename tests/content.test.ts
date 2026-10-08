@@ -3,12 +3,12 @@
  * 报错信息会指出是哪个文件里的哪一条数据有问题。
  */
 import { describe, expect, it } from 'vitest';
-import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
+import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SHI, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
 import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
-import { ACTIVE_MAX, EFFICIENCY_BAND, JIANGHU_RULE, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
+import { ACTIVE_MAX, EFFICIENCY_BAND, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
 import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
 import { REL_WORDS } from '../src/engine/renqing';
 import { SHENFEN } from '../src/engine/shenfen';
@@ -36,9 +36,15 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   if (c.realm && !skillIds.has(c.realm.skill)) errs.push(`${where}：条件里的武功「${c.realm.skill}」不存在`);
   if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
   if (c.sect && !SCHOOL_STYLE[c.sect.school]) errs.push(`${where}：条件里的门派「${c.sect.school}」没有定位（见 SCHOOL_STYLE）`);
+  if (c.notSect !== undefined && !SCHOOL_STYLE[c.notSect]) errs.push(`${where}：条件里的门派「${c.notSect}」没有定位（见 SCHOOL_STYLE）`);
   if (c.yue !== undefined) yueRead.add(c.yue);
   if (c.shenfen !== undefined && !SHENFEN[c.shenfen]) errs.push(`${where}：条件里的身份「${c.shenfen}」不存在（见 engine/shenfen.ts）`);
   for (const id of [c.job, c.jobOpen]) if (id !== undefined && !jobIds.has(id)) errs.push(`${where}：条件里的差事「${id}」不存在`);
+  if (c.shi) {
+    const d = SHI.find(x => x.id === c.shi!.id);
+    if (!d) errs.push(`${where}：条件里的世事「${c.shi.id}」不存在`);
+    else for (const k of [...(c.shi.at ?? []), ...(c.shi.not ?? [])]) if (!d.steps[k]) errs.push(`${where}：世事「${d.id}」没有「${k}」这一步`);
+  }
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
 }
 
@@ -78,6 +84,12 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         break;
       case 'yueDone': yueDone.add(e.id); break;
       case 'shenfen': if (!SHENFEN[e.id]) errs.push(`${w}：身份「${e.id}」不存在（见 engine/shenfen.ts）`); break;
+      case 'shi': {
+        const d = SHI.find(x => x.id === e.id);
+        if (!d) errs.push(`${w}：世事「${e.id}」不存在`);
+        else if (e.to !== undefined && !d.steps[e.to]) errs.push(`${w}：世事「${e.id}」没有「${e.to}」这一步`);
+        break;
+      }
       case 'job': case 'jobDone': case 'jobFail':
         if (!jobIds.has(e.id)) errs.push(`${w}：差事「${e.id}」不存在`);
         (e.type === 'job' ? jobTaken : e.type === 'jobDone' ? jobDoneSet : new Set<string>()).add(e.id);
@@ -97,7 +109,9 @@ function checkBranches(bs: Branch[] | undefined, where: string, errs: string[], 
     for (const e of b.do || []) {
       if (e.type !== 'learn') continue;
       const k = SKILLS.find(x => x.id === e.skill);
-      if (k && k.school !== JIANGHU_RULE.school && b.if?.canLearn !== e.skill) errs.push(`${where}[${i}]：教「${k.name}」的分支要带条件 canLearn: '${e.skill}'，学不成的情形另写一个分支`);
+      // 学艺有代价（content/skills.ts 的 LEARN_LILIAN）：教武功的分支带 canLearn，学不成的另写一个分支；江湖散学也一样。
+      // 剧情、奇遇里白给的，写明 lilian，把代价写进剧情
+      if (k && b.if?.canLearn !== e.skill && e.lilian === undefined) errs.push(`${where}[${i}]：教「${k.name}」的分支要带条件 canLearn: '${e.skill}'（历练、前置、师门都由它把关），学不成的情形另写一个分支；剧情里白给的写明 lilian`);
     }
   });
   if (needFallback && bs.length && bs[bs.length - 1].if) errs.push(`${where}：最后一个分支必须不带 if，保证总有回应`);
@@ -122,9 +136,10 @@ describe('内容包', () => {
   it('人物的 at 指向存在的地点', () => {
     const errs: string[] = [];
     for (const n of NPCS) {
-      if (!n.at) continue;
-      if (!roomIds.has(n.at.room)) errs.push(`人物 ${n.id}：at 指向不存在的地点「${n.at.room}」`);
-      checkCond(n.at.if, `人物 ${n.id} 的 at`, errs);
+      for (const at of [n.at ?? []].flat()) {
+        if (!roomIds.has(at.room)) errs.push(`人物 ${n.id}：at 指向不存在的地点「${at.room}」`);
+        checkCond(at.if, `人物 ${n.id} 的 at`, errs);
+      }
     }
     report(errs);
   });
@@ -239,7 +254,7 @@ describe('基础设施', () => {
   /** 人物在哪些地点：地点的 npcs、objs，或者人物自己写的 at */
   const placesOf = (n: Npc): string[] => [
     ...ROOMS.filter(r => [...r.npcs, ...(r.objs ?? [])].some(x => idOf(x) === n.id)).map(r => r.id),
-    ...(n.at ? [n.at.room] : [])
+    ...[n.at ?? []].flat().map(a => a.room)
   ];
   const regionOf = (room: string): string | undefined => ROOMS.find(r => r.id === room)?.region;
   const branchesOf = (n: Npc): Branch[] => Object.values(n.actions).flatMap(bs => bs ?? []);
@@ -643,7 +658,7 @@ describe('差事', () => {
       const r = ROOMS.find(x => x.id === j.at), n = NPCS.find(x => x.id === j.npc);
       if (!r) errs.push(`${w}：交差的地点「${j.at}」不存在`);
       if (!n) errs.push(`${w}：交差的人「${j.npc}」不存在`);
-      else if (r && n.at?.room !== j.at && ![...r.npcs, ...(r.objs ?? [])].some(x => (typeof x === 'string' ? x : x.id) === j.npc)) errs.push(`${w}：交差的人「${j.npc}」不在「${j.at}」`);
+      else if (r && ![n.at ?? []].flat().some(a => a.room === j.at) && ![...r.npcs, ...(r.objs ?? [])].some(x => (typeof x === 'string' ? x : x.id) === j.npc)) errs.push(`${w}：交差的人「${j.npc}」不在「${j.at}」`);
       if (!jobTaken.has(j.id)) errs.push(`${w}：没有任何地方用 { type: 'job' } 发这件差事`);
       if (!jobDoneSet.has(j.id)) errs.push(`${w}：没有任何地方用 { type: 'jobDone' } 交差，办完了也领不到钱`);
     }
@@ -659,7 +674,7 @@ describe('后果看得见', () => {
    */
   const DEBT: string[] = [];
   it('写下的旗标都有地方读', () => {
-    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES });
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI });
     const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));
     const read = new Set([...all.matchAll(/(?<!"type":"flag",)"(?:flag|notFlag)":"([^"]+)"/g)].map(m => m[1]));
     const unread = [...set].filter(f => !read.has(f));

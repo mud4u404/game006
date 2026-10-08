@@ -42,6 +42,6 @@ export function viewDitu(): string {
       <svg class="map-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines.join('')}</svg>
       ${nodes}</section>
     ${out.length ? `<div class="mout">${out.map(o => `<button data-act="travel:${o.to}"><small>${room(o.from).name}</small><b>往${REGIONS[room(o.to).region]?.name ?? ''} · ${room(o.to).name}</b></button>`).join('')}</div>` : ''}
-    <div class="legend"><span><i style="background:var(--accent)"></i>你在这里</span><span><i style="background:var(--info)"></i>当前目标</span><span>点地名即可自动赶路</span></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>你在这里</span><span><i style="background:var(--info)"></i>记挂着的事</span><span>点地名即可自动赶路</span></div>
     ${info ? `<section class="card"><p class="muted">${info.note}</p></section>` : ''}`;
 }

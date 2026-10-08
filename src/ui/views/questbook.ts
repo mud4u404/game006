@@ -1,5 +1,6 @@
 import { S } from '../../core/state';
-import { questById, room } from '../../content';
+import { REGIONS, questById, room } from '../../content';
+import { knownShi, type ShiRow } from '../../engine/shishi';
 import { minLabel } from '../../core/time';
 import { pathMin, travelMin } from '../../engine/world';
 import { IC } from '../icons';
@@ -55,15 +56,31 @@ export function partitionQuests(
   };
 }
 
-/** 任务簿弹层 HTML。纯 UI：读 S，产出字符串，不直接渲染。 */
+/** 江湖上的事（世事，engine/shishi.ts）：写到玩家知道的那一步；隔久了没打听，就是旧消息 */
+function shiRow(r: ShiRow): string {
+  const where = REGIONS[r.region]?.name ?? '';
+  return `
+      <div class="qb-row ${r.ended ? 'done' : ''}">
+        <div class="qb-info">
+          <b>${r.name}</b>
+          ${where ? `<span class="qb-stage">${where}</span>` : ''}
+          <p>${r.now}</p>
+          ${r.stale ? '<small class="qb-to">这是你上回听说的，后来怎样，得再去打听。</small>' : ''}
+        </div>
+      </div>`;
+}
+
+/**
+ * 见闻弹层 HTML（docs/huojianghu.md 第三节第四条：不指路）。纯 UI：读 S，产出字符串，不直接渲染。
+ * 江湖上的事：听说的、看见的世事；心事：主线和别的私事，自己选一件记挂，江湖页顶上才挂它；了结的。
+ */
 export function questbookSheetHtml(): string {
   const { active, done, trackId } = partitionQuests(S.quests, S.track);
-  if (!active.length && !done.length) {
-    return `
-      <div class="qb-wrap">
-        <div class="qb-h"><h2>任务簿</h2><button class="qb-close" data-act="sheetClose" aria-label="关闭">×</button></div>
-        <p class="qb-empty">江湖寂寥，暂无要事。</p>
-      </div>`;
+  const shi = knownShi();
+  const shiOpen = shi.filter(r => !r.ended), shiDone = shi.filter(r => r.ended);
+  const head = `<div class="qb-h"><h2>见闻</h2><button class="qb-close" data-act="sheetClose" aria-label="关闭">×</button></div>`;
+  if (!active.length && !done.length && !shi.length) {
+    return `<div class="qb-wrap">${head}<p class="qb-empty">江湖寂寥，暂无要事。四处走走，找人打听打听。</p></div>`;
   }
   const renderRow = (r: QuestRow, group: 'active' | 'done') => {
     const dist = r.to ? travelMin(pathMin(S.loc, r.to)) : 0;
@@ -71,8 +88,9 @@ export function questbookSheetHtml(): string {
     const target = r.to ? room(r.to) : null;
     const trackable = group === 'active';
     const isTrack = r.id === trackId;
+    // 记挂：江湖页顶上挂着它，地图上标着它；再点一下就放下
     const action = trackable
-      ? `<button class="qb-act ${isTrack ? 'on' : ''}" data-act="qtrack:${r.id}" aria-pressed="${isTrack}">${isTrack ? '已追踪' : '追踪'}</button>`
+      ? `<button class="qb-act ${isTrack ? 'on' : ''}" data-act="qtrack:${r.id}" aria-pressed="${isTrack}">${isTrack ? '记挂着' : '记挂'}</button>`
       : '';
     const goBtn = (trackable && r.to && target)
       ? `<button class="qb-go${here ? ' dim' : ''}" data-act="qgo:${r.id}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button>`
@@ -92,28 +110,29 @@ export function questbookSheetHtml(): string {
       </div>`;
   };
 
-  const activeHtml = active.length
-    ? `<h3 class="qb-sec">进行中 · ${active.length}</h3>${active.map(r => renderRow(r, 'active')).join('')}`
-    : `<h3 class="qb-sec muted">进行中 · 0</h3><p class="qb-empty">暂无进行中的事。</p>`;
-  const doneHtml = done.length
-    ? `<h3 class="qb-sec">已完成 · ${done.length}</h3>${done.map(r => renderRow(r, 'done')).join('')}`
-    : `<h3 class="qb-sec muted">已完成 · 0</h3>`;
+  const shiHtml = `<h3 class="qb-sec${shiOpen.length ? '' : ' muted'}">江湖上的事 · ${shiOpen.length}</h3>${shiOpen.length
+    ? shiOpen.map(shiRow).join('')
+    : '<p class="qb-empty">还没听说什么。找人打听打听，或者到处走走看看。</p>'}`;
+  const activeHtml = `<h3 class="qb-sec${active.length ? '' : ' muted'}">心事 · ${active.length}</h3>${active.map(r => renderRow(r, 'active')).join('')}`;
+  const doneN = done.length + shiDone.length;
+  const doneHtml = `<h3 class="qb-sec${doneN ? '' : ' muted'}">了结的 · ${doneN}</h3>${shiDone.map(shiRow).join('')}${done.map(r => renderRow(r, 'done')).join('')}`;
 
   return `
     <div class="qb-wrap">
-      <div class="qb-h"><h2>任务簿</h2><button class="qb-close" data-act="sheetClose" aria-label="关闭">×</button></div>
+      ${head}
+      ${shiHtml}
       ${activeHtml}
       ${doneHtml}
     </div>`;
 }
 
-/** 打开任务簿弹层（供 explore.ts 的 handler 调用） */
+/** 打开见闻弹层（供 explore.ts 的 handler 调用） */
 export function openQuestbook(): void { openSheet(questbookSheetHtml()); }
 
-/** 追踪指定任务：设 S.track、关闭弹层、刷新，顶部横幅随之切换（Issue #7 第 3 条） */
+/** 记挂一件心事：设 S.track、关闭弹层、刷新，顶部横幅随之切换；已经记挂着的，再点一下就放下（不挂横幅） */
 export function trackQuest(id: string): void {
   if (!questById(id)) return;
-  S.track = id;
+  S.track = S.track === id ? '' : id;
   closeSheet();
   render();
 }

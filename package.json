@@ -13,12 +13,14 @@
     "validate": "vitest run tests/content.test.ts tests/menpai.test.ts",
     "check": "npm run typecheck && npm run test",
     "smoke": "vite build && node scripts/smoke.mjs",
+    "luandian": "vite build && node scripts/luandian.mjs",
     "ids": "UPDATE_IDS=1 vitest run tests/ids.test.ts",
     "retune": "RETUNE=1 vitest run tests/retune.test.ts --silent=false",
     "menpai": "MENPAI=1 vitest run tests/menpai.test.ts --silent=false",
     "balance": "BALANCE=1 vitest run tests/balance.test.ts --silent=false",
     "model": "MODEL=1 vitest run tests/model.test.ts --silent=false",
-    "zoubian": "ZOUBIAN=1 vitest run tests/zoubian.test.ts --silent=false"
+    "zoubian": "ZOUBIAN=1 vitest run tests/zoubian.test.ts --silent=false",
+    "xianguang": "XIANGUANG=1 vitest run tests/xianguang.test.ts --disableConsoleIntercept"
   },
   "devDependencies": {
     "playwright": "1.56.1",

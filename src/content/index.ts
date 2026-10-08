@@ -4,7 +4,7 @@
  * 2. 人物写了 at 的，放进对应地点。
  * 新增内容只需要在 packs/ 下新建文件，这里不用改。
  */
-import type { ContentPack, EncounterDef, EyeDef, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, SkillDef, StoryDef } from './types';
+import type { ContentPack, EncounterDef, EyeDef, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, ShiDef, SkillDef, StoryDef } from './types';
 
 export { REALMS, REALM_NEED, GRADES, GRADE_COEF, SLOT_CATS, SLOT_NAME } from './skills';
 
@@ -24,6 +24,7 @@ export interface Registry {
   ENCOUNTERS: EncounterDef[];
   JOBS: JobDef[];
   EYES: EyeDef[];
+  SHI: ShiDef[];
 }
 
 /** 合并内容包：补回程出口、按 at 放人物 */
@@ -40,7 +41,8 @@ export function mergePacks(list: ContentPack[]): Registry {
     SKILLS: list.flatMap(p => p.skills || []),
     ENCOUNTERS: list.flatMap(p => p.encounters || []),
     JOBS: list.flatMap(p => p.jobs || []),
-    EYES: list.flatMap(p => p.eyes || [])
+    EYES: list.flatMap(p => p.eyes || []),
+    SHI: list.flatMap(p => p.shi || [])
   };
   const byId = new Map(reg.ROOMS.map(r => [r.id, r]));
   for (const r of reg.ROOMS) {
@@ -50,18 +52,20 @@ export function mergePacks(list: ContentPack[]): Registry {
       if (back && target && !target.exits.some(e => e[1] === r.id)) target.exits.push([back, r.id]);
     }
   }
+  // 作息：写了几处的，每一处各放一条，带着时辰条件（engine/world.ts 的 roomNpcs 按条件挑）
   for (const n of reg.NPCS) {
-    if (!n.at) continue;
-    const target = byId.get(n.at.room);
-    if (!target) continue;
-    const list2 = n.obj ? (target.objs ||= []) : target.npcs;
-    if (list2.some(x => (typeof x === 'string' ? x : x.id) === n.id)) continue;
-    list2.push(n.at.if ? { id: n.id, if: n.at.if } : n.id);
+    for (const at of [n.at ?? []].flat()) {
+      const target = byId.get(at.room);
+      if (!target) continue;
+      const list2 = n.obj ? (target.objs ||= []) : target.npcs;
+      if (list2.includes(n.id)) continue;
+      list2.push(at.if ? { id: n.id, if: at.if } : n.id);
+    }
   }
   return reg;
 }
 
-export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS, SKILLS, ENCOUNTERS, JOBS, EYES } = mergePacks(packs);
+export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS, SKILLS, ENCOUNTERS, JOBS, EYES, SHI } = mergePacks(packs);
 
 const roomMap = new Map(ROOMS.map(r => [r.id, r]));
 const npcMap = new Map(NPCS.map(n => [n.id, n]));
@@ -71,6 +75,7 @@ const questMap = new Map(QUESTS.map(q => [q.id, q]));
 const itemMap = new Map(ITEMS.map(i => [i.id, i]));
 const skillMap = new Map(SKILLS.map(k => [k.id, k]));
 const jobMap = new Map(JOBS.map(j => [j.id, j]));
+const shiMap = new Map(SHI.map(d => [d.id, d]));
 
 export function room(id: string): RoomDef {
   const r = roomMap.get(id);
@@ -84,3 +89,4 @@ export const questById = (id: string): QuestDef | undefined => questMap.get(id);
 export const itemById = (id: string): ItemDef | undefined => itemMap.get(id);
 export const skillById = (id: string): SkillDef | undefined => skillMap.get(id);
 export const jobById = (id: string): JobDef | undefined => jobMap.get(id);
+export const shiById = (id: string): ShiDef | undefined => shiMap.get(id);

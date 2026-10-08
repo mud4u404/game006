@@ -255,6 +255,27 @@ describe('门派打法', () => {
     expect(errs).toEqual([]);
   });
 
+  /**
+   * 负责人 10-08：「这个世界大多是有条件有代价的，极少存在唾手可得的东西……武功有很多，但都应该有前置条件，无非是有的简单，有的艰难。」
+   * 上品以上的武功都要有前置（前置武学，或者根基门槛），奇遇、江湖散学也不例外；
+   * 绝品以上要艰难：前置武学练到第二重以上，或者根基门槛二十八以上。
+   * 例外只有主线：断水是江伯临终所传的起手式（序章），代价是江伯的命。
+   */
+  it('上品以上的武功都有前置，绝品以上的前置要难（奇遇、江湖散学也一样）', () => {
+    const STORY_GIFT = ['duanshui'];
+    const hi = (g: string): number => gradeRank(g as never);
+    const errs: string[] = [];
+    for (const k of SKILLS) {
+      if (STORY_GIFT.includes(k.id) || hi(k.grade) < hi('上品')) continue;
+      const w = `${k.school} ${k.name}（${k.grade}）`;
+      const req = Math.max(-1, ...(k.requires ?? []).map(r => r.realm));
+      const attr = Math.max(0, ...Object.values(k.needAttr ?? {}).map(v => v ?? 0));
+      if (req < 0 && !attr) errs.push(`${w}：没有前置。写 requires（先练成哪门武功的第几重）或 needAttr（根基门槛）`);
+      else if (hi(k.grade) >= hi('绝品') && req < 2 && attr < 28) errs.push(`${w}：前置太容易。绝品以上，前置武学要到第二重以上，或根基门槛二十八以上`);
+    }
+    expect(errs, '\n' + errs.join('\n')).toEqual([]);
+  });
+
   it('武学树：每派入门就传本门内功，外门以上的武功顺着前置追得到本门入门武功（所有门派，包括待改造的）', () => {
     const schools = [...new Set(SKILLS.map(k => k.school))];
     const errs = schools.flatMap(s => treeProblems(s).map(e => `${s}：${e}`));
@@ -500,6 +521,13 @@ describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
     act('bs2_bao', '复命');
     expect(S.sect).toEqual({ school: '丐帮', rank: '记名' });
     expect(S.quests.bs2_gb_kao).toBe(1);
+    // 学艺要拿历练去换：见识不够的，鲍四只肯教一门，说清楚还差多少
+    S.lilian = 150;
+    act('bs2_bao', '请教');
+    expect(S.skills.gb_baina).toBeDefined();
+    expect(act('bs2_bao', '请教').text).toContain('见识还浅');
+    expect(S.skills.gb_babu).toBeUndefined();
+    S.lilian = 5000;
     for (let i = 0; i < 5; i++) act('bs2_bao', '请教');
     for (const id of ['gb_baina', 'gb_babu', 'gb_lianhua', 'gb_xiaoyaoyou']) expect(S.skills[id], id).toBeDefined();
     for (const id of ['gb_huntian', 'gb_chansi', 'gb_xianglong', 'gb_dagou']) expect(S.skills[id], id).toBeUndefined();
