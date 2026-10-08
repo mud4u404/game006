@@ -51,6 +51,7 @@ const NPCS: NpcDef[] = [
     brief: '撑伞而立', hint: '似身负武功',
     look: '步履轻盈，伞沿滴水不沾衣。伞柄比寻常的长了半尺，像是藏着什么。',
     gift: '柳寒舟一怔，接过杏花，轻声道：「……多谢。」',
+    likes: ['flower'],
     verbs: ['交谈', '观察', '请教', '切磋', '赠礼', '偷窃'],
     actions: {
       交谈: [
@@ -80,6 +81,7 @@ const NPCS: NpcDef[] = [
   { id: 'huagu', name: '卖花姑娘', ini: '花', tone: 'amber', brief: '挎着花篮',
     look: '十五六岁年纪，篮里是新折的杏花，还带着雨水。',
     gift: '姑娘扑哧一笑：「公子，这本来就是我的花呀。」',
+    likes: ['flower'],
     verbs: ['交谈', '观察', '购买', '赠礼'],
     actions: {
       交谈: [{ text: '「公子，买枝杏花吧？三文钱一枝，送人最好不过。」' }],
@@ -102,6 +104,7 @@ const NPCS: NpcDef[] = [
   { id: 'liaochen', name: '了尘大师', ini: '尘', tone: 'gray', brief: '白眉老僧',
     look: '须眉皆白，扫地时步子不疾不徐，落叶却都自己往簸箕里飘。',
     gift: '了尘大师合十一笑：「阿弥陀佛，拈花一笑，施主有心了。」',
+    likes: ['flower'],
     verbs: ['交谈', '观察', '请教', '赠礼'],
     actions: {
       交谈: [

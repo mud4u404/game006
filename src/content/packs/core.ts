@@ -2,17 +2,29 @@ import type { ContentPack, ItemDef, NewsDef } from '../types';
 
 /** 通用内容：物品、江湖传闻 */
 
+/**
+ * 道具的类决定能做什么（docs/zhuangbei.md 第四节）：药服用、酒食饮用、装备穿戴、信物细看、杂物赠人。
+ * price 是买价（文），当铺按四成收；信物不写 price，不卖不送。说明里写了能做什么，就要真能做到。
+ */
 const ITEMS: ItemDef[] = [
-  { id: 'qingfeng', name: '青锋剑', desc: '寻常青钢长剑，剑脊上刻着一个「沈」字。', equip: { slot: '兵器', weapon: '剑', reach: '短' } },
-  { id: 'jcy', name: '金疮药', desc: '止血生肌，回复三成气血。战斗中也能服用；伤筋动骨的伤，还得静养。', usable: true },
-  { id: 'fhs', name: '飞蝗石', desc: '暗器。战斗中随手打出，伤敌不重，聊胜于无。' },
-  { id: 'flower', name: '杏花', desc: '新折的杏花，可以送人。' },
-  { id: 'med', name: '药', desc: '回春堂的两副药，用油纸包着，还带着余温。' },
-  { id: 'jade', name: '半块玉佩', desc: '刻着一个「沈」字和半个「寒」字，断口参差。另一半在哪里？' },
-  { id: 'scroll', name: '断水残页', desc: '油布包着的一页剑谱，墨迹被水洇开了一半。' },
-  { id: 'badge', name: '「厂」字铜牌', desc: '黑衣首领逃走时掉落的。铜牌上铸着一个「厂」字。' },
-  { id: 'huadiao', name: '花雕', desc: '望江楼的花雕，泥封上还沾着酒渍。自己喝也好，请人喝也好，江湖上一壶酒能换来不少话。' },
-  { id: 'blade', name: '黑风断首刀', desc: '屠千山的鬼头刀，刀背九个铁环。剑客用不顺手，倒能卖个好价钱。' }
+  { id: 'qingfeng', name: '青锋剑', kind: '装备', price: 1500, desc: '寻常青钢长剑，剑脊上刻着一个「沈」字。',
+    equip: { slot: '兵器', weapon: '剑', reach: '短', grade: '凡品' } },
+  { id: 'jcy', name: '金疮药', kind: '药', price: 20, desc: '止血生肌，回复三成气血。战斗中也能服用；伤筋动骨的伤，还得静养。',
+    use: [{ type: 'heal', hpFrac: 0.3 }] },
+  { id: 'fhs', name: '飞蝗石', kind: '杂物', price: 3, desc: '暗器。战斗中随手打出，伤敌不重，聊胜于无。' },
+  { id: 'flower', name: '杏花', kind: '杂物', price: 3, desc: '新折的杏花，可以送人。' },
+  { id: 'med', name: '药', kind: '信物', desc: '回春堂的两副药，用油纸包着，还带着余温。' },
+  // 信物类的佩饰：可以挂在腰间，没有数值，只有剧情作用
+  { id: 'jade', name: '半块玉佩', kind: '信物', desc: '刻着一个「沈」字和半个「寒」字，断口参差。另一半在哪里？',
+    equip: { slot: '佩' },
+    look: [{ if: { flag: 'bei' }, text: '你摩挲着玉佩上的「沈」字，想起湖畔石碑落款下的那一个。天下姓沈的人多了，可你总觉得，两个字有些相像。' }] },
+  { id: 'scroll', name: '断水残页', kind: '信物', desc: '油布包着的一页剑谱，墨迹被水洇开了一半。',
+    look: [{ if: { realm: { skill: 'duanshui', atLeast: 1 } }, text: '残页上那一剑，你如今使得出几分了。洇开的那一半，倒像是故意留白，等人自己去补。' }] },
+  { id: 'badge', name: '「厂」字铜牌', kind: '信物', desc: '黑衣首领逃走时掉落的。铜牌上铸着一个「厂」字。' },
+  { id: 'huadiao', name: '花雕', kind: '酒食', price: 30, desc: '望江楼的花雕，泥封上还沾着酒渍。自己喝也好，请人喝也好，江湖上一壶酒能换来不少话。',
+    use: [{ type: 'heal', mpFrac: 0.1 }, { type: 'feed', tag: '江湖', text: '你拍开泥封，仰头灌了几口。酒是陈酒，一路暖到心口。' }] },
+  { id: 'blade', name: '黑风断首刀', kind: '装备', price: 6000, desc: '屠千山的鬼头刀，刀背九个铁环。剑客用不顺手，倒能卖个好价钱。',
+    equip: { slot: '兵器', weapon: '刀', reach: '短', grade: '良品', stats: { chushou: 3 } } }
 ];
 
 /** 闭关出关、打赏说书人时抽取的江湖传闻 */

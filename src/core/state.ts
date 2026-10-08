@@ -9,6 +9,8 @@ export interface SkillProg { r: number; p: number }
 export interface Yue { id: string; npc: string; at: string; due: number; text: string; miss?: Effect[] }
 export interface FeedEntry { t: FeedTag; x: string; n: number }
 export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
+/** 纸娃娃六个装备位在存档里的键：兵器、冠、衣、靴、佩、饰 */
+export type GearKey = 'weapon' | 'head' | 'body' | 'feet' | 'waist' | 'ring';
 
 export interface GameState {
   v: 4;
@@ -42,8 +44,12 @@ export interface GameState {
   skills: Partial<Record<SkillId, SkillProg>>;
   /** 搭配：各槽位放的武功，见 docs/zhuangbei.md 第二节 */
   loadout: Loadout;
-  /** 身上的装备：兵器决定兵刃位的武功使不使得出来（纸娃娃的其余装备位以后再加） */
-  gear: { weapon?: string };
+  /**
+   * 身上的装备（纸娃娃，docs/zhuangbei.md 第三节）：装备位到道具 id。
+   * 兵器 weapon 决定兵刃位的武功使不使得出来；冠 head、衣 body、靴 feet、佩 waist、饰 ring 给一点护体、闪避、内力、根基。
+   * 第四版的旧存档只有 weapon，读档时照样读得出来（core/save.ts 的 repair 把不对的位置空出来）。
+   */
+  gear: Partial<Record<GearKey, string>>;
   /** 师门：同一时间只有一个，见 docs/menpai.md 第七节 */
   sect?: { school: string; rank: SectRank };
   /** 离开过的师门 */

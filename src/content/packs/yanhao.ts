@@ -206,7 +206,7 @@ const pack: ContentPack = {
   npcs: NPCS,
   quests: QUESTS,
   items: [
-    { id: 'yh_shenqi', name: '云娘的身契', desc: '汪家盐号开出的卖身契，朱印齐全。攥在手里，就是攥着一个人的命。', hidden: true }
+    { id: 'yh_shenqi', name: '云娘的身契', kind: '信物', desc: '汪家盐号开出的卖身契，朱印齐全。攥在手里，就是攥着一个人的命。', hidden: true }
   ],
   news: [
     { if: { flag: 'yh_freed' },

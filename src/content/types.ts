@@ -87,7 +87,8 @@ export type Effect =
   /** add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天） */
   | { type: 'time'; add?: number; set?: number }
   | { type: 'weather'; value: string }
-  | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number }
+  /** hpFrac、mpFrac：按上限的几成回，例如金疮药 hpFrac: 0.3 */
+  | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number; hpFrac?: number; mpFrac?: number }
   | { type: 'feedReset' }
   /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
   | { type: 'news' }
@@ -163,8 +164,12 @@ export interface NpcDef {
   brief: string;
   hint?: string;
   look: string;
-  /** 收到杏花等礼物时的反应，不写则用默认句子 */
+  /** 收到喜欢的礼物（likes 里的）时的反应，不写则用默认句子 */
   gift?: string;
+  /** 喜欢的道具 id：「赠礼」送对了关系升一级，送别的只是客气收下（docs/zhuangbei.md 第四节） */
+  likes?: string[];
+  /** 做什么营生：医馆、客栈、兵器铺、当铺、杂货。带「当」的人物有「典当」动作，不用写进 verbs */
+  service?: ('医' | '宿' | '兵' | '当' | '杂')[];
   /** 动作列表的顺序。带 if 的动作只在条件成立时出现，例如真相揭开后才有的「求情」，免得按钮先剧透 */
   verbs: (Verb | { verb: Verb; if: Cond })[];
   actions: Partial<Record<Verb, Branch[]>>;
@@ -429,10 +434,54 @@ export interface SkillDef {
   roots?: string[];
 }
 
+/* ---------- 道具与装备（docs/zhuangbei.md 第三到第五节） ---------- */
+
+/**
+ * 道具的类，决定行囊里能对它做什么：
+ * 药服用（战斗中也能），酒食饮用、请人喝，装备穿戴、典当，信物（含线索）只能细看、不卖不送，杂物赠人、典当。
+ */
+export type ItemKind = '药' | '酒食' | '装备' | '信物' | '杂物';
+/** 纸娃娃的六个装备位 */
+export type GearSlot = '兵器' | '冠' | '衣' | '靴' | '佩' | '饰';
+/** 装备的品级：凡品到神品（没有禁品） */
+export type GearGrade = Exclude<SkillGrade, '禁品'>;
+/**
+ * 装备的数值：小，锦上添花，一件神兵不能让三流打赢一流。
+ * 每件的上限按装备位和品级定（engine/zhuangbei.ts 的 GEAR_POINTS），tests/daoju.test.ts 校验。
+ */
+export interface GearStats {
+  /** 出手：伤害多百分之几（兵器） */
+  chushou?: number;
+  /** 护体：挨打的伤害少百分之几上下（衣、冠）。和根骨、功力的护体一样，并进气血上限 */
+  huti?: number;
+  /** 闪避：躲开普通出手的几率多几个百分点（靴、冠） */
+  shanbi?: number;
+  /** 内力上限多几点（佩） */
+  neili?: number;
+  /** 后天根基多几点（靴、佩、饰）：火候、检定都算 */
+  attr?: Partial<Record<AttrKey, number>>;
+}
+export interface EquipDef {
+  slot: GearSlot;
+  /** 兵器位必填：兵器的类型（剑法配剑……）、长短 */
+  weapon?: WeaponKind;
+  reach?: SkillReach;
+  /** 品级，数值的上限跟着它；没有数值的（信物、寻常兵器）可以不写 */
+  grade?: GearGrade;
+  stats?: GearStats;
+}
+
 export interface ItemDef {
-  id: string; name: string; desc: string; usable?: boolean; hidden?: boolean;
-  /** 能装备的兵器（纸娃娃的其余装备位见 docs/zhuangbei.md 第三节，以后再加） */
-  equip?: { slot: '兵器'; weapon: WeaponKind; reach: SkillReach };
+  id: string; name: string; desc: string; hidden?: boolean;
+  kind: ItemKind;
+  /** 服用、饮用的效果（药、酒食必写）：例如 { type: 'heal', hpFrac: 0.3 } 回三成气血 */
+  use?: Effect[];
+  /** 能穿戴：装备位、兵器类型和长短、品级、数值 */
+  equip?: EquipDef;
+  /** 买价，单位文。当铺按四成收；信物不写（不卖） */
+  price?: number;
+  /** 细看：先显示 desc，再接上第一个条件成立的分支（线索随剧情变化，和人物的「观察」一样） */
+  look?: Branch[];
 }
 
 export interface QuestDef {

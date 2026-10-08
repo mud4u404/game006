@@ -131,6 +131,18 @@ await snap('07-chapter');
 await click('[data-act="chapDone"]');
 log('到达', await p.textContent('#appbar h1'), '| 主线：', await p.textContent('.quest .qt'));
 await snap('08-yangzhou');
+// 纸娃娃和行囊：人物页最上方的装备位点得开，兵器卸下再拿起；行囊里的道具能细看
+await click('[data-act="tab:renwu"]');
+await click('[data-act="gearSlot:weapon"]');
+await click('#sheetLayer [data-act="gearSet:weapon:"]');
+await click('[data-act="gearSlot:weapon"]');
+await click('#sheetLayer [data-act="gearSet:weapon:qingfeng"]');
+log('纸娃娃 · 兵器：', (await p.textContent('[data-act="gearSlot:weapon"] b')).trim());
+await click('[data-act="tab:xingnang"]');
+await click('[data-act="itemLook:jade"]');
+log('细看：', (await p.textContent('#sheetLayer .sk-d')).slice(0, 12));
+await click('#sheetLayer [data-act="sheetClose"]');
+await click('[data-act="tab:jianghu"]');
 await goQuest('大明寺');
 await click('[data-act="sel:liaochen"]');
 await click('[data-act="do:交谈"]');

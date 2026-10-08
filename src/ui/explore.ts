@@ -1,10 +1,11 @@
 /**
- * 探索相关的操作：切换标签、选人、做动作、赶路、闭关、服药、存档管理。
+ * 探索相关的操作：切换标签、选人、做动作、赶路、闭关、存档管理。
+ * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { advanceDays, dateStr } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
-import { itemById, questById, room, skillById } from '../content';
+import { questById, room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
@@ -18,6 +19,7 @@ import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
+import { pickItemFirst } from './daoju';
 
 let traveling = false;
 export const isTraveling = (): boolean => traveling;
@@ -74,6 +76,8 @@ export function travelTo(dest: string, onArrive?: () => void): void {
 function doAct(verb: Verb): void {
   const id = S.sel;
   if (!id) return;
+  // 赠礼、典当：先从行囊里挑一件（ui/daoju.ts）
+  if (pickItemFirst(id, verb)) return;
   const { text, out } = act(id, verb);
   if (out.story || out.fight) { afterOutcome(out); return; }
   S.reply = text ? { id, text } : null;
@@ -123,11 +127,6 @@ registerHandlers({
     closeSheet();
     render();
   },
-  // 兵器：装备、卸下（纸娃娃的其余装备位以后再加）
-  wield: v => {
-    if (v && (S.items[v] ?? 0) > 0 && itemById(v)?.equip) S.gear.weapon = v; else delete S.gear.weapon;
-    render();
-  },
   mapRegion: v => { setMapRegion(v); render(); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
@@ -150,13 +149,6 @@ registerHandlers({
     if (to === S.loc) { toast('就在此处'); return; }
     closeSheet();
     travelTo(to);
-  },
-  use: v => {
-    if (v !== 'jcy' || (S.items.jcy || 0) < 1 || S.hp >= S.hpMax) return;
-    S.items.jcy--;
-    S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * 0.3));
-    toast('气血回复');
-    render();
   },
   retreat: v => retreat(Number(v)),
   sheetClose: () => { closeSheet(); render(); },
