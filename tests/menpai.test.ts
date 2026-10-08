@@ -6,12 +6,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { FOES, NPCS, ROOMS, SKILLS, STORIES } from '../src/content';
 import { GRADES, JIANGHU_RULE, NATURES, OUTER, REALMS, ROOTED_CATS, ROOT_ANY, SCHOOLS, SCHOOL_STYLE, STYLES, STYLE_PENDING, STYLE_RING, TEACH_GRADES, styleBeats } from '../src/content/skills';
-import { canLearn, rootsOn } from '../src/engine/shicheng';
+import { canLearn, pastSectText, realmCap, rootsOn } from '../src/engine/shicheng';
 import type { Style } from '../src/content/skills';
-import type { AttrKey, Branch, Effect, FoeDef, FxDef, FxKind, NpcDef, RoomDef, SkillDef, StoryDef } from '../src/content/types';
+import type { AttrKey, Branch, Effect, FoeDef, FxDef, FxKind, NpcDef, RoomDef, SkillDef, SkillTeach, StoryDef } from '../src/content/types';
 import { S, setState, skipToYangzhou } from '../src/core/state';
 import { dayNo } from '../src/core/time';
-import { run } from '../src/engine/dsl';
+import { run, test as cond } from '../src/engine/dsl';
 import { act } from '../src/engine/world';
 import { fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
 import { Duel, SKILLED, simulate } from '../src/engine/duel';
@@ -80,6 +80,43 @@ export function styleProblems(school: string): string[] {
 
 const byId = (id: string): SkillDef | undefined => SKILLS.find(k => k.id === id);
 
+/** 不按师门传授的出处：江湖散学谁都能学；寒江一脉是主角家学，都算奇遇（docs/menpai.md 第七节） */
+const NO_TREE = [JIANGHU_RULE.school, '寒江'];
+
+/** 顺着前置往下找，找得到本门的入门武功吗 */
+function reachesEntry(k: SkillDef, school: string): boolean {
+  const seen = new Set<string>(), stack = [k.id];
+  while (stack.length) {
+    const cur = byId(stack.pop()!);
+    if (!cur || seen.has(cur.id)) continue;
+    seen.add(cur.id);
+    for (const r of cur.requires || []) {
+      const d = byId(r.skill);
+      if (d?.school !== school) continue;
+      if (d.teach === '入门') return true;
+      stack.push(d.id);
+    }
+  }
+  return false;
+}
+
+/**
+ * 武学树（docs/menpai.md 第七节第三、四条）：入门就传一门本门内功（内功为根，入门弟子才使得出本门绝招）；
+ * 外门、内门、真传的武功顺着前置往下，追得到本门的入门武功，入门、外门、内门、真传一层层连成一棵树。
+ */
+export function treeProblems(school: string): string[] {
+  const skills = SKILLS.filter(k => k.school === school);
+  if (!skills.length || NO_TREE.includes(school)) return [];
+  const errs: string[] = [];
+  if (!skills.some(k => k.category === '内功' && k.teach === '入门'))
+    errs.push('没有 teach 为「入门」的本门内功：内功为根，入门弟子没有本门内功，本门外功只剩普通招式');
+  for (const k of skills) {
+    if ((k.teach === '外门' || k.teach === '内门' || k.teach === '真传') && !reachesEntry(k, school))
+      errs.push(`${k.name}：${k.teach}武功顺着前置往下，找不到本门的入门武功，武学树断了`);
+  }
+  return errs;
+}
+
 /** 一门派的师承问题：传授、前置、内功为根、武学树（docs/menpai.md 第七节） */
 function shichengProblems(school: string): string[] {
   const skills = SKILLS.filter(k => k.school === school);
@@ -90,27 +127,31 @@ function shichengProblems(school: string): string[] {
       const same = (k.requires || []).some(r => byId(r.skill)?.school === school);
       if (!same && !(k.teach === '奇遇' && k.needAttr)) errs.push(`${k.name}：${k.grade}要有同门的前置武学（requires）；奇遇武功可以改用属性门槛（needAttr）`);
     }
-    if (k.teach === '内门' || k.teach === '真传') {
-      // 顺着前置往下找，要能找到本门的入门或外门武功
-      const seen = new Set<string>(), stack = [k.id];
-      let ok = false;
-      while (stack.length && !ok) {
-        const cur = byId(stack.pop()!);
-        if (!cur || seen.has(cur.id)) continue;
-        seen.add(cur.id);
-        for (const r of cur.requires || []) {
-          const d = byId(r.skill);
-          if (d?.school === school && (d.teach === '入门' || d.teach === '外门')) ok = true;
-          else if (d?.school === school) stack.push(d.id);
-        }
-      }
-      if (!ok) errs.push(`${k.name}：${k.teach}武功顺着前置往下，找不到本门的入门或外门武功，武学树断了`);
-    }
     const usesRoot = ROOTED_CATS.includes(k.category) && (k.performs?.length || k.ult || k.combos?.length);
     if (usesRoot && !k.roots?.includes(ROOT_ANY) && !SKILLS.some(n => n.category === '内功' && gradeRank(n.grade) <= gradeRank('上品') && rootsOn(k, n)))
       errs.push(`${k.name}：内功为根，要有一门上品以下、能给它打底的内功（本门内功，或写进 roots），否则绝招没人使得出`);
   }
+  errs.push(...treeProblems(school));
   return errs;
+}
+
+/** 一派的武学树，写给人看：每一层传哪些武功，括号里是门类和前置。写山门的人照它排「请教」「考校」 */
+export function treeText(school: string): string {
+  const skills = SKILLS.filter(k => k.school === school);
+  const tiers: SkillTeach[] = ['入门', '外门', '内门', '真传', '奇遇'];
+  const rows = tiers.map(t => {
+    const ks = skills.filter(k => k.teach === t);
+    if (!ks.length) return '';
+    return `  ${t}：` + ks.map(k => {
+      const notes = [
+        ['内功', '轻功', '绝技'].includes(k.category) ? k.category : '',
+        ...(k.requires || []).map(r => `${byId(r.skill)?.name ?? r.skill}${REALMS[r.realm]}`),
+        ...Object.entries(k.needAttr || {}).map(([a, v]) => `${a}${v}`)
+      ].filter(Boolean);
+      return k.name + (notes.length ? `（${notes.join('，')}）` : '');
+    }).join('、');
+  }).filter(Boolean);
+  return `${school}\n${rows.join('\n')}`;
 }
 
 /** 门派的效果分布：每种效果出现几次，多段连击算一项 */
@@ -214,6 +255,13 @@ describe('门派打法', () => {
     expect(errs).toEqual([]);
   });
 
+  it('武学树：每派入门就传本门内功，外门以上的武功顺着前置追得到本门入门武功（所有门派，包括待改造的）', () => {
+    const schools = [...new Set(SKILLS.map(k => k.school))];
+    const errs = schools.flatMap(s => treeProblems(s).map(e => `${s}：${e}`));
+    if (env.MENPAI) console.log('各派武学树（括号里是门类、前置）：\n' + schools.filter(s => !NO_TREE.includes(s)).map(treeText).join('\n'));
+    expect(errs, '\n' + errs.join('\n')).toEqual([]);
+  });
+
   it('机器把关本身管用：故意写错的门派会被拦下', () => {
     const fake: SkillDef = {
       id: 'fake', name: '假掌', grade: '上品', category: '掌法', school: '铁掌帮', nature: '阴', reach: '徒手', desc: '', learn: '',
@@ -232,7 +280,14 @@ describe('门派打法', () => {
       const qz = styleProblems('全真').join('\n');
       expect(qz).toContain('同门的前置');
       expect(qz).toContain('武学树断了');
+      // 外门武功不写前置，也是树断了
+      SKILLS[SKILLS.length - 1] = { ...fake, school: '全真', grade: '良品', teach: '外门', performs: [] } as SkillDef;
+      expect(treeProblems('全真').join('\n')).toContain('假掌：外门武功顺着前置往下，找不到本门的入门武功');
     } finally { SKILLS.pop(); }
+    // 入门没有本门内功
+    const xinfa = byId('tq_xinfa')!;
+    xinfa.teach = '外门';
+    try { expect(treeProblems('全真').join('\n')).toContain('没有 teach 为「入门」的本门内功'); } finally { xinfa.teach = '入门'; }
   });
 });
 
@@ -433,7 +488,7 @@ describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
     expect(canLearn(S, SKILLS.find(k => k.id === 'gb_lianhua')!).ok).toBe(false);
   });
 
-  it('丐帮：讨一顿饭入帮，花钱买的不算；记名只传入门，没有本门内功使不出绝招；腿脚、侠义够了升外门，传混天气功，莲花掌的绝招使得出', () => {
+  it('丐帮：讨一顿饭入帮，花钱买的不算；记名先传百衲功，内功位要自己换上，换上了莲花掌的绝招使得出；腿脚、侠义够了升外门，根基够了传混天气功、缠丝擒拿手', () => {
     act('bs2_bao', '拜师');
     expect(S.quests.bs2_gb_kao).toBe(0);
     act('bs2_hu', '购买');
@@ -445,24 +500,97 @@ describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
     act('bs2_bao', '复命');
     expect(S.sect).toEqual({ school: '丐帮', rank: '记名' });
     expect(S.quests.bs2_gb_kao).toBe(1);
-    for (let i = 0; i < 4; i++) act('bs2_bao', '请教');
-    for (const id of ['gb_babu', 'gb_lianhua', 'gb_xiaoyaoyou']) expect(S.skills[id], id).toBeDefined();
+    for (let i = 0; i < 5; i++) act('bs2_bao', '请教');
+    for (const id of ['gb_baina', 'gb_babu', 'gb_lianhua', 'gb_xiaoyaoyou']) expect(S.skills[id], id).toBeDefined();
     for (const id of ['gb_huntian', 'gb_chansi', 'gb_xianglong', 'gb_dagou']) expect(S.skills[id], id).toBeUndefined();
     expect(S.loadout.fist).toBe('gb_lianhua');
     delete S.gear.weapon;
+    // 学到了本门内功，内功位上还是寒江心法：不替玩家换，记一条见闻提醒
+    expect(S.loadout.neigong).toBe('xinfa');
+    expect(S.feed.some(f => f.x.includes('「百衲功」是丐帮的根本') && f.x.includes('武功页换上'))).toBe(true);
     expect(fightKit(S).unrooted).toBe(true);
+    // 换上百衲功，记名弟子的莲花掌就使得出绝招
+    S.loadout.neigong = 'gb_baina';
+    fights('gb_lianhua', 'bs2_wg_shidun');
     act('bs2_bao', '考校');
     expect(S.sect?.rank).toBe('记名');
     S.skills.gb_babu!.r = 1;
     S.xia = 20;
     act('bs2_bao', '考校');
     expect(S.sect).toEqual({ school: '丐帮', rank: '外门' });
-    for (let i = 0; i < 3; i++) act('bs2_bao', '请教');
+    // 根基不够：百衲功、莲花掌都还没练到略有小成，混天气功、缠丝擒拿手学不成，鲍四说清楚还差什么
+    expect(act('bs2_bao', '请教').text).toContain('先把百衲功练到略有小成');
+    S.skills.gb_baina!.r = 1;
+    expect(act('bs2_bao', '请教').text).toContain('混天气功');
+    expect(S.skills.gb_huntian).toBeDefined();
+    expect(act('bs2_bao', '请教').text).toContain('先把莲花掌练到略有小成');
+    S.skills.gb_lianhua!.r = 1;
+    act('bs2_bao', '请教');
     for (const id of ['gb_huntian', 'gb_chansi']) expect(S.skills[id], id).toBeDefined();
     expect(S.skills.gb_xianglong).toBeUndefined();
     S.loadout.neigong = 'gb_huntian';
     S.loadout.qinggong = 'gb_babu';
     fights('gb_lianhua', 'bs2_wg_shidun');
+  });
+});
+
+describe('叛门、逐出：拜不回原门派，出师的回得去（docs/menpai.md 第七节）', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+  const lianhua = (): SkillDef => byId('gb_lianhua')!;
+
+  it('叛门：丐帮拜不回去，本门武功封顶，学不到新的；别的门派照样拜得进', () => {
+    // 百衲功练到炉火纯青，莲花掌本来能练到登堂入室（外功不过内功一重）
+    run([{ type: 'sect', school: '丐帮', rank: '外门' }, { type: 'learn', skill: 'gb_baina', realm: 3 }, { type: 'learn', skill: 'gb_lianhua' }]);
+    S.skills.gb_lianhua!.r = 1;
+    expect(realmCap(S, lianhua())).toBe(4);
+    run([{ type: 'leaveSect', how: '叛门' }]);
+    expect(S.sect).toBeUndefined();
+    expect(pastSectText(S)).toBe('叛出丐帮');
+    run([{ type: 'sect', school: '丐帮', rank: '记名' }]);
+    expect(S.sect).toBeUndefined();
+    expect(S.feed[0].x).toContain('叛出过丐帮');
+    expect(realmCap(S, lianhua())).toBe(1);
+    const why = canLearn(S, byId('gb_xiaoyaoyou')!);
+    expect(why.ok ? '' : why.why).toContain('叛出过丐帮');
+    run([{ type: 'sect', school: '六扇门', rank: '记名' }]);
+    expect(S.sect).toEqual({ school: '六扇门', rank: '记名' });
+  });
+
+  it('逐出：同样拜不回去、本门武功封顶；来历写「被逐出」', () => {
+    run([{ type: 'sect', school: '六扇门', rank: '记名' }, { type: 'learn', skill: 'jl_suolian' }]);
+    run([{ type: 'leaveSect', how: '逐出' }]);
+    expect(S.sect).toBeUndefined();
+    expect(pastSectText(S)).toBe('被逐出六扇门');
+    run([{ type: 'sect', school: '六扇门', rank: '记名' }]);
+    expect(S.sect).toBeUndefined();
+    expect(S.feed[0].x).toContain('被逐出过六扇门');
+    expect(realmCap(S, byId('jl_suolian')!)).toBe(0);
+    expect(canLearn(S, byId('jl_tiechi')!).ok).toBe(false);
+  });
+
+  it('出师：所学全留、不封顶，日后还拜得回去', () => {
+    run([{ type: 'sect', school: '丐帮', rank: '真传' }, { type: 'learn', skill: 'gb_baina', realm: 3 }, { type: 'learn', skill: 'gb_lianhua' }]);
+    run([{ type: 'leaveSect', how: '出师' }]);
+    expect(pastSectText(S)).toBe('出师于丐帮');
+    expect(realmCap(S, lianhua())).toBe(4);
+    run([{ type: 'sect', school: '丐帮', rank: '记名' }]);
+    expect(S.sect).toEqual({ school: '丐帮', rank: '记名' });
+  });
+
+  it('条件 pastSect：拜过、叛出过、被逐出过某派，内容读得到', () => {
+    expect(cond({ pastSect: { school: '丐帮' } })).toBe(false);
+    run([{ type: 'sect', school: '丐帮', rank: '记名' }, { type: 'leaveSect', how: '逐出' }]);
+    run([{ type: 'sect', school: '军伍', rank: '记名' }, { type: 'leaveSect', how: '出师' }]);
+    expect(pastSectText(S)).toBe('被逐出丐帮；出师于军伍');
+    expect(cond({ pastSect: { school: '丐帮' } })).toBe(true);
+    expect(cond({ pastSect: { school: '丐帮', how: '逐出' } })).toBe(true);
+    expect(cond({ pastSect: { school: '丐帮', how: '叛门' } })).toBe(false);
+    expect(cond({ pastSect: { school: '军伍', how: '出师' } })).toBe(true);
+    expect(cond({ pastSect: { school: '六扇门' } })).toBe(false);
+    // 眼下在门中的不算「离开过」
+    run([{ type: 'sect', school: '六扇门', rank: '记名' }]);
+    expect(cond({ pastSect: { school: '六扇门' } })).toBe(false);
+    expect(cond({ noSect: true })).toBe(false);
   });
 });
 

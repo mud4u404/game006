@@ -8,9 +8,9 @@ import { advanceMin, dayNo } from '../core/time';
 import { liang, pick } from '../core/util';
 import { NEWS, jobById, questById, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
-import type { Branch, Cond, Effect } from '../content/types';
+import type { Branch, Cond, Effect, PastSect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
-import { canLearn } from './shicheng';
+import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
 import { houtianOf } from './ren';
 import { SHENFEN, jobOpen, jobPay } from './shenfen';
@@ -83,6 +83,7 @@ export function test(c?: Cond): boolean {
   }
   if (c.sect && (S.sect?.school !== c.sect.school || (c.sect.rank && SECT_RANKS.indexOf(S.sect.rank) < SECT_RANKS.indexOf(c.sect.rank)))) return false;
   if (c.noSect && S.sect) return false;
+  if (c.pastSect && !pastSectsOf(S).some(x => x.school === c.pastSect!.school && (!c.pastSect!.how || x.how === c.pastSect!.how))) return false;
   if (c.any && !c.any.some(x => test(x))) return false;
   return true;
 }
@@ -133,13 +134,20 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'prof': out.breaks.push(...gainProf(e.skill, e.amount)); break;
       case 'lilian': addLilian(S, e.amount); break;
       case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0)); break;
-      // 拜师或升地位，只升不降；身在别派时无效（要先出师或叛门）
-      case 'sect':
-        if (!S.sect) S.sect = { school: e.school, rank: e.rank };
-        else if (S.sect.school === e.school && SECT_RANKS.indexOf(e.rank) > SECT_RANKS.indexOf(S.sect.rank)) S.sect.rank = e.rank;
+      // 拜师或升地位，只升不降；身在别派时无效（要先离开）。叛出、被逐出过这一派的，拜不回去（docs/menpai.md 第七节）
+      case 'sect': {
+        if (S.sect) {
+          if (S.sect.school === e.school && SECT_RANKS.indexOf(e.rank) > SECT_RANKS.indexOf(S.sect.rank)) S.sect.rank = e.rank;
+          break;
+        }
+        const barred = barredFrom(S, e.school);
+        if (barred) { pushFeed('江湖', `你${leaveWord(barred)}过${e.school}，${e.school}的门不会再为你打开。`); break; }
+        S.sect = { school: e.school, rank: e.rank };
         break;
+      }
+      // 离开师门：出师、叛门、逐出都记进来历。state.ts 的 pastSects 类型还没写上逐出，这里按 PastSect 记（见 engine/shicheng.ts 的 pastSectsOf）
       case 'leaveSect':
-        if (S.sect) { (S.pastSects ??= []).push({ school: S.sect.school, how: e.how }); delete S.sect; }
+        if (S.sect) { ((S.pastSects ??= []) as PastSect[]).push({ school: S.sect.school, how: e.how }); delete S.sect; }
         break;
       case 'attr': growAttr(S, e.key, e.delta, '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;

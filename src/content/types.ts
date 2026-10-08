@@ -58,8 +58,13 @@ export interface Cond {
   canLearn?: SkillId;
   /** 是某门派的弟子（在门中），rank 写了就要求不低于这个地位 */
   sect?: { school: string; rank?: SectRank };
-  /** 眼下没有师门（出过师、叛过门的也算没有）。拜师的分支用它：一人一师门，身在别派的要另写一个分支 */
+  /** 眼下没有师门（出过师、叛过门、被逐出的也算没有）。拜师的分支用它：一人一师门，身在别派的要另写一个分支 */
   noSect?: true;
+  /**
+   * 离开过某派（出师、叛门、逐出），how 写了就只看这一种离开法。眼下还在门中的不算，用 sect。
+   * 拜师的分支先用它拦下叛出、被逐出本门的人：这两种人 sect 效果拜不回去（engine/shicheng.ts 的 barredFrom）
+   */
+  pastSect?: { school: string; how?: LeaveHow };
   any?: Cond[];
 }
 
@@ -79,10 +84,10 @@ export type Effect =
   /** 历练：江湖上的见识与实战，闭关时化为武功进境（engine/lilian.ts）。高人指点、奇遇用它；打架、了结任务由引擎自动给 */
   | { type: 'lilian'; amount: number }
   | { type: 'learn'; skill: SkillId; realm?: number; prof?: number }
-  /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先出师或叛门 */
+  /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先离开；叛出、被逐出过这一派的，拜不回去 */
   | { type: 'sect'; school: string; rank: SectRank }
-  /** 离开师门：出师所学全留；叛门则本门武功境界封顶，门派追杀 */
-  | { type: 'leaveSect'; how: '出师' | '叛门' }
+  /** 离开师门（见 LeaveHow）：出师所学全留，日后还能回来；叛门、逐出则本门武功境界封顶，再也拜不回去 */
+  | { type: 'leaveSect'; how: LeaveHow }
   | { type: 'attr'; key: AttrKey; delta: number }
   | { type: 'xia'; delta: number }
   /** 恶名：与侠义是两条独立的值，不互相抵消 */
@@ -324,6 +329,15 @@ export type SkillCategory =
 export type SkillTeach = '入门' | '外门' | '内门' | '真传' | '奇遇';
 /** 门内地位：记名弟子 → 外门 → 内门 → 真传 */
 export type SectRank = '记名' | '外门' | '内门' | '真传';
+/**
+ * 怎样离开师门（docs/menpai.md 第七节）：
+ * 出师，做到真传、师父点头，所学全留，日后还能回来；
+ * 叛门，自己叛出，门派追杀，本门武功境界封顶，再也拜不回去；
+ * 逐出，犯了门规被师门除名，本门武功境界封顶，同样拜不回去，只是不追杀。
+ */
+export type LeaveHow = '出师' | '叛门' | '逐出';
+/** 离开过的一个师门 */
+export interface PastSect { school: string; how: LeaveHow }
 /** 性质相克：柔克刚、刚克阴、阴克阳、阳克柔；中正不克也不被克 */
 export type SkillNature = '刚' | '柔' | '阴' | '阳' | '中正';
 /** 兵器长短：一寸长一寸强，一寸短一寸险 */

@@ -39,9 +39,9 @@ const SKILLS: SkillDef[] = [
   },
   {
     id: 'tq_bichao', name: '碧潮心法', grade: '良品', category: '内功', school: '桃花岛', nature: '柔',
-    desc: '以内功摹拟碧海潮生之意。潮有信，力有节，一波未平一波又起，是桃花岛外门功夫的底子。',
-    learn: '桃花岛外门心法，与玉箫同参',
-    teach: '外门',
+    desc: '以内功摹拟碧海潮生之意。潮有信，力有节，一波未平一波又起，是桃花岛弟子入门的底子。',
+    learn: '桃花岛入门心法，与玉箫同参',
+    teach: '入门',
     passive: [{ kind: 'rage', value: 5 }]
   },
   {
@@ -185,6 +185,7 @@ const SKILLS: SkillDef[] = [
     desc: '全真教轻功。一纵数丈，凌空如雁翔，落地悄无声息，是玄门弟子入门的根基功夫。',
     learn: '全真教入门轻功，弟子共习',
     teach: '外门',
+    requires: [{ skill: 'tq_xinfa', realm: 1 }],
     passive: [{ kind: 'haste', value: 10 }]
   },
   {
