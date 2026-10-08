@@ -18,7 +18,8 @@ const rankIdx = (r: string): number => SECT_RANKS.indexOf(r as never);
 export function canLearn(s: St, def: SkillDef): LearnCheck {
   const sect = s.sect;
   const jianghu = def.school === JIANGHU_RULE.school;
-  if (sect && !jianghu && def.school !== sect.school) {
+  // 寒江一脉是主角的家学，不受别派门规限制（docs/decisions.md）：拜过严门的人，主线里照样学得到
+  if (sect && !jianghu && def.school !== sect.school && def.school !== '寒江') {
     const rule = SCHOOL_STYLE[sect.school];
     if (rule?.discipline === '严') return { ok: false, why: `门规森严，${sect.school}弟子在门期间不得兼修别派武功` };
     const style = SCHOOL_STYLE[def.school]?.main;
@@ -47,7 +48,7 @@ export const sectText = (s: Pick<GameState, 'sect'>): string => (s.sect ? `${s.s
 export function menguiText(school: string): string {
   const r = SCHOOL_STYLE[school];
   if (!r) return '';
-  if (r.discipline === '严') return '门规森严：在门期间只学本门武功和江湖散学，别派的功夫（连奇遇在内）一概学不得。';
+  if (r.discipline === '严') return '门规森严：在门期间只学本门武功、江湖散学和自家的寒江一脉，别派的功夫（连奇遇在内）一概学不得。';
   if (r.discipline === '邪') return '门规不讲究：什么都学得，只是正道容不下你。';
   const forbid = r.forbid?.length ? `；${r.forbid.join('、')}一路的功夫不许碰` : '';
   return `门规宽：可以兼修别派，只是别派的外功没有本门内功打底，只剩普通招式${forbid}。`;

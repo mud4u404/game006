@@ -5,7 +5,7 @@
  * 2. 不卡死：剧情卡片总有选项可选；任务的目的地走得到；结算里开打、开剧情不会被吞掉；
  * 3. 每个任务都走得完：几局下来，每个任务至少有一局走到最后一个阶段。
  * 顺带统计内容覆盖：走了几万步也碰不到的分支、剧情选项、路遇、对手，多半是条件写错了。
- * ZOUBIAN=1 npm test -- zoubian 打印完整的覆盖报告。
+ * npm run zoubian 打印完整的覆盖报告；ZOUBIAN_PREFIX=bj_ npm run zoubian 只看某个前缀的内容（协作者交活前自查用）。
  */
 import { describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
@@ -23,6 +23,8 @@ import { tierNow } from '../src/engine/ren';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const VERBOSE = !!env.ZOUBIAN;
+/** 只看这个前缀的内容：协作者自查「我写的东西玩家走不走得到」 */
+const PREFIX = env.ZOUBIAN_PREFIX ?? '';
 
 /** 一局：从哪里开始、走几步、用哪个种子 */
 interface Run { start: 'new' | 'skip'; steps: number; seed: number; focus?: string }
@@ -274,7 +276,15 @@ describe('机器玩家走遍江湖', () => {
     `没碰上的路遇：${missEnc.join('、') || '无'}`,
     `提醒：\n${[...warns].map(([m, n]) => `  ${m}（${n} 次）`).join('\n') || '  无'}`
   ];
-  if (VERBOSE) {
+  if (PREFIX) {
+    const mine = (k: string): boolean => k.startsWith(PREFIX);
+    const own = (all: string[], miss: string[]): string => `${all.filter(mine).length - miss.filter(mine).length}/${all.filter(mine).length}`;
+    report.push(`\n—— 前缀「${PREFIX}」的内容 ——`,
+      `分支 ${own(allBranches, missBranch)}，剧情选项 ${own(allChoices, missChoice)}，对手 ${own(FOES.map(f => f.id), missFoe)}，路遇 ${own(ENCOUNTERS.map(e => e.id), missEnc)}，地点 ${own(ROOMS.map(r => r.id), missRoom)}`,
+      `没走到的：\n  ${[...missBranch, ...missChoice, ...missFoe, ...missEnc, ...missRoom].filter(mine).join('\n  ') || '无'}`,
+      '（没走到的不一定是错：可能要很高的根基、很多钱、特定的选择。逐条想一想玩家怎样才能走到；想不出来，就是写错了。）');
+  }
+  if (VERBOSE && !PREFIX) {
     report.push(`没走到的分支（${missBranch.length}）：\n  ${missBranch.join('\n  ')}`);
     report.push(`没选过的剧情选项（${missChoice.length}）：\n  ${missChoice.join('\n  ')}`);
   }

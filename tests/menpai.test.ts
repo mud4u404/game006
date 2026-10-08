@@ -465,3 +465,17 @@ describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
     fights('gb_lianhua', 'bs2_wg_shidun');
   });
 });
+
+describe('寒江一脉不受别派门规', () => {
+  it('严门弟子学得了寒江武功，学不了别派的', async () => {
+    const { canLearn } = await import('../src/engine/shicheng');
+    const { SKILLS } = await import('../src/content');
+    const hj = SKILLS.find(k => k.school === '寒江')!;
+    const other = SKILLS.find(k => k.school === '少林')!;
+    const st = { sect: { school: '军伍', rank: '记名' as const }, skills: {}, attr: { 体魄: 40, 根骨: 40, 身法: 40, 悟性: 40, 胆魄: 40 } };
+    const r = canLearn(st as never, hj);
+    expect(r.ok ? '' : r.why).not.toContain('门规');
+    expect(canLearn(st as never, other).ok).toBe(false);
+  });
+});
+

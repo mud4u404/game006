@@ -231,7 +231,9 @@ describe('基础设施', () => {
    */
   type Npc = (typeof NPCS)[number];
   type Service = NonNullable<Npc['service']>[number];
-  const NEED: Record<string, Service[]> = { yz: ['医', '宿', '兵', '当', '杂'], gz: ['医', '宿'], zj: ['医', '宿'] };
+  /** 扬州是首府，五样都要；其余地区（包括以后新开的苏州等地）至少要有医馆和客栈 */
+  const NEED: Record<string, Service[]> = Object.fromEntries(Object.keys(REGIONS).filter(r => ROOMS.some(x => x.region === r))
+    .map(r => [r, r === 'yz' ? ['医', '宿', '兵', '当', '杂'] : ['医', '宿']]));
   const ALL_FX = JSON.stringify({ ROOMS, NPCS, STORIES, FOES, ENCOUNTERS });
   const idOf = (x: string | { id: string }): string => (typeof x === 'string' ? x : x.id);
   /** 人物在哪些地点：地点的 npcs、objs，或者人物自己写的 at */
@@ -247,7 +249,7 @@ describe('基础设施', () => {
   const boughtItems = (b: Branch): string[] => (pays(b) ? (b.do ?? []).flatMap(e => (e.type === 'item' && e.delta > 0 ? [e.id] : [])) : []);
   const servers = NPCS.filter(n => n.service?.length);
 
-  it('扬州五样齐全；瓜洲、镇江至少有医馆和客栈', () => {
+  it('扬州五样齐全；其余每个地区至少有医馆和客栈', () => {
     const errs: string[] = [];
     for (const [region, need] of Object.entries(NEED)) {
       const have = new Set(servers.filter(n => placesOf(n).some(r => regionOf(r) === region)).flatMap(n => n.service ?? []));
