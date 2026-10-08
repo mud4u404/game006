@@ -3,18 +3,25 @@
  * 规则见 docs/menpai.md 第七节。
  */
 import { REALMS, SKILLS, skillById } from '../content';
-import { JIANGHU_RULE, LEARN_LILIAN, ROOTED_CATS, ROOT_ANY, SCHOOL_STYLE, SECT_RANKS, TEACH_RANK } from '../content/skills';
+import { GONGXIAN_PENDING, JIANGHU_RULE, LEARN_GONGXIAN, LEARN_LILIAN, ROOTED_CATS, ROOT_ANY, SCHOOL_STYLE, SECT_RANKS, TEACH_RANK } from '../content/skills';
 import type { LeaveHow, PastSect, SkillDef } from '../content/types';
 import type { GameState } from '../core/state';
 import { houtianOf } from './ren';
 
-type St = Pick<GameState, 'skills' | 'attr' | 'loadout' | 'sect' | 'pastSects' | 'gear' | 'gongli' | 'name'> & { lilian?: number };
+type St = Pick<GameState, 'skills' | 'attr' | 'loadout' | 'sect' | 'pastSects' | 'gear' | 'gongli' | 'name'> & { lilian?: number; gongxian?: Record<string, number> };
 
 /** 学不成的原因；short 是只差历练的时候还差多少（师父肯教，你见识不够） */
 export type LearnCheck = { ok: true } | { ok: false; why: string; short?: number };
 
 /** 学这门武功要拿多少历练去换（content/skills.ts 的 LEARN_LILIAN） */
 export const learnCost = (def: Pick<SkillDef, 'grade'>): number => LEARN_LILIAN[def.grade] ?? 0;
+
+/**
+ * 学这门武功要拿多少门派贡献去换（content/skills.ts 的 LEARN_GONGXIAN）：本门外门以上的武功才要，
+ * 还没有师门差事的门派（GONGXIAN_PENDING）暂不收，免得玩家卡住
+ */
+export const gongxianCost = (def: Pick<SkillDef, 'school' | 'teach'>): number =>
+  def.teach && !GONGXIAN_PENDING.includes(def.school) ? LEARN_GONGXIAN[def.teach] ?? 0 : 0;
 
 const rankIdx = (r: string): number => SECT_RANKS.indexOf(r as never);
 
@@ -64,6 +71,9 @@ export function canLearn(s: St, def: SkillDef, cost: number = learnCost(def)): L
   }
   const have = Math.floor(s.lilian ?? 0);
   if (have < cost) return { ok: false, why: `见识还浅：学「${def.name}」要历练 ${cost}，你眼下只有 ${have}。去江湖上走一走、打几场硬仗再来`, short: cost - have };
+  // 门派贡献：本门外门以上的武功，要先替师门出过力（docs/menpai.md 第七节第八条）
+  const gx = gongxianCost(def), mine = s.gongxian?.[def.school] ?? 0;
+  if (gx > mine) return { ok: false, why: `门派贡献不够：学「${def.name}」要${def.school}贡献 ${gx}，你眼下只有 ${mine}。替师门办几件差事再来`, short: gx - mine };
   return { ok: true };
 }
 

@@ -13,7 +13,7 @@ import { gainProf, learnSkill } from './growth';
 import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
 import { houtianOf } from './ren';
-import { SHENFEN, jobOpen, jobPay } from './shenfen';
+import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
 import { hearsay, learnShi, moveShi } from './shishi';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
@@ -72,6 +72,7 @@ export function test(c?: Cond): boolean {
   if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
   if (c.job !== undefined && S.job?.id !== c.job) return false;
   if (c.jobOpen !== undefined && !jobOpen(S, c.jobOpen)) return false;
+  if (c.gongxian !== undefined && gongxianOf(S) < c.gongxian) return false;
   // 世事（engine/shishi.ts）：眼下在哪一步；还没起头的，哪一步都不在
   if (c.shi) {
     const at = S.shi?.[c.shi.id]?.at;
@@ -114,6 +115,12 @@ export const newOutcome = (): Outcome => ({ vars: {}, breaks: [] });
  * 被东家辞退（地位降到零、恶名太盛）：做回游侠，手上的差事作废；
  * 身份连着门派的，一并逐出门墙；身份的信物收回（engine/shenfen.ts 的 sect、badge）
  */
+/** 门派贡献加减，不低于零 */
+function addGongxian(school: string, d: number): void {
+  const g = (S.gongxian ??= {});
+  g[school] = Math.max(0, (g[school] ?? 0) + d);
+}
+
 function dismiss(why: string): void {
   const sf = SHENFEN[S.shenfen.id];
   if (!sf) return;
@@ -181,6 +188,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         break;
       case 'attr': growAttr(S, e.key, e.delta, '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;
+      case 'gongxian': if (S.sect) addGongxian(S.sect.school, e.delta); break;
       case 'eming': {
         S.eming = Math.max(0, S.eming + e.delta);
         // 软肋：恶名到了这个身份容不下的地步，被辞退（六扇门收回腰牌）
@@ -254,13 +262,21 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'jobDone': {
         const j = jobById(e.id);
         if (!j || S.job?.id !== e.id) break;
-        const pay = jobPay(j);
-        S.silver += pay;
         S.job = null;
         S.jobLog[j.id] = dayNo(S);
         S.yue = S.yue.filter(y => y.id !== 'job_' + j.id);
-        pushFeed('收获', `交了差：${j.title}，得银 ${pay} 文。`);
-        emit('toast', `交差 · 银两 +${pay} 文`);
+        // 师门差事给门派贡献，不给钱；身份的差事给钱
+        if (j.sect) {
+          const g = jobGongxian(j);
+          addGongxian(j.sect, g);
+          pushFeed('收获', `交了差：${j.title}，${j.sect}贡献 +${g}。`);
+          emit('toast', `交差 · ${j.sect}贡献 +${g}`);
+        } else {
+          const pay = jobPay(j);
+          S.silver += pay;
+          pushFeed('收获', `交了差：${j.title}，得银 ${pay} 文。`);
+          emit('toast', `交差 · 银两 +${pay} 文`);
+        }
         break;
       }
       case 'jobFail': {
@@ -269,7 +285,9 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         S.jobLog[e.id] = dayNo(S);
         S.yue = S.yue.filter(y => y.id !== 'job_' + e.id);
         pushFeed('江湖', `差事办砸了：${j?.title ?? e.id}。`);
-        run([{ type: 'standing', delta: -1 }]);
+        // 师门差事误了，扣贡献（这件差事本该给的那么多）；身份的差事误了，降地位
+        if (j?.sect) addGongxian(j.sect, -jobGongxian(j));
+        else run([{ type: 'standing', delta: -1 }]);
         break;
       }
       case 'fight': out.fight = e.foe; break;

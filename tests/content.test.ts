@@ -8,7 +8,7 @@ import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
 import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
-import { ACTIVE_MAX, EFFICIENCY_BAND, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
+import { ACTIVE_MAX, EFFICIENCY_BAND, GONGXIAN_PENDING, RANK_GONGXIAN, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
 import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
 import { REL_WORDS } from '../src/engine/renqing';
 import { SHENFEN } from '../src/engine/shenfen';
@@ -649,7 +649,10 @@ describe('差事', () => {
     const errs: string[] = [];
     for (const j of JOBS) {
       const w = `差事 ${j.id}`;
-      if (!SHENFEN[j.shenfen]) errs.push(`${w}：身份「${j.shenfen}」不存在（见 engine/shenfen.ts）`);
+      // 身份的差事（给钱）和师门差事（给门派贡献）二选一
+      if (!!j.shenfen === !!j.sect) errs.push(`${w}：shenfen（身份的差事）和 sect（师门差事）写一样，只写一样`);
+      if (j.shenfen && !SHENFEN[j.shenfen]) errs.push(`${w}：身份「${j.shenfen}」不存在（见 engine/shenfen.ts）`);
+      if (j.sect && !SCHOOL_STYLE[j.sect]) errs.push(`${w}：门派「${j.sect}」没有定位（见 SCHOOL_STYLE）`);
       if (!(Number.isInteger(j.tier) && j.tier >= 0 && j.tier <= 5)) errs.push(`${w}：tier（档次）要是 0 到 5 的整数`);
       if (!(Number.isInteger(j.days) && j.days >= 1)) errs.push(`${w}：days 要是一以上的整数`);
       if (j.again !== undefined && !(Number.isInteger(j.again) && j.again >= 1)) errs.push(`${w}：again 要是一以上的整数`);
@@ -680,6 +683,47 @@ describe('后果看得见', () => {
     const unread = [...set].filter(f => !read.has(f));
     const errs = unread.filter(f => !DEBT.includes(f)).map(f => `旗标「${f}」：写了却没有任何地方读。给它接一条后续（路遇、传闻、人物的话），玩家才看得到这个选择的后果`);
     for (const f of DEBT) if (!unread.includes(f)) errs.push(`旗标「${f}」：已经有地方读了（或者不再写了），请从本测试的欠账单里删掉`);
+    report(errs);
+  });
+});
+
+describe('门派贡献', () => {
+  /**
+   * docs/menpai.md 第七节第八条：替师门办差攒贡献，升地位、学外门以上的武功拿它去换（负责人 10-08「有条件有代价」）。
+   * 1. 拜得进的门派，要有攒贡献的路：师门差事（JobDef 的 sect），或者本门弟子才有的、加贡献的效果；
+   * 2. 升到外门以上的分支，条件里要有贡献门槛（content/skills.ts 的 RANK_GONGXIAN）；
+   * 3. 还没有师门差事的门派列在 GONGXIAN_PENDING，补上了就从单上删掉。
+   */
+  type Br = { if?: Cond; do?: Effect[] };
+  const branches: { where: string; b: Br }[] = [];
+  for (const n of NPCS) for (const [v, bs] of Object.entries(n.actions)) (bs ?? []).forEach((b, i) => branches.push({ where: `人物 ${n.id}「${v}」[${i}]`, b }));
+  for (const s of STORIES) s.cards.forEach((c, i) => c.choices.forEach(ch => branches.push({ where: `剧情 ${s.id}#${i}「${ch.label}」`, b: ch })));
+  for (const f of FOES) for (const [r, res] of Object.entries(f.results)) {
+    if (!res) continue;
+    branches.push({ where: `对手 ${f.id} 的结算 ${r}`, b: { do: res.do } });
+    res.after?.opts.forEach(o => branches.push({ where: `对手 ${f.id} 胜负以后「${o.label}」`, b: o }));
+  }
+  const joinable = new Set(branches.flatMap(x => (x.b.do ?? []).flatMap(e => (e.type === 'sect' ? [e.school] : []))));
+
+  it('拜得进的门派都有攒贡献的路；补上了的从待办单上删掉', () => {
+    const errs: string[] = [];
+    for (const school of joinable) {
+      const jobs = JOBS.some(j => j.sect === school);
+      const earn = jobs || branches.some(x => x.b.if?.sect?.school === school && (x.b.do ?? []).some(e => e.type === 'gongxian' && e.delta > 0));
+      if (GONGXIAN_PENDING.includes(school)) {
+        if (jobs) errs.push(`${school}已经有师门差事了，从 content/skills.ts 的 GONGXIAN_PENDING 里删掉`);
+      } else if (!earn) errs.push(`${school}拜得进，却没有攒门派贡献的路：写几件师门差事（JobDef 写 sect: '${school}'，见 packs/shimen-chaishi.ts），或者先列进 GONGXIAN_PENDING`);
+    }
+    report(errs);
+  });
+
+  it('升外门以上的分支，条件里有贡献门槛', () => {
+    const errs: string[] = [];
+    for (const { where, b } of branches) for (const e of b.do ?? []) {
+      if (e.type !== 'sect' || e.rank === '记名' || GONGXIAN_PENDING.includes(e.school)) continue;
+      const need = RANK_GONGXIAN[e.rank];
+      if (!(b.if?.gongxian !== undefined && b.if.gongxian >= need)) errs.push(`${where}：升${e.school}${e.rank}，条件里要写 gongxian: ${need}（替师门出过力，见 content/skills.ts 的 RANK_GONGXIAN）；对手的结算里没有条件可写，升地位写在人物的动作分支里`);
+    }
     report(errs);
   });
 });

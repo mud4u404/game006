@@ -3,7 +3,7 @@ import { emit } from '../core/bus';
 import { REALMS, REALM_NEED, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { autoSlot } from './wuxue';
-import { canLearn, realmCap, rootHint, learnCost } from './shicheng';
+import { canLearn, realmCap, rootHint, learnCost, gongxianCost } from './shicheng';
 import { profMul } from './gengu';
 import { syncBody } from './ren';
 
@@ -65,10 +65,14 @@ export function learnSkill(id: SkillId, realm = 0, prof = 0, cost?: number): str
   }
   S.skills[id] = { r: realm, p: prof };
   S.lilian = Math.max(0, (S.lilian ?? 0) - price);
+  // 本门外门以上的武功，另拿门派贡献去换
+  const gx = gongxianCost(sk);
+  if (gx) (S.gongxian ??= {})[sk.school] = Math.max(0, (S.gongxian[sk.school] ?? 0) - gx);
   autoSlot(S, sk);
   const msg = `习得「${sk.name}」`;
-  pushFeed('突破', msg + (price ? `！拿历练 ${price} 换的。` : '！'));
-  emit('toast', msg + (price ? `！历练 −${price}` : '！'));
+  const paid = [price ? `历练 ${price}` : '', gx ? `${sk.school}贡献 ${gx}` : ''].filter(Boolean).join('、');
+  pushFeed('突破', msg + (paid ? `！拿${paid}换的。` : '！'));
+  emit('toast', msg + (paid ? `！${paid.replace(/ /g, ' −')}` : '！'));
   // 学到本门内功，内功位上却还是别的内功：记一条见闻，换不换由玩家定
   const hint = rootHint(S, sk);
   if (hint) pushFeed('江湖', hint);

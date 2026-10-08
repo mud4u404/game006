@@ -9,6 +9,7 @@ import type { GameState } from '../core/state';
 import { dayNo } from '../core/time';
 import { jobById } from '../content';
 import type { JobDef } from '../content/types';
+import { JOB_GONGXIAN } from '../content/skills';
 
 export interface ShenfenDef {
   name: string;
@@ -40,9 +41,9 @@ export const STANDING = ['被辞退', '新进', '正经', '老手'];
 /** 一件差事算多少在线时辰的活（半个时辰）；一两合一千文 */
 export const JOB_HOURS = 0.5;
 
-/** 这件差事给多少文：身份在这一档每在线小时的收入 × 半个时辰 × 难易，取整到十文 */
+/** 这件差事给多少文：身份在这一档每在线小时的收入 × 半个时辰 × 难易，取整到十文。师门差事不给钱 */
 export function jobPay(j: Pick<JobDef, 'shenfen' | 'tier' | 'k'>): number {
-  const sf = SHENFEN[j.shenfen];
+  const sf = j.shenfen ? SHENFEN[j.shenfen] : undefined;
   const t = Math.max(0, Math.min(5, Math.round(j.tier)));
   return sf ? Math.round((sf.pay[t] * 1000 * JOB_HOURS * (j.k ?? 1)) / 10) * 10 : 0;
 }
@@ -53,11 +54,21 @@ export const shenfenOf = (s: Pick<GameState, 'shenfen'>): ShenfenDef => SHENFEN[
 export const shenfenText = (s: Pick<GameState, 'shenfen'>): string =>
   s.shenfen.id === 'yumin' || s.shenfen.id === 'youxia' ? shenfenOf(s).name : `${shenfenOf(s).name} · ${STANDING[s.shenfen.standing] ?? ''}`;
 
-/** 这件差事眼下接得：身份对、地位在、手上没有别的差事、上回办完已经隔够了日子 */
-export function jobOpen(s: Pick<GameState, 'shenfen' | 'job' | 'jobLog' | 'year' | 'month' | 'day'>, id: string): boolean {
+/** 师门差事给多少门派贡献：按档次（content/skills.ts 的 JOB_GONGXIAN）× 难易 */
+export function jobGongxian(j: Pick<JobDef, 'sect' | 'tier' | 'k'>): number {
+  if (!j.sect) return 0;
+  const t = Math.max(0, Math.min(5, Math.round(j.tier)));
+  return Math.round(JOB_GONGXIAN[t] * (j.k ?? 1));
+}
+
+/** 本门的门派贡献 */
+export const gongxianOf = (s: Pick<GameState, 'sect' | 'gongxian'>): number => (s.sect ? s.gongxian?.[s.sect.school] ?? 0 : 0);
+
+/** 这件差事眼下接得：身份对、地位在（师门差事：是这一派的弟子）、手上没有别的差事、上回办完已经隔够了日子 */
+export function jobOpen(s: Pick<GameState, 'shenfen' | 'job' | 'jobLog' | 'year' | 'month' | 'day' | 'sect'>, id: string): boolean {
   const j = jobById(id);
   if (!j || s.job) return false;
-  if (s.shenfen.id !== j.shenfen || s.shenfen.standing < 1) return false;
+  if (j.sect ? s.sect?.school !== j.sect : s.shenfen.id !== j.shenfen || s.shenfen.standing < 1) return false;
   const last = s.jobLog[id];
   return last === undefined || dayNo(s) - last >= (j.again ?? 3);
 }

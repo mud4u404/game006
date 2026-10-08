@@ -67,6 +67,8 @@ export interface Cond {
    * 拜师的分支先用它拦下叛出、被逐出本门的人：这两种人 sect 效果拜不回去（engine/shicheng.ts 的 barredFrom）
    */
   pastSect?: { school: string; how?: LeaveHow };
+  /** 本门的门派贡献不少于（替师门办差攒下的，见 docs/menpai.md 第七节第八条）。升地位的考校用它 */
+  gongxian?: number;
   /** 世事（engine/shishi.ts）眼下在这几步之一（at）；不在这几步（not，还没起头也算不在） */
   shi?: { id: string; at?: string[]; not?: string[] };
   any?: Cond[];
@@ -77,6 +79,8 @@ export type Effect =
   | { type: 'flag'; flag: string; value?: boolean }
   | { type: 'quest'; id: string; stage: number }
   | { type: 'track'; id: string }
+  /** 本门的门派贡献加减（没有师门时无效）。师门差事的贡献由 jobDone 按档次给，这里写额外的：立了功、犯了门规 */
+  | { type: 'gongxian'; delta: number }
   /** 玩家插手世事：把它推到 to 这一步（engine/shishi.ts）；不写 to，只是让玩家知道了这件事眼下怎样 */
   | { type: 'shi'; id: string; to?: string }
   | { type: 'feed'; tag: FeedTag; text: string }
@@ -628,8 +632,13 @@ export interface ShiStep {
  */
 export interface JobDef {
   id: string;
-  /** 哪个身份的差事 */
-  shenfen: string;
+  /** 哪个身份的差事（给钱）；和 sect 二选一 */
+  shenfen?: string;
+  /**
+   * 哪个门派的师门差事（给门派贡献，不给钱；docs/menpai.md 第七节第八条）。和 shenfen 二选一。
+   * 拜进了这一派才接得到；误了差事扣贡献，不降身份的地位
+   */
+  sect?: string;
   /** 档次：0 不入流 … 5 宗师。报酬按它算；路上的对手也该是这一档上下 */
   tier: number;
   /** 差事簿上的一行 */
