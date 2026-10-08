@@ -3,10 +3,12 @@
  * - 用户名 + 密码：用户名在本地换算成一个内部邮箱地址交给 Supabase（邮箱验证已关，不发信）。
  * - 每个账号一份当前存档（saves 表），外加每天一份历史（save_history 表，云上保留三十份）。
  * 存档始终先存本机；这里出任何错，都不影响游戏。
+ * 试玩预览（/preview/）不连云存档：cloudEnabled 为假，入口全藏起来；万一还有地方调到，call 也不发请求（core/preview.ts）。
  */
+import { isPreview, storageKey } from '../core/preview';
 import { EMAIL_DOMAIN, SUPABASE_KEY, SUPABASE_URL } from './config';
 
-export const cloudEnabled = (): boolean => !!(SUPABASE_URL && SUPABASE_KEY);
+export const cloudEnabled = (): boolean => !!(SUPABASE_URL && SUPABASE_KEY) && !isPreview();
 
 export interface Session { access: string; refresh: string; expires: number; uid: string; username: string }
 export interface CloudSave { data: unknown; version: number; summary: string; updated: number }
@@ -41,6 +43,8 @@ export function explain(status: number, body: string): string {
 }
 
 async function call(path: string, init: RequestInit & { token?: string } = {}): Promise<unknown> {
+  // 试玩预览的存档格式可能比正式版新，绝不能传到云上、也不从云上拉正式版的存档下来
+  if (isPreview()) throw new CloudError('预览版不连云存档');
   const headers: Record<string, string> = { apikey: SUPABASE_KEY, 'content-type': 'application/json', ...(init.headers as Record<string, string>) };
   if (init.token) headers.authorization = `Bearer ${init.token}`;
   let r: Response;
@@ -56,10 +60,11 @@ async function call(path: string, init: RequestInit & { token?: string } = {}): 
 const store = (): Storage | null => { try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; } };
 
 export function session(): Session | null {
-  try { return JSON.parse(store()?.getItem(SESSION_KEY) ?? 'null'); } catch { return null; }
+  try { return JSON.parse(store()?.getItem(storageKey(SESSION_KEY)) ?? 'null'); } catch { return null; }
 }
 function keep(s: Session | null): void {
-  try { if (s) store()?.setItem(SESSION_KEY, JSON.stringify(s)); else store()?.removeItem(SESSION_KEY); } catch { /* 存不了就每次重新登录 */ }
+  const k = storageKey(SESSION_KEY);
+  try { if (s) store()?.setItem(k, JSON.stringify(s)); else store()?.removeItem(k); } catch { /* 存不了就每次重新登录 */ }
 }
 
 interface AuthReply { access_token?: string; refresh_token?: string; expires_in?: number; user?: { id: string; user_metadata?: { username?: string } } }
@@ -130,9 +135,9 @@ export async function push(data: unknown, version: number, summary: string, keep
     body: JSON.stringify({ user_id: s.uid, username: s.username, version, summary, data, updated_at: now.toISOString() })
   });
   const day = now.toISOString().slice(0, 10);
-  if (store()?.getItem(HIST_DAY) !== day) {
+  if (store()?.getItem(storageKey(HIST_DAY)) !== day) {
     await call('/rest/v1/save_history', { method: 'POST', token: s.access, keepalive, headers: { prefer: 'return=minimal' }, body: JSON.stringify({ user_id: s.uid, version, summary, data }) });
-    try { store()?.setItem(HIST_DAY, day); } catch { /* 无妨 */ }
+    try { store()?.setItem(storageKey(HIST_DAY), day); } catch { /* 无妨 */ }
   }
   return now.getTime();
 }

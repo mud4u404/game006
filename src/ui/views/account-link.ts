@@ -1,8 +1,13 @@
 /** 标题画面和人物页上的账号入口。只拼 HTML，处理函数在 ui/account.ts */
+import { isPreview } from '../../core/preview';
 import { cloudEnabled, session } from '../../net/cloud';
 import { syncStatus } from '../../net/sync';
 
+/** 试玩预览不连云存档（core/preview.ts）：不给登录入口，写明一句 */
+const PREVIEW_NOTE = '预览版不连云存档';
+
 export function titleAccountHTML(): string {
+  if (isPreview()) return `<p class="t-warn">${PREVIEW_NOTE}，进度只存在这台设备上</p>`;
   if (!cloudEnabled()) return '';
   const s = session();
   return s
@@ -11,6 +16,7 @@ export function titleAccountHTML(): string {
 }
 
 export function cloudRowHTML(): string {
+  if (isPreview()) return `<div class="rows"><div class="row"><span>云存档<small class="muted">${PREVIEW_NOTE}。这里的进度和正式版分开存，只在这台设备上</small></span></div></div>`;
   if (!cloudEnabled()) return '';
   const s = session();
   return s

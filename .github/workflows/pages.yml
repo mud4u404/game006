@@ -1,32 +1,90 @@
 name: 部署到 GitHub Pages
 
 # 每次 main 更新后自动部署，手机打开 Pages 地址即可试玩最新版本。
+# 维护者分支（PREVIEW_BRANCH）的构建放在 /preview/ 子目录：负责人合并 PR 之前，先在那里玩一下。
+#   正式版：https://mud4u404.github.io/game006/
+#   预览版：https://mud4u404.github.io/game006/preview/
+# 预览页的存档换一套键、不连云存档，碰不到朋友们的正式存档（src/core/preview.ts）。
+#
+# GitHub Pages 只有一个产物，所以每次部署都把两边各构建一遍：最新的 main 放根目录，最新的维护者分支放 preview/；
+# 维护者分支不存在，或者它还没有存档隔离，就只部署 main。
 # 第一次使用前，需要在仓库 Settings → Pages → Build and deployment → Source 选择「GitHub Actions」。
 on:
   push:
-    branches: [main]
+    branches: [main, claude/determined-hawking-7fpvbg]
   workflow_dispatch:
+
+env:
+  PREVIEW_BRANCH: claude/determined-hawking-7fpvbg
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# 部署排队，不互相打断：正在跑的那次一定跑完，后来的排在后面（排队的只留最新一个）。
+# 每次都现取两边最新的代码，所以排在后面的那次总会带上最新的推送。
+# 维护者分支的推送只做转交（见 relay），用另一个组，不占部署的队。
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: ${{ github.ref == 'refs/heads/main' && 'pages' || format('pages-relay-{0}', github.ref) }}
+  cancel-in-progress: false
 
 jobs:
+  # 维护者分支推送：github-pages 环境默认只许 main 部署，所以不在这里部署，
+  # 而是在 main 上启动一次这份工作流（用 GITHUB_TOKEN 启动 workflow_dispatch 是允许的，ci.yml 的 automerge 也这么做）
+  relay:
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: 在 main 上重新部署（带上这个分支的预览）
+        run: gh workflow run pages.yml --repo "${{ github.repository }}" --ref main
+
   build:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
+      # 不管是谁触发的，都取最新的 main
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - name: 构建正式版（main，放根目录）
+        run: npm run build
+      # 预览版出任何问题（分支不在、构建失败、没有存档隔离）都只是不放预览，main 照常部署
+      - name: 构建预览版（维护者分支，放 preview/）
+        run: |
+          say() { echo "$1"; echo "$1" >> "$GITHUB_STEP_SUMMARY"; }
+          echo "正式版：main @ $(git log -1 --format='%h %s')" >> "$GITHUB_STEP_SUMMARY"
+          if ! git ls-remote --exit-code --heads origin "$PREVIEW_BRANCH" > /dev/null; then
+            say "维护者分支 $PREVIEW_BRANCH 不存在，只部署 main。"
+            exit 0
+          fi
+          git fetch --depth=1 origin "$PREVIEW_BRANCH"
+          src="$RUNNER_TEMP/preview-src"
+          git worktree add --detach "$src" FETCH_HEAD
+          ver="$PREVIEW_BRANCH @ $(git -C "$src" log -1 --format='%h %s')"
+          if ! (cd "$src" && npm ci && npm run build); then
+            echo "::warning::预览版构建失败，这次只部署 main。"
+            say "预览版（$ver）构建失败，没有部署。"
+            exit 0
+          fi
+          # 安全闸：预览版必须有存档隔离（src/core/preview.ts 的 jhyy-preview- 前缀），否则它会读写正式版的存档、连正式的云存档
+          if ! grep -rqF 'jhyy-preview-' "$src/dist/assets"; then
+            echo "::warning::维护者分支还没有存档隔离（找不到 jhyy-preview-），这次不部署预览版。先把最新的 main 合进维护者分支。"
+            say "预览版（$ver）没有存档隔离，没有部署。"
+            exit 0
+          fi
+          rm -rf dist/preview
+          cp -r "$src/dist" dist/preview
+          say "预览版：$ver，在 /preview/"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

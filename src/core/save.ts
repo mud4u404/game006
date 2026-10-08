@@ -17,14 +17,21 @@ import type { Loadout } from '../engine/wuxue';
 import type { AttrKey, Slot } from '../content/types';
 import { newGame, skipToYangzhou, type GameState } from './state';
 import { dateStr, dayNo, nowMs } from './time';
+import { storageKey } from './preview';
 
 export const SAVE_VERSION = 4;
+/** 正式版的存档键。试玩预览（/preview/）换一套键，见 core/preview.ts；下面用到的键都经 saveKeys() 现算 */
 export const KEY = 'jhyy-save-v2';
 const META = 'jhyy-save-meta';
 const BROKEN = 'jhyy-save-broken-';
 const BAK = 'jhyy-bak-';
 const BAK_RESTART = 'jhyy-bak-restart';
 const BAK_KEEP = 3;
+
+/** 这一页实际用的键：正式版原样，试玩预览全部换成 jhyy-preview- 开头，碰不到正式版的存档 */
+export const saveKeys = (): { save: string; meta: string; broken: string; bak: string; bakRestart: string } => ({
+  save: storageKey(KEY), meta: storageKey(META), broken: storageKey(BROKEN), bak: storageKey(BAK), bakRestart: storageKey(BAK_RESTART)
+});
 
 /** 和浏览器的 localStorage 一样的接口，测试时可以换成内存里的 */
 export interface SaveStore {
@@ -154,7 +161,7 @@ export function readSave(): ReadResult {
   const s = st();
   if (!s) return { state: null, broken: false };
   let t: string | null = null;
-  try { t = s.getItem(KEY); } catch { return { state: null, broken: false }; }
+  try { t = s.getItem(saveKeys().save); } catch { return { state: null, broken: false }; }
   if (!t) return { state: null, broken: false };
   try {
     return { state: migrate(JSON.parse(t)), broken: false };
@@ -166,9 +173,10 @@ export function readSave(): ReadResult {
 
 function keepBroken(s: SaveStore, raw: string): void {
   try {
-    const keys = listKeys(s, BROKEN);
+    const { broken } = saveKeys();
+    const keys = listKeys(s, broken);
     if (keys.some(k => s.getItem(k) === raw)) return;
-    s.setItem(BROKEN + Date.now(), raw);
+    s.setItem(broken + Date.now(), raw);
   } catch { /* 存不下也不影响游戏 */ }
 }
 
@@ -188,13 +196,14 @@ export function writeSave(state: GameState): void {
   const s = st();
   if (!s) return;
   try {
+    const ks = saveKeys();
     const json = JSON.stringify(state);
-    s.setItem(KEY, json);
-    s.setItem(META, JSON.stringify({ savedAt: Date.now(), v: SAVE_VERSION }));
-    const day = BAK + today();
+    s.setItem(ks.save, json);
+    s.setItem(ks.meta, JSON.stringify({ savedAt: Date.now(), v: SAVE_VERSION }));
+    const day = ks.bak + today();
     if (!s.getItem(day)) {
       s.setItem(day, json);
-      const old = listKeys(s, BAK).filter(k => k !== BAK_RESTART);
+      const old = listKeys(s, ks.bak).filter(k => k !== ks.bakRestart);
       for (const k of old.slice(0, Math.max(0, old.length - BAK_KEEP))) s.removeItem(k);
     }
   } catch { /* 隐私模式等情况下存不了，游戏照常进行 */ }
@@ -202,7 +211,7 @@ export function writeSave(state: GameState): void {
 
 /** 最近一次存档的时间（毫秒），没有就是 0 */
 export function savedAt(): number {
-  try { return JSON.parse(st()?.getItem(META) ?? '{}').savedAt ?? 0; } catch { return 0; }
+  try { return JSON.parse(st()?.getItem(saveKeys().meta) ?? '{}').savedAt ?? 0; } catch { return 0; }
 }
 
 /** 当前进度被清空或替换之前调用；云存档在这里把它收进云上的历史 */
@@ -211,9 +220,10 @@ export const onReplacing = (fn: (old: GameState) => void): void => { replacing.p
 
 /** 把当前存档另存一份，留作「上次替换之前」的备份 */
 function keepCurrent(s: SaveStore): void {
-  const t = s.getItem(KEY);
+  const ks = saveKeys();
+  const t = s.getItem(ks.save);
   if (!t) return;
-  s.setItem(BAK_RESTART, t);
+  s.setItem(ks.bakRestart, t);
   let old: GameState | null = null;
   try { old = migrate(JSON.parse(t)); } catch { /* 读不出来的就只留在本机 */ }
   if (old) for (const fn of replacing) try { fn(old); } catch { /* 云端出错不影响本机 */ }
@@ -223,7 +233,7 @@ function keepCurrent(s: SaveStore): void {
 export function clearSaveSafely(): void {
   const s = st();
   if (!s) return;
-  try { keepCurrent(s); s.removeItem(KEY); } catch { /* 同上 */ }
+  try { keepCurrent(s); s.removeItem(saveKeys().save); } catch { /* 同上 */ }
 }
 
 /** 用导入的存档码或备份替换当前进度；当前进度先另存一份 */
@@ -240,13 +250,14 @@ export const summary = (s: GameState): string => `${s.chapter === 0 ? '序章' :
 export function listBackups(): { key: string; label: string; state: GameState | null }[] {
   const s = st();
   if (!s) return [];
-  const keys = [BAK_RESTART, ...listKeys(s, BAK).filter(k => k !== BAK_RESTART).reverse(), ...listKeys(s, BROKEN).reverse()];
+  const { bak, bakRestart, broken } = saveKeys();
+  const keys = [bakRestart, ...listKeys(s, bak).filter(k => k !== bakRestart).reverse(), ...listKeys(s, broken).reverse()];
   return keys.flatMap(k => {
     const t = s.getItem(k);
     if (!t) return [];
     let state: GameState | null = null;
     try { state = migrate(JSON.parse(t)); } catch { /* 读不出来的也列出来，可以导出给维护者 */ }
-    const label = k === BAK_RESTART ? '上次重来或导入之前' : k.startsWith(BROKEN) ? '读不出来的旧存档' : '每日备份 ' + k.slice(BAK.length + 5);
+    const label = k === bakRestart ? '上次重来或导入之前' : k.startsWith(broken) ? '读不出来的旧存档' : '每日备份 ' + k.slice(bak.length + 5);
     return [{ key: k, label, state }];
   });
 }

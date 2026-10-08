@@ -5,6 +5,7 @@
  * - 存档写完后十五秒推一次云，切到后台时立刻推。
  */
 import { SAVE_VERSION, onReplacing, onSaved, summary } from '../core/save';
+import { storageKey } from '../core/preview';
 import type { GameState } from '../core/state';
 import { archive, cloudEnabled, push, session, type CloudSave } from './cloud';
 
@@ -25,10 +26,10 @@ const SYNCED = 'jhyy-cloud-synced';
 interface Synced { uid: string; fp: string }
 const ls = (): Storage | null => { try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; } };
 function synced(uid: string): string | null {
-  try { const s = JSON.parse(ls()?.getItem(SYNCED) ?? 'null') as Synced | null; return s?.uid === uid ? s.fp : null; } catch { return null; }
+  try { const s = JSON.parse(ls()?.getItem(storageKey(SYNCED)) ?? 'null') as Synced | null; return s?.uid === uid ? s.fp : null; } catch { return null; }
 }
 export function markSynced(uid: string, data: unknown): void {
-  try { ls()?.setItem(SYNCED, JSON.stringify({ uid, fp: fingerprint(data) })); } catch { /* 无妨 */ }
+  try { ls()?.setItem(storageKey(SYNCED), JSON.stringify({ uid, fp: fingerprint(data) })); } catch { /* 无妨 */ }
 }
 
 export type Decision = 'none' | 'push' | 'pull' | 'ask';

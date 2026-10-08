@@ -13,6 +13,7 @@
     "validate": "vitest run tests/content.test.ts tests/menpai.test.ts",
     "check": "npm run typecheck && npm run test",
     "smoke": "vite build && node scripts/smoke.mjs",
+    "luandian": "vite build && node scripts/luandian.mjs",
     "ids": "UPDATE_IDS=1 vitest run tests/ids.test.ts",
     "retune": "RETUNE=1 vitest run tests/retune.test.ts --silent=false",
     "menpai": "MENPAI=1 vitest run tests/menpai.test.ts --silent=false",

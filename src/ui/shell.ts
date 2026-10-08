@@ -15,6 +15,7 @@ import { viewWugong } from './views/wugong';
 import { viewXingnang } from './views/xingnang';
 import { viewDitu } from './views/ditu';
 import { checkYue } from '../engine/shiguang';
+import { isPreview } from '../core/preview';
 
 type Handler = (v: string, el: HTMLElement) => void;
 const handlers: Record<string, Handler> = {};
@@ -61,6 +62,17 @@ export function buildShell(): void {
     handlers[k]?.(v, el);
   });
   on('toast', toast);
+}
+
+/** 试玩预览（/preview/）：页面顶上挂一行提示，画面整体往下让出这一行，不盖住任何按钮（样式见 app.css「试玩预览」） */
+export function previewBar(): void {
+  if (!isPreview() || document.querySelector('.pv-bar')) return;
+  document.documentElement.classList.add('preview');
+  const bar = document.createElement('div');
+  bar.className = 'pv-bar';
+  bar.setAttribute('role', 'note');
+  bar.textContent = '试玩预览：存档与正式版分开';
+  document.body.prepend(bar);
 }
 
 let toastTimer = 0;
