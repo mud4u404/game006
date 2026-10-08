@@ -35,6 +35,10 @@ describe('接力：挑下一个任务', () => {
     expect(pickWork([])).toBeNull();
   });
 
+  it('依赖的 PR 还没合并也先不做', () => {
+    expect(pickWork([issue(23, ['内容'], '依赖：#106'), pr(106, '大换血五')])).toBeNull();
+    expect(pickWork([issue(23, ['内容'], '依赖：#106')])?.number).toBe(23);
+  });
   it('读出依赖编号', () => {
     expect(deps('背景\n依赖：#12、#13\n其他 #99')).toEqual([12, 13]);
     expect(deps(null)).toEqual([]);
