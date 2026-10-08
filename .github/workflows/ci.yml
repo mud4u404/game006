@@ -53,12 +53,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # 下载浏览器偶尔会卡住不动（GitHub 那边的网络问题），卡住时协作者会一直等 CI。
-      # 每次最多等五分钟，卡住就重下一次。
-      - name: 安装无头浏览器
-        run: timeout 300 npx playwright install --with-deps chromium || timeout 300 npx playwright install --with-deps chromium
+      # 不再每次下载浏览器：GitHub 的机器上装着 Chrome，直接用它。
+      # 下载浏览器要连带装几十兆系统字体，软件源慢的时候会卡住，或者抢不到安装锁而失败（#79、#90）。
+      - name: 机器上没有 Chrome 时才下载浏览器
+        timeout-minutes: 10
+        run: command -v google-chrome || npx playwright install --with-deps chromium
       - name: 冒烟测试：从标题画面一路玩到首领战
         timeout-minutes: 10
+        env:
+          SMOKE_CHANNEL: chrome
         run: npm run smoke
 
   # 协作者推送任务分支后，自动建 PR（已有就沿用）。维护者的 claude/ 分支不在此列。

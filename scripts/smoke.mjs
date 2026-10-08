@@ -18,7 +18,15 @@ if (!url) {
   url = server.resolvedUrls.local[0];
 }
 const shots = process.argv[3];
-const b = await pw.chromium.launch();
+// CI 里用机器上装好的 Chrome（SMOKE_CHANNEL=chrome），省掉每次下载浏览器；找不到就退回 Playwright 自带的
+const channel = process.env.SMOKE_CHANNEL;
+let b;
+try { b = await pw.chromium.launch(channel ? { channel } : {}); }
+catch (e) {
+  if (!channel) throw e;
+  console.log(`· 找不到 ${channel}，改用 Playwright 自带的浏览器`);
+  b = await pw.chromium.launch();
+}
 // 用矮屏手机的尺寸跑：手机浏览器的工具栏、微信的标题栏会吃掉一截高度，按钮跑到屏幕外，玩家就会以为卡死了
 const p = await b.newPage({ viewport: { width: 360, height: 560 }, deviceScaleFactor: 2 });
 const errs = [];
