@@ -13,7 +13,8 @@
 ## 二、开工先读
 
 1. `docs/maintainer.md`：维护者交接，含负责人的偏好。
-2. `docs/ledger.md`：总账，含需求台账、玩家旅程与缺口、接下来的顺序。
-3. `docs/charter.md`、`docs/decisions.md`：原则和已经定下的事，不要重新讨论。
+2. `docs/blueprint.md`：总体策划。玩家是谁、三种玩法、数值模型、门派武学的数学模型、开篇剧情、先做什么后做什么。**每天开工先看现在在哪个阶段。**
+3. `docs/ledger.md`：总账，含需求台账、玩家旅程与缺口。
+4. `docs/charter.md`、`docs/decisions.md`：原则和已经定下的事，不要重新讨论。
 
 协作者（zcode 等）的规则在 `AGENTS.md`。

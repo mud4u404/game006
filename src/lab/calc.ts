@@ -2,7 +2,8 @@
  * 武学试算台的纯函数（Issue #33）：构造状态、列成算表、算绝招预算。
  * 数值规则一律调用 engine/wuxue、engine/formulas、content/skills 里现成的函数和常量，不另写一套。
  */
-import { ACTIVE_MAX } from '../content/skills';
+import { ACTIVE_MAX, CAT_WEAPON } from '../content/skills';
+import { ITEMS, skillById } from '../content';
 import type { SkillDef, TellDef } from '../content/types';
 import { newGame } from '../core/state';
 import type { GameState } from '../core/state';
@@ -10,12 +11,16 @@ import { respOptions, type FoeTraits } from '../engine/formulas';
 import { performBudget, performEfficiency } from '../engine/wuxue';
 import type { Loadout } from '../engine/wuxue';
 
-/** 以 newGame() 为底，按 realms 设境界（熟练度为 0），再按 loadout 设搭配 */
+/** 以 newGame() 为底，按 realms 设境界（熟练度为 0），再按 loadout 设搭配；兵刃位有武功时，手里拿对应的兵器（游戏里有这种兵器的话） */
 export function buildState(loadout: Loadout, realms: Record<string, number>): GameState {
   const s = newGame();
   for (const [id, r] of Object.entries(realms)) s.skills[id] = { r, p: 0 };
   for (const id of Object.values(loadout)) if (id && !s.skills[id]) s.skills[id] = { r: 0, p: 0 };
   s.loadout = { ...loadout };
+  const w = loadout.weapon ? skillById(loadout.weapon) : undefined;
+  const item = w ? ITEMS.find(i => i.equip?.weapon === CAT_WEAPON[w.category]) : undefined;
+  s.gear = item ? { weapon: item.id } : {};
+  if (item) s.items[item.id] = 1;
   return s;
 }
 

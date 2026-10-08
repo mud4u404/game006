@@ -5,8 +5,8 @@
 import { S, save } from '../core/state';
 import { advanceMin, dateStr, shichen } from '../core/time';
 import { $, H, M, MO, buzz, clamp, cn, fmt, liang, pick, reduceMotion, rnd } from '../core/util';
-import { foeById, itemById, room, skillById } from '../content';
-import type { Effect, FightResult, FoeDef, PrepDef, TellDef } from '../content/types';
+import { REALMS, foeById, itemById, room, skillById } from '../content';
+import type { Effect, FightResult, FoeDef, FxKind, PrepDef, TellDef } from '../content/types';
 import { run, textVars } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
 import { attrEffects } from '../engine/gengu';
@@ -14,6 +14,8 @@ import { prepFoe } from '../engine/beizhan';
 import { fightLilian } from '../engine/lilian';
 import { cheng, chengN, judgeText, realmPow, respOptions, tellPw, type RespKey, type RespOption } from '../engine/formulas';
 import { npcName } from '../engine/world';
+import { FOE_FX_TAG, FX_SAY, fightKit, foeFighter, meFighter, weaponWord, type FightKit } from '../engine/zhaoshi';
+import { dealtMul, endOfRound, flatCut, strike, takenMul, type Combat, type Fighter, type Move } from '../engine/combat';
 import { IC } from './icons';
 import { mb } from './widgets';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render } from './shell';
@@ -21,31 +23,29 @@ import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render } 
 const ROUND_MS = 1500;
 const PARTS = ['左肩', '右肩', '左臂', '右臂', '胸口', '右肋', '左肋', '小腹', '左腿', '右腿'];
 const PART_XY: Record<string, [number, number]> = { 左肩: [28, 19], 右肩: [12, 19], 左臂: [33, 32], 右臂: [7, 32], 胸口: [20, 26], 右肋: [15, 35], 左肋: [25, 35], 小腹: [20, 41], 左腿: [26, 58], 右腿: [14, 58] };
-const MY_MOVES = ['孤帆远影', '江枫渔火', '寒潭映月', '烟波钓叟', '霜落寒江'];
-const MY_FL = ['长剑斜挑', '剑光如一泓秋水', '手腕轻抖，抖出点点剑花', '身随剑走，衣袂飘飘', '剑势轻灵，如燕掠波'];
 const FOE_HIT = [
-  (f: FoeDef, p: string) => `${f.name}闪避不及，${H(p + '被划开一道血口')}。`,
-  (f: FoeDef, p: string) => `噗的一声，剑尖已刺入${f.name}${H(p)}。`,
-  (f: FoeDef, p: string) => `${f.name}躲闪稍慢，${H(p + '中剑')}，闷哼一声。`,
-  (f: FoeDef, p: string) => `剑光过处，${f.name}${H(p)}衣衫碎裂，渗出血来。`
+  (f: FoeDef, p: string) => `${f.name}闪避不及，${H(p)}结结实实挨了一下。`,
+  (f: FoeDef, p: string) => `噗的一声，正中${f.name}${H(p)}。`,
+  (f: FoeDef, p: string) => `${f.name}躲闪稍慢，${H(p + '中招')}，闷哼一声。`,
+  (f: FoeDef, p: string) => `${f.name}${H(p)}挨了一记，脚下一个踉跄。`
 ];
-const FOE_PARRY = [(f: FoeDef) => `${f.name}横${f.ws}一架，「铛」的一声，火星四溅。`, (f: FoeDef) => `${f.name}${f.weapon}一封，将这一剑荡开。`];
-const FOE_DODGE = [(f: FoeDef) => `${f.name}侧身急退，剑锋贴着衣襟掠过。`, (f: FoeDef) => `${f.name}矮身一闪，这一剑落了空。`];
-const ME_DODGE = ['你足尖一点，身形斜飘，锋刃贴着衣角削过。', '你侧身一让，长剑顺势一引，将来势卸开。'];
-const ME_PARRY = ['你横剑一格，只震得虎口发麻。', '你长剑一搭一引，将这一招带偏了半尺。'];
+const FOE_PARRY = [(f: FoeDef) => `${f.name}横${f.ws}一架，「铛」的一声，火星四溅。`, (f: FoeDef) => `${f.name}${f.weapon}一封，将这一招荡开。`];
+const FOE_DODGE = [(f: FoeDef) => `${f.name}侧身急退，堪堪避过。`, (f: FoeDef) => `${f.name}矮身一闪，这一招落了空。`];
+const ME_DODGE = ['你足尖一点，身形斜飘，锋刃贴着衣角削过。', '你侧身一让，顺势一引，将来势卸开。'];
+const ME_PARRY = [(w: string) => `你${w}势一封，只震得虎口发麻。`, (w: string) => `你${w}上一搭一引，将这一招带偏了半尺。`];
 const ME_HIT = [(p: string) => `你闪避不及，${H(p)}已被扫中，鲜血迸流。`, (p: string) => `你急忙后跃，终究慢了半分，${H(p)}一阵剧痛。`, (p: string) => `你${H(p)}中招，踉跄退了两步。`];
-const SAY: Record<RespKey, (f: FoeDef) => string> = {
-  block: () => '你沉腰坐马，运起寒江心法，长剑横胸，硬接这一招！',
-  dodge: () => '你足尖一点，「踏雪无痕」，身形斜飘而起——',
-  parry: f => `你凝神细看${f.weapon}去势，长剑一引一带——`,
-  rush: f => `你不退反进，${M('惊鸿照影')}抢在${f.name}招式未成之前刺出——`
+const SAY: Record<RespKey, (f: FoeDef, o: RespOption) => string> = {
+  block: (_f, o) => `你沉腰坐马，运起${M(o.sname)}，硬接这一招！`,
+  dodge: (_f, o) => `你足尖一点，${M(o.sname)}，身形斜飘而起——`,
+  parry: (f, o) => `你凝神细看${f.weapon}去势，${M(o.sname)}一引一带——`,
+  rush: (f, o) => `你不退反进，${M(o.sname)}抢在${f.name}招式未成之前出手——`
 };
 
 interface Prompt { t: TellDef; opts: RespOption[]; dur: number; end: number; rem?: number; untimed?: boolean }
 type Res = 'win' | 'lose' | 'flee' | 'yield';
 interface Fight {
   f: FoeDef; ehp: number; ehpMax: number; mom: number; round: number;
-  wounds: Record<string, number>; recent: string[]; rage: number; gu: number; jh: number;
+  wounds: Record<string, number>; recent: string[]; rage: number;
   charge: number; chargeT: number; prompt: Prompt | null; opening: { part: string } | null;
   busy: boolean; paused: boolean; over: boolean; phase: number; nextTell: number; lastTell: number; lock: number;
   st: { parry: number; open: number; ult: number; big: string[] };
@@ -53,6 +53,10 @@ interface Fight {
   res?: Res; then?: Effect[]; tellRound?: number; rescued?: boolean;
   /** 生效的备战（engine/beizhan.ts） */
   prep: PrepDef[];
+  /** 由搭配算出的招式（engine/zhaoshi.ts）；绝招各自的调息合数 */
+  kit: FightKit; pcd: number[];
+  /** 交给战斗内核记状态的两个人（点穴、流血、护体……）和内核的局面 */
+  me: Fighter; foe: Fighter; k: Combat;
 }
 let C: Fight | null = null;
 export const inFight = (): boolean => !!C;
@@ -63,13 +67,16 @@ export function startFight(fid: string): void {
   const base = foeById(fid);
   if (C || !base) return;
   const { foe: f, active } = prepFoe(base);
+  const kit = fightKit(S);
+  const me = meFighter(S, kit), foe = foeFighter(f);
   C = {
-    f, ehp: f.hp, ehpMax: f.hp, mom: 50, round: 0, wounds: {}, recent: [], rage: Math.max(0, 30 + attrEffects(S).rage), gu: 0, jh: 0, charge: 0, chargeT: 0,
+    f, ehp: f.hp, ehpMax: f.hp, mom: 50, round: 0, wounds: {}, recent: [], rage: Math.max(0, 30 + attrEffects(S).rage), charge: 0, chargeT: 0,
     prompt: null, opening: null, busy: false, paused: false, over: false, phase: 1,
     nextTell: f.firstTell ?? rnd(3, 4), lastTell: -1, lock: 0,
     st: { parry: 0, open: 0, ult: 0, big: [] },
     floor: f.spar ? Math.round(Math.min(S.hpMax * 0.3, S.hp * 0.5)) : f.script ? Math.round(S.hpMax * 0.25) : 0,
-    T: {}, prep: active
+    T: {}, prep: active,
+    kit, pcd: kit.performs.map(() => 0), me, foe, k: { round: 0, maxRounds: 999, f: [me, foe], rng: Math.random }
   };
   if (f.script && S.hp <= C.floor + 100) S.hp = C.floor + 300;
   const L = $('#fightLayer')!;
@@ -109,17 +116,16 @@ function fightHTML(c: Fight): string {
     </div>
     <div class="pb" id="pBars"></div>
     <div class="sk" id="idleBody">
-      <button class="skb" id="skGu" data-act="fSkill:gu"><b>寒江孤影</b><small></small></button>
-      <button class="skb" id="skJh" data-act="fSkill:jh"><b>惊鸿照影</b><small></small></button>
+      ${c.kit.performs.map((x, i) => `<button class="skb" id="skP${i}" data-act="fSkill:p${i}"><b>${x.p.name}</b><small></small></button>`).join('')}
+      ${c.kit.locked.map(p => `<button class="skb" disabled><b>${p.name}</b><small>${REALMS[p.realm ?? 0]}可用</small></button>`).join('')}
       <button class="skb" id="skCharge"><b>运功</b><small>长按蓄力</small></button>
-      <button class="skb ult" id="skUlt" data-act="fSkill:ult"><b>绝招·断水</b><small></small></button>
+      <button class="skb ult" id="skUlt" data-act="fSkill:ult"><b>${c.kit.ult ? '杀招·' + c.kit.ult.def.name : '杀招'}</b><small></small></button>
       <button class="skb minor" id="skJcy" data-act="fSkill:jcy"></button>
       <button class="skb minor" id="skDart" data-act="fSkill:dart"></button>
-      <button class="skb minor" data-act="fSkill:yield">认输</button>
-      <button class="skb minor" data-act="fSkill:flee">逃跑</button>
+      ${f.spar ? '<button class="skb minor" data-act="fSkill:yield">认输</button>' : '<button class="skb minor" data-act="fSkill:flee">逃跑</button>'}
     </div>
   </section>
-  <div class="ult-layer" id="ultL" hidden><small id="ultLabel">寒江剑法 · 绝招</small><div class="ult-w"><div class="ult-word">断水</div><span class="ult-seal">寒江</span></div><span class="ult-slash"></span></div>
+  <div class="ult-layer" id="ultL" hidden><small id="ultLabel"></small><div class="ult-w"><div class="ult-word" id="ultWord"></div><span class="ult-seal" id="ultSeal"></span></div><span class="ult-slash"></span></div>
   <div class="pause-layer" id="pauseL" hidden><div class="box"><b>已暂停</b><small>对手也在等你</small><button class="btn" data-act="fResume">继续</button></div></div>
 </div>`;
 }
@@ -151,13 +157,18 @@ function tick(): void {
   if (!C || C.over || C.paused || C.prompt || C.busy) return;
   C.round++;
   S.mp = Math.min(S.mpMax, S.mp + 10);
-  if (C.gu > 0) C.gu--;
-  if (C.jh > 0) C.jh--;
+  C.pcd = C.pcd.map(x => Math.max(0, x - 1));
   if (C.f.script === 'rescue' && C.tellRound !== undefined && C.round >= C.tellRound + 2) { rescue(); return; }
+  dotTick();
+  if (!C || C.over) return;
+  // 被点穴、寒气入体，这一合出不了手（每合只判一次）
+  const held = foeHeld();
   C.nextTell--;
-  if (C.nextTell <= 0) { startTell(); updAll(); return; }
-  if (Math.random() < 0.26 + C.mom * 0.0048) playerAuto(); else foeAuto();
+  if (C.nextTell <= 0 && !held) { startTell(); updAll(); return; }
+  if (held || Math.random() < 0.26 + C.mom * 0.0048) playerAuto(); else foeAuto();
   if (C && !C.over && Math.random() < 0.1) bubble('aside', pick(C.f.asides));
+  if (!C || C.over) return;
+  endOfRound(C.me); endOfRound(C.foe);
   updAll();
   next();
 }
@@ -169,17 +180,28 @@ function cancelCharge(): void {
   $('#skCharge')?.classList.remove('charging');
 }
 
+/** 出手那门外功练到了的招式里挑一招；空手又没有拳脚功夫时，随手一拳 */
+function myMove(part: string): { name: string; text: string } {
+  const o = C!.kit.outer;
+  const r = o ? S.skills[o.id]?.r ?? 0 : 0;
+  const ms = (o?.moves ?? []).filter(m => (m.realm ?? 0) <= r);
+  if (!ms.length) return { name: '随手一拳', text: `你挥拳打向${C!.f.name}${part}。` };
+  const m = pick(ms);
+  return { name: m.name, text: fmt(m.text, { foe: C!.f.name, part }) };
+}
+
 function playerAuto(): void {
   const c = C!, f = c.f, p = pick(PARTS);
-  const t = `你使一招${M(pick(MY_MOVES))}，${pick(MY_FL)}，直指${f.name}${p}。`;
+  const mv = myMove(p);
+  const t = `你使一招${M(mv.name)}，${mv.text}`;
   const r = Math.random(), dg = 0.14 - (c.mom - 50) * 0.002, pr = 0.2 - (c.mom - 50) * 0.002;
   if (r < dg) bubble('me', t + pick(FOE_DODGE)(f));
   else if (r < dg + pr) bubble('me', t + pick(FOE_PARRY)(f));
   else {
-    let d = rnd(55, 80) * realmPow(S, S.loadout.main) * chargeMul();
+    let d = rnd(55, 80) * realmPow(S, c.kit.outer?.id) * chargeMul() * takenMul(c.foe);
     const crit = Math.random() < 0.1;
     if (crit) d *= 1.6;
-    bubble('me', t + pick(FOE_HIT)(f, p) + (crit ? '<span class="note">剑势如虹</span>' : ''), d, 'out');
+    bubble('me', t + pick(FOE_HIT)(f, p) + (crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), d, 'out');
     hitFoe(d, p, crit ? 8 : 5);
     maybeOpening(0.12);
   }
@@ -190,16 +212,42 @@ function armMul(): number {
   return 1 - Math.min(0.25, n * 0.05);
 }
 
+/** 对手这一合被制住了吗：点穴（按次数解）、寒气入体（一半时候慢半拍）。制住了就说一句，返回 true */
+function foeHeld(): boolean {
+  const c = C!, busy = c.foe.st.busy;
+  if (busy) {
+    bubble('aside', `${c.f.name}穴道受制，空自挣扎。`);
+    if (--busy.r <= 0) { delete c.foe.st.busy; c.foe.immune = 2; }
+    return true;
+  }
+  if (c.foe.st.chill && Math.random() < 0.5) { bubble('aside', `${c.f.name}寒气入体，出招慢了半拍。`); return true; }
+  return false;
+}
+
+/** 合初：对手身上的流血、中毒、灼伤掉血 */
+function dotTick(): void {
+  const c = C!;
+  for (const k of ['bleed', 'poison', 'burn'] as const) {
+    const st = c.foe.st[k];
+    if (!st || !C || C.over) continue;
+    bubble('aside', { bleed: `${c.f.name}伤口血流不止。`, poison: `${c.f.name}毒性发作，脸色发青。`, burn: `${c.f.name}灼伤处火辣辣地疼。` }[k], st.v, 'out');
+    hitFoe(st.v, null, 0, true);
+  }
+}
+
+/** 身法：轻功位的境界 */
+const qgRealm = (): number => S.skills[S.loadout.qinggong ?? '']?.r ?? 0;
+
 function foeAuto(): void {
   const c = C!, f = c.f, p = pick(PARTS), charging = !!c.chargeT;
   let t = `${f.name}一招${MO(pick(f.moves))}，${f.weapon}${pick(f.flourish)}，直取你${p}！`;
   const r = Math.random();
-  const dg = charging ? 0 : 0.2 + (c.mom - 50) * 0.003 + (S.skills.taxue?.r ?? 0) * 0.02;
+  const dg = charging ? 0 : 0.2 + (c.mom - 50) * 0.003 + qgRealm() * 0.02 + (c.me.st.haste?.v ?? 0) / 100;
   const pr = charging ? 0 : 0.15;
   if (r < dg) { bubble('foe', t + pick(ME_DODGE)); c.mom = clamp(c.mom + 2, 5, 95); maybeOpening(0.2); }
-  else if (r < dg + pr) { bubble('foe', t + pick(ME_PARRY)); maybeOpening(0.12); }
+  else if (r < dg + pr) { bubble('foe', t + pick(ME_PARRY)(weaponWord(S))); maybeOpening(0.12); }
   else {
-    let d = rnd(f.atk[0], f.atk[1]) * (c.phase === 2 ? 1.2 : 1) * armMul();
+    let d = (rnd(f.atk[0], f.atk[1]) * (c.phase === 2 ? 1.2 : 1) * armMul() * dealtMul(c.foe) - flatCut(c.foe)) * takenMul(c.me);
     if (charging) { d *= 1.3; cancelCharge(); t += '你正凝神运功，躲闪不及——'; }
     bubble('foe', t + pick(ME_HIT)(p), d, 'in');
     c.mom = clamp(c.mom - 5, 5, 95);
@@ -207,13 +255,14 @@ function foeAuto(): void {
   }
 }
 
-function hitFoe(d: number, p: string | null, mg: number): void {
+/** noRage：怒气已经由战斗内核加过了（绝招），或者不该加（流血、中毒） */
+function hitFoe(d: number, p: string | null, mg: number, noRage = false): void {
   const c = C;
   if (!c || c.over) return;
-  d = Math.round(d);
+  d = Math.max(0, Math.round(d));
   c.ehp = Math.max(c.f.script === 'rescue' ? 1 : 0, c.ehp - d);
   if (p) { c.wounds[p] = (c.wounds[p] || 0) + 1; c.recent = c.recent.filter(x => x !== p); c.recent.push(p); }
-  c.rage = Math.min(100, c.rage + 4);
+  if (!noRage) c.rage = Math.min(100, c.rage + 4);
   c.mom = clamp(c.mom + mg, 5, 95);
   const hb = $('#fHp');
   if (hb) { hb.classList.remove('flash'); void hb.offsetWidth; hb.classList.add('flash'); }
@@ -294,8 +343,9 @@ function takeOpening(): void {
   c.opening = null;
   hideOpening();
   c.st.open++;
-  const d = rnd(200, 240) * realmPow(S, S.loadout.main) * chargeMul();
-  bubble('me crit', `你看得真切，剑随身走，一招${M('寒潭映月')}直刺${c.f.name}${part}！`);
+  const d = rnd(200, 240) * realmPow(S, c.kit.outer?.id) * chargeMul() * takenMul(c.foe);
+  const mv = myMove(part);
+  bubble('me crit', `你看得真切，一招${M(mv.name)}，${mv.text}`);
   bubble('foe', `${c.f.name}${pick(['闷哼一声', '怪叫一声', '脸色大变'])}，${H(part + '鲜血迸流')}。`, d, 'out');
   c.rage = Math.min(100, c.rage + 10);
   hitFoe(d, part, 12);
@@ -324,7 +374,7 @@ function startTell(): void {
     const n = chengN(o.p);
     return `<button class="ropt" data-act="fReact:${o.k}"${o.dis ? ' disabled' : ''}><span class="rn"><b>${o.act}</b><span> · ${o.sname}</span></span><span class="ro ${n >= 6 ? 'hi' : n >= 3 ? 'mid' : 'low'}">成算${cheng(o.p)}</span><span class="rx">${o.note}</span></button>`;
   }).join('');
-  const dur = Math.round((5000 + (S.skills.taxue?.r ?? 0) * 300) * (c.phase === 2 ? 0.85 : 1));
+  const dur = Math.round((5000 + qgRealm() * 300) * (c.phase === 2 ? 0.85 : 1));
   if (!S.flags.tutTell) {
     // 第一次遇到重招：不计时，附上说明
     c.prompt = { t, opts, dur, end: 0, untimed: true };
@@ -365,6 +415,14 @@ function setPromptUI(on: boolean): void {
   sh.classList.toggle('alert', on);
   $('#rBody')!.hidden = !on;
   $('#idleBody')!.hidden = on;
+  // 矮屏上底部面板放不下时可以滚动；出重招时滚到应对按钮露全，免得按钮在屏幕外、玩家以为卡死
+  if (on) requestAnimationFrame(() => {
+    const o = $('#rOpts');
+    if (!o) return;
+    const below = o.getBoundingClientRect().bottom - sh.getBoundingClientRect().bottom;
+    if (below > 0) sh.scrollTop += below + 8;
+  });
+  else sh.scrollTop = 0;
   if (!on) {
     if (C) clearInterval(C.T.cd);
     $('#rTime')!.textContent = '对手出重招时在这里应对';
@@ -403,15 +461,15 @@ function resolveTell(choice: RespKey | null): void {
   const p = Math.max(0.05, o.p - (instinct ? 0.15 : 0));
   const ok = Math.random() < p;
   S.mp = Math.max(0, S.mp - o.cost);
-  bubble('me', (instinct ? '你来不及细想，凭本能——' : '') + SAY[o.k](f) + `<span class="note">成算${cheng(p)}</span>`);
+  bubble('me', (instinct ? '你来不及细想，凭本能——' : '') + SAY[o.k](f, o) + `<span class="note">成算${cheng(p)}</span>`);
   if (ok) {
     c.st.parry++;
     c.rage = Math.min(100, c.rage + 12);
     const pw = realmPow(S, o.skill);
     if (o.k === 'block') { const d = rnd(80, 110) * pw; bubble('foe', `「当」的一声巨响，${MO(t.name)}被你硬生生接下！${f.name}反被震得连退三步。`, d, 'out'); hitFoe(d, null, 15); }
     else if (o.k === 'dodge') { bubble('foe', `${MO(t.name)}落了空，${t.after}`); c.mom = clamp(c.mom + 8, 5, 95); window.setTimeout(() => { if (C && !C.over && !C.prompt) maybeOpening(1); }, 450); }
-    else if (o.k === 'parry') { const d = rnd(60, 90) * pw; bubble('foe', `你以巧破拙，将${MO(t.name)}化于无形，顺势一剑划过他${H(part)}！`, d, 'out'); hitFoe(d, part, 20); }
-    else { const d = rnd(220, 280) * pw; bubble('foe', `${f.name}招式未成，${H(part + '先中一剑')}，${MO(t.name)}硬生生憋了回去！`, d, 'out'); hitFoe(d, part, 15); }
+    else if (o.k === 'parry') { const d = rnd(60, 90) * pw; bubble('foe', `你以巧破拙，将${MO(t.name)}化于无形，顺势还了一${weaponWord(S)}，正中他${H(part)}！`, d, 'out'); hitFoe(d, part, 20); }
+    else { const d = rnd(220, 280) * pw; bubble('foe', `${f.name}招式未成，${H(part + '先中一' + weaponWord(S))}，${MO(t.name)}硬生生憋了回去！`, d, 'out'); hitFoe(d, part, 15); }
     gainProf(o.skill, 15);
     bubble('aside', `实战有得：「${o.sname}」熟练 +15`);
   } else {
@@ -420,12 +478,13 @@ function resolveTell(choice: RespKey | null): void {
     const txt = {
       block: `你内力不及，${MO(t.name)}破开护体真气，余劲震得你${H(part)}一阵剧痛！`,
       dodge: `你身法慢了半拍，${MO(t.name)}正中你${H(part)}！${t.after}`,
-      parry: `你剑势一乱，非但没拆开${MO(t.name)}，反被${f.ws}锋带过${H(part)}！`,
+      parry: `你${weaponWord(S)}势一乱，非但没拆开${MO(t.name)}，反被${f.ws}锋带过${H(part)}！`,
       rush: `你抢攻慢了一步，正撞上${MO(t.name)}！${t.after}`
     }[o.k];
     c.mom = clamp(c.mom - dm, 5, 95);
-    bubble('foe', txt, big * mul, 'in');
-    hurtMe(big * mul);
+    const hurt = (big * mul * dealtMul(c.foe) - flatCut(c.foe)) * takenMul(c.me);
+    bubble('foe', txt, hurt, 'in');
+    hurtMe(hurt);
   }
   updAll();
   if (!C || C.over || C.rescued) return;
@@ -452,7 +511,7 @@ function rescue(): void {
   bubble('sys', fmt('「{given}，退后！」', textVars()));
   bubble('foe', '不知何时，江伯已撑着床沿站了起来。他从你手中接过长剑，咳出一口血，竟笑了笑。');
   window.setTimeout(() => {
-    playUlt('江伯 · 寒江剑法', () => {
+    playUlt('江伯 · 寒江剑法', '断水', '寒江', () => {
       if (!C) return;
       bubble('me crit', '江伯一剑横斩而出——剑气如匹练横江，屋外的雨幕竟被生生斩断了一瞬！');
       bubble('foe', '黑衣首领胸前鲜血迸射，腰间一块铜牌「当啷」落地。他怪叫一声，撞破窗棂，消失在雨夜里。', rnd(900, 1100), 'out');
@@ -482,55 +541,25 @@ function useSkill(k: string): void {
     return;
   }
   if (c.prompt) return;
-  if (k === 'gu') {
-    if (S.mp < 60 || c.gu > 0) return;
-    S.mp -= 60; c.gu = 1; c.lock = now + 700;
-    const p = pick(PARTS);
-    bubble('me', `你一招${M('寒江孤影')}，剑走偏锋，疾刺${f.name}${p}！`);
-    if (Math.random() < 0.82 + (c.mom - 50) * 0.003) {
-      const d = rnd(160, 200) * realmPow(S, 'hanjiang') * chargeMul();
-      bubble('foe', `${f.name}${pick(['闷哼一声', '闪避不及', '回' + f.ws + '不及'])}，${H(p + '鲜血迸流')}。`, d, 'out');
-      hitFoe(d, p, 8);
-    } else bubble('foe', `${f.name}拼着衣衫被划破，堪堪避过这一剑。`);
-    gainProf('hanjiang', 3);
-    updAll();
-    return;
-  }
-  if (k === 'jh') {
-    if (!S.skills.jinghong || S.mp < 80 || c.jh > 0) return;
-    S.mp -= 80; c.jh = 3; c.lock = now + 900;
-    const ps = [pick(PARTS), pick(PARTS), pick(PARTS)];
-    bubble('me', `你身形一晃，${M('惊鸿照影')}连出三剑，剑影如惊鸿掠水，分刺${f.name}${ps.join('、')}！`);
-    const mul = realmPow(S, 'jinghong') * chargeMul();
-    let tot = 0;
-    const hits: string[] = [];
-    ps.forEach(p => { if (Math.random() < 0.78) { tot += rnd(60, 80) * mul; hits.push(p); } });
-    if (hits.length) {
-      const where = [...new Set(hits)].join('、');
-      bubble('foe', `${hits.length === 3 ? '三剑尽数命中' : '三剑中了' + liang(hits.length) + '剑'}，${f.name}${H(where)}血流如注。`, tot, 'out');
-      hits.slice(1).forEach(p => { c.wounds[p] = (c.wounds[p] || 0) + 1; });
-      hitFoe(tot, hits[0], 6 + hits.length * 2);
-    } else bubble('foe', `${f.name}${f.ws}光护体，三剑尽数挡下。`);
-    gainProf('jinghong', 4);
-    updAll();
-    return;
-  }
+  if (k.startsWith('p')) { usePerform(Number(k.slice(1)), now); return; }
   if (k === 'ult') {
-    if (!S.skills.duanshui || c.rage < 100) return;
+    const u = c.kit.ult;
+    if (!u || c.rage < 100) return;
     c.rage = 0; c.busy = true; c.lock = now + 1500;
     hideOpening();
     c.opening = null;
     clearTimeout(c.T.tick);
     updAll();
-    playUlt('寒江剑法 · 绝招', () => {
+    playUlt(u.u.title, u.def.name, u.def.school, () => {
       if (!C || C.over) return;
-      const p = pick(PARTS), d = rnd(520, 600) * realmPow(S, 'duanshui') * chargeMul();
-      bubble('me crit', `你长剑一收，凝气于锋，一剑横斩而出——剑气如匹练横江，竟将${room(S.loc).region === 'yz' && S.loc === 'dukou' ? '江面的雨幕' : '眼前的雨幕'}生生斩断！`);
-      bubble('foe', `${C.f.name}踉跄后退，${H(p + '鲜血狂喷')}！`, d, 'out');
+      const p = pick(PARTS);
+      bubble('me crit', fmt(u.u.text, { foe: C.f.name, part: p }));
+      const d = strikeFoe(u.move, realmPow(S, u.def.id) * chargeMul());
+      bubble('foe', `${C.f.name}踉跄后退，${H(p + '受了重创')}！`, d, 'out');
       C.st.ult++;
       C.busy = false;
-      hitFoe(d, p, 25);
-      gainProf('duanshui', 20);
+      hitFoe(d, p, 25, true);
+      gainProf(u.def.id, 20);
       updAll();
       next(1100);
     });
@@ -565,9 +594,53 @@ function useSkill(k: string): void {
 }
 
 /** 全屏书法题字，播完后执行 after */
-function playUlt(label: string, after: () => void): void {
+/**
+ * 打出一招，交给战斗内核判定命中、伤害和效果（engine/combat.ts 的 strike）。
+ * 气血、内力、怒气的账由实战界面记：出手前把数同步给内核，出手后取回来；对手掉的血返回，由 hitFoe 记账。
+ */
+function strikeFoe(move: Move, mul: number): number {
+  const c = C!, me = c.me, foe = c.foe;
+  me.hp = S.hp; me.mp = S.mp; me.rage = c.rage;
+  foe.hp = c.ehp;
+  const before = new Set(Object.keys(foe.st)), mine = new Set(Object.keys(me.st));
+  const shi = foe.shi, mp = S.mp, hp = S.hp;
+  strike(c.k, me, foe, move, mul);
+  const d = Math.max(0, c.ehp - foe.hp);
+  S.hp = Math.min(S.hpMax, me.hp); S.mp = me.mp; c.rage = me.rage;
+  // 新上身的效果，说一句
+  const said: FxKind[] = [];
+  for (const k of Object.keys(foe.st) as FxKind[]) if (!before.has(k) || foe.st[k as keyof typeof foe.st]!.fresh) said.push(k);
+  for (const k of Object.keys(me.st) as FxKind[]) if (!mine.has(k)) said.push(k);
+  if (foe.shi < shi) said.push('fear');
+  if (S.mp > mp) said.push('drain');
+  if (S.hp > hp) said.push('heal');
+  for (const k of new Set(said)) { const say = FX_SAY[k]; if (say) bubble('aside', say(c.f.name)); }
+  return d;
+}
+
+/** 施展一门绝招 */
+function usePerform(i: number, now: number): void {
+  const c = C!, x = c.kit.performs[i];
+  if (!x || c.pcd[i] > 0 || S.mp < x.p.mp) return;
+  S.mp -= x.p.mp;
+  c.pcd[i] = x.p.cd;
+  c.lock = now + 600 + 150 * x.p.hits;
+  const part = pick(PARTS);
+  bubble('me', fmt(x.p.text, { foe: c.f.name, part }));
+  const d = strikeFoe(x.move, realmPow(S, c.kit.outer?.id) * chargeMul());
+  if (d > 0) {
+    bubble('foe', `${c.f.name}${pick(['闷哼一声', '闪避不及', '回' + c.f.ws + '不及'])}，${H(part + '受伤')}。`, d, 'out');
+    hitFoe(d, part, 6 + 2 * x.p.hits, true);
+  } else if (x.p.hits) bubble('foe', `${c.f.name}拼着衣衫被划破，堪堪避过这一招。`);
+  if (c.kit.outer) gainProf(c.kit.outer.id, 3);
+  updAll();
+}
+
+function playUlt(label: string, word: string, seal: string, after: () => void): void {
   const L = $('#ultL')!;
   $('#ultLabel')!.textContent = label;
+  $('#ultWord')!.textContent = word;
+  $('#ultSeal')!.textContent = seal;
   L.hidden = false;
   L.classList.remove('go');
   void L.offsetWidth;
@@ -660,6 +733,7 @@ function updFoe(): void {
   const breath = r > 0.7 ? '气息平稳' : r > 0.4 ? '气息粗重' : r > 0.15 ? '摇摇欲坠' : '强弩之末';
   const tags = [`<span class="tag">${breath}</span>`].concat(c.recent.slice(-2).reverse().map(p => `<span class="tag danger">${p}带伤</span>`));
   if (c.phase === 2) tags.push('<span class="tag warn">狂怒</span>');
+  for (const k of Object.keys(c.foe.st) as FxKind[]) { const t = FOE_FX_TAG[k]; if (t) tags.push(`<span class="tag ${t[1]}">${t[0]}</span>`); }
   $('#fTags')!.innerHTML = tags.join('');
   $('#wounds')!.innerHTML = Object.entries(c.wounds).map(([p, n]) => { const [x, y] = PART_XY[p]; return `<circle class="wd" cx="${x}" cy="${y}" r="${Math.min(3 + n, 6)}"/>`; }).join('');
 }
@@ -688,17 +762,15 @@ function setSkill(id: string, disabled: boolean, sub: string): HTMLButtonElement
 function updSkills(): void {
   const c = C!;
   const dis = c.over || c.busy || c.paused, act = dis || !!c.prompt;
-  setSkill('#skGu', act || S.mp < 60 || c.gu > 0, c.gu > 0 ? '调息 1 合' : '内力 60');
-  if (S.skills.jinghong) setSkill('#skJh', act || S.mp < 80 || c.jh > 0, c.jh > 0 ? `调息 ${c.jh} 合` : '内力 80');
-  else setSkill('#skJh', true, '未习得');
+  c.kit.performs.forEach((x, i) => setSkill(`#skP${i}`, act || S.mp < x.p.mp || c.pcd[i] > 0, c.pcd[i] > 0 ? `调息 ${c.pcd[i]} 合` : `内力 ${x.p.mp}`));
   const ch = $('#skCharge') as HTMLButtonElement;
   ch.disabled = act;
   if (!c.chargeT) {
     ch.querySelector('small')!.textContent = c.charge > 0 ? `已蓄 +${Math.round(c.charge * 100)}%` : '长按蓄力';
     ch.classList.toggle('charged', c.charge > 0);
   }
-  const ready = !!S.skills.duanshui && c.rage >= 100;
-  const ult = setSkill('#skUlt', act || !ready, !S.skills.duanshui ? '未习得' : ready ? '怒气已满' : `怒气 ${Math.floor(c.rage)}/100`);
+  const ready = !!c.kit.ult && c.rage >= 100;
+  const ult = setSkill('#skUlt', act || !ready, !c.kit.ult ? '没有杀招' : ready ? '怒气已满' : `怒气 ${Math.floor(c.rage)}/100`);
   ult.classList.toggle('ready', ready);
   const jcy = $('#skJcy') as HTMLButtonElement;
   jcy.textContent = `金疮药 ×${S.items.jcy || 0}`;
@@ -733,7 +805,7 @@ function composeStory(c: Fight): string {
   c.prep.forEach(p => { if (p.story) parts.push(p.story); });
   if (st.big.length) parts.push(`那${c.f.name}的${st.big.map(x => '「' + x + '」').join('、')}何等凶猛，少年却${st.parry ? liang(st.parry) + '次见招拆招，教他占不到半分便宜' : '硬是咬牙撑了下来'}。`);
   if (st.open) parts.push(`更有${liang(st.open)}次瞧出破绽，趁虚而入。`);
-  if (st.ult) parts.push('最后一剑「断水」，剑气横江，满江雨幕为之一断——');
+  if (st.ult) parts.push(`最后一招「${c.kit.ult?.def.name ?? '杀招'}」，石破天惊——`);
   parts.push(`两人斗到第${cn(c.round)}合，${c.f.name}终于弃${c.f.ws}跪倒。`);
   parts.push('此事一传十、十传百，扬州城里人人都在打听：这位少年，究竟是什么来头？');
   return parts.join('');
@@ -784,7 +856,7 @@ function showResult(): void {
   let story = r.story || '';
   if (story === '@compose') { story = composeStory(c); S.story = story; }
   else story = fmt(story, textVars());
-  const statline = `<p class="statline">共 ${c.round} 合 · 见招拆招得手 ${c.st.parry} 次 · 破绽 ${c.st.open} 次 · 断水 ${c.st.ult} 次</p>`;
+  const statline = `<p class="statline">共 ${c.round} 合 · 见招拆招得手 ${c.st.parry} 次 · 破绽 ${c.st.open} 次 · 杀招 ${c.st.ult} 次</p>`;
   const chips = rewardChips([...(r.do ?? []), ...extra, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])]).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
   c.then = r.then;
   save();

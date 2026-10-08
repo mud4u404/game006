@@ -7,7 +7,7 @@ import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { skillById } from '../src/content';
 import type { SkillDef } from '../src/content/types';
 import { respOptions } from '../src/engine/formulas';
-import { autoSlot, counterBonus, defaultLoadout, huohou, reachBonus, skillPower, synergy, xiuwei } from '../src/engine/wuxue';
+import { activeOuter, autoSlot, counterBonus, defaultLoadout, huohou, reachBonus, skillPower, synergy, xiuwei } from '../src/engine/wuxue';
 
 const fake = (grade: SkillDef['grade']): SkillDef =>
   ({ id: 'x', name: '测试', grade, category: '剑法', school: '江湖', nature: '中正', reach: '短', desc: '', learn: '' });
@@ -59,8 +59,9 @@ describe('搭配', () => {
   it('老存档按已学武功排出与原来一样的组合', () => {
     // 改版前跳过序章的存档：学过惊鸿剑
     const old = { hanjiang: { r: 1, p: 340 }, jinghong: { r: 0, p: 80 }, taxue: { r: 2, p: 120 }, xinfa: { r: 1, p: 260 }, duanshui: { r: 0, p: 10 } };
-    expect(defaultLoadout(old)).toEqual({ neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang', off: 'jinghong', ult: 'duanshui' });
-    expect(defaultLoadout(newGame().skills)).toEqual({ neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang' });
+    // 寒江剑法和惊鸿剑都是剑法，只有一个兵刃位：功力高的寒江剑法留下
+    expect(defaultLoadout(old)).toEqual({ neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang', ult: 'duanshui' });
+    expect(defaultLoadout(newGame().skills)).toEqual({ neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' });
   });
 
   it('火候与改版前的公式一致（境界 × 10 + 属性）', () => {
@@ -71,31 +72,44 @@ describe('搭配', () => {
       expect(huohou(S, 'dodge')).toBe(r('taxue') * 10 + S.attr.身法);
       expect(huohou(S, 'parry')).toBe(r('hanjiang') * 10 + S.attr.悟性);
     }
-    expect(huohou(skipToYangzhou(), 'rush')).toBe(0 + skipToYangzhou().attr.胆魄);
+    // 抢攻改由出手的那门外功负责（改版前看副手）
+    expect(huohou(skipToYangzhou(), 'rush')).toBe(skipToYangzhou().skills.hanjiang!.r * 10 + skipToYangzhou().attr.胆魄);
   });
 
-  it('副手空着就没有抢攻', () => {
-    setState(newGame());
-    expect(respOptions(S, { li: 30, su: 30, qiao: 30, xi: 30 }).map(o => o.k)).toEqual(['block', 'dodge', 'parry']);
+  it('剑在手里，兵刃位的剑法出手；剑不在手里，换拳脚位的功夫；两样都没有，就没有拆招和抢攻', () => {
+    const pw = { li: 30, su: 30, qiao: 30, xi: 30 };
+    const who = (): string[] => respOptions(S, pw).filter(o => o.k === 'parry' || o.k === 'rush').map(o => o.sname);
+    expect(activeOuter(S)?.id).toBe('hanjiang');
+    expect(who()).toEqual(['寒江剑法', '寒江剑法']);
+    S.skills.jh_bagua = { r: 0, p: 0 };
+    S.loadout.fist = 'jh_bagua';
+    expect(who()).toEqual(['寒江剑法', '寒江剑法']);
+    delete S.gear.weapon;
+    expect(activeOuter(S)?.id).toBe('jh_bagua');
+    expect(who()).toEqual(['八卦掌', '八卦掌']);
+    delete S.loadout.fist;
+    expect(respOptions(S, pw).map(o => o.k)).toEqual(['block', 'dodge']);
   });
 
-  it('应对显示的是槽位里那门武功', () => {
+  it('兵刃位换成别的剑法，出手的就是它', () => {
     S.skills.jinghong = { r: 0, p: 0 };
-    S.loadout.off = 'jinghong';
+    S.loadout.weapon = 'jinghong';
     const o = respOptions(S, { li: 30, su: 30, qiao: 30, xi: 30 }).find(x => x.k === 'rush')!;
     expect(o.sname).toBe('惊鸿剑');
     expect(o.skill).toBe('jinghong');
   });
 
-  it('学会新武功时，自动放进空着的合适槽位', () => {
+  it('学会新武功时，对应的位置空着才自动放进去；占着的不动', () => {
     setState(newGame());
     autoSlot(S, skillById('jinghong')!);
-    expect(S.loadout.off).toBe('jinghong');
+    expect(S.loadout.weapon).toBe('hanjiang');
+    autoSlot(S, skillById('jh_bagua')!);
+    expect(S.loadout.fist).toBe('jh_bagua');
     autoSlot(S, skillById('duanshui')!);
     expect(S.loadout.ult).toBe('duanshui');
   });
 
-  it('内功与主手同出一门，都练到炉火纯青才相辅相成', () => {
+  it('内功与出手的外功同出一门，都练到炉火纯青才相辅相成', () => {
     expect(synergy(S)).toBe(0);
     S.skills.xinfa!.r = 3;
     S.skills.hanjiang!.r = 3;
@@ -110,8 +124,8 @@ describe('修为', () => {
     setState(skipToYangzhou());
     for (const id of Object.keys(S.skills)) S.skills[id]!.r = 8;
     expect(xiuwei(S).rank).toBe('绝顶');
-    S.skills.jinghong = { r: 8, p: 0 };
-    S.loadout.off = 'jinghong';
+    S.skills.jh_bagua = { r: 8, p: 0 };
+    S.loadout.fist = 'jh_bagua';
     expect(xiuwei(S).rank).toBe('宗师');
   });
   it('境界越高，修为越高', () => {

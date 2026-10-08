@@ -2,27 +2,27 @@
  * 武学库的数值规则（纯函数，便于测试）。设计说明见 docs/wuxue.md。
  *
  * - 功力 = 境界 × 10 × 品级系数
- * - 火候 = 槽位里那门武功的功力 + 对应属性 + 同源加成（硬接另加内力充足程度）
+ * - 火候 = 负责这种应对的那门武功的功力 + 对应属性 + 同源加成（硬接另加内力充足程度）
  * - 修为 = 各槽位功力的加权和，分为不入流到宗师六档
  * - 克制：柔克刚、刚克阴、阴克阳、阳克柔；兵器一寸长一寸强，一寸短一寸险
  */
 import type { GameState } from '../core/state';
-import { GRADE_COEF, SLOT_CATS, skillById } from '../content';
-import { FX_RULES, PASSIVE_COST } from '../content/skills';
-import type { AttrKey, FxDef, PerformDef, SkillDef, SkillNature, SkillReach, Slot, UltDef } from '../content/types';
+import { GRADE_COEF, SLOT_CATS, itemById, skillById } from '../content';
+import { CAT_WEAPON, FX_RULES, PASSIVE_COST } from '../content/skills';
+import type { AttrKey, FxDef, PerformDef, SkillDef, SkillNature, SkillReach, Slot, UltDef, WeaponKind } from '../content/types';
 
 export type Loadout = Partial<Record<Slot, string>>;
 export type RespKey = 'block' | 'dodge' | 'parry' | 'rush';
-type CombatSlot = Exclude<Slot, 'ult'>;
+/** 算搭配要用到的存档字段；gear 是身上的装备（兵器决定兵刃位的武功使不使得出来） */
+export type Worn = Pick<GameState, 'skills' | 'loadout'> & { gear?: GameState['gear'] };
 
-/** 每种应对由哪个槽位的武功负责 */
-export const RESP_SLOT: Record<RespKey, CombatSlot> = { block: 'neigong', dodge: 'qinggong', parry: 'main', rush: 'off' };
-/** 每个槽位看哪项属性 */
-export const SLOT_ATTR: Record<CombatSlot, AttrKey> = { neigong: '根骨', qinggong: '身法', main: '悟性', off: '胆魄' };
-const SLOTS: Slot[] = ['neigong', 'qinggong', 'main', 'off', 'ult'];
+/** 每种应对看哪项属性 */
+export const RESP_ATTR: Record<RespKey, AttrKey> = { block: '根骨', dodge: '身法', parry: '悟性', rush: '胆魄' };
+const SLOTS: Slot[] = ['neigong', 'qinggong', 'fist', 'weapon', 'ult'];
 
 export const skillPower = (def: SkillDef, realm: number): number => realm * 10 * GRADE_COEF[def.grade];
-export const fits = (def: SkillDef, slot: Slot): boolean => SLOT_CATS[slot].includes(def.category);
+/** 这门武功放得进这个位置吗（不认识的位置名一律放不进，读坏存档时不崩） */
+export const fits = (def: SkillDef, slot: Slot): boolean => !!SLOT_CATS[slot]?.includes(def.category);
 
 const realmOf = (s: Pick<GameState, 'skills'>, id: string): number => s.skills[id]?.r ?? 0;
 
@@ -33,32 +33,50 @@ export function slotSkill(s: Pick<GameState, 'skills' | 'loadout'>, slot: Slot):
   return skillById(id);
 }
 
-/** 按已学武功排出默认搭配：每个槽位放功力最高的一门，副手放第二高的外功 */
+/** 手里拿着的兵器类型；空手为空 */
+export const wielded = (s: Worn): WeaponKind | undefined => {
+  const id = s.gear?.weapon;
+  return id ? itemById(id)?.equip?.weapon : undefined;
+};
+
+/** 兵刃位的武功和手里的兵器对得上吗（剑法配剑、刀法配刀……） */
+export function weaponReady(s: Worn): boolean {
+  const w = slotSkill(s, 'weapon');
+  return !!w && !!wielded(s) && CAT_WEAPON[w.category] === wielded(s);
+}
+
+/** 出手用的外功：兵器对得上用兵刃位的，否则用拳脚位的（docs/zhuangbei.md 第二节） */
+export const activeOuter = (s: Worn): SkillDef | undefined => (weaponReady(s) ? slotSkill(s, 'weapon') : slotSkill(s, 'fist'));
+
+/** 每种应对由哪门武功负责：内功硬接，轻功闪避，出手的那门外功拆招、抢攻 */
+export function respSkill(s: Worn, k: RespKey): SkillDef | undefined {
+  if (k === 'block') return slotSkill(s, 'neigong');
+  if (k === 'dodge') return slotSkill(s, 'qinggong');
+  return activeOuter(s);
+}
+
+/** 按已学武功排出默认搭配：每个槽位放功力最高的一门 */
 export function defaultLoadout(skills: GameState['skills']): Loadout {
   const learned = Object.keys(skills).map(id => skillById(id)).filter((d): d is SkillDef => !!d);
   const rank = (d: SkillDef): number => skillPower(d, skills[d.id]!.r) + GRADE_COEF[d.grade] / 100;
-  const pick = (slot: Slot, except?: string): string | undefined =>
-    learned.filter(d => fits(d, slot) && d.id !== except).sort((a, b) => rank(b) - rank(a) || a.id.localeCompare(b.id))[0]?.id;
   const lo: Loadout = {};
   for (const slot of SLOTS) {
-    const id = slot === 'off' ? pick('off', lo.main) : pick(slot);
+    const id = learned.filter(d => fits(d, slot)).sort((a, b) => rank(b) - rank(a) || a.id.localeCompare(b.id))[0]?.id;
     if (id) lo[slot] = id;
   }
   return lo;
 }
 
-/** 刚学会一门武功时，如果有合适的空槽位，自动放进去 */
+/** 刚学会一门武功时，对应的位置空着，就自动放进去；占着的不动，玩家自己去武功页换 */
 export function autoSlot(s: Pick<GameState, 'loadout'>, def: SkillDef): void {
   const lo = (s.loadout ||= {});
-  // 只放进合适的槽位：暗器、杂学这类不能撑起主手、副手
-  const order = (['neigong', 'qinggong', 'main', 'off', 'ult'] as Slot[]).filter(slot => fits(def, slot));
-  const free = order.find(slot => !lo[slot]);
+  const free = SLOTS.find(slot => fits(def, slot) && !lo[slot]);
   if (free) lo[free] = def.id;
 }
 
-/** 同源加成：内功与主手同出一门且都练到「炉火纯青」，火候 +3；内功与主手一阴一阳，彼此相冲，火候 −3 */
-export function synergy(s: Pick<GameState, 'skills' | 'loadout'>): number {
-  const ng = slotSkill(s, 'neigong'), mn = slotSkill(s, 'main');
+/** 同源加成：内功与出手的外功同出一门且都练到「炉火纯青」，火候 +3；一阴一阳，彼此相冲，火候 −3 */
+export function synergy(s: Worn): number {
+  const ng = slotSkill(s, 'neigong'), mn = activeOuter(s);
   if (!ng || !mn) return 0;
   let v = 0;
   if (ng.school === mn.school && realmOf(s, ng.id) >= 3 && realmOf(s, mn.id) >= 3) v += 3;
@@ -69,9 +87,8 @@ export function synergy(s: Pick<GameState, 'skills' | 'loadout'>): number {
 
 /** 火候：境界、品级、属性、同源合在一起；硬接另加当前内力的充足程度 0 到 10 */
 export function huohou(s: GameState, k: RespKey): number {
-  const slot = RESP_SLOT[k];
-  const def = slotSkill(s, slot);
-  let v = (def ? skillPower(def, realmOf(s, def.id)) : 0) + s.attr[SLOT_ATTR[slot]] + synergy(s);
+  const def = respSkill(s, k);
+  let v = (def ? skillPower(def, realmOf(s, def.id)) : 0) + s.attr[RESP_ATTR[k]] + synergy(s);
   if (k === 'block') v += Math.round((s.mp / s.mpMax) * 10);
   return Math.round(v);
 }
@@ -98,14 +115,15 @@ export function reachBonus(k: RespKey, mine?: SkillReach, theirs?: SkillReach): 
 }
 
 export const XIUWEI: [number, string][] = [[0, '不入流'], [30, '三流'], [80, '二流'], [150, '一流'], [240, '绝顶'], [360, '宗师']];
-const XIUWEI_WEIGHT: Record<Slot, number> = { neigong: 1.5, qinggong: 1, main: 1, off: 0.5, ult: 0.5 };
+const XIUWEI_WEIGHT: Record<Slot, number> = { neigong: 1.5, qinggong: 1, fist: 0.5, weapon: 0.5, ult: 0.5 };
 
-/** 修为：各槽位武功功力的加权和。内功是根基，分量最重 */
-export function xiuwei(s: Pick<GameState, 'skills' | 'loadout'>): { value: number; rank: string } {
+/** 修为：各槽位武功功力的加权和。内功是根基，分量最重；出手的那门外功算足一份，另一门算半份 */
+export function xiuwei(s: Worn): { value: number; rank: string } {
   let value = 0;
+  const main = activeOuter(s);
   for (const slot of SLOTS) {
     const def = slotSkill(s, slot);
-    if (def) value += skillPower(def, realmOf(s, def.id)) * XIUWEI_WEIGHT[slot];
+    if (def) value += skillPower(def, realmOf(s, def.id)) * (def === main ? 1 : XIUWEI_WEIGHT[slot]);
   }
   value = Math.round(value);
   const rank = XIUWEI.filter(([min]) => value >= min).pop()![1];

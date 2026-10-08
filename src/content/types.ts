@@ -241,8 +241,13 @@ export type SectRank = '记名' | '外门' | '内门' | '真传';
 export type SkillNature = '刚' | '柔' | '阴' | '阳' | '中正';
 /** 兵器长短：一寸长一寸强，一寸短一寸险 */
 export type SkillReach = '长' | '短' | '徒手';
-/** 搭配槽位：内功、轻功、主手外功、副手外功、绝技 */
-export type Slot = 'neigong' | 'qinggong' | 'main' | 'off' | 'ult';
+/**
+ * 搭配槽位：内功、轻功、拳脚、兵刃、绝技（docs/zhuangbei.md 第二节）。
+ * 出手用哪一门：手里的兵器和兵刃位的武功对得上，用兵刃位的；否则用拳脚位的。
+ */
+export type Slot = 'neigong' | 'qinggong' | 'fist' | 'weapon' | 'ult';
+/** 兵器的类型：剑法配剑、刀法配刀……奇门兵器配奇门武功 */
+export type WeaponKind = '剑' | '刀' | '枪' | '棍' | '杖' | '鞭' | '斧' | '锤' | '奇门';
 /** 伤势类型，决定战斗里伤势的写法 */
 export type WoundKind = '瘀伤' | '内伤' | '刺伤' | '割伤' | '砸伤' | '冻伤' | '灼伤' | '毒伤';
 
@@ -354,7 +359,11 @@ export interface SkillDef {
   roots?: string[];
 }
 
-export interface ItemDef { id: string; name: string; desc: string; usable?: boolean; hidden?: boolean }
+export interface ItemDef {
+  id: string; name: string; desc: string; usable?: boolean; hidden?: boolean;
+  /** 能装备的兵器（纸娃娃的其余装备位见 docs/zhuangbei.md 第三节，以后再加） */
+  equip?: { slot: '兵器'; weapon: WeaponKind; reach: SkillReach };
+}
 
 export interface QuestDef {
   id: string;

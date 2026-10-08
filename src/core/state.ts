@@ -8,7 +8,7 @@ export interface FeedEntry { t: FeedTag; x: string; n: number }
 export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
 
 export interface GameState {
-  v: 2;
+  v: 3;
   /** 0 为序章，1 起为第几回 */
   chapter: number;
   /** 名，姓固定为沈 */
@@ -34,8 +34,10 @@ export interface GameState {
   eming: number;
   attr: Record<AttrKey, number>;
   skills: Partial<Record<SkillId, SkillProg>>;
-  /** 搭配：各槽位放的武功，见 docs/wuxue.md */
+  /** 搭配：各槽位放的武功，见 docs/zhuangbei.md 第二节 */
   loadout: Loadout;
+  /** 身上的装备：兵器决定兵刃位的武功使不使得出来（纸娃娃的其余装备位以后再加） */
+  gear: { weapon?: string };
   /** 师门：同一时间只有一个，见 docs/menpai.md 第七节 */
   sect?: { school: string; rank: SectRank };
   /** 离开过的师门 */
@@ -64,15 +66,15 @@ export const ATTR0: Record<AttrKey, number> = { 体魄: 14, 根骨: 12, 身法: 
 /** 新游戏：从序章「瓜洲夜雨」开始。一个只会几招粗浅功夫的渔家少年，属性略低，由童年三忆补上 */
 export function newGame(): GameState {
   return {
-    v: 2, chapter: 0, name: '孤舟', loc: 'gz_home', month: 3, day: 5, min: 15 * 60 + 20, weather: '阴',
+    v: 3, chapter: 0, name: '孤舟', loc: 'gz_home', month: 3, day: 5, min: 15 * 60 + 20, weather: '阴',
     hp: 600, hpMax: 600, mp: 150, mpMax: 300,
-    silver: 30, items: { jcy: 1, fhs: 3 },
+    silver: 30, items: { qingfeng: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
     flags: {}, rel: { jiangbo: '相依为命' }, title: '', xia: 0, eming: 0,
     attr: { 体魄: 13, 根骨: 11, 身法: 14, 悟性: 13, 胆魄: 10 }, lilian: 0, encLog: {}, lastEnc: -1e9,
     // 渔家少年：江伯只教过几招防身的粗浅功夫，都还没入门（从零练起，见 docs/audit.md）
     skills: { hanjiang: { r: 0, p: 0 }, xinfa: { r: 0, p: 0 }, taxue: { r: 0, p: 0 } },
-    loadout: { neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang' },
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'qingfeng' },
     feed: [{ t: '传闻', x: '江上这两天来了几条生船，不打鱼，专打听人。', n: 0 }],
     story: '', sel: null, reply: null, tab: 'jianghu'
   };
@@ -81,15 +83,15 @@ export function newGame(): GameState {
 /** 跳过序章，直接从扬州开始：和走完序章的样子相当（江伯故去，学了断水的起手；惊鸿剑要自己去小金山悟） */
 export function skipToYangzhou(): GameState {
   const s: GameState = {
-    v: 2, chapter: 1, name: '孤舟', loc: 'hu', month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
+    v: 3, chapter: 1, name: '孤舟', loc: 'hu', month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
     hp: 520, hpMax: 600, mp: 200, mpMax: 300,
-    silver: 120, items: { jcy: 3, fhs: 5, jade: 1, scroll: 1 },
+    silver: 120, items: { qingfeng: 1, jcy: 3, fhs: 5, jade: 1, scroll: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
     flags: { skipped: true }, rel: { liu: '素不相识' }, title: '', xia: 12, eming: 0,
     // 历练：序章了结 300，加上那一夜两场被江伯救下的恶战 26 + 180（engine/lilian.ts）
     attr: { ...ATTR0 }, lilian: 506, encLog: {}, lastEnc: -1e9,
     skills: { hanjiang: { r: 0, p: 120 }, taxue: { r: 0, p: 50 }, xinfa: { r: 0, p: 80 }, duanshui: { r: 0, p: 10 } },
-    loadout: { neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang', ult: 'duanshui' },
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang', ult: 'duanshui' }, gear: { weapon: 'qingfeng' },
     feed: [
       { t: '江湖', x: '你在扬州城外的破庙里歇了一夜，江伯教的那几招剑法，比划来比划去，总觉得差着火候。', n: 0 },
       { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮放出悬赏。', n: 0 }

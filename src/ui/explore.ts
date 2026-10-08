@@ -4,8 +4,10 @@
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { advanceDays, dateStr } from '../core/time';
 import { $, reduceMotion } from '../core/util';
-import { NEWS, questById, room, skillById } from '../content';
-import type { SkillId, Verb } from '../content/types';
+import { NEWS, itemById, questById, room, skillById } from '../content';
+import type { SkillId, Slot, Verb } from '../content/types';
+import { fits } from '../engine/wuxue';
+import { slotSheet } from './views/wugong';
 import { test } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
 import { growAttr } from '../engine/gengu';
@@ -22,7 +24,8 @@ let traveling = false;
 export const isTraveling = (): boolean => traveling;
 
 export function travelTo(dest: string, onArrive?: () => void): void {
-  if (traveling || dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
+  if (traveling) { toast('正在赶路……'); return; }
+  if (dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
   const path = pathTo(S.loc, dest);
   if (!path.length) { toast('从这里去不了那儿'); return; }
   traveling = true;
@@ -118,6 +121,25 @@ function retreat(days: number): void {
 }
 
 registerHandlers({
+  // 搭配：点一个位置，列出能放进去的武功；战斗中不能换（战斗界面盖住了武功页）
+  slotPick: v => openSheet(slotSheet(v as Slot)),
+  slotSet: v => {
+    const [slot, id] = v.split(':') as [Slot, string];
+    const def = id ? skillById(id) : undefined;
+    if (id && (!def || !S.skills[id] || !fits(def, slot))) return;
+    if (id) {
+      // 同一门武功只能放一个位置
+      for (const k of Object.keys(S.loadout) as Slot[]) if (S.loadout[k] === id) delete S.loadout[k];
+      S.loadout[slot] = id;
+    } else delete S.loadout[slot];
+    closeSheet();
+    render();
+  },
+  // 兵器：装备、卸下（纸娃娃的其余装备位以后再加）
+  wield: v => {
+    if (v && (S.items[v] ?? 0) > 0 && itemById(v)?.equip) S.gear.weapon = v; else delete S.gear.weapon;
+    render();
+  },
   mapRegion: v => { setMapRegion(v); render(); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
