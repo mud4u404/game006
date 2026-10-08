@@ -7,6 +7,7 @@ import { relGroup, type RelGroup } from '../../engine/renqing';
 import { gongliText, houtianOf, tierNow } from '../../engine/ren';
 import { LODGING, yueText } from '../../engine/shiguang';
 import { shenfenOf, shenfenText } from '../../engine/shenfen';
+import { menguiText, pastSectText, sectText } from '../../engine/shicheng';
 import { fullDate } from '../../core/time';
 import { ZONE_NAME } from '../../engine/duel';
 import { cn } from '../../core/util';
@@ -45,6 +46,16 @@ function yingshengHTML(): string {
     <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文）；钱不够就露宿，不花钱，伤好得慢。</span></div></div></section>`;
 }
 
+/** 师门：门派、地位、门规；出过师、叛过门的写一行来历（docs/menpai.md 第七节） */
+function shimenHTML(): string {
+  const past = pastSectText(S);
+  if (!S.sect && !past) return '';
+  const rows: string[] = [];
+  if (S.sect) rows.push(`<div><span class="tag">门规</span><span>${menguiText(S.sect.school)}</span></div>`);
+  if (past) rows.push(`<div><span class="tag">来历</span><span>${past}。</span></div>`);
+  return `<section class="card here"><div class="sec-h"><h2>师门</h2><span class="count">${sectText(S)}</span></div><div class="news">${rows.join('')}</div></section>`;
+}
+
 let confirmRestart = false;
 export const setConfirmRestart = (v: boolean): void => { confirmRestart = v; };
 
@@ -65,7 +76,7 @@ export function viewRenwu(): string {
     <div class="rows">${effects}</div></section>
   <section class="card"><div class="kv">
     <div><span>气血</span><b>${S.hp} / ${S.hpMax}</b></div><div><span>内力</span><b>${S.mp} / ${S.mpMax}</b></div>
-    <div><span>身份</span><b>${shenfenText(S)}</b></div><div><span>门派</span><b>无门无派</b></div>
+    <div><span>身份</span><b>${shenfenText(S)}</b></div><div><span>门派</span><b>${sectText(S)}</b></div>
     <div><span>档次</span><b>${tier}</b></div><div><span>功力</span><b>${gongliText(S.gongli)}</b></div>
     <div><span>伤</span><b>${hurt || '无'}</b></div><div><span>历练</span><b>${S.lilian}</b></div>
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
@@ -73,6 +84,7 @@ export function viewRenwu(): string {
     <div><span>江湖历</span><b>${fullDate(S)}</b></div>
   </div></section>
   ${yingshengHTML()}
+  ${shimenHTML()}
   ${yueHTML()}
   <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${meaningful}</span></div>${renqingHTML()}</section>
   <section class="card here"><div class="sec-h"><h2>存档</h2></div>

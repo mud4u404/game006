@@ -54,6 +54,8 @@ export interface Cond {
   canLearn?: SkillId;
   /** 是某门派的弟子（在门中），rank 写了就要求不低于这个地位 */
   sect?: { school: string; rank?: SectRank };
+  /** 眼下没有师门（出过师、叛过门的也算没有）。拜师的分支用它：一人一师门，身在别派的要另写一个分支 */
+  noSect?: true;
   any?: Cond[];
 }
 
