@@ -9,7 +9,7 @@ const ROOMS: RoomDef[] = [
   {
     id: 'yz_yanhao', name: '汪家盐号', area: '扬州城 · 东关', region: 'yz', t: 10, map: [80, 66],
     desc: '东关街东头最大的铺面，三开间门脸，匾上「汪家盐号」四个泥金大字。柜上算盘声不断，伙计扛着盐包进进出出，后院隐约有舂捣之声。',
-    npcs: ['yh_bizhang', 'yh_wanglaoye', 'yh_xinger', 'yh_menfang'],
+    npcs: ['yh_bizhang', 'yh_wanglaoye', 'yh_xinger', 'yh_menfang', 'yh_yunniang'],
     objs: ['yh_qixia', 'yh_zhangbu'],
     exits: [['西', 'cheng', '东']],
     road: '你沿东关街往东走到头，汪家盐号的金字招牌就在眼前……',
@@ -139,6 +139,31 @@ const NPCS: NpcDef[] = [
     }
   },
   {
+    id: 'yh_yunniang', name: '云娘', ini: '云', tone: 'jade', brief: '舂着盐',
+    look: '粗布衣裳，袖口挽到肘弯，腕上有一道旧琴弦勒出的细痕。舂盐的木杵举得稳，眼睛却一直望着墙头那一角天。',
+    at: { room: 'yz_yanhao', if: { flag: 'huafang_taken', notFlag: 'yh_yun_done' } },
+    verbs: ['交谈', '交契'],
+    actions: {
+      交谈: [
+        { if: { flag: 'yh_freed' },
+          text: '云娘直起身，手在围裙上擦了又擦：「契的事，掌柜的都说了……公子，契一日不在我自己手里，奴家一日不敢信这是真的。」' },
+        { text: '她把木杵放轻了些，声音压得极低：「公子别看奴家。汪家的院子，墙高。」木杵又重重落了下去。' }
+      ],
+      交契: [
+        { if: { item: { id: 'yh_shenqi', atLeast: 1 } },
+          text: '你把身契展开，当着她的面念了一遍，然后连纸带印，放进她手里。云娘捏着那张纸，手指抖得捏不拢，半晌，朝着你直挺挺跪了下去。你把她扶起来，她朝着北方磕了三个头：「奴家回泰州老家去，给我爹上坟——把这张契，在坟前烧给他看。」',
+          do: [
+            { type: 'item', id: 'yh_shenqi', delta: -1 },
+            { type: 'flag', flag: 'yh_yun_done' },
+            { type: 'xia', delta: 2 },
+            { type: 'quest', id: 'side_yanhao', stage: 3 },
+            { type: 'feed', tag: '江湖', text: '你把云娘的身契原样交到了她手里。她要回泰州给爹上坟，把这张契在坟前烧了。' }
+          ] },
+        { text: '你手里没有那张身契。契匣还锁在柜上，钥匙在毕掌柜腰上。' }
+      ]
+    }
+  },
+  {
     id: 'yh_qixia', name: '契匣', obj: true, icon: 'door', brief: '黄铜锁',
     look: '柜上一口黑漆契匣，黄铜锁擦得锃亮。听说汪家卖出去的身契，都锁在这匣子里。',
     verbs: ['观察', '细看', '撬锁'],
@@ -197,7 +222,8 @@ const QUESTS: QuestDef[] = [
   { id: 'side_yanhao', name: '支线 · 汪家身契', stages: [
     { title: '打听云娘的身契' },
     { title: '查出汪家的软处' },
-    { title: '身契有了着落' }
+    { title: '身契有了着落' },
+    { title: '身契交到云娘手里' }
   ] }
 ];
 
@@ -215,6 +241,8 @@ const pack: ContentPack = {
       text: '汪家盐号闹了贼，契匣被撬了个空。汪老爷发了话：家贼难防。' },
     { if: { flag: 'yh_qianshu' },
       text: '有人花二十两银子，从汪家盐号赎出一纸身契。街坊都说，头一回见汪家松口。' },
+    { if: { flag: 'yh_yun_done' },
+      text: '汪家盐号后院舂盐的女子走了，说是回泰州老家。走那天，她在东关街口给一位佩剑的年轻人磕了个头，惊动了半条街。' },
     { if: { flag: 'huafang_grudge' },
       text: '东关街上新添了几条闲汉，见着生面孔就咋呼，说是拿钱办事，替人出气。' }
   ]
