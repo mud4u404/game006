@@ -82,6 +82,7 @@ export function test(c?: Cond): boolean {
     if (!d || !canLearn(S, d).ok) return false;
   }
   if (c.sect && (S.sect?.school !== c.sect.school || (c.sect.rank && SECT_RANKS.indexOf(S.sect.rank) < SECT_RANKS.indexOf(c.sect.rank)))) return false;
+  if (c.noSect && S.sect) return false;
   if (c.any && !c.any.some(x => test(x))) return false;
   return true;
 }

@@ -3,12 +3,19 @@
  * 规则见 docs/menpai.md 第四节、第七节。
  * 看每个门派的体检结果：npm run menpai
  */
-import { describe, expect, it } from 'vitest';
-import { SKILLS } from '../src/content';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { FOES, NPCS, ROOMS, SKILLS, STORIES } from '../src/content';
 import { GRADES, JIANGHU_RULE, NATURES, OUTER, REALMS, ROOTED_CATS, ROOT_ANY, SCHOOLS, SCHOOL_STYLE, STYLES, STYLE_PENDING, STYLE_RING, TEACH_GRADES, styleBeats } from '../src/content/skills';
-import { rootsOn } from '../src/engine/shicheng';
+import { canLearn, rootsOn } from '../src/engine/shicheng';
 import type { Style } from '../src/content/skills';
-import type { AttrKey, FxDef, FxKind, SkillDef } from '../src/content/types';
+import type { AttrKey, Branch, Effect, FoeDef, FxDef, FxKind, NpcDef, RoomDef, SkillDef, StoryDef } from '../src/content/types';
+import { S, setState, skipToYangzhou } from '../src/core/state';
+import { dayNo } from '../src/core/time';
+import { run } from '../src/engine/dsl';
+import { act } from '../src/engine/world';
+import { fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
+import { Duel, SKILLED, simulate } from '../src/engine/duel';
+import { mulberry32 } from '../src/engine/rng';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const FX_KINDS = Object.keys({ busy: 0, bleed: 0, poison: 0, burn: 0, chill: 0, weaken: 0, break: 0, disarm: 0, fear: 0, drain: 0, guard: 0, haste: 0, heal: 0, rage: 0 } satisfies Record<FxKind, number>) as FxKind[];
@@ -226,5 +233,235 @@ describe('门派打法', () => {
       expect(qz).toContain('同门的前置');
       expect(qz).toContain('武学树断了');
     } finally { SKILLS.pop(); }
+  });
+});
+
+/* ---------- 拜师：拜得进的门派教得到入门武功，门派武功只在 canLearn 把关的地方教（docs/content-guide.md「拜师」） ---------- */
+
+type Packs = { rooms: RoomDef[]; npcs: NpcDef[]; stories: StoryDef[]; foes: FoeDef[] };
+type TeachSite = { where: string; skill: string; guard?: string };
+
+/** 内容里所有教武功（learn）的地方：在哪里，教哪门，那个分支（选项）的条件里 canLearn 的是哪门 */
+function teachSites(p: Packs): TeachSite[] {
+  const out: TeachSite[] = [];
+  const take = (effs: Effect[] | undefined, where: string, guard?: string): void => {
+    for (const e of effs || []) if (e.type === 'learn') out.push({ where, skill: e.skill, guard });
+  };
+  const branches = (bs: Branch[] | string | undefined, where: string): void => {
+    if (Array.isArray(bs)) bs.forEach((b, i) => take(b.do, `${where}[${i}]`, b.if?.canLearn));
+  };
+  for (const r of p.rooms) {
+    branches(r.desc, `地点 ${r.id} 的 desc`);
+    branches(r.road, `地点 ${r.id} 的 road`);
+    branches(r.onEnter, `地点 ${r.id} 的 onEnter`);
+  }
+  for (const n of p.npcs) for (const [v, bs] of Object.entries(n.actions)) branches(bs, `人物 ${n.id} 的「${v}」`);
+  for (const s of p.stories) s.cards.forEach((c, i) => c.choices.forEach((ch, k) => take(ch.do, `剧情 ${s.id} 第 ${i} 张第 ${k} 个选项`, ch.if?.canLearn)));
+  for (const f of p.foes) {
+    for (const [k, r] of Object.entries(f.results)) {
+      if (!r) continue;
+      take(r.do, `对手 ${f.id} 的结算 ${k}`);
+      take(r.then, `对手 ${f.id} 的结算 ${k} 的 then`);
+      r.after?.opts.forEach((o, i) => take(o.do, `对手 ${f.id} 胜负以后的第 ${i + 1} 条路`, o.if?.canLearn));
+    }
+    (f.prep ?? []).forEach((x, i) => take(x.win, `对手 ${f.id} 的备战 ${i}`));
+  }
+  return out;
+}
+
+/** 内容里拜得进的门派：所有 { type: 'sect' } 效果写到的门派 */
+function sectsJoined(p: Packs): Set<string> {
+  const out = new Set<string>();
+  const walk = (x: unknown): void => {
+    if (Array.isArray(x)) x.forEach(walk);
+    else if (x && typeof x === 'object') {
+      const o = x as Record<string, unknown>;
+      if (o.type === 'sect' && typeof o.school === 'string') out.add(o.school);
+      Object.values(o).forEach(walk);
+    }
+  };
+  walk(p);
+  return out;
+}
+
+/** 靠师门传授的武功：江湖散学、奇遇以外的（待改造的门派没写 teach 的也算） */
+const sectTaught = (k: SkillDef): boolean => k.school !== JIANGHU_RULE.school && k.teach !== '奇遇';
+
+/** 拜师的问题清单；空的就是合规 */
+export function baishiProblems(p: Packs, skills: SkillDef[] = SKILLS): string[] {
+  const errs: string[] = [];
+  const sites = teachSites(p);
+  const find = (id: string): SkillDef | undefined => skills.find(k => k.id === id);
+  // 门派武功有师门、地位、前置、门规，教之前先问 canLearn；剧情选项也一样。对手的结算里没有条件可写，就不在那里教
+  for (const s of sites) {
+    const k = find(s.skill);
+    if (k && sectTaught(k) && s.guard !== s.skill) errs.push(`${s.where}：教「${k.name}」（${k.school}${k.teach ? ' · ' + k.teach : ''}）要带条件 canLearn: '${s.skill}'，学不成的情形另写一个分支；对手结算里没有条件可写，门派武功改到师父的分支里教`);
+  }
+  const taught = new Set(sites.map(s => s.skill));
+  for (const school of sectsJoined(p)) {
+    const mine = skills.filter(k => k.school === school);
+    // 拜了师学不到东西：入门武功每一门都要有地方教
+    for (const k of mine) if (k.teach === '入门' && !taught.has(k.id)) errs.push(`${school}：内容里拜得进这一派，入门武功「${k.name}」却没有地方教（learn），拜了师学不到东西`);
+    // 内功为根：教了带绝招的外功，就要教得到给它打底的内功，不然绝招没人使得出
+    for (const o of mine) {
+      if (!taught.has(o.id) || !ROOTED_CATS.includes(o.category) || !(o.performs?.length || o.ult)) continue;
+      if (!skills.some(n => taught.has(n.id) && rootsOn(o, n))) errs.push(`${school}：教了「${o.name}」，却没有地方教给它打底的内功，绝招没人使得出`);
+    }
+  }
+  return errs;
+}
+
+describe('拜师', () => {
+  const packs: Packs = { rooms: ROOMS, npcs: NPCS, stories: STORIES, foes: FOES };
+
+  it('拜得进的门派，入门武功都教得到、有内功打底；门派武功只在 canLearn 把关的地方教', () => {
+    for (const school of ['丐帮', '六扇门', '军伍']) expect(sectsJoined(packs).has(school), `${school} 拜不进去`).toBe(true);
+    const errs = baishiProblems(packs);
+    expect(errs, '\n' + errs.join('\n')).toEqual([]);
+  });
+
+  it('机器把关本身管用：漏教入门武功、不带 canLearn 就教、在对手结算里教，都会被拦下', () => {
+    const npc: NpcDef = {
+      id: 'fake_master', name: '假师父', brief: '', look: '', verbs: ['拜师'],
+      actions: { 拜师: [
+        { if: { noSect: true }, do: [{ type: 'sect', school: '六扇门', rank: '记名' }] },
+        { do: [{ type: 'learn', skill: 'jl_suolian' }] }
+      ] }
+    };
+    const foe = { id: 'fake_foe', results: { win: { do: [{ type: 'learn', skill: 'jl_zhuifeng' }] } } } as unknown as FoeDef;
+    const ps = baishiProblems({ rooms: [], stories: [], npcs: [npc], foes: [foe] }).join('\n');
+    expect(ps).toContain("canLearn: 'jl_suolian'");
+    expect(ps).toContain('对手 fake_foe 的结算 win');
+    expect(ps).toContain('入门武功「缉事心法」却没有地方教');
+    expect(ps).toContain('入门武功「铁尺点穴」却没有地方教');
+    expect(ps).toContain('教了「锁链擒拿」，却没有地方教给它打底的内功');
+  });
+});
+
+describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+
+  /** 打赢考校：照对手的胜利结算执行（打不打得过看本事，这里验的是拜师这条路走得通） */
+  const passKao = (foeId: string): void => { run(FOES.find(f => f.id === foeId)!.results.win.do); };
+  /** 用交手引擎按实战规矩打一场，气血、内力先回满 */
+  const duel = (foeId: string): Duel => {
+    S.hp = S.hpMax; S.mp = S.mpMax;
+    const foe = FOES.find(f => f.id === foeId)!;
+    return simulate(new Duel(heroSpec(S, fightKit(S), foe), foeSpec(foe, []), { rng: mulberry32(2026) }), SKILLED);
+  };
+  /** 上阵：出手的外功、绝招都在，打得完一场，绝招真的使了 */
+  const fights = (outer: string, foeId: string): void => {
+    const kit = fightKit(S);
+    expect(kit.outer?.id).toBe(outer);
+    expect(kit.unrooted).toBe(false);
+    expect(kit.performs.length).toBeGreaterThan(0);
+    const d = duel(foeId);
+    expect(['win', 'lose', 'flee', 'yield']).toContain(d.res);
+    expect(d.log.dealt.perform ?? 0).toBeGreaterThan(0);
+  };
+  const clock = (): number => dayNo(S) * 1440 + S.min;
+
+  it('武馆：交学费、花时辰学江湖散学，不用拜师；钱不够、底子不够，各有说法', () => {
+    S.silver = 50;
+    act('bs2_lu', '学长拳');
+    expect(S.skills.jh_taizu).toBeUndefined();
+    S.silver = 1000;
+    const t0 = clock();
+    act('bs2_lu', '学长拳');
+    expect(S.skills.jh_taizu).toBeDefined();
+    expect(S.silver).toBe(900);
+    expect(clock() - t0).toBeGreaterThanOrEqual(240);
+    expect(S.loadout.fist).toBe('jh_taizu');
+    act('bs2_lu', '学形意');
+    expect(S.skills.jh_xingyi).toBeUndefined();
+    S.skills.jh_taizu!.r = 1;
+    act('bs2_lu', '学形意');
+    expect(S.skills.jh_xingyi).toBeDefined();
+    expect(S.sect).toBeUndefined();
+  });
+
+  it('军伍：画押、考校、拜入，传铁脊功、行军步、军中长拳；换上本门内功，长拳的绝招使得出；练到了升正兵，传边军大枪', () => {
+    act('bs2_han', '投军');
+    expect(S.sect).toBeUndefined();
+    S.flags.jw_mingce = true;
+    expect(act('bs2_han', '投军').out.fight).toBe('bs2_jw_kao');
+    passKao('bs2_jw_kao');
+    expect(S.sect).toEqual({ school: '军伍', rank: '记名' });
+    for (let i = 0; i < 4; i++) act('bs2_han', '请教');
+    for (const id of ['jl_tiejigong', 'jl_xingjunbu', 'jl_changquan']) expect(S.skills[id], id).toBeDefined();
+    expect(S.skills.jl_changqiang).toBeUndefined();
+    expect(S.loadout.fist).toBe('jl_changquan');
+    S.loadout.neigong = 'jl_tiejigong';
+    S.loadout.qinggong = 'jl_xingjunbu';
+    delete S.gear.weapon;
+    fights('jl_changquan', 'bs2_jw_kao');
+    // 一人一师门：投了军，丐帮的门就关上了
+    act('bs2_bao', '拜师');
+    expect(S.quests.bs2_gb_kao).toBeUndefined();
+    expect(S.sect?.school).toBe('军伍');
+    // 升正兵
+    act('bs2_han', '考校');
+    expect(S.sect?.rank).toBe('记名');
+    S.skills.jl_tiejigong!.r = 1;
+    S.skills.jl_changquan!.r = 1;
+    act('bs2_han', '考校');
+    expect(S.sect).toEqual({ school: '军伍', rank: '外门' });
+    act('bs2_han', '请教');
+    expect(S.skills.jl_changqiang).toBeDefined();
+    S.gear.weapon = 'bs2_qiang';
+    S.loadout.weapon = 'jl_changqiang';
+    fights('jl_changqiang', 'bs2_jw_kao');
+  });
+
+  it('六扇门：周捕头举荐（草上飞一案了结），秦教头考校，传四门入门武功；拿上铁尺，铁尺点穴的绝招使得出', () => {
+    act('bs2_qin', '投效');
+    expect(S.sect).toBeUndefined();
+    S.quests.side_caoshangfei = 3;
+    S.flags.csf_caught = true;
+    expect(act('bs2_qin', '投效').out.fight).toBe('bs2_lsm_kao');
+    passKao('bs2_lsm_kao');
+    expect(S.sect).toEqual({ school: '六扇门', rank: '记名' });
+    expect(S.items.bs2_tiechi).toBe(1);
+    for (let i = 0; i < 5; i++) act('bs2_qin', '请教');
+    for (const id of ['jl_jishixinfa', 'jl_suolian', 'jl_tiechi', 'jl_zhuifeng']) expect(S.skills[id], id).toBeDefined();
+    expect(S.skills.jl_fulong).toBeUndefined();
+    S.loadout.neigong = 'jl_jishixinfa';
+    S.loadout.weapon = 'jl_tiechi';
+    S.gear.weapon = 'bs2_tiechi';
+    fights('jl_tiechi', 'bs2_lsm_kao');
+    // 门规森严：在门期间学不了别派的功夫
+    expect(canLearn(S, SKILLS.find(k => k.id === 'gb_lianhua')!).ok).toBe(false);
+  });
+
+  it('丐帮：讨一顿饭入帮，花钱买的不算；记名只传入门，没有本门内功使不出绝招；腿脚、侠义够了升外门，传混天气功，莲花掌的绝招使得出', () => {
+    act('bs2_bao', '拜师');
+    expect(S.quests.bs2_gb_kao).toBe(0);
+    act('bs2_hu', '购买');
+    expect(S.items.bs2_shaobing).toBe(1);
+    act('bs2_bao', '复命');
+    expect(S.sect).toBeUndefined();
+    expect(S.items.bs2_shaobing).toBe(0);
+    act('bs2_hu', '帮工');
+    act('bs2_bao', '复命');
+    expect(S.sect).toEqual({ school: '丐帮', rank: '记名' });
+    expect(S.quests.bs2_gb_kao).toBe(1);
+    for (let i = 0; i < 4; i++) act('bs2_bao', '请教');
+    for (const id of ['gb_babu', 'gb_lianhua', 'gb_xiaoyaoyou']) expect(S.skills[id], id).toBeDefined();
+    for (const id of ['gb_huntian', 'gb_chansi', 'gb_xianglong', 'gb_dagou']) expect(S.skills[id], id).toBeUndefined();
+    expect(S.loadout.fist).toBe('gb_lianhua');
+    delete S.gear.weapon;
+    expect(fightKit(S).unrooted).toBe(true);
+    act('bs2_bao', '考校');
+    expect(S.sect?.rank).toBe('记名');
+    S.skills.gb_babu!.r = 1;
+    S.xia = 20;
+    act('bs2_bao', '考校');
+    expect(S.sect).toEqual({ school: '丐帮', rank: '外门' });
+    for (let i = 0; i < 3; i++) act('bs2_bao', '请教');
+    for (const id of ['gb_huntian', 'gb_chansi']) expect(S.skills[id], id).toBeDefined();
+    expect(S.skills.gb_xianglong).toBeUndefined();
+    S.loadout.neigong = 'gb_huntian';
+    S.loadout.qinggong = 'gb_babu';
+    fights('gb_lianhua', 'bs2_wg_shidun');
   });
 });

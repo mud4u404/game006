@@ -8,7 +8,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'gb_xianglong', name: '降龙十八掌', grade: '绝品', category: '掌法', school: '丐帮', nature: '刚', reach: '徒手',
     desc: '丐帮镇帮绝学，天下至刚的掌法。招式朴实无华，每一掌都含着十成力道，讲究「有余不尽」，留三分后劲，敌人越强，它越强。',
-    learn: '丐帮帮主亲传，须八袋以上弟子',
+    learn: '丐帮帮主亲传，须八袋以上弟子', teach: '真传',
     moves: [
       { name: '亢龙有悔', text: '你左腿微屈，右臂内弯，右掌划了个圆圈，呼的一声向{foe}{part}推去。', wound: '内伤' },
       { name: '见龙在田', text: '你双掌一错，掌力平平推出，如大河东流，罩住{foe}{part}。', wound: '瘀伤' },
@@ -36,7 +36,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'gb_dagou', name: '打狗棒法', grade: '绝品', category: '棍法', school: '丐帮', nature: '柔', reach: '长',
     desc: '丐帮帮主代代相传的棒法，只凭一根青竹棒。棒走轻灵，以绊、劈、缠、戳、挑、引、封、转八字为纲，专破刚猛一路。',
-    learn: '丐帮帮主亲传，非帮主不得全授',
+    learn: '丐帮帮主亲传，非帮主不得全授', teach: '真传',
     moves: [
       { name: '绊字诀·棒打双犬', text: '你竹棒贴地连绊，如棒打双犬，{foe}两腿接连吃绊，{part}跟着吃亏。', wound: '瘀伤' },
       { name: '劈字诀·斜打狗背', text: '你棒梢斜落，不打头不打脸，专敲{foe}背脊，如斜打狗背。', wound: '砸伤' },
@@ -63,13 +63,13 @@ const SKILLS: SkillDef[] = [
   {
     id: 'gb_huntian', name: '混天气功', grade: '上品', category: '内功', school: '丐帮', nature: '阳',
     desc: '丐帮的内功根基，取「混元一气」之意。行功时周身暖意流转，护住心脉，任对手掌力如潮，也难伤及根本。',
-    learn: '丐帮长老传授，多在污衣一脉',
+    learn: '丐帮长老传授，多在污衣一脉', teach: '外门',
     passive: [{ kind: 'guard', value: 8 }, { kind: 'heal', value: 5 }]
   },
   {
     id: 'gb_xiaoyaoyou', name: '逍遥游', grade: '良品', category: '拳法', school: '丐帮', nature: '中正', reach: '徒手',
     desc: '丐帮拳法，取《庄子·逍遥游》之意。身随意走，拳若乘风，看似闲散，实则无一处不着劲力。',
-    learn: '丐帮弟子多能学到，八袋以上传其精要',
+    learn: '丐帮弟子多能学到，八袋以上传其精要', teach: '入门',
     moves: [
       { name: '鲲鹏展翅', text: '你双臂一展，拳势开阔如鲲鹏振翼，扫向{foe}{part}。', wound: '瘀伤' },
       { name: '扶摇直上', text: '你拳自下挑起，势如扶摇直上，撞向{foe}{part}。', wound: '瘀伤' },
@@ -93,7 +93,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'gb_lianhua', name: '莲花掌', grade: '良品', category: '掌法', school: '丐帮', nature: '柔', reach: '徒手',
     desc: '丐帮一路绵软掌法，掌势如莲瓣层叠，一瓣未落，一瓣又起。看着轻柔，掌力却已透入肌肤。',
-    learn: '丐帮记名弟子亦可学，多在净衣一脉流传',
+    learn: '丐帮记名弟子亦可学，多在净衣一脉流传', teach: '入门',
     moves: [
       { name: '莲开九品', text: '你双掌层叠拍出，掌影如莲开九品，罩向{foe}{part}。', wound: '瘀伤' },
       { name: '步步生莲', text: '你脚下轻移，掌随身走，一步一掌，印向{foe}{part}。', wound: '瘀伤' },
@@ -114,7 +114,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'gb_chansi', name: '缠丝擒拿手', grade: '良品', category: '手法', school: '丐帮', nature: '柔', reach: '徒手',
     desc: '丐帮擒拿手法，讲究以缠代打、以柔锁刚。指腕如丝，缠上便不放松，专拿人腕脉关节。',
-    learn: '丐帮刑堂长老传授',
+    learn: '丐帮刑堂长老传授', teach: '外门',
     moves: [
       { name: '缠丝绕腕', text: '你五指搭上{foe}手腕，轻轻一绕，如蚕丝缠腕。', wound: '瘀伤' },
       { name: '金丝缠臂', text: '你指腕并用，顺{foe}臂而上，缠锁其{part}。', wound: '瘀伤' },
@@ -135,13 +135,13 @@ const SKILLS: SkillDef[] = [
   {
     id: 'gb_babu', name: '八步赶蝉', grade: '良品', category: '轻功', school: '丐帮', nature: '中正',
     desc: '丐帮的轻身功夫，八步之内可赶上一只飞蝉。脚步看似踉跄如醉，实则暗合八卦方位，最擅闪避。',
-    learn: '丐帮弟子多在赶路时练成',
+    learn: '丐帮弟子多在赶路时练成', teach: '入门',
     passive: [{ kind: 'haste', value: 10 }]
   },
   {
     id: 'gb_tianxiawugou', name: '天下无狗', grade: '绝品', category: '绝技', school: '丐帮', nature: '柔',
     desc: '打狗棒法的终极一式。棒影漫天，四面八方尽是竹光，天下恶犬无处可逃。非棒法炉火纯青者不能领悟。',
-    learn: '打狗棒法练至炉火纯青后自悟',
+    learn: '打狗棒法练至炉火纯青后自悟', teach: '真传',
     ult: {
       title: '打狗棒法 · 杀招',
       text: '你竹棒一抖，棒影漫天而起——四面八方的竹光同时落下，如天罗地网当头罩下！{foe}只觉{part}一麻，周身穴道已被尽数封住，再难动弹分毫。',

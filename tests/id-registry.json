@@ -2,6 +2,8 @@
  "ids": {
   "rooms": [
    "biaoju",
+   "bs2_longwang",
+   "bs2_wuguan",
    "cheng",
    "cheng_tavern",
    "daming",
@@ -40,6 +42,14 @@
    "bj_sun",
    "bj_yazi",
    "bj_zhao",
+   "bs2_bao",
+   "bs2_han",
+   "bs2_hu",
+   "bs2_lu",
+   "bs2_qin",
+   "bs2_shidun",
+   "bs2_wg_jia",
+   "bs2_xjh",
    "bs_qi",
    "bs_wu",
    "bs_zhao",
@@ -125,6 +135,11 @@
    "badge",
    "bj_haodao",
    "blade",
+   "bs2_pudao",
+   "bs2_qiang",
+   "bs2_shaobing",
+   "bs2_tiechi",
+   "bs2_yaopai",
    "fangzi",
    "fhs",
    "flower",
@@ -146,6 +161,9 @@
    "bj_jie_gz2",
    "bj_jie_zj",
    "bj_shibiao",
+   "bs2_jw_kao",
+   "bs2_lsm_kao",
+   "bs2_wg_shidun",
    "bs_qi",
    "cw_shuigui",
    "heiyi",
@@ -163,6 +181,7 @@
    "zy_csf"
   ],
   "quests": [
+   "bs2_gb_kao",
    "main1",
    "prologue",
    "side_cangjing",
@@ -368,6 +387,7 @@
   "side_huafang": 3,
   "prologue": 4,
   "main1": 4,
-  "side_yanhao": 3
+  "side_yanhao": 3,
+  "bs2_gb_kao": 2
  }
 }

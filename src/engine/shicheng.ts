@@ -40,6 +40,23 @@ export function canLearn(s: St, def: SkillDef): LearnCheck {
   return { ok: true };
 }
 
+/** 人物页「门派」一格：「丐帮 · 记名弟子」；没有师门写「无门无派」 */
+export const sectText = (s: Pick<GameState, 'sect'>): string => (s.sect ? `${s.sect.school} · ${s.sect.rank}弟子` : '无门无派');
+
+/** 门规的宽严，写给人看的一句（docs/menpai.md 第七节第五条，canLearn 照这个把关） */
+export function menguiText(school: string): string {
+  const r = SCHOOL_STYLE[school];
+  if (!r) return '';
+  if (r.discipline === '严') return '门规森严：在门期间只学本门武功和江湖散学，别派的功夫（连奇遇在内）一概学不得。';
+  if (r.discipline === '邪') return '门规不讲究：什么都学得，只是正道容不下你。';
+  const forbid = r.forbid?.length ? `；${r.forbid.join('、')}一路的功夫不许碰` : '';
+  return `门规宽：可以兼修别派，只是别派的外功没有本门内功打底，只剩普通招式${forbid}。`;
+}
+
+/** 来历：离开过的师门，例如「出师于丐帮；叛出军伍」 */
+export const pastSectText = (s: Pick<GameState, 'pastSects'>): string =>
+  (s.pastSects ?? []).map(x => (x.how === '出师' ? `出师于${x.school}` : `叛出${x.school}`)).join('；');
+
 /** 这门内功能不能给这门武功打底 */
 export function rootsOn(def: SkillDef, neigong: SkillDef): boolean {
   if (neigong.category !== '内功') return false;
