@@ -291,6 +291,8 @@ describe('师承与前置', () => {
     expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('悟性') });
     // 门槛看后天：寒江剑法第四重，悟性后天多八点
     S.attr.悟性 = 32;
+    // 门派贡献：外门的武功要替师门出过力（GONGXIAN_PENDING 清空后，夹具的少林也照此把关）
+    S.gongxian = { 少林: 60 };
     expect(canLearn(S, k).ok).toBe(true);
   });
 

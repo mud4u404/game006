@@ -1,4 +1,4 @@
-import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, NewsDef, NpcDef, QuestDef, RoomDef } from '../types';
+import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, JobDef, NewsDef, NpcDef, QuestDef, RoomDef } from '../types';
 
 /**
  * 武当的江南道据点（Issue #117）：扬州琼花观，武当的下院，观主清和是俗家出身的道长。
@@ -68,6 +68,7 @@ const NPCS: NpcDef[] = [
       { verb: '拜师', if: { notFlag: 'smwd_in' } },
       { verb: '领考', if: { flag: 'smwd_asked', notFlag: 'smwd_zhuang', noSect: true } },
       { verb: '请教', if: { sect: WD } },
+      { verb: '讨差事', if: { sect: WD } },
       { verb: '考校', if: { sect: WD, notFlag: 'smwd_wai' } }],
     actions: {
       交谈: [
@@ -132,15 +133,29 @@ const NPCS: NpcDef[] = [
           text: '道长摆摆手：「记名弟子，学到这儿。武当长拳、太和心法练到略有小成，来考校。绵掌、神门十三剑、梯云纵——升了外门再传。」' },
         { text: '道长合了合掌：「武当的功夫，不传外人。」' }
       ],
+      讨差事: [
+        { if: { job: 'smwd_job_cai' }, text: '道长收了桩：「药还没采回来？后山石缝里的七叶一枝花，认叶不认花——采错了不怪你，认对了算你有心。」' },
+        { if: { jobOpen: 'smwd_job_cai' },
+          text: '道长把药锄递给你：「观里药圃的药断了，去后山采一把七叶一枝花回来。太极是水，药也是水——采药的脚步，比什么都练人。」',
+          do: [{ type: 'job', id: 'smwd_job_cai' }] },
+        { if: { jobOpen: 'smwd_job_shou' },
+          text: '道长把一盏灯笼递给你：「观里的丹房要守夜。夜里有人翻过院墙偷过香烛——守到天亮，灯别灭。太极的静，守夜最练。」',
+          do: [{ type: 'job', id: 'smwd_job_shou' }] },
+        { text: '道长合了合掌：「这几日观里没有差事。」' }
+      ],
       考校: [
         // 两重境界的条件：realm 只能写一个，第二个放进只有一项的 any 里
-        { if: { sect: WD, realm: { skill: 'wd_changquan', atLeast: 1 }, any: [{ realm: { skill: 'wd_taihe', atLeast: 1 } }], xia: 15 },
-          text: '道长叫你在院里打一趟武当长拳，打完了，问：「这一趟拳，收在哪儿？」你答不上来。道长替你答：「收在『没打出去』上。你护过人——知道什么时候不打，比知道怎么打金贵。」他点点头：「从今天起，你是武当的外门弟子。」',
+        { if: { sect: WD, realm: { skill: 'wd_changquan', atLeast: 1 }, any: [{ realm: { skill: 'wd_taihe', atLeast: 1 } }], xia: 15, gongxian: 100 },
+          text: '道长叫你在院里打一趟武当长拳，打完了，翻了翻差事簿，问：「这一趟拳，收在哪儿？」你答不上来。道长替你答：「收在『没打出去』上。你护过人，也替观里办过差——知道什么时候不打，比知道怎么打金贵。」他点点头：「从今天起，你是武当的外门弟子。」',
           do: [{ type: 'sect', school: '武当', rank: '外门' }, { type: 'flag', flag: 'smwd_wai' }, { type: 'time', add: 60 },
             { type: 'feed', tag: '江湖', text: '你升了武当外门。清和道长说，绵掌、神门十三剑、梯云纵，都可以学了。' },
             { type: 'toast', text: '武当 · 升外门弟子' }] },
+        { if: { sect: WD, realm: { skill: 'wd_changquan', atLeast: 1 }, any: [{ realm: { skill: 'wd_taihe', atLeast: 1 } }], xia: 15 },
+          text: '道长点了点头：「拳和心法，都有三成的样子了——只差替观里办差。去讨件差事，攒够一百的贡献，再来。」' },
+        { if: { sect: WD, realm: { skill: 'wd_changquan', atLeast: 1 }, any: [{ realm: { skill: 'wd_taihe', atLeast: 1 } }], gongxian: 100 },
+          text: '道长叫你在院里打一趟武当长拳，打完了，问：「这一趟拳，收在哪儿？」你答不上来。道长替你答：「收在『没打出去』上。你护过人——知道什么时候不打，比知道怎么打金贵。」' },
         { if: { sect: WD, realm: { skill: 'wd_changquan', atLeast: 1 }, any: [{ realm: { skill: 'wd_taihe', atLeast: 1 } }] },
-          text: '道长点了点头：「拳和心法，都有三成的样子了。可太极是护人的拳——你还没护过什么人。侠义的事，再多做几件，再来。」' },
+          text: '道长点了点头：「拳和心法，都有三成的样子了。可太极是护人的拳——侠义的事多做几件，观里的差也去讨一件。」' },
         { if: { sect: WD, xia: 15 },
           text: '道长看了看你的架子：「心是有的。拳和心法还浮着——武当长拳、太和心法，都练到略有小成，再来考校。」' },
         { if: { sect: WD },
@@ -152,8 +167,13 @@ const NPCS: NpcDef[] = [
   {
     id: 'smwd_guqing', name: '顾青', ini: '顾', tone: 'blue', brief: '在演武场劈砖',
     look: '三十来岁，短打劲装，手背上全是茧和旧痂。眉骨上一道断疤，说话不看他先看你站在哪儿。',
-    verbs: ['交谈', '观察'],
+    verbs: ['交谈', '观察',
+      { verb: '交差', if: { job: 'smwd_job_shou' } }],
     actions: {
+      交差: [
+        { text: '顾青接过灯笼，看了看灯芯——亮了一宿，没灭。他把差事簿翻开，划了一道，划得很正：「守夜守成这样，行。」他把灯笼挂回原位，「下一宿，还你。」',
+          do: [{ type: 'time', add: 20 }, { type: 'jobDone', id: 'smwd_job_shou' }] }
+      ],
       交谈: [
         { if: { sect: WD_OUT },
           text: '顾青收了拳，难得地冲你点了个头：「外门了。出了观门，拳头收着点——收不住的那天，别说是我师弟。」他把手背上的新茧给你看，「这些，都是收着打收出来的。」' },
@@ -170,7 +190,8 @@ const NPCS: NpcDef[] = [
     id: 'smwd_saochen', name: '扫尘', ini: '尘', tone: 'amber', brief: '扫着落叶',
     look: '十二三岁的小道童，头发用一根木簪别着，别得歪歪的。扫帚比他高半头，扫两下就要停下来比一比谁高。',
     verbs: ['交谈', '观察',
-      { verb: '站桩', if: { flag: 'smwd_asked', notFlag: 'smwd_zhuang', noSect: true } }],
+      { verb: '站桩', if: { flag: 'smwd_asked', notFlag: 'smwd_zhuang', noSect: true } },
+      { verb: '交药', if: { job: 'smwd_job_cai' } }],
     actions: {
       交谈: [
         { if: { flag: 'smwd_zhuang' },
@@ -180,6 +201,10 @@ const NPCS: NpcDef[] = [
         { text: '扫尘停下扫帚：「你是来拜师的？」他往观主那边瞟了一眼，声音压得极低，「观里就我一个道童，顾师兄又不跟我玩。你要是拜进来了——喂招有人，过節分饼也有人。」他忽然站直了，一本正经地补了一句，「我就是这么盼着的。」' }
       ],
       观察: [{ text: '他扫地的路数有讲究：先扫观主门前的，再扫廊下的，最后才是自己院门口的。落叶堆了三堆，一堆比一堆小。' }],
+      交药: [
+        { text: '扫尘把药接过去，一片叶子一片叶子数：「七叶一枝花，真的七片叶！」他把药捧进丹房，出来时朝你伸出大拇指，又比划了一个挑担的姿势——意思是：这一趟的账，他记你头一份功劳。',
+          do: [{ type: 'time', add: 20 }, { type: 'jobDone', id: 'smwd_job_cai' }] }
+      ],
       站桩: [
         { if: { attr: { key: '悟性', atLeast: 25 } },
           text: '你在老琼花树下站定。眼睛刚落到树梢上，廊下的道长忽然开口：「息调你，不是你调息。」就这一句，你呼吸跟树影晃到了一处，一炷香的桩，站得脚下生了根。扫尘在旁边看呆了：「你、你头一回就站住了？」',
@@ -228,7 +253,52 @@ const KAO: FoeDef = {
   }
 };
 
+/* ---------- 师门差事：采药、守观 ---------- */
+
+const ZEI: FoeDef = {
+  id: 'smwd_zei', name: '偷香的贼', title: '惦记丹房的贼', ini: '贼', tone: 'red',
+  weapon: '一把匕首', ws: '剑', tag: '守观',
+  nature: '阴', reach: '短', rank: 0.6, build: 'outer', weak: 0.8, firstTell: 3,
+  moves: ['翻窗', '摸香炉', '闷刀', '跳墙'],
+  flourish: ['匕首反着光，专往暗处去', '脚步轻得像猫', '眼睛盯着丹房的门闩', '得手就想溜'],
+  tells: [
+    { name: '摸香炉', text: '贼的黑影摸到丹房门前，去撬门闩……', dom: 'qiao', after: '门闩一声响，人影缩了回去！' },
+    { name: '跳墙', text: '贼见势不好，翻身就往院墙跳……', dom: 'su', after: '墙头上的人影晃了一晃，消失在夜里！' }
+  ],
+  asides: ['丹房的烛火被风吹得晃了晃。', '扫尘睡得正香，翻了个身。', '院里的老琼花落了一片叶。'],
+  opening: ['匕首掉了，弯腰去捡', '翻墙时蹬脱了一块砖', '撬门闩撬出了声'],
+  intro: '黑影见你提灯过来，匕首反握在手：「守观的？丹房的香烛借我使使——识相的，装没看见。」',
+  win: '贼的匕首飞进了花圃。他翻墙跑了，掉在墙外的一只鞋都没顾上捡。丹房的香烛一根不少——灯笼，你提到了天亮。',
+  lose: '匕首划过你的手臂，贼从你腋下钻过去，翻墙走了。丹房的门闩，叫人撬坏了一根。',
+  results: {
+    win: { tag: '守观 · 安', title: '丹房无事', button: '提灯交差',
+      story: '天亮了，你的灯笼还亮着。顾青来换班，看了一眼灯，又看了一眼你，把差事簿翻开，划了一道——他什么都没夸，可这一道，划得很慢，很正。',
+      do: [{ type: 'jobDone', id: 'smwd_job_shou' }] },
+    lose: { tag: '守观', title: '丹房失了香烛', button: '提灯天亮',
+      story: '贼跑了，香烛少了两把。顾青来换班，看了眼坏掉的门闩，没说话，自己拿工具修了半天——修门闩的声音，比骂人难听。',
+      do: [{ type: 'jobFail', id: 'smwd_job_shou' }, { type: 'heal', hpAtLeast: 0.5 }] }
+  }
+};
+
+const NPCS_EXTRA: NpcDef[] = [
+  {
+    id: 'smwd_zei_ren', name: '偷香的贼', ini: '贼', tone: 'red', brief: '在墙根摸黑',
+    look: '墙根下的黑影，怀里揣着鼓鼓囊囊的包袱，眼睛盯着丹房的门。',
+    at: { room: 'smwd_qionghua', if: { hour: { from: 22, to: 4 }, job: 'smwd_job_shou' } },
+    verbs: ['交谈', '动手'],
+    actions: {
+      交谈: [{ text: '黑影压着嗓子：「守夜的？丹房的香烛，佛……道爷也不要我偷——穷，实话。」' }],
+      动手: [{ do: [{ type: 'fight', foe: 'smwd_zei' }] }]
+    }
+  }
+];
+
 /* ---------- 任务：站桩的考验 ---------- */
+
+const JOBS: JobDef[] = [
+  { id: 'smwd_job_cai', sect: '武当', tier: 1, title: '去后山采一把七叶一枝花', npc: 'smwd_saochen', at: 'smwd_qionghua', days: 2, again: 2 },
+  { id: 'smwd_job_shou', sect: '武当', tier: 1, k: 1.5, title: '夜里守一宿丹房', npc: 'smwd_guqing', at: 'smwd_qionghua', days: 2, again: 3 }
+];
 
 const QUESTS: QuestDef[] = [
   { id: 'smwd_zhuang', name: '武当 · 站桩', stages: [
@@ -263,8 +333,9 @@ const NEWS: NewsDef[] = [
 
 const pack: ContentPack = {
   rooms: ROOMS,
-  npcs: NPCS,
-  foes: [KAO],
+  npcs: [...NPCS, ...NPCS_EXTRA],
+  foes: [KAO, ZEI],
+  jobs: JOBS,
   quests: QUESTS,
   eyes: EYES,
   news: NEWS

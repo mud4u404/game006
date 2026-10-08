@@ -1,4 +1,4 @@
-import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, NewsDef, NpcDef, QuestDef, RoomDef } from '../types';
+import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, JobDef, NewsDef, NpcDef, QuestDef, RoomDef } from '../types';
 
 /**
  * 峨眉的江南道据点（Issue #118）：瓜洲观音庵，峨眉的云游师太听潮借住在江边的尼庵。
@@ -71,6 +71,7 @@ const NPCS: NpcDef[] = [
       { verb: '拜师', if: { notFlag: 'smem_in' } },
       { verb: '领考', if: { flag: 'smem_asked', notFlag: 'smem_chao', noSect: true } },
       { verb: '请教', if: { sect: EM } },
+      { verb: '讨差事', if: { sect: EM } },
       { verb: '考校', if: { sect: EM, notFlag: 'smem_wai' } }],
     actions: {
       交谈: [
@@ -130,15 +131,30 @@ const NPCS: NpcDef[] = [
           text: '师太摆摆手：「记名弟子，学到这儿。清音诀、截手九式练到略有小成，来考校。临济十二庄、金顶绵掌——升了外门再传。」' },
         { text: '师太合十：「峨眉的功夫，不传外人。」' }
       ],
+      讨差事: [
+        { if: { job: 'smem_job_xiang' }, text: '师太拨着佛珠：「香客还没护送到？山道上的生面孔，慧安都替你记着。」' },
+        { if: { jobOpen: 'smem_job_xiang' },
+          text: '师太把一串佛珠递给你：「今日有香客上山进香，山道上最近不太平。护她们一个来回——佛门的差事，护的是人。」',
+          do: [{ type: 'job', id: 'smem_job_xiang' }] },
+        { if: { jobOpen: 'smem_job_hua' },
+          text: '师太指了指佛前的空瓶：「庵里的供花该换了。江滩的芦花、山道的野菊，采一把时令的回来——佛前的东西，不在贵，在诚。」',
+          do: [{ type: 'job', id: 'smem_job_hua' }] },
+        { text: '师太合十：「这几日庵里没有差事。」' }
+      ],
       考校: [
+        // 两重境界的条件：realm 只能写一个，第二个放进只有一项的 any 里；外门要替庵里办过差（贡献一百）
         // 两重境界的条件：realm 只能写一个，第二个放进只有一项的 any 里
-        { if: { sect: EM, realm: { skill: 'eh_jieshou', atLeast: 1 }, any: [{ realm: { skill: 'eh_qingyin', atLeast: 1 } }], xia: 15 },
-          text: '师太叫你在院里走一趟截手九式，走完了，问：「这九式，截住了几个念头？」你答不上来。师太替你答：「你护过人——护人的时候，念头不用截，它自己就让路了。」她睁开眼，把拂尘换到左手：「从今天起，你是峨眉的外门弟子。」',
+        { if: { sect: EM, realm: { skill: 'eh_jieshou', atLeast: 1 }, any: [{ realm: { skill: 'eh_qingyin', atLeast: 1 } }], xia: 15, gongxian: 100 },
+          text: '师太叫你在院里走一趟截手九式，走完了，翻看了你的差事簿：「截手截住了，香客也护过了——峨眉的功夫是护人的功夫，你两样都摸着了。」她睁开眼，把拂尘换到左手：「从今天起，你是峨眉的外门弟子。」',
           do: [{ type: 'sect', school: '峨眉', rank: '外门' }, { type: 'flag', flag: 'smem_wai' }, { type: 'time', add: 60 },
             { type: 'feed', tag: '江湖', text: '你升了峨眉外门。听潮师太说，临济十二庄、金顶绵掌都可以学了——再往上，是内门的机缘。' },
             { type: 'toast', text: '峨眉 · 升外门弟子' }] },
+        { if: { sect: EM, realm: { skill: 'eh_jieshou', atLeast: 1 }, any: [{ realm: { skill: 'eh_qingyin', atLeast: 1 } }], xia: 15 },
+          text: '师太点了点头：「手上有三成了，侠义也行了——只差替庵里办差。去讨件差事，攒够一百的贡献，再来。」' },
+        { if: { sect: EM, realm: { skill: 'eh_jieshou', atLeast: 1 }, any: [{ realm: { skill: 'eh_qingyin', atLeast: 1 } }], gongxian: 100 },
+          text: '师太叫你在院里走一趟截手九式，走完了，问：「这九式，截住了几个念头？」你答不上来。师太替你答：「你护过人——护人的时候，念头不用截，它自己就让路了。」' },
         { if: { sect: EM, realm: { skill: 'eh_jieshou', atLeast: 1 }, any: [{ realm: { skill: 'eh_qingyin', atLeast: 1 } }] },
-          text: '师太点了点头：「手上有三成了。可峨眉的功夫是护人的——你还没护过什么人。侠义的事，再多做几件，再来。」' },
+          text: '师太点了点头：「手上有三成了。可峨眉的功夫是护人的——侠义的事多做几件，庵里的差也去讨一件。」' },
         { if: { sect: EM, xia: 15 },
           text: '师太看了看你的手：「心是善的。手和气还浮着——清音诀、截手九式，都练到略有小成，再来考校。」' },
         { if: { sect: EM },
@@ -150,8 +166,13 @@ const NPCS: NpcDef[] = [
   {
     id: 'smem_huian', name: '慧安师姐', ini: '慧', tone: 'blue', brief: '在井边打水',
     look: '二十四五岁，灰布僧衣浆得笔挺，左腕上有一圈很深的旧绳痕。打水的时候不看人，倒完水才抬眼看你一下。',
-    verbs: ['交谈', '观察'],
+    verbs: ['交谈', '观察',
+      { verb: '交差', if: { job: 'smem_job_xiang' } }],
     actions: {
+      交差: [
+        { text: '慧安数完香客的人数，一个不少。她把差事簿翻开，划了一道，难得开口多说了半句：「山道太平了。贡献，记你一笔——师父问起，我照实说。」',
+          do: [{ type: 'time', add: 30 }, { type: 'jobDone', id: 'smem_job_xiang' }] }
+      ],
       交谈: [
         { if: { sect: EM_OUT },
           text: '慧安把井绳绕好，难得地朝你点了点头：「外门了。」她顿了半晌，「师父看人不走眼。你往后出了这个门——」她把井绳又紧了一圈，「替她争口气，也替我这句话争口气。」' },
@@ -168,7 +189,8 @@ const NPCS: NpcDef[] = [
     id: 'smem_xiaoman', name: '小满', ini: '满', tone: 'amber', brief: '扫着香灰',
     look: '十一二岁的小尼姑，僧袍大得像袍子底下藏着另一个人。扫帚扫两下就要停下来，看一眼佛前的油灯够不够亮。',
     verbs: ['交谈', '观察',
-      { verb: '听潮', if: { flag: 'smem_asked', notFlag: 'smem_chao', noSect: true } }],
+      { verb: '听潮', if: { flag: 'smem_asked', notFlag: 'smem_chao', noSect: true } },
+      { verb: '交花', if: { job: 'smem_job_hua' } }],
     actions: {
       交谈: [
         { if: { flag: 'smem_chao' },
@@ -178,6 +200,10 @@ const NPCS: NpcDef[] = [
         { text: '小满扫着香灰，声音压得比香灰还轻：「庵里就我一个小的。师姐好是好，就是不笑。师父——师父耳朵里全是江。」她扫帚一停，「你要是拜进来了，念经有人搭腔，过年分糖也有人抢……我是说，也分你一块。」' }
       ],
       观察: [{ text: '她扫地的路线从不经过佛前第三块砖——那块砖底下，是她埋糖纸的地方。埋了就埋了，她记得哪块鼓一点。' }],
+      交花: [
+        { text: '小满把芦花和野菊插进佛前的空瓶，歪着头看了看，又调了一枝：「佛祖应该……喜欢吧？」她朝你合十，学得有模有样，「差事簿我让师姐记了——芦花两枝，野菊三枝，诚心一整个上午。」',
+          do: [{ type: 'time', add: 20 }, { type: 'jobDone', id: 'smem_job_hua' }] }
+      ],
       听潮: [
         { if: { attr: { key: '悟性', atLeast: 25 } },
           text: '你在江滩上坐下来，面朝着江。潮声一层压着一层，你数着浪头之间的空——起、落、歇，再起、再落、再歇。一个时辰不到，那些「响」忽然分了家：涨潮是一个调，退潮是一个调，风擦过芦苇，是第三个。你回去告诉师太，她闭着的眼睛睁开一线：「三个就三个。耳朵通了，气就通了。」',
@@ -223,7 +249,51 @@ const KAO: FoeDef = {
   }
 };
 
+/* ---------- 师门差事：护送香客、供花 ---------- */
+
+const DIPI: FoeDef = {
+  id: 'smem_dipi', name: '地痞', title: '山道上讨买卖的', ini: '地', tone: 'red',
+  weapon: '木棒', ws: '棍', tag: '护香客',
+  nature: '刚', reach: '短', rank: 0.7, build: 'outer', weak: 0.8, firstTell: 3,
+  moves: ['拦路棒', '敲山震虎', '抱腰', '讹钱式'],
+  flourish: ['木棒敲着掌心，笃笃地响', '几个地痞把你围在道心', '嘴里骂骂咧咧，眼睛看着香客的包袱', '棒子抡得虎虎生风，脚下却在退'],
+  tells: [
+    { name: '拦路棒', text: '领头的地痞把木棒横在道心，朝香客们一伸……', dom: 'li', after: '棒子被你一格，他虎口一麻！' },
+    { name: '讹钱式', text: '地痞忽然撒泼坐在地上，喊着「打人了」……', dom: 'qiao', after: '你抢上一步，把他拎了起来！' }
+  ],
+  asides: ['香客们缩在道边，念着佛。', '慧安的目色冷了下来。', '山道上的鸟雀惊飞了一片。'],
+  opening: ['棒子敲在了石头上', '围拢时自己人先挤了架', '讹钱的腔调起了个高音'],
+  intro: '领头的地痞把木棒一横：「上山的留下买路香火——尼姑庵的钱，也是钱！」',
+  win: '地痞们抱头窜下山道。香客们围上来念佛，慧安把佛珠一收：「这一段的香火道，往后好走了。」',
+  lose: '木棒扫在你的腿上，你跌坐在山道边。地痞们抢了香客两个包袱，扬长而去——慧安扶起香客，眼神冷得像铁。',
+  results: {
+    win: { tag: '护香客 · 胜', title: '香道太平', button: '送香客进庵',
+      story: '香客们平平安安进了庵门，回头朝你合十。慧安把佛珠数完了一串，朝你点了点头——她替你把这一趟，记在了差事簿上。',
+      do: [{ type: 'jobDone', id: 'smem_job_xiang' }] },
+    lose: { tag: '护香客', title: '叫地痞打散了', button: '爬起来',
+      story: '香客们散了，进香的日子也误了。慧安扶起跌倒的老人，回头看你一眼，什么也没说——她不说，比说什么都重。',
+      do: [{ type: 'jobFail', id: 'smem_job_xiang' }, { type: 'heal', hpAtLeast: 0.5 }] }
+  }
+};
+
+const NPCS_EXTRA: NpcDef[] = [
+  {
+    id: 'smem_xiangke', name: '进香的香客', count: 3, ini: '香', tone: 'blue', brief: '结伴上山',
+    look: '三个进香的妇人，包袱里带着香烛，走一段歇一段。',
+    at: { room: 'smem_guanyin', if: { job: 'smem_job_xiang' } },
+    verbs: ['交谈'],
+    actions: {
+      交谈: [{ text: '香客们攥着佛珠：「听说山道上有地痞讨买卖……护送的到了么？到了就走，趁天亮。」' }]
+    }
+  }
+];
+
 /* ---------- 任务：听潮的考验 ---------- */
+
+const JOBS: JobDef[] = [
+  { id: 'smem_job_xiang', sect: '峨眉', tier: 1, title: '护送香客上山进香', npc: 'smem_huian', at: 'smem_guanyin', days: 2, again: 2 },
+  { id: 'smem_job_hua', sect: '峨眉', tier: 1, title: '采一把时令的供花回庵', npc: 'smem_xiaoman', at: 'smem_guanyin', days: 2, again: 2 }
+];
 
 const QUESTS: QuestDef[] = [
   { id: 'smem_chao', name: '峨眉 · 听潮', stages: [
@@ -258,8 +328,9 @@ const NEWS: NewsDef[] = [
 
 const pack: ContentPack = {
   rooms: ROOMS,
-  npcs: NPCS,
-  foes: [KAO],
+  npcs: [...NPCS, ...NPCS_EXTRA],
+  foes: [KAO, DIPI],
+  jobs: JOBS,
   quests: QUESTS,
   eyes: EYES,
   news: NEWS

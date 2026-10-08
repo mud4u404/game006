@@ -74,7 +74,7 @@ const NPCS: NpcDef[] = [
       { verb: '请教', if: { sect: TZ } },
       { verb: '讨差事', if: { sect: TZ } },
       { verb: '考校', if: { sect: TZ, notFlag: 'smtz_wai' } },
-      { verb: '压街', if: { sect: TZ, shi: { id: SHI, at: ['fang', 'za'] } } }],
+      { verb: '压街', if: { sect: TZ, shi: { id: SHI, at: ['fang', 'za', 'gui_bang'] } } }],
     actions: {
       交谈: [
         { if: { shi: { id: SHI, at: ['fang', 'za'] } },
