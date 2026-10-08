@@ -64,6 +64,7 @@ const NPCS: NpcDef[] = [
           do: [
             { type: 'flag', flag: 'zj_chutou' }, { type: 'flag', flag: 'zj_shi_done' },
             { type: 'xia', delta: 3 },
+            { type: 'flag', flag: 'zj_garrison_grudge' },
             { type: 'feed', tag: '江湖', text: '大市口有个年轻人替醋坊出头，顶了京口驻军的兵丁。看客叫好，也有人替他捏汗。' }
           ] },
         { text: '「这事了了，别再招我。」兵丁别过脸去。' }
@@ -97,7 +98,7 @@ const NPCS: NpcDef[] = [
     actions: {
       交谈: [
         { if: { flag: 'zj_chutou' },
-          text: '「多谢公子仗义……只是往后，军爷的醋，小店还得月月送。」尤掌柜苦笑，「得罪了兵，这醋香里，往后都得掺着憋屈。」' },
+          text: '「多谢公子仗义……只是往后，军爷的醋，小店还得月月送。」尤掌柜苦笑，「得罪了兵，这醋香里，往后都得掺着憋屈。前几日我去军营送醋，守门的说是有人吩咐了，要刁难我。」' },
         { if: { flag: 'zj_bangqiang' },
           text: '尤掌柜别过脸去，没搭理你。柜台底下的抹布，被他拧得变了形。' },
         { if: { flag: 'zj_taokuang' },
@@ -127,7 +128,9 @@ const pack: ContentPack = {
     { if: { flag: 'zj_bangqiang' },
       text: '京口驻军的兵爷在大市口白得一坛老醋，听说还有个闲人在旁边帮着敲边鼓。' },
     { if: { flag: 'zj_taokuang' },
-      text: '大市口的醋坊受了兵气，多亏一位公子掏钱解围。尤家的老醋，往后怕是要给这位公子留着一坛。' }
+      text: '大市口的醋坊受了兵气，多亏一位公子掏钱解围。尤家的老醋，往后怕是要给这位公子留着一坛。' },
+    { if: { flag: 'zj_garrison_grudge' },
+      text: '京口驻军的兵爷在大市口丢了脸面，这几日寻人问一个佩剑年轻人的名字，说要给他「长长记性」。' }
   ]
 };
 

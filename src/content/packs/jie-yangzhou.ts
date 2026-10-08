@@ -9,6 +9,7 @@ import type { ContentPack, EncounterDef, FoeDef, NpcDef, StoryDef } from '../typ
 const NIGHT = { hour: { from: 19, to: 5 } };
 
 const ENCOUNTERS: EncounterDef[] = [
+  { id: 'luyu_yz_yan', region: ['yz'], to: ['cheng'], once: true, if: { flag: 'jy_sun_out' }, weight: 0.6, story: 'ly_yz_yan' },
   { id: 'luyu_yz_feizei', region: ['yz'], to: ['zhuyuwan'], once: true, if: NIGHT, weight: 0.7, story: 'ly_yz_feizei' },
   { id: 'luyu_yz_feizei_yin', region: ['yz'], to: ['cheng'], once: true, if: { flag: 'jy_fei_fang' }, weight: 0.8, story: 'ly_yz_feizei_yin' }
 ];
@@ -204,16 +205,16 @@ const SHUIZEI_FOE: FoeDef = {
       story: '斗笠落地。月光下是一张年轻的脸，眉眼里全是倔强——她攥着从货栈里带出来的一个包袱，没有松手的意思。',
       do: [{ type: 'flag', flag: 'jy_fei_biaotai' }],
       after: {
-        plea: '「我爹是汪家船行的老船工，拉了三十年纤，压断了腰，汪家一文抚恤没出，把人卷了张草席送回来。」她攥紧包袱，「我今夜拿的，是我爹没拿到的工钱。」',
+        plea: '「我弟弟在金山寺当和尚。寺里叫他白抄半年的经，交上去说是假的——香火钱进了方丈的匣子，人被赶出山门，行李也扣了。那包袱几经转手，抵账抵进了汪家货栈。我不偷钱，我只拿回我爹留下的那串念珠——让庙里和号里都知道，穷人的东西，不是「规矩」两个字就能吞的。」',
         opts: [
           { label: '放她走', sub: '侠义 +2　这份情她记下了',
-            say: '你侧开一步，让开了墙头：「汪家的银子不干净，可你别沾血。」她愣了愣，朝你一低头，消失在夜色里。',
+            say: '你侧开一步，让开了墙头：「拿回你弟弟的东西，别拿第二样。」她愣了愣，朝你一低头，背着包袱消失在夜色里。',
             do: [
               { type: 'flag', flag: 'jy_fei_fang' }, { type: 'flag', flag: 'jy_fei_out' },
               { type: 'xia', delta: 2 },
-              { type: 'feed', tag: '江湖', text: '你放走了盗汪家货栈的女飞贼。她背着的包袱里，是她爹没拿到的工钱。' }
+              { type: 'feed', tag: '江湖', text: '你放走了盗汪家货栈的女飞贼。她背走的包袱里，是一个穷和尚被扣下的行李。' }
             ],
-            later: '城南穷巷，夜里常有人留下一小串铜钱——老人们说，是燕子衔来还债的。' },
+            later: '过了些日子，有人看见一个背短刀的女客上了金山寺，在殿外放下一个旧包袱，磕了三个头，飘然而去。' },
           { label: '送官究办', sub: '银两 +20　汪老爷的谢礼',
             say: '你一声唿哨，家丁们打着灯笼涌出来，把她围在了墙头上。她被押走时没有回头。汪老爷隔着墙扔出二十文：「多谢壮士！」',
             do: [
@@ -221,22 +222,92 @@ const SHUIZEI_FOE: FoeDef = {
               { type: 'silver', delta: 20 },
               { type: 'feed', tag: '江湖', text: '盗汪家货栈的女飞贼落了网。汪老爷赏了报信的人二十文——有人听见他冷笑了一声。' }
             ],
-            later: '汪家连夜把库银搬去了别处——贼抓完了，防的是知道太多的人。' },
+            later: '汪家的库房翻了个底朝天——少的是一个旧包袱，报官的册子上，却写成了「湖丝三十匹」。' },
           { label: '问她赃物去了哪里', sub: '听她说完',
-            say: '「偷来的财，你花得安稳？」她冷笑：「汪家的库银，哪一文是干净的？早散给城南断粮的人家了——你抓得着我，抓不着良心。」',
+            say: '「偷来的财，你花得安稳？」她把包袱抖开给你看——一件旧僧袍，一串磨得发亮的念珠。「旁的湖丝，一匹没动。你抓得着我，抓不着庙里那些吞香火钱的手。」',
             do: [
               { type: 'flag', flag: 'jy_fei_wen' }, { type: 'flag', flag: 'jy_fei_gone' }, { type: 'flag', flag: 'jy_fei_out' },
               { type: 'xia', delta: 1 },
-              { type: 'feed', tag: '江湖', text: '盐商货栈飞贼一案，赃物早散给了城南的穷户——民不举，官不究。' }
+              { type: 'feed', tag: '江湖', text: '盐商货栈飞贼一案有了下文：库里少的是一个旧包袱，湖丝一匹未少——汪老爷却咬定丢了三十匹。' }
             ],
-            later: '城南的穷户们那几日没断粮。至于墙脊上的燕子，再没人见过。' }
+            later: '后来金山寺外多了个摆摊抄经的年轻先生，一字三文，童叟无欺。他姐姐的短刀，再没出过鞘。' }
         ]
       }
     }
   }
 };
 
+const YAN_STORY: StoryDef = { id: 'ly_yz_yan', cards: [
+    { tag: '路遇', title: '阎爷的回话',
+      paras: [
+        '巷口等着一个精瘦的汉子，见你过来，迎上半步，拱手当胸。',
+        '「公子留步。盐号阎爷听了东关街的信儿，让我带句话——公子怎么接，怎么回，都随公子。」'
+      ],
+      choices: [
+        { label: '「孙彪的话，带到了。」', if: { flag: 'jy_sun_chuan' }, next: 1 },
+        { label: '「赌坊后屋，我去过。」', if: { flag: 'jy_sun_jian' }, next: 2 },
+        { label: '「府衙的板子，他挨上了。」', if: { flag: 'jy_sun_guan' }, next: 3 },
+        { label: '「他收钱的那只手，抬不起来了。」', if: { flag: 'jy_sun_sha' }, next: 4 },
+        { label: '不接这话，径直走开',
+          result: '你绕开汉子走了。身后传来一声不高不低的话音：「阎爷的话，带到为止——公子慢走。」',
+          do: [{ type: 'flag', flag: 'jy_yan_note' }], next: -1 }
+      ] },
+    { tag: '路遇', title: '好胆色',
+      paras: [
+        '汉子笑了：「阎爷说，敢把孙彪打一顿放回去的，东关街头一份。你的份子钱，从此不收了——但你这把剑，阎爷记下了。」',
+        '他说完就拱手，退回巷子里去了，脚步声轻得听不见。'
+      ],
+      choices: [
+        { label: '「随时奉陪。」', sub: '侠义 +1',
+          result: '你按着剑柄，朝巷子深处说了一句：「随时奉陪。」巷子里静了半晌，飘出来两个字：「好胆色。」',
+          do: [{ type: 'xia', delta: 1 }, { type: 'flag', flag: 'jy_yan_note' }], next: -1 },
+        { label: '「我不惹事，但也不怕事。」', sub: '历练 +20',
+          result: '你不卑不亢地站定，把这句话原样捎了回去。巷子里没有回音——你觉得后背发凉，但你知道自己没退。',
+          do: [{ type: 'lilian', amount: 20 }], next: -1 }
+      ] },
+    { tag: '路遇', title: '一杯茶',
+      paras: [
+        '汉子点点头：「那晚的后屋，公子坐的是客位。阎爷说，敢一个人闯赌坊后屋的，扬州城里数不出三个。」',
+        '「阎爷的原话是：东关街的份子钱，公子那一户免了。这杯茶他记着——只是往后公子走船走桥，自己仔细。」'
+      ],
+      choices: [
+        { label: '「替我谢过阎爷的茶。」', sub: '历练 +20',
+          result: '你客客气气地回了话。汉子愣了一下，拱手去了——客套话说得滴水不漏的人，比拔剑的更叫人摸不透。',
+          do: [{ type: 'lilian', amount: 20 }], next: -1 },
+        { label: '「茶不必记，账也不必记。」', sub: '侠义 +1',
+          result: '你把话撂下就走。身后静了一瞬，传来一声低低的笑——不知道是笑你，还是笑他自己。',
+          do: [{ type: 'xia', delta: 1 }, { type: 'flag', flag: 'jy_yan_note' }], next: -1 }
+      ] },
+    { tag: '路遇', title: '秤和板子',
+      paras: [
+        '汉子的脸沉了下来：「阎爷说，衙门的板子，打不断盐号的秤。份子钱还在收，往后改了个名目，叫「船脚」。」',
+        '他顿了顿，声音压低：「阎爷还说——公子的名字，他记在另一本册子上了。哪本册子，小人不敢问。」'
+      ],
+      choices: [
+        { label: '「盐号的秤，早晚有人来平。」', sub: '侠义 +1',
+          result: '你说完转身就走，没看那汉子的脸色。走出半条街，才发觉自己攥着剑柄的手心全是汗。',
+          do: [{ type: 'xia', delta: 1 }, { type: 'flag', flag: 'jy_yan_note' }], next: -1 },
+        { label: '把这话记在心里', sub: '历练 +20',
+          result: '你点了点头，什么也没说。册子、名目、船脚——盐号换皮不换骨，这一层，你记下了。',
+          do: [{ type: 'lilian', amount: 20 }], next: -1 }
+      ] },
+    { tag: '路遇', title: '一块木牌',
+      paras: [
+        '汉子没有开口。他从怀里取出一块巴掌大的木牌，轻轻放在你脚边，转身就走。',
+        '木牌上一个字，墨深得像刀刻的：「偿」。'
+      ],
+      choices: [
+        { label: '一脚踩碎木牌', sub: '侠义 +1',
+          result: '你一脚踩下去，木牌断成两截。巷口传来一声极轻的叹息，随后什么声音都没有了。',
+          do: [{ type: 'xia', delta: 1 }, { type: 'flag', flag: 'jy_yan_note' }], next: -1 },
+        { label: '把木牌收起来', sub: '历练 +20',
+          result: '你把木牌揣进怀里。这笔账迟早要算——是躲，还是迎，你打算想清楚了再动。',
+          do: [{ type: 'lilian', amount: 20 }], next: -1 }
+      ] }
+  ] };
+
 const STORIES: StoryDef[] = [
+  YAN_STORY,
   { id: 'ly_yz_feizei', cards: [
     { tag: '路遇', title: '墙脊上的黑影',
       paras: [
@@ -291,6 +362,7 @@ const pack: ContentPack = {
     { if: { flag: 'jy_fei_wen' }, text: '盐商货栈飞贼一案查明：赃物早散给了城南的穷户。民不举，官不究。' },
     { if: { flag: 'jy_fei_let' }, text: '汪家货栈夜里丢了一包湖丝，飞贼没抓着，掌柜的说要换锁。' },
     { if: { flag: 'jy_fei_shout' }, text: '汪家货栈夜里进了飞贼，有人喊跑了贼，汪老爷赏了二十文——街坊都说汪家大方。' },
+    { if: { flag: 'jy_yan_note' }, text: '盐枭阎爷放话，东关街的份子钱不收了——但阎爷也记下了一个名字。' },
     { if: { flag: 'jy_sun_biaotai' }, text: '东关街替盐枭收份子的孙彪叫人打趴下了，趴在地上说了半天好话。' },
     { if: { flag: 'jy_sun_out' }, text: '东关街的份子钱这几日没人收了。摊贩们松了口气，又隐隐不安。' },
     { if: { flag: 'jy_lei_biaotai' }, text: '卖艺的李麻子叫人拆穿了刀砍不入的把戏，铜锣哑了好几天。' },
