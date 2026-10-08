@@ -101,7 +101,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'mr_xixing', name: '吸星大法', grade: '神品', category: '内功', school: '日月神教', nature: '阴',
     desc: '日月神教神功。吸人内力贮于己身，威力绝伦，只是异种真气积于经脉，隐患极深，练者不可不慎。',
-    learn: '西湖梅庄湖底铁板刻字，历代教主口耳相传',
+    learn: '西湖梅庄湖底铁板刻字，机缘巧合方可得见',
     teach: '奇遇',
     needAttr: { 根骨: 36 },
     passive: [{ kind: 'guard', value: 15 }],
@@ -109,7 +109,7 @@ const SKILLS: SkillDef[] = [
   },
   {
     id: 'mr_pixie', name: '辟邪剑法', grade: '禁品', category: '剑法', school: '日月神教', nature: '阴', reach: '短',
-    desc: '福建林家辟邪剑谱，流入日月神教。快到极处，以速破敌，敌招再妙，也快不过这一剑；只是谱上开篇写得分明：习此剑者，须先自宫。',
+    desc: '福建林家辟邪剑谱，源出前朝宫中的宝典。快到极处，以速破敌，敌招再妙，也快不过这一剑；只是谱上开篇写得分明：习此剑者，须先自宫。',
     learn: '辟邪剑谱残卷，须付非常代价',
     teach: '奇遇',
     needAttr: { 身法: 29 },

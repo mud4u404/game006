@@ -10,11 +10,11 @@ const SKILLS: SkillDef[] = [
     moves: [
       { name: '黑虎掏心', text: '你一记直拳直捣{foe}胸前，如黑虎掏心，实实砸在其{part}。', wound: '内伤' },
       { name: '天王托塔', text: '你双掌上托，借着{foe}攻势掀其{part}，如天王托塔。', wound: '砸伤' },
-      { name: '白鹤亮翅', text: '你双臂一展一收，如白鹤亮翅，拂开{foe}来势，反拍其{part}。', wound: '瘀伤' },
-      { name: '金鸡独立', text: '你提膝一撞，如金鸡独立，顶在{foe}{part}上。', wound: '瘀伤', realm: 2 },
+      { name: '探马', text: '你双臂一展一收，如探马勒缰，拂开{foe}来势，反拍其{part}。', wound: '瘀伤' },
+      { name: '铁牛顶角', text: '你提膝一撞，如铁牛顶角，顶在{foe}{part}上。', wound: '瘀伤', realm: 2 },
       { name: '弓步冲拳', text: '你弓步进身，一记冲拳从腰间打出去，正中{foe}{part}。', wound: '瘀伤', realm: 3 },
       { name: '仆步穿掌', text: '你仆步下势，掌随腰走，穿掌直插{foe}{part}。', wound: '刺伤', realm: 4 },
-      { name: '搂膝拗步', text: '你搂膝拗步，卸开{foe}下盘来势，反掌抹其{part}。', wound: '瘀伤', realm: 5 },
+      { name: '穿手搂打', text: '你穿手搂打，卸开{foe}下盘来势，反掌抹其{part}。', wound: '瘀伤', realm: 5 },
       { name: '霸王卸甲', text: '你连环六拳，如霸王卸甲，一拳重过一拳，把{foe}{part}的门户一层层砸开。', wound: '砸伤', realm: 6 }
     ],
     performs: [
@@ -119,7 +119,7 @@ const SKILLS: SkillDef[] = [
     desc: '相传浪子燕青所传，故也叫迷踪拳。身法灵巧似燕，拳打三分脚踢七分，踪迹飘忽难测。',
     learn: '燕青拳门户不严，市井把式偶有真传',
     moves: [
-      { name: '燕子抄水', text: '你低身掠进，掌如抄水，轻轻一带，卸开{foe}攻势反拂其{part}。', wound: '瘀伤' },
+      { name: '掠水穿波', text: '你低身掠进，掌如掠水穿波，轻轻一带，卸开{foe}攻势反拂其{part}。', wound: '瘀伤' },
       { name: '燕子衔泥', text: '你拳走轻灵，一点即收，如燕子衔泥，连点{foe}{part}。', wound: '瘀伤' },
       { name: '燕子穿帘', text: '你从{foe}臂弯里穿身而过，反手一拳击其{part}。', wound: '瘀伤' },
       { name: '燕子翻身', text: '你翻身绕到{foe}侧后，拳随身到，落在其{part}。', wound: '瘀伤', realm: 2 },

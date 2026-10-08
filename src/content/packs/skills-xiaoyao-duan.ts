@@ -73,7 +73,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'xd_wuxiang', name: '小无相功', grade: '绝品', category: '内功', school: '逍遥', nature: '中正',
     desc: '逍遥派内功。中正平和，无相无形，以之催动各家武学皆可似模似样，真气护体亦绵密周到。',
-    learn: '逍遥派内密，历代只传寥寥数人',
+    learn: '逍遥派秘传，历代只传寥寥数人',
     teach: '内门',
     requires: [{ skill: 'xd_xiaoyao', realm: 4 }],
     passive: [{ kind: 'guard', value: 14 }],
