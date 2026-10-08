@@ -6,13 +6,14 @@ import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
 import { advanceMin, dayNo } from '../core/time';
 import { pick } from '../core/util';
-import { NEWS, questById, skillById } from '../content';
+import { NEWS, jobById, questById, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { canLearn } from './shicheng';
 import { growAttr } from './gengu';
 import { houtianOf } from './ren';
+import { SHENFEN, jobOpen, jobPay } from './shenfen';
 import { addLilian, questDone } from './lilian';
 
 export function test(c?: Cond): boolean {
@@ -47,6 +48,10 @@ export function test(c?: Cond): boolean {
   if (c.eming !== undefined && S.eming < c.eming) return false;
   // 约：今天是约期，约还没了结（engine/shiguang.ts）
   if (c.yue !== undefined && !S.yue.some(y => y.id === c.yue && y.due === dayNo(S))) return false;
+  // 身份与差事（engine/shenfen.ts）
+  if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
+  if (c.job !== undefined && S.job?.id !== c.job) return false;
+  if (c.jobOpen !== undefined && !jobOpen(S, c.jobOpen)) return false;
   if (c.hour) {
     const h = Math.floor(S.min / 60);
     const { from, to } = c.hour;
@@ -151,6 +156,54 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (e.delta > 0 && e.why) S.xinmo.why = e.why;
         if (S.xinmo.n <= 0) S.xinmo = { n: 0, why: '' };
         break;
+      case 'shenfen':
+        if (S.shenfen.id !== e.id) {
+          S.shenfen = { id: e.id, standing: 1, since: dayNo(S) };
+          if (e.id !== 'youxia' && e.id !== 'yumin') pushFeed('江湖', `你做了${SHENFEN[e.id]?.name ?? e.id}。`);
+        }
+        break;
+      case 'standing': {
+        const sf = SHENFEN[S.shenfen.id];
+        // 游侠、渔家没有东家，谈不上辞退，地位不降到零
+        const free = S.shenfen.id === 'youxia' || S.shenfen.id === 'yumin';
+        S.shenfen.standing = Math.max(free ? 1 : 0, Math.min(3, S.shenfen.standing + e.delta));
+        if (S.shenfen.standing === 0) {
+          pushFeed('江湖', `你被辞退了，不再是${sf?.name ?? ''}，又做回了游侠。`);
+          S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) };
+          S.job = null;
+        }
+        break;
+      }
+      case 'job': {
+        const j = jobById(e.id);
+        if (!j || S.job) break;
+        S.job = { id: j.id, due: dayNo(S) + j.days };
+        // 差事的义务就是一个约：过了约期没交差，就算误事（engine/shiguang.ts 的 checkYue）
+        S.yue = S.yue.filter(y => y.id !== 'job_' + j.id).concat({ id: 'job_' + j.id, npc: j.npc, at: j.at, due: S.job.due, text: j.title, miss: [{ type: 'jobFail', id: j.id }] });
+        pushFeed('江湖', `接下差事：${j.title}。`);
+        break;
+      }
+      case 'jobDone': {
+        const j = jobById(e.id);
+        if (!j || S.job?.id !== e.id) break;
+        const pay = jobPay(j);
+        S.silver += pay;
+        S.job = null;
+        S.jobLog[j.id] = dayNo(S);
+        S.yue = S.yue.filter(y => y.id !== 'job_' + j.id);
+        pushFeed('收获', `交了差：${j.title}，得银 ${pay} 文。`);
+        emit('toast', `交差 · 银两 +${pay} 文`);
+        break;
+      }
+      case 'jobFail': {
+        const j = jobById(e.id);
+        if (S.job?.id === e.id) S.job = null;
+        S.jobLog[e.id] = dayNo(S);
+        S.yue = S.yue.filter(y => y.id !== 'job_' + e.id);
+        pushFeed('江湖', `差事办砸了：${j?.title ?? e.id}。`);
+        run([{ type: 'standing', delta: -1 }]);
+        break;
+      }
       case 'fight': out.fight = e.foe; break;
       case 'story': out.story = e.id; break;
     }
