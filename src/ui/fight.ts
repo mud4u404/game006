@@ -16,6 +16,9 @@ import { cheng, chengN, judgeText, realmPow, respOptions, tellPw, type RespKey, 
 import { npcName } from '../engine/world';
 import { FOE_FX_TAG, FX_SAY, fightKit, foeFighter, meFighter, weaponWord, type FightKit } from '../engine/zhaoshi';
 import { dealtMul, endOfRound, flatCut, strike, takenMul, type Combat, type Fighter, type Move } from '../engine/combat';
+import { PROTO, xushiOn } from '../core/proto';
+import { VS_FEINT, feintRate, mergeOdds } from '../engine/xushi';
+import { FATE_LABEL, aftermathOf, type AftermathDef, type FateKey } from '../content/aftermath';
 import { IC } from './icons';
 import { mb } from './widgets';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render } from './shell';
@@ -41,14 +44,15 @@ const SAY: Record<RespKey, (f: FoeDef, o: RespOption) => string> = {
   rush: (f, o) => `你不退反进，${M(o.sname)}抢在${f.name}招式未成之前出手——`
 };
 
-interface Prompt { t: TellDef; opts: RespOption[]; dur: number; end: number; rem?: number; untimed?: boolean }
+/** feint：这一招是虚招（原型）；raw：不算虚实时，各应对对实招的成算 */
+interface Prompt { t: TellDef; opts: RespOption[]; dur: number; end: number; rem?: number; untimed?: boolean; feint?: boolean; raw?: Partial<Record<RespKey, number>> }
 type Res = 'win' | 'lose' | 'flee' | 'yield';
 interface Fight {
   f: FoeDef; ehp: number; ehpMax: number; mom: number; round: number;
   wounds: Record<string, number>; recent: string[]; rage: number;
   charge: number; chargeT: number; prompt: Prompt | null; opening: { part: string } | null;
   busy: boolean; paused: boolean; over: boolean; phase: number; nextTell: number; lastTell: number; lock: number;
-  st: { parry: number; open: number; ult: number; big: string[] };
+  st: { parry: number; open: number; ult: number; big: string[]; kanpo: number };
   floor: number; T: { tick?: number; prompt?: number; open?: number; cd?: number };
   res?: Res; then?: Effect[]; tellRound?: number; rescued?: boolean;
   /** 生效的备战（engine/beizhan.ts） */
@@ -57,6 +61,8 @@ interface Fight {
   kit: FightKit; pcd: number[];
   /** 交给战斗内核记状态的两个人（点穴、流血、护体……）和内核的局面 */
   me: Fighter; foe: Fighter; k: Combat;
+  /** 胜负以后（原型）：问不问、选了什么 */
+  after?: AftermathDef | null; fate?: FateKey;
 }
 let C: Fight | null = null;
 export const inFight = (): boolean => !!C;
@@ -73,7 +79,7 @@ export function startFight(fid: string): void {
     f, ehp: f.hp, ehpMax: f.hp, mom: 50, round: 0, wounds: {}, recent: [], rage: Math.max(0, 30 + attrEffects(S).rage), charge: 0, chargeT: 0,
     prompt: null, opening: null, busy: false, paused: false, over: false, phase: 1,
     nextTell: f.firstTell ?? rnd(3, 4), lastTell: -1, lock: 0,
-    st: { parry: 0, open: 0, ult: 0, big: [] },
+    st: { parry: 0, open: 0, ult: 0, big: [], kanpo: 0 },
     floor: f.spar ? Math.round(Math.min(S.hpMax * 0.3, S.hp * 0.5)) : f.script ? Math.round(S.hpMax * 0.25) : 0,
     T: {}, prep: active,
     kit, pcd: kit.performs.map(() => 0), me, foe, k: { round: 0, maxRounds: 999, f: [me, foe], rng: Math.random }
@@ -114,6 +120,7 @@ function fightHTML(c: Fight): string {
       <div class="rbar"><i id="rFill"></i></div>
       <div class="ropts" id="rOpts"></div>
     </div>
+    <div class="rbody" id="fateBody" hidden><p class="rtell" id="fatePlea"></p><div class="ropts" id="fateOpts"></div></div>
     <div class="pb" id="pBars"></div>
     <div class="sk" id="idleBody">
       ${c.kit.performs.map((x, i) => `<button class="skb" id="skP${i}" data-act="fSkill:p${i}"><b>${x.p.name}</b><small></small></button>`).join('')}
@@ -367,9 +374,14 @@ function startTell(): void {
   bubble('tell', `<span class="tl"><i></i>预兆</span>${t.text}`);
   buzz(30);
   const pw = tellPw(t, c.phase);
-  const opts = respOptions(S, pw, c.f);
+  let opts = respOptions(S, pw, c.f);
+  // 虚实（原型）：这一招是不是虚招，玩家看不出；按钮上的成算并进了「它可能是虚招」
+  const fr = xushiOn() ? feintRate(c.f) : 0;
+  const feint = fr > 0 && Math.random() < fr;
+  const raw: Partial<Record<RespKey, number>> = {};
+  if (fr > 0) opts = opts.map(o => { raw[o.k] = o.p; return { ...o, p: mergeOdds(o.p, o.k, fr) }; });
   $('#rTell')!.textContent = t.text;
-  $('#rJudge')!.textContent = judgeText(S, pw, c.f.ws);
+  $('#rJudge')!.textContent = judgeText(S, pw, c.f.ws) + (fr > 0 ? `${c.f.name}会使虚招，全力硬接最怕落空。` : '');
   $('#rOpts')!.innerHTML = opts.map(o => {
     const n = chengN(o.p);
     return `<button class="ropt" data-act="fReact:${o.k}"${o.dis ? ' disabled' : ''}><span class="rn"><b>${o.act}</b><span> · ${o.sname}</span></span><span class="ro ${n >= 6 ? 'hi' : n >= 3 ? 'mid' : 'low'}">成算${cheng(o.p)}</span><span class="rx">${o.note}</span></button>`;
@@ -377,14 +389,14 @@ function startTell(): void {
   const dur = Math.round((5000 + qgRealm() * 300) * (c.phase === 2 ? 0.85 : 1));
   if (!S.flags.tutTell) {
     // 第一次遇到重招：不计时，附上说明
-    c.prompt = { t, opts, dur, end: 0, untimed: true };
+    c.prompt = { t, opts, dur, end: 0, untimed: true, feint, raw };
     setPromptUI(true);
     $('#rTip')!.hidden = false;
     $('#rTime')!.textContent = '这一次不限时';
     updSkills();
     return;
   }
-  c.prompt = { t, opts, dur, end: 0 };
+  c.prompt = { t, opts, dur, end: 0, feint, raw };
   armPrompt(dur, 1);
 }
 
@@ -436,7 +448,7 @@ function setPromptUI(on: boolean): void {
 function resolveTell(choice: RespKey | null): void {
   const c = C;
   if (!c || !c.prompt || c.over || c.paused) return;
-  const { t, opts } = c.prompt;
+  const { t, opts, feint, raw } = c.prompt;
   c.prompt = null;
   clearTimeout(c.T.prompt);
   setPromptUI(false);
@@ -459,16 +471,33 @@ function resolveTell(choice: RespKey | null): void {
     return;
   }
   const p = Math.max(0.05, o.p - (instinct ? 0.15 : 0));
-  const ok = Math.random() < p;
+  // 虚实（原型）：按钮上的成算并进了虚实；实际成败，实招按对实招的成算，虚招按应付得了虚招的几率
+  const pReal = raw?.[o.k] !== undefined ? Math.max(0.05, raw[o.k]! - (instinct ? 0.15 : 0)) : p;
+  const ok = Math.random() < (feint ? VS_FEINT[o.k] : pReal);
   S.mp = Math.max(0, S.mp - o.cost);
   bubble('me', (instinct ? '你来不及细想，凭本能——' : '') + SAY[o.k](f, o) + `<span class="note">成算${cheng(p)}</span>`);
-  if (ok) {
+  if (feint) {
+    if (ok) {
+      // 看破虚招：乘虚而入
+      c.st.kanpo++;
+      c.rage = Math.min(100, c.rage + 12);
+      c.mom = clamp(c.mom + 12, 5, 95);
+      bubble('foe', `${MO(t.name)}原来是虚的！你${o.act}之际看得分明，${f.name}这一晃，门户反倒露了出来——`);
+      window.setTimeout(() => { if (C && !C.over && !C.prompt) maybeOpening(1); }, 450);
+    } else {
+      // 扑了空，被顺势带了一下
+      c.mom = clamp(c.mom - 8, 5, 95);
+      const hurt = (big * 0.6 * dealtMul(c.foe) - flatCut(c.foe)) * takenMul(c.me);
+      bubble('foe', `${MO(t.name)}原来是虚招！你${o.act}扑了个空，被${f.name}顺势带了一下，${H(part)}吃了一记。`, hurt, 'in');
+      hurtMe(hurt);
+    }
+  } else if (ok) {
     c.st.parry++;
     c.rage = Math.min(100, c.rage + 12);
     const pw = realmPow(S, o.skill);
-    if (o.k === 'block') { const d = rnd(80, 110) * pw; bubble('foe', `「当」的一声巨响，${MO(t.name)}被你硬生生接下！${f.name}反被震得连退三步。`, d, 'out'); hitFoe(d, null, 15); }
+    if (o.k === 'block') { const d = (PROTO ? rnd(100, 130) : rnd(80, 110)) * pw; bubble('foe', `「当」的一声巨响，${MO(t.name)}被你硬生生接下！${f.name}反被震得连退三步。`, d, 'out'); hitFoe(d, null, 15); }
     else if (o.k === 'dodge') { bubble('foe', `${MO(t.name)}落了空，${t.after}`); c.mom = clamp(c.mom + 8, 5, 95); window.setTimeout(() => { if (C && !C.over && !C.prompt) maybeOpening(1); }, 450); }
-    else if (o.k === 'parry') { const d = rnd(60, 90) * pw; bubble('foe', `你以巧破拙，将${MO(t.name)}化于无形，顺势还了一${weaponWord(S)}，正中他${H(part)}！`, d, 'out'); hitFoe(d, part, 20); }
+    else if (o.k === 'parry') { const d = (PROTO ? rnd(120, 150) : rnd(60, 90)) * pw; bubble('foe', `你以巧破拙，将${MO(t.name)}化于无形，顺势还了一${weaponWord(S)}，正中他${H(part)}！`, d, 'out'); hitFoe(d, part, 20); }
     else { const d = rnd(220, 280) * pw; bubble('foe', `${f.name}招式未成，${H(part + '先中一' + weaponWord(S))}，${MO(t.name)}硬生生憋了回去！`, d, 'out'); hitFoe(d, part, 15); }
     gainProf(o.skill, 15);
     bubble('aside', `实战有得：「${o.sname}」熟练 +15`);
@@ -796,7 +825,33 @@ function endFight(res: Res): void {
   if (res === 'win' && c.f.win) bubble('foe', c.f.win);
   else if (res === 'lose' && c.f.lose) bubble('sys', c.f.lose);
   updAll();
-  window.setTimeout(showResult, reduceMotion ? 300 : 1300);
+  // 胜负以后（原型）：打倒有名有姓的对手，先问放还是杀，再出结算
+  c.after = PROTO && res === 'win' ? aftermathOf(c.f) : null;
+  window.setTimeout(c.after ? showAftermath : showResult, reduceMotion ? 300 : 1300);
+}
+
+/* ---------- 胜负以后（原型，docs/foundation.md 第三版第五条） ---------- */
+
+function showAftermath(): void {
+  const c = C;
+  if (!c || !c.after) return;
+  $('#idleBody')!.hidden = true;
+  $('#pBars')!.hidden = true;
+  $('#rHead')!.innerHTML = '<b>胜负以后</b><span>放还是杀，由你定</span>';
+  $('#fatePlea')!.textContent = c.after.plea;
+  $('#fateOpts')!.innerHTML = (Object.keys(FATE_LABEL) as FateKey[]).map(k =>
+    `<button class="ropt fate" data-act="fFate:${k}"><span class="rn"><b>${FATE_LABEL[k][0]}</b></span><span class="rx">${FATE_LABEL[k][1]}</span></button>`).join('');
+  $('#fateBody')!.hidden = false;
+}
+
+function chooseFate(k: FateKey): void {
+  const c = C;
+  if (!c || !c.after || c.fate) return;
+  c.fate = k;
+  $('#fateBody')!.hidden = true;
+  bubble('foe', c.after.plea);
+  bubble(k === 'sha' ? 'me crit' : 'me', c.after[k].say);
+  window.setTimeout(showResult, reduceMotion ? 300 : 1100);
 }
 
 function composeStory(c: Fight): string {
@@ -845,6 +900,9 @@ function showResult(): void {
   const ll = fightLilian(S, c.f, c.f.script ? 'lose' : c.res);
   // 带着某项准备打赢时，准备的后果
   const extra = c.res === 'win' ? c.prep.flatMap(p => p.win ?? []) : [];
+  // 胜负以后的后果（原型）
+  const fate = c.after && c.fate ? c.after[c.fate] : null;
+  if (fate) extra.push(...fate.fx);
   if (r.silent) {
     run([...(r.do ?? []), ...extra]);
     closeFight();
@@ -853,15 +911,16 @@ function showResult(): void {
   }
   advanceMin(S, 15);
   const out = run([...(r.do ?? []), ...extra]);
-  let story = r.story || '';
+  let story = fate?.story ?? (r.story || '');
   if (story === '@compose') { story = composeStory(c); S.story = story; }
   else story = fmt(story, textVars());
-  const statline = `<p class="statline">共 ${c.round} 合 · 见招拆招得手 ${c.st.parry} 次 · 破绽 ${c.st.open} 次 · 杀招 ${c.st.ult} 次</p>`;
+  const statline = `<p class="statline">共 ${c.round} 合 · 见招拆招得手 ${c.st.parry} 次${c.st.kanpo ? ` · 看破虚招 ${c.st.kanpo} 次` : ''} · 破绽 ${c.st.open} 次 · 杀招 ${c.st.ult} 次</p>`;
+  const fateLine = fate && c.fate ? `<div class="r-sub">胜负以后 · ${FATE_LABEL[c.fate][0]}</div><p class="story">${fate.later}</p>` : '';
   const chips = rewardChips([...(r.do ?? []), ...extra, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])]).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
   c.then = r.then;
   save();
-  openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${r.title || ''}</h2></div>
-    ${r.story === '@compose' ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${statline}
+  openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${fate?.title ?? (r.title || '')}</h2></div>
+    ${r.story === '@compose' && !fate?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${statline}
     ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? GROWTH : ''}
     <button class="btn" data-act="fResult">${r.button || '继续'}</button>`);
 }
@@ -884,6 +943,7 @@ registerHandlers({
   fOpening: () => takeOpening(),
   fPause: () => pauseFight(),
   fResume: () => resumeFight(),
+  fFate: v => chooseFate(v as FateKey),
   fResult: () => {
     const then = C?.then;
     closeSheet();
