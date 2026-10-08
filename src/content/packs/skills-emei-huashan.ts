@@ -1,17 +1,40 @@
 import type { ContentPack, SkillDef } from '../types';
 
-/** 武学库第一批：峨眉四门、华山四门（Issue #24） */
+/**
+ * 武学库第一批：峨眉五门、华山五门（Issue #24）。
+ *
+ * 峨眉的武学树（docs/menpai.md 第七节）：
+ *   入门：清音诀（内功）、截手九式
+ *   外门：临济十二庄（清音诀融会贯通）、金顶绵掌（截手九式融会贯通）
+ *   内门：回风拂柳剑（临济十二庄融会贯通）
+ * 峨眉是迅捷加绵柔：身法、连击为主，卸力、护体为辅，不缴械。
+ *
+ * 华山的武学树：
+ *   入门：华山心法（内功）、华山剑法
+ *   外门：狂风快剑（华山剑法融会贯通）
+ *   内门：紫霞神功（华山心法炉火纯青）
+ *   奇遇：独孤九剑（华山剑法炉火纯青，悟性绝高；不挑内功）
+ * 华山是迅捷加刚猛：身法、连击为主，破绽为辅，不用寒气。
+ */
 const SKILLS: SkillDef[] = [
   {
     id: 'eh_linji', name: '临济十二庄', grade: '上品', category: '内功', school: '峨眉', nature: '阴',
     desc: '峨眉临济一脉的筑基内功。以天地、心、游龙、鹤翔等十二庄法行气周天，练成后真气护体，绵绵密密，水火难侵。',
-    learn: '峨眉伏虎寺传功师太亲授',
+    learn: '峨眉伏虎寺传功师太亲授', teach: '外门',
+    requires: [{ skill: 'eh_qingyin', realm: 2 }],
     passive: [{ kind: 'guard', value: 11 }]
+  },
+  {
+    id: 'eh_qingyin', name: '清音诀', grade: '良品', category: '内功', school: '峨眉', nature: '柔',
+    desc: '峨眉入门的吐纳功夫，传自山腰清音阁。行气时听双桥下两道溪水相击，气随水走，一呼一吸都轻了，是峨眉轻灵一路的底子。',
+    learn: '峨眉入门弟子在清音阁所习', teach: '入门',
+    passive: [{ kind: 'haste', value: 8 }]
   },
   {
     id: 'eh_jinding', name: '金顶绵掌', grade: '良品', category: '掌法', school: '峨眉', nature: '柔', reach: '徒手',
     desc: '峨眉金顶一脉的掌法。掌力柔中带绵，粘住敌劲再缓缓化去，招名皆取金顶佛光、云海、圣灯诸般胜景。',
-    learn: '峨眉金顶一脉亲传，须入内门',
+    learn: '峨眉金顶一脉亲传，外门弟子方得', teach: '外门',
+    requires: [{ skill: 'eh_jieshou', realm: 2 }],
     moves: [
       { name: '佛光初现', text: '你双掌一圈一按，掌力柔中含劲，如金顶佛光乍现，罩向{foe}{part}。', wound: '瘀伤' },
       { name: '云海千层', text: '你双掌连环推出，一重柔劲接一重，如云海翻涌，层层叠上{foe}{part}。', wound: '内伤' },
@@ -32,7 +55,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'eh_huifeng', name: '回风拂柳剑', grade: '上品', category: '剑法', school: '峨眉', nature: '柔', reach: '短',
     desc: '峨眉剑法。身随剑走，剑随风回，一招一式轻柔如拂柳，回风处却暗藏杀机，招名多取咏柳的诗词。',
-    learn: '峨眉掌门亲传，须先练成临济十二庄',
+    learn: '峨眉掌门亲传，须先练成临济十二庄', teach: '内门',
+    requires: [{ skill: 'eh_linji', realm: 2 }],
     moves: [
       { name: '回风舞柳', text: '你长剑斜引，剑锋一转又回，如风过柳梢，掠向{foe}{part}。', wound: '割伤' },
       { name: '柳浪闻莺', text: '你剑尖连点，如莺穿柳浪，几点寒芒分袭{foe}{part}。', wound: '刺伤' },
@@ -51,7 +75,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'eh_jieshou', name: '截手九式', grade: '良品', category: '手法', school: '峨眉', nature: '柔', reach: '徒手',
     desc: '峨眉护身手法。讲究后发先至，敌刃未落，我手已截。九式由浅入深，练到头可空手入白刃。',
-    learn: '峨眉女尼传下的护身手法',
+    learn: '峨眉女尼传下的护身手法', teach: '入门',
     moves: [
       { name: '截云式', text: '你五指一翻，凌空一截，如手摘浮云，把{foe}攻来的招式截在半途。', wound: '瘀伤' },
       { name: '截燕式', text: '你侧身探手，轻轻盈盈一截，恰似掠燕剪风，搭上{foe}{part}。', wound: '瘀伤' },
@@ -65,19 +89,26 @@ const SKILLS: SkillDef[] = [
     ],
     performs: [
       { name: '顺手截脉', text: '你卖个破绽诱{foe}抢攻，手腕一翻已搭上其{part}，顺着劲路一截一按。', mp: 55, cd: 1, hits: 1, dmg: [105, 145], acc: 0.78 },
-      { name: '九式归元', realm: 3, text: '你九式连环使出，末了双掌一错，快逾闪电地截向{foe}持兵的手，只一拿一带，兵刃便脱手飞出。', mp: 25, cd: 3, hits: 1, dmg: [85, 105], acc: 0.8, fx: [{ kind: 'disarm', rounds: 2 }] }
+      { name: '九式归元', realm: 3, text: '你九式连环使出，末了双掌一错，快逾闪电地截向{foe}持兵的手，一拿一带，{foe}虎口一麻，劲力去了大半。', mp: 25, cd: 3, hits: 1, dmg: [90, 110], acc: 0.8, fx: [{ kind: 'weaken', value: 15, rounds: 2 }] }
     ]
   },
   {
     id: 'eh_zixia', name: '紫霞神功', grade: '上品', category: '内功', school: '华山', nature: '阳',
     desc: '华山内功之最，气宗嫡传。行功时面泛紫气，如紫气东来，绵绵不绝；真气蓄得越足，后劲越是雄浑，战意也一段段涨起来。',
-    learn: '华山气宗嫡传，历代只传掌门弟子',
+    learn: '华山气宗嫡传，历代只传掌门弟子', teach: '内门',
+    requires: [{ skill: 'eh_huashanxinfa', realm: 3 }],
     passive: [{ kind: 'rage', value: 5 }]
+  },
+  {
+    id: 'eh_huashanxinfa', name: '华山心法', grade: '良品', category: '内功', school: '华山', nature: '中正',
+    desc: '华山入门的吐纳功夫，剑宗、气宗分家以前便有。不求真气雄厚，只练一口气提得起、沉得下：气提得起，脚下才轻，剑才快得起来。',
+    learn: '华山入门弟子早课所习', teach: '入门',
+    passive: [{ kind: 'haste', value: 8 }]
   },
   {
     id: 'eh_huashan', name: '华山剑法', grade: '良品', category: '剑法', school: '华山', nature: '中正', reach: '短',
     desc: '华山派入门剑法。中正平和，堂堂正正，后来剑宗气宗分途，这门根基剑法却是两宗同源的。',
-    learn: '华山入门弟子人人得授',
+    learn: '华山入门弟子人人得授', teach: '入门',
     moves: [
       { name: '白云出岫', text: '你长剑平递，一招「白云出岫」，剑尖直取{foe}{part}，堂堂正正。', wound: '刺伤' },
       { name: '有凤来仪', text: '你剑光一敛复张，自下而上斜挑，如凤展翅，撩向{foe}{part}。', wound: '割伤' },
@@ -89,7 +120,7 @@ const SKILLS: SkillDef[] = [
       { name: '萧史乘龙', text: '你剑随身走，腾跃如乘龙，一剑快似一剑，绕袭{foe}{part}。', wound: '刺伤', realm: 6 }
     ],
     performs: [
-      { name: '有凤来仪', text: '你一招「有凤来仪」，剑光自下而上翩然撩起，凤翅般的剑影罩向{foe}{part}，{foe}越是抢攻，越被这从容剑意拖得迟缓。', mp: 70, cd: 1, hits: 1, dmg: [110, 150], acc: 0.8, fx: [{ kind: 'chill', rounds: 2, chance: 0.5 }] },
+      { name: '有凤来仪', text: '你一招「有凤来仪」，剑光自下而上翩然撩起，凤翅般的剑影罩向{foe}{part}，你身随剑起，步法也跟着轻灵起来。', mp: 70, cd: 1, hits: 1, dmg: [110, 150], acc: 0.8, fx: [{ kind: 'haste', value: 10, rounds: 2 }] },
       { name: '白虹贯日', realm: 3, text: '你气随剑走，一剑刺出，剑光凝如白虹，隐隐透出嗡嗡之声，直贯{foe}{part}。', mp: 75, cd: 2, hits: 1, dmg: [130, 175], acc: 0.78, fx: [{ kind: 'break', value: 15, rounds: 2 }] }
     ],
     combos: [{ with: 'eh_zixia', name: '紫霞剑气', text: '你真气一转，面泛紫气，紫霞内力透上剑尖，剑光隐隐带紫，又添三分威势。', bonus: 4 }]
@@ -97,7 +128,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'eh_kuangfeng', name: '狂风快剑', grade: '上品', category: '剑法', school: '华山', nature: '刚', reach: '短',
     desc: '华山剑宗快剑。一剑快似一剑，如狂风骤起卷地而来，敌人未看清招式，剑光已到面门。',
-    learn: '华山剑宗在中条山自创的一路，私授门下',
+    learn: '华山剑宗在中条山自创的一路，私授门下', teach: '外门',
+    requires: [{ skill: 'eh_huashan', realm: 2 }],
     moves: [
       { name: '风起青萍', text: '你手腕一抖，剑尖颤出嗡嗡急响，如风起青萍之末，刺向{foe}{part}。', wound: '刺伤' },
       { name: '疾风劲草', text: '你借着前招之势一剑回削，剑未老而劲已至，割向{foe}{part}。', wound: '割伤' },
@@ -116,7 +148,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'eh_dugu', name: '独孤九剑', grade: '神品', category: '剑法', school: '华山', nature: '中正', reach: '短',
     desc: '前代剑魔独孤求败所创。重意不重招，无招胜有招，料敌机先，后发先至，九式可破尽天下武功。',
-    learn: '华山剑宗隐世前辈口传心授，悟性绝高者自悟',
+    learn: '华山剑宗隐世前辈口传心授，悟性绝高者自悟', teach: '奇遇',
+    requires: [{ skill: 'eh_huashan', realm: 3 }], needAttr: { 悟性: 31 }, roots: ['任意'],
     moves: [
       { name: '总诀式', text: '你随手一剑，看似全无章法，却暗藏三百六十般变化，点向{foe}{part}。', wound: '刺伤' },
       { name: '破剑式', text: '你剑尖斜挑，专找{foe}剑招空隙，轻轻一点，便教长剑使不圆转。', wound: '刺伤' },

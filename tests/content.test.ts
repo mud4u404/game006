@@ -3,7 +3,7 @@
  * 报错信息会指出是哪个文件里的哪一条数据有问题。
  */
 import { describe, expect, it } from 'vitest';
-import { ENCOUNTERS, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
+import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
@@ -221,6 +221,75 @@ describe('人物与物品', () => {
     const placed = new Set(ROOMS.flatMap(r => [...r.npcs, ...(r.objs || [])].map(x => (typeof x === 'string' ? x : x.id))));
     const orphans = NPCS.filter(n => !placed.has(n.id)).map(n => n.id);
     expect(orphans, `这些人物没有出现在任何地点：${orphans.join('、')}`).toEqual([]);
+  });
+});
+
+describe('基础设施', () => {
+  /**
+   * 负责人试玩：「现在的地图，玩家连个治病疗伤的地方都没有」。
+   * 医馆、客栈、兵器铺、当铺、杂货铺由人物的 service 标出（示范 src/content/packs/jichu.ts），缺了、名不副实，这里变红。
+   */
+  type Npc = (typeof NPCS)[number];
+  type Service = NonNullable<Npc['service']>[number];
+  /** 扬州是首府，五样都要；其余地区（包括以后新开的苏州等地）至少要有医馆和客栈 */
+  const NEED: Record<string, Service[]> = Object.fromEntries(Object.keys(REGIONS).filter(r => ROOMS.some(x => x.region === r))
+    .map(r => [r, r === 'yz' ? ['医', '宿', '兵', '当', '杂'] : ['医', '宿']]));
+  const ALL_FX = JSON.stringify({ ROOMS, NPCS, STORIES, FOES, ENCOUNTERS });
+  const idOf = (x: string | { id: string }): string => (typeof x === 'string' ? x : x.id);
+  /** 人物在哪些地点：地点的 npcs、objs，或者人物自己写的 at */
+  const placesOf = (n: Npc): string[] => [
+    ...ROOMS.filter(r => [...r.npcs, ...(r.objs ?? [])].some(x => idOf(x) === n.id)).map(r => r.id),
+    ...(n.at ? [n.at.room] : [])
+  ];
+  const regionOf = (room: string): string | undefined => ROOMS.find(r => r.id === room)?.region;
+  const branchesOf = (n: Npc): Branch[] => Object.values(n.actions).flatMap(bs => bs ?? []);
+  const has = (b: Branch, f: (e: Effect) => boolean): boolean => (b.do ?? []).some(f);
+  const pays = (b: Branch): boolean => has(b, e => e.type === 'silver' && e.delta < 0);
+  const boughtItems = (b: Branch): string[] => (pays(b) ? (b.do ?? []).flatMap(e => (e.type === 'item' && e.delta > 0 ? [e.id] : [])) : []);
+  const servers = NPCS.filter(n => n.service?.length);
+
+  it('扬州五样齐全；其余每个地区至少有医馆和客栈', () => {
+    const errs: string[] = [];
+    for (const [region, need] of Object.entries(NEED)) {
+      const have = new Set(servers.filter(n => placesOf(n).some(r => regionOf(r) === region)).flatMap(n => n.service ?? []));
+      for (const s of need) if (!have.has(s)) errs.push(`区域 ${region}（${REGIONS[region]?.name ?? ''}）：没有提供「${s}」的人`);
+    }
+    report(errs);
+  });
+
+  it('带 service 的人真的放在某个地点上', () => {
+    const errs: string[] = [];
+    for (const n of servers) {
+      const ps = placesOf(n);
+      if (!ps.length) errs.push(`人物 ${n.id}：标了 service，却没有放进任何地点（写进地点的 npcs，或者用 at）`);
+      for (const p of ps) if (!regionOf(p)) errs.push(`人物 ${n.id}：所在的地点「${p}」不存在`);
+    }
+    report(errs);
+  });
+
+  it('服务名副实：医能治伤，宿能歇一宿，兵卖兵器，当收东西给钱，杂卖东西', () => {
+    const errs: string[] = [];
+    for (const n of servers) {
+      const bs = branchesOf(n), w = `人物 ${n.id}（${n.name}）`;
+      for (const s of n.service ?? []) {
+        if (s === '医' && !bs.some(b => has(b, e => e.type === 'cure' || e.type === 'heal'))) errs.push(`${w}：标了「医」，却没有一个分支用 cure 或 heal`);
+        if (s === '宿' && !bs.some(b => has(b, e => e.type === 'heal') && has(b, e => e.type === 'time'))) errs.push(`${w}：标了「宿」，却没有一个分支同时用 heal 和 time（住一宿要回气血、过时辰）`);
+        if (s === '兵') {
+          const sold = bs.flatMap(boughtItems);
+          if (!sold.length) errs.push(`${w}：标了「兵」，却没有一个分支收钱卖东西`);
+          for (const id of sold) if (!ITEMS.find(i => i.id === id)?.equip) errs.push(`${w}：标了「兵」，卖的「${id}」不是兵器（物品要带 equip）`);
+        }
+        // 当铺的「典当」由引擎统一提供（engine/daoju.ts，按买价四成收）；不要再一件一个按钮地写，免得和通用的「典当」重复、价钱对不上
+        if (s === '当' && Object.keys(n.actions).some(v => v !== '典当' && v.startsWith('当'))) errs.push(`${w}：标了「当」就自动有「典当」，不要再写「当某某」这样一件一个的动作`);
+        if (s === '杂' && !bs.some(b => boughtItems(b).length)) errs.push(`${w}：标了「杂」，却没有一个分支收钱卖东西`);
+      }
+      // 没伤的人不该花冤枉钱：收钱治伤的分支要带 wounded: true，没伤的情形另写一个分支
+      bs.forEach(b => { if (pays(b) && has(b, e => e.type === 'cure') && b.if?.wounded !== true) errs.push(`${w}：收钱治伤的分支要带条件 wounded: true，没伤时另写一句「没伤」`); });
+    }
+    // cure 的 levels：不写为全治，写了要是一以上的整数
+    const levels = new Set([...ALL_FX.matchAll(/"type":"cure","levels":([^,}]+)/g)].map(m => m[1]));
+    for (const v of levels) if (!(Number.isInteger(Number(v)) && Number(v) >= 1)) errs.push(`cure 效果的 levels 写成了 ${v}：要是一以上的整数，全治就不写`);
+    report(errs);
   });
 });
 
@@ -590,7 +659,7 @@ describe('后果看得见', () => {
    */
   const DEBT: string[] = [];
   it('写下的旗标都有地方读', () => {
-    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS });
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES });
     const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));
     const read = new Set([...all.matchAll(/(?<!"type":"flag",)"(?:flag|notFlag)":"([^"]+)"/g)].map(m => m[1]));
     const unread = [...set].filter(f => !read.has(f));

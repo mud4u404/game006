@@ -5,16 +5,33 @@
 import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
 import { advanceMin, dayNo } from '../core/time';
-import { pick } from '../core/util';
+import { liang, pick } from '../core/util';
 import { NEWS, jobById, questById, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
-import { canLearn } from './shicheng';
+import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
 import { houtianOf } from './ren';
 import { SHENFEN, jobOpen, jobPay } from './shenfen';
 import { addLilian, questDone } from './lilian';
+import { ZONE_NAME, type Zone } from './duel';
+
+/** 三处伤，最重的先治；一样重时先内息，再手、足（和静修养伤同一个次序，engine/lilian.ts） */
+const ZONES: Zone[] = ['inner', 'hand', 'foot'];
+const isWounded = (): boolean => ZONES.some(z => S.wounds[z] > 0);
+
+/** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）。返回每处治好了几级 */
+function cureWounds(levels = Infinity): Partial<Record<Zone, number>> {
+  const got: Partial<Record<Zone, number>> = {};
+  for (let left = levels; left > 0; left--) {
+    const z = ZONES.slice().sort((a, b) => S.wounds[b] - S.wounds[a])[0];
+    if (S.wounds[z] <= 0) break;
+    S.wounds[z]--;
+    got[z] = (got[z] ?? 0) + 1;
+  }
+  return got;
+}
 
 export function test(c?: Cond): boolean {
   if (!c) return true;
@@ -30,6 +47,8 @@ export function test(c?: Cond): boolean {
   if (c.silver !== undefined && S.silver < c.silver) return false;
   if (c.item && (S.items[c.item.id] || 0) < (c.item.atLeast ?? 1)) return false;
   if (c.noItem && (S.items[c.noItem] || 0) > 0) return false;
+  if (c.wounded !== undefined && isWounded() !== c.wounded) return false;
+  if (c.tired !== undefined && (S.hp < S.hpMax || S.mp < S.mpMax) !== c.tired) return false;
   if (c.rel) {
     const r = S.rel[c.rel.npc] ?? '素不相识';
     if (c.rel.is && !c.rel.is.includes(r)) return false;
@@ -63,6 +82,8 @@ export function test(c?: Cond): boolean {
     if (!d || !canLearn(S, d).ok) return false;
   }
   if (c.sect && (S.sect?.school !== c.sect.school || (c.sect.rank && SECT_RANKS.indexOf(S.sect.rank) < SECT_RANKS.indexOf(c.sect.rank)))) return false;
+  if (c.noSect && S.sect) return false;
+  if (c.pastSect && !pastSectsOf(S).some(x => x.school === c.pastSect!.school && (!c.pastSect!.how || x.how === c.pastSect!.how))) return false;
   if (c.any && !c.any.some(x => test(x))) return false;
   return true;
 }
@@ -99,7 +120,11 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'feedReset': S.feed = []; break;
       case 'toast': emit('toast', e.text); break;
       case 'silver': S.silver = Math.max(0, S.silver + e.delta); break;
-      case 'item': S.items[e.id] = Math.max(0, (S.items[e.id] || 0) + e.delta); break;
+      case 'item':
+        S.items[e.id] = Math.max(0, (S.items[e.id] || 0) + e.delta);
+        // 兵器当了、卖了，手里也就没了
+        if (!S.items[e.id] && S.gear?.weapon === e.id) delete S.gear.weapon;
+        break;
       case 'rel': {
         const cur = S.rel[e.npc] ?? '素不相识';
         if (!e.from || e.from.includes(cur)) S.rel[e.npc] = e.value;
@@ -109,11 +134,18 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'prof': out.breaks.push(...gainProf(e.skill, e.amount)); break;
       case 'lilian': addLilian(S, e.amount); break;
       case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0)); break;
-      // 拜师或升地位，只升不降；身在别派时无效（要先出师或叛门）
-      case 'sect':
-        if (!S.sect) S.sect = { school: e.school, rank: e.rank };
-        else if (S.sect.school === e.school && SECT_RANKS.indexOf(e.rank) > SECT_RANKS.indexOf(S.sect.rank)) S.sect.rank = e.rank;
+      // 拜师或升地位，只升不降；身在别派时无效（要先离开）。叛出、被逐出过这一派的，拜不回去（docs/menpai.md 第七节）
+      case 'sect': {
+        if (S.sect) {
+          if (S.sect.school === e.school && SECT_RANKS.indexOf(e.rank) > SECT_RANKS.indexOf(S.sect.rank)) S.sect.rank = e.rank;
+          break;
+        }
+        const barred = barredFrom(S, e.school);
+        if (barred) { pushFeed('江湖', `你${leaveWord(barred)}过${e.school}，${e.school}的门不会再为你打开。`); break; }
+        S.sect = { school: e.school, rank: e.rank };
         break;
+      }
+      // 离开师门：出师、叛门、逐出都记进来历（engine/shicheng.ts 的 pastSectsOf）
       case 'leaveSect':
         if (S.sect) { (S.pastSects ??= []).push({ school: S.sect.school, how: e.how }); delete S.sect; }
         break;
@@ -137,7 +169,16 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         } else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
         if (e.mp === 'full') S.mp = S.mpMax; else if (typeof e.mp === 'number') S.mp = Math.min(S.mpMax, S.mp + e.mp);
         if (e.hpAtLeast) S.hp = Math.max(S.hp, Math.round(S.hpMax * e.hpAtLeast));
+        // 按上限的几成回（金疮药回三成，和战斗里服药一样）
+        if (e.hpFrac) S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * e.hpFrac));
+        if (e.mpFrac) S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * e.mpFrac));
         break;
+      case 'cure': {
+        const got = cureWounds(e.levels);
+        const done = ZONES.filter(z => got[z]).map(z => `${ZONE_NAME[z]}伤${S.wounds[z] ? `轻了${liang(got[z]!)}级，还剩${liang(S.wounds[z])}级` : '好了'}`);
+        if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
+        break;
+      }
       case 'news': {
         const pool = NEWS.filter(n => test(n.if));
         const n = pick(pool).text;

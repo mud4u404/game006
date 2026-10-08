@@ -1,14 +1,22 @@
 import type { ContentPack, SkillDef } from '../types';
 
 /**
- * 武当的八门武功。文风与数值规则见 docs/wuxue.md。
+ * 武当的九门武功。文风与数值规则见 docs/wuxue.md。
  * id 一律以 wd_ 开头，避免和别的批次重名。修订版（Issue #54）：长拳整门重写、考据订正、描写与机制对齐。
+ *
+ * 武学树（docs/menpai.md 第七节）：
+ *   入门：太和心法（内功）、武当长拳
+ *   外门：梯云纵（太和心法略有小成）、绵掌、神门十三剑（武当长拳融会贯通）
+ *   内门：太极神功（太和心法炉火纯青）、太极拳（太极神功融会贯通、绵掌炉火纯青）
+ *   真传：太极剑（太极神功炉火纯青、太极拳融会贯通）、真武除魔（太极剑登堂入室）
+ * 武当是绵柔加浑厚：卸力、护体、疗伤。不缴械、不打破绽，三连击是迅捷门派的路子。
  */
 const SKILLS: SkillDef[] = [
   {
     id: 'wd_taijishengong', name: '太极神功', grade: '绝品', category: '内功', school: '武当', nature: '中正',
     desc: '武当内功根基，取太极阴阳相生之意。行功时气走圆转，绵绵不绝，外可卸力护体，内可自愈创伤。',
-    learn: '武当掌门亲传，须道心澄明',
+    learn: '武当掌门亲传，须道心澄明', teach: '内门',
+    requires: [{ skill: 'wd_taihe', realm: 3 }],
     passive: [{ kind: 'guard', value: 10 }, { kind: 'heal', value: 7 }],
     combos: [
       { with: '门派:武当', name: '道法自然', text: '你太极神功内息圆转，与身上武当武功浑然相合，举手投足皆合自然之道。', bonus: 5, fx: [{ kind: 'guard', value: 5 }] }
@@ -17,13 +25,21 @@ const SKILLS: SkillDef[] = [
   {
     id: 'wd_tiyunzong', name: '梯云纵', grade: '上品', category: '轻功', school: '武当', nature: '中正',
     desc: '武当轻功，步步如踏云梯，愈上愈轻。传说练成者能在崖壁间纵跃往来，如履平地。',
-    learn: '武当门下弟子皆可学',
+    learn: '武当门下弟子皆可学', teach: '外门',
+    requires: [{ skill: 'wd_taihe', realm: 1 }],
     passive: [{ kind: 'haste', value: 13 }]
+  },
+  {
+    id: 'wd_taihe', name: '太和心法', grade: '良品', category: '内功', school: '武当', nature: '中正',
+    desc: '武当入门的吐纳功夫。武当山古称太和山，取「保合太和」之意：行气不争不抢，周身圆融，挨了打先化后受。太极神功的根脚就在这里。',
+    learn: '武当入门弟子早晚功课', teach: '入门',
+    passive: [{ kind: 'guard', value: 8 }]
   },
   {
     id: 'wd_taijiquan', name: '太极拳', grade: '绝品', category: '拳法', school: '武当', nature: '柔', reach: '徒手',
     desc: '武当绝学，以柔克刚，借力打力。拳势如环，无始无终，敌人的力道愈猛，还给它的劲道愈沉。',
-    learn: '武当掌门亲授，须先通太极神功',
+    learn: '武当掌门亲授，须先通太极神功', teach: '内门',
+    requires: [{ skill: 'wd_taijishengong', realm: 2 }, { skill: 'wd_mianzhang', realm: 3 }],
     moves: [
       { name: '揽雀尾', text: '你双手一捋，将{foe}来势引出，顺势一按，劲发{part}。', wound: '瘀伤' },
       { name: '单鞭', text: '你侧身定势，勾手如鞭、立掌如刀，一臂横展封住{foe}半边攻势，掌沿切其{part}。', wound: '瘀伤' },
@@ -45,7 +61,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'wd_taijijian', name: '太极剑', grade: '绝品', category: '剑法', school: '武当', nature: '柔', reach: '短',
     desc: '武当剑法，剑意绵绵不绝。剑走轻灵，神在剑先，讲究以静制动、后发先至。',
-    learn: '武当掌门亲授，与太极拳同修',
+    learn: '武当掌门亲授，与太极拳同修', teach: '真传',
+    requires: [{ skill: 'wd_taijishengong', realm: 3 }, { skill: 'wd_taijiquan', realm: 2 }],
     moves: [
       { name: '三环套月', text: '你剑尖连环三绕，如三环套月，圈住{foe}来势，剑光不散。', wound: '刺伤' },
       { name: '玉女穿梭', text: '你身形一转，一剑往来穿梭，直刺{foe}{part}。', wound: '刺伤' },
@@ -70,7 +87,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'wd_changquan', name: '武当长拳', grade: '凡品', category: '拳法', school: '武当', nature: '中正', reach: '徒手',
     desc: '武当入门拳法。一套拳便是上山的路：从玄岳门走到金顶，冲、架、劈、砸，一步一拳，都是道家的筋骨。',
-    learn: '武当入门弟子皆学',
+    learn: '武当入门弟子皆学', teach: '入门',
     moves: [
       { name: '玄岳门', text: '你起手推掌，如推开玄岳门，掌风直撞{foe}{part}。', wound: '瘀伤' },
       { name: '遇真宫', text: '你一拳递出复收回，如入遇真宫参拜，礼数里有真劲，{foe}格挡的手臂震得发麻。', wound: '瘀伤' },
@@ -91,7 +108,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'wd_mianzhang', name: '绵掌', grade: '良品', category: '掌法', school: '武当', nature: '柔', reach: '徒手',
     desc: '武当掌法，掌力绵软，以柔化劲。出手看似无力，中掌者当时不觉；真被缠上，后劲一浪浪涌来，越挣扎越是吃亏。',
-    learn: '武当门下二三代弟子传授',
+    learn: '武当门下二三代弟子传授', teach: '外门',
+    requires: [{ skill: 'wd_changquan', realm: 2 }],
     moves: [
       { name: '绵里藏针', text: '你掌势绵软，指尖却暗藏刚劲，点向{foe}{part}。', wound: '内伤' },
       { name: '软手拂云', text: '你软手轻拂，如拂流云，掌力贴上{foe}{part}。', wound: '瘀伤' },
@@ -111,8 +129,9 @@ const SKILLS: SkillDef[] = [
   },
   {
     id: 'wd_shenmen', name: '神门十三剑', grade: '上品', category: '剑法', school: '武当', nature: '中正', reach: '短',
-    desc: '武当剑法，专刺手腕神门穴。剑走偏锋，一十三剑不离腕脉，中者兵刃脱手。',
-    learn: '武当剑法精要，须过三关',
+    desc: '武当剑法，专刺手腕神门穴。剑走偏锋，一十三剑不离腕脉，中者五指酸麻，兵刃上使不出力气。',
+    learn: '武当剑法精要，须过三关', teach: '外门',
+    requires: [{ skill: 'wd_changquan', realm: 2 }],
     moves: [
       { name: '神门一点', text: '你剑尖一点，正中{foe}腕上神门穴，{foe}五指一麻。', wound: '刺伤' },
       { name: '刺腕截脉', text: '你剑走偏锋，绕过{foe}兵刃，直刺其手腕外侧的脉路。', wound: '刺伤' },
@@ -122,24 +141,25 @@ const SKILLS: SkillDef[] = [
       { name: '柔云绕腕', text: '你剑如柔云绕腕，绕着{foe}手腕转了一圈，剑锋轻轻一割。', wound: '割伤', realm: 3 },
       { name: '剑锁双腕', text: '你剑影一合，封锁{foe}双腕，教他两手都使不上劲。', wound: '刺伤', realm: 3 },
       { name: '一点寒星', text: '你剑尖凝成一点寒星，疾点{foe}{part}。', wound: '刺伤', realm: 4 },
-      { name: '十三连刺', text: '你剑光连闪，一十三剑连绵而出，三剑着肉，余者封路。', wound: '刺伤', realm: 5 }
+      { name: '十三连刺', text: '你剑光连闪，一十三剑连绵而出，两剑着肉，余者封路。', wound: '刺伤', realm: 5 }
     ],
     performs: [
-      { name: '剑锁双腕', text: '你剑影一合，锁住{foe}双腕神门，长剑一震，{foe}兵刃脱手飞出。',
-        mp: 25, cd: 3, hits: 1, dmg: [70, 90], acc: 0.8, fx: [{ kind: 'disarm', rounds: 2 }] },
-      { name: '十三连刺', realm: 5, text: '你剑光连闪，一十三剑连绵刺出，十三剑里有三剑着肉，{foe}{part}血痕点点，破绽尽露。',
-        mp: 65, cd: 3, hits: 3, dmg: [90, 125], acc: 0.78, fx: [{ kind: 'break', value: 8, rounds: 1 }] }
+      { name: '剑锁双腕', text: '你剑影一合，锁住{foe}双腕神门，长剑一震，{foe}虎口发麻，兵刃上的劲力去了大半。',
+        mp: 25, cd: 3, hits: 1, dmg: [80, 100], acc: 0.8, fx: [{ kind: 'weaken', value: 15, rounds: 2 }] },
+      { name: '十三连刺', realm: 5, text: '你剑光连闪，一十三剑连绵刺出，两剑着肉，余下的剑光封住{foe}去路，{foe}手脚都慢了下来。',
+        mp: 60, cd: 2, hits: 2, dmg: [100, 135], acc: 0.78, fx: [{ kind: 'chill', rounds: 2 }] }
     ]
   },
   {
     id: 'wd_zhenwu', name: '真武除魔', grade: '绝品', category: '绝技', school: '武当', nature: '中正',
     desc: '武当剑意的极致。一剑既出，真武荡魔，剑气如江河奔涌，荡尽一切邪祟。',
-    learn: '武当掌门秘传，须剑意大成',
+    learn: '武当掌门秘传，须剑意大成', teach: '真传',
+    requires: [{ skill: 'wd_taijijian', realm: 4 }],
     ult: {
       title: '真武除魔 · 杀招',
-      text: '你长剑指天，周身剑意如江河奔涌，忽而一剑直落——真武荡魔，剑气化作漫天寒光，将{foe}连人带兵刃罩在光里！寒光敛去，{foe}单膝触地，长剑深深拄进青石板，方才没有栽倒。',
-      dmg: [450, 530],
-      fx: [{ kind: 'break', value: 15, rounds: 2 }, { kind: 'weaken', value: 10, rounds: 1 }]
+      text: '你长剑指天，周身剑意如江河奔涌，忽而一剑直落——真武荡魔，剑气化作漫天寒光，将{foe}连人带兵刃罩在光里！寒光敛去，{foe}手脚僵冷，单膝触地，长剑拄进青石板，方才没有栽倒。',
+      dmg: [480, 560],
+      fx: [{ kind: 'chill', rounds: 2 }, { kind: 'weaken', value: 10, rounds: 1 }]
     }
   }
 ];

@@ -8,3 +8,6 @@ dist/
 CODE_WIKI.md
 .trae-html-share-packages/
 .uploads/
+
+# 维护者的助手在这里开独立工作区，不提交
+.claude/worktrees/

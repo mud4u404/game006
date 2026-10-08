@@ -1,11 +1,12 @@
 import { S, pushFeed } from '../core/state';
 import { fmt } from '../core/util';
 import { npc, questById, room } from '../content';
-import type { Cond, NpcDef, Verb } from '../content/types';
+import type { Cond, EyeDef, NpcDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
 import { advanceMin, shichen } from '../core/time';
 import { attrEffects } from './gengu';
-import { warmer } from './renqing';
+import { eyesOn } from './yan';
+import { giveGift, isPawnshop, pawn } from './daoju';
 
 const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
   (list || []).filter(x => typeof x === 'string' || test(x.if)).map(x => (typeof x === 'string' ? x : x.id));
@@ -65,8 +66,12 @@ export function npcName(id: string): string {
   return n.altName && test(n.altName.if) ? n.altName.name : n.name;
 }
 
-/** 人物此刻能点的动作：带 if 的只在条件成立时出现 */
-export const verbsOf = (n: NpcDef): Verb[] => n.verbs.flatMap(v => (typeof v === 'string' ? [v] : test(v.if) ? [v.verb] : []));
+/** 人物此刻能点的动作：带 if 的只在条件成立时出现；当铺（service 有「当」）自动有「典当」 */
+export function verbsOf(n: NpcDef): Verb[] {
+  const vs = n.verbs.flatMap(v => (typeof v === 'string' ? [v] : test(v.if) ? [v.verb] : []));
+  if (isPawnshop(n) && !vs.includes('典当')) vs.push('典当');
+  return vs;
+}
 
 /** 对人物或物品做一个动作，返回要显示的文字和产生的后果 */
 /** 实际赶路的分钟数：身法好的人走得快（engine/gengu.ts） */
@@ -82,19 +87,19 @@ const DEFAULT_MIN = 10;
 /** 天色转换时记一句见闻 */
 const DUSK: Record<string, string> = { 酉时: '日头偏西，天色向晚。', 戌时: '天黑了，街上点起了灯。', 子时: '夜深了，四下里静悄悄的。', 卯时: '天蒙蒙亮了。' };
 
-/** 对人物、物件做一个动作：执行分支，再按动作花掉时间 */
-export function act(id: string, verb: Verb): { text: string; out: Outcome } {
-  const r = doAct(id, verb);
+/** 对人物、物件做一个动作：执行分支，再按动作花掉时间。arg 是赠礼、典当时挑的那件道具 */
+export function act(id: string, verb: Verb, arg?: string): { text: string; out: Outcome; eyes: EyeDef[] } {
+  const r = doAct(id, verb, arg);
   if (!r.timed && !r.out.fight && !r.out.story && npc(id)) {
     const before = shichen(S.min);
     advanceMin(S, VERB_MIN[verb] ?? DEFAULT_MIN);
     const now = shichen(S.min);
     if (now !== before && DUSK[now]) pushFeed('江湖', DUSK[now]);
   }
-  return { text: r.text, out: r.out };
+  return { text: r.text, out: r.out, eyes: r.eyes ?? [] };
 }
 
-function doAct(id: string, verb: Verb): { text: string; out: Outcome; timed?: boolean } {
+function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outcome; timed?: boolean; eyes?: EyeDef[] } {
   const n = npc(id);
   if (!n) return { text: '', out: newOutcome() };
   if (verb === '观察') {
@@ -102,7 +107,10 @@ function doAct(id: string, verb: Verb): { text: string; out: Outcome; timed?: bo
     const b = pickBranch(n.actions['观察']);
     const out = b ? run(b.do) : newOutcome();
     const more = b?.text ? '\n' + fmt(b.text, { ...textVars(), ...out.vars }) : '';
-    return { text: fmt(n.look, textVars()) + more, out, timed: b?.do?.some(e => e.type === 'time') };
+    // 根基之眼：根基够了，多看出一层（engine/yan.ts）；看见的同时写下的旗标，解锁别处的做法
+    const eyes = eyesOn({ npc: id });
+    for (const e of eyes) run(e.do, out);
+    return { text: fmt(n.look, textVars()) + more, out, timed: b?.do?.some(e => e.type === 'time'), eyes };
   }
   const b = pickBranch(n.actions[verb as keyof typeof n.actions]);
   if (b) {
@@ -112,13 +120,9 @@ function doAct(id: string, verb: Verb): { text: string; out: Outcome; timed?: bo
   const who = npcName(id);
   const out = newOutcome();
   switch (verb) {
-    case '赠礼':
-      if ((S.items.flower || 0) > 0) {
-        S.items.flower--;
-        S.rel[id] = warmer(S.rel[id]);
-        return { text: n.gift || `${who}收下了杏花，神色和缓了许多。`, out };
-      }
-      return { text: '你身上没有合适的礼物。', out };
+    // 赠礼、典当：从行囊里挑一件（engine/daoju.ts）。送了人物喜欢的，关系升一级
+    case '赠礼': return { text: giveGift(n, who, arg), out };
+    case '典当': return { text: pawn(who, arg), out };
     case '请教': return { text: `${who}摇摇头：「我没什么可教你的。」`, out };
     case '切磋': return { text: `${who}连连摆手：「不敢不敢。」`, out };
     case '偷窃': return { text: `你的手刚伸出去，${who}就警觉地看了过来。你只好装作整理衣襟。`, out };

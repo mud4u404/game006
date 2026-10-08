@@ -4,7 +4,7 @@
  * 2. 人物写了 at 的，放进对应地点。
  * 新增内容只需要在 packs/ 下新建文件，这里不用改。
  */
-import type { ContentPack, EncounterDef, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, SkillDef, StoryDef } from './types';
+import type { ContentPack, EncounterDef, EyeDef, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, SkillDef, StoryDef } from './types';
 
 export { REALMS, REALM_NEED, GRADES, GRADE_COEF, SLOT_CATS, SLOT_NAME } from './skills';
 
@@ -23,6 +23,7 @@ export interface Registry {
   SKILLS: SkillDef[];
   ENCOUNTERS: EncounterDef[];
   JOBS: JobDef[];
+  EYES: EyeDef[];
 }
 
 /** 合并内容包：补回程出口、按 at 放人物 */
@@ -38,7 +39,8 @@ export function mergePacks(list: ContentPack[]): Registry {
     NEWS: list.flatMap(p => p.news || []),
     SKILLS: list.flatMap(p => p.skills || []),
     ENCOUNTERS: list.flatMap(p => p.encounters || []),
-    JOBS: list.flatMap(p => p.jobs || [])
+    JOBS: list.flatMap(p => p.jobs || []),
+    EYES: list.flatMap(p => p.eyes || [])
   };
   const byId = new Map(reg.ROOMS.map(r => [r.id, r]));
   for (const r of reg.ROOMS) {
@@ -59,7 +61,7 @@ export function mergePacks(list: ContentPack[]): Registry {
   return reg;
 }
 
-export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS, SKILLS, ENCOUNTERS, JOBS } = mergePacks(packs);
+export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS, SKILLS, ENCOUNTERS, JOBS, EYES } = mergePacks(packs);
 
 const roomMap = new Map(ROOMS.map(r => [r.id, r]));
 const npcMap = new Map(NPCS.map(n => [n.id, n]));

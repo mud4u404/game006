@@ -79,6 +79,36 @@ describe('存档：更新游戏不丢档', () => {
     expect(migrate(t).gear).toEqual({});
   });
 
+  it('纸娃娃：第四版的旧存档只有兵器一个装备位，照样读得出来，其余五个位置空着', () => {
+    const raw = JSON.parse(FIXTURES['./fixtures/saves/v4-before-zhiwawa.json']);
+    const s = migrate(raw);
+    expect(s.gear).toEqual({ weapon: 'qingfeng' });
+    expect(s.items).toEqual(raw.items);
+    expect(s.hpMax).toBe(hpMaxOf(personOf(s)));
+    expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
+  });
+
+  it('装备位上不对的东西空出来：不认识的位置、放错的位置、行囊里已经没有的、不是道具的', () => {
+    const t = skipToYangzhou();
+    t.items = { ...t.items, zb_douli: 1, zb_pijia: 1 };
+    const raw = { ...JSON.parse(JSON.stringify(t)), gear: { weapon: 'qingfeng', head: 'zb_douli', body: 'zb_douli', feet: 'zb_kuaixue', waist: 'no_such_item', hat: 'zb_douli' } };
+    expect(migrate(raw).gear).toEqual({ weapon: 'qingfeng', head: 'zb_douli' });
+    expect(migrate({ ...raw, gear: null }).gear).toEqual({});
+    expect(migrate({ ...raw, gear: 'qingfeng' }).gear).toEqual({});
+  });
+
+  it('穿着装备的存档：气血上限把护体算进去，反复读档不变', () => {
+    const t = skipToYangzhou();
+    t.items = { ...t.items, zb_pijia: 1 };
+    t.gear = { weapon: 'qingfeng', body: 'zb_pijia' };
+    const s = migrate(JSON.parse(JSON.stringify(t)));
+    expect(s.gear.body).toBe('zb_pijia');
+    expect(personOf(s).gear?.huti).toBe(2);
+    expect(s.hpMax).toBe(hpMaxOf(personOf(s)));
+    expect(s.hpMax).toBeGreaterThan(skipToYangzhou().hpMax);
+    expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
+  });
+
   it('读不出来的存档原样另存，不会被新游戏覆盖掉', () => {
     mem.setItem(KEY, '{坏了');
     const r = readSave();

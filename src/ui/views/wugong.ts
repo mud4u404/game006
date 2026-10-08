@@ -1,7 +1,7 @@
 import { S } from '../../core/state';
 import { cn, liang } from '../../core/util';
 import { GRADES, REALMS, REALM_NEED, SKILLS, SLOT_NAME, itemById, skillById } from '../../content';
-import { CAT_WEAPON, OUTER } from '../../content/skills';
+import { CAT_WEAPON, JIANGHU_RULE, OUTER } from '../../content/skills';
 import type { SkillDef, Slot } from '../../content/types';
 import { RESP, huohou } from '../../engine/formulas';
 import { activeOuter, fits, respSkill, slotSkill, weaponReady } from '../../engine/wuxue';
@@ -72,7 +72,7 @@ export function slotSheet(slot: Slot): string {
   const rows = cands.map(k => {
     const on = k.id === cur;
     const warn = (k.performs?.length || k.ult) && !canPerform(S, k) ? ' · 没有本门内功，绝招使不出' : '';
-    return `<div class="row"><span>${k.name}<small class="muted">${k.grade} · ${REALMS[S.skills[k.id]!.r]} · ${preview(slot, k.id) || '—'}${warn}</small></span>${on ? '<span class="tag accent">在用</span>' : `<button class="act" data-act="slotSet:${slot}:${k.id}">换上</button>`}</div>`;
+    return `<div class="row"><span>${k.name}<small class="muted">${k.grade} · ${schoolName(k)} · ${REALMS[S.skills[k.id]!.r]} · ${preview(slot, k.id) || '—'}${warn}</small></span>${on ? '<span class="tag accent">在用</span>' : `<button class="act" data-act="slotSet:${slot}:${k.id}">换上</button>`}</div>`;
   }).join('');
   return `<div class="r-h"><span class="tag accent">搭配</span><h2>${SLOT_NAME[slot]}</h2></div>
     <p class="muted">${SLOT_ROLE[slot]}。下面的数是换上以后的火候，越高成算越高。</p>
@@ -81,9 +81,11 @@ export function slotSheet(slot: Slot): string {
 }
 
 const kind = (k: SkillDef): string => (OUTER.includes(k.category) ? '外功 · ' + k.category : k.category);
+/** 出处：门派武功写门派（绝招要本门内功打底），江湖散学谁都能学 */
+const schoolName = (k: SkillDef): string => (k.school === JIANGHU_RULE.school ? '江湖散学' : k.school);
 
 function useText(k: SkillDef, realm: number): string {
-  const parts: string[] = [`${k.nature}${k.reach && k.reach !== '徒手' ? ' · ' + k.reach + '兵' : ''}`];
+  const parts: string[] = [schoolName(k), `${k.nature}${k.reach && k.reach !== '徒手' ? ' · ' + k.reach + '兵' : ''}`];
   if (k.performs?.length) parts.push(`绝招 ${k.performs.map(p => (p.realm ?? 0) <= realm ? `「${p.name}」` : `「${p.name}」（${REALMS[p.realm!]}）`).join('')}`);
   if (k.ult) parts.push('杀招 · 怒气满时可用');
   return parts.join(' · ');

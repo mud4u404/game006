@@ -30,6 +30,10 @@ export interface Cond {
   silver?: number;
   item?: { id: string; atLeast?: number };
   noItem?: string;
+  /** 身上有伤（手、足、内息任一处大于零）；写 false 表示没伤。医馆「看伤」用它分有伤、没伤 */
+  /** 气血或内力不满（写 false 表示两样都满）：调养、喝药这类只回气血的，气血满了就别收钱 */
+  tired?: boolean;
+  wounded?: boolean;
   rel?: { npc: string; is?: string[]; not?: string[] };
   learned?: SkillId;
   notLearned?: SkillId;
@@ -54,6 +58,13 @@ export interface Cond {
   canLearn?: SkillId;
   /** 是某门派的弟子（在门中），rank 写了就要求不低于这个地位 */
   sect?: { school: string; rank?: SectRank };
+  /** 眼下没有师门（出过师、叛过门、被逐出的也算没有）。拜师的分支用它：一人一师门，身在别派的要另写一个分支 */
+  noSect?: true;
+  /**
+   * 离开过某派（出师、叛门、逐出），how 写了就只看这一种离开法。眼下还在门中的不算，用 sect。
+   * 拜师的分支先用它拦下叛出、被逐出本门的人：这两种人 sect 效果拜不回去（engine/shicheng.ts 的 barredFrom）
+   */
+  pastSect?: { school: string; how?: LeaveHow };
   any?: Cond[];
 }
 
@@ -73,10 +84,10 @@ export type Effect =
   /** 历练：江湖上的见识与实战，闭关时化为武功进境（engine/lilian.ts）。高人指点、奇遇用它；打架、了结任务由引擎自动给 */
   | { type: 'lilian'; amount: number }
   | { type: 'learn'; skill: SkillId; realm?: number; prof?: number }
-  /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先出师或叛门 */
+  /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先离开；叛出、被逐出过这一派的，拜不回去 */
   | { type: 'sect'; school: string; rank: SectRank }
-  /** 离开师门：出师所学全留；叛门则本门武功境界封顶，门派追杀 */
-  | { type: 'leaveSect'; how: '出师' | '叛门' }
+  /** 离开师门（见 LeaveHow）：出师所学全留，日后还能回来；叛门、逐出则本门武功境界封顶，再也拜不回去 */
+  | { type: 'leaveSect'; how: LeaveHow }
   | { type: 'attr'; key: AttrKey; delta: number }
   | { type: 'xia'; delta: number }
   /** 恶名：与侠义是两条独立的值，不互相抵消 */
@@ -87,7 +98,10 @@ export type Effect =
   /** add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天） */
   | { type: 'time'; add?: number; set?: number }
   | { type: 'weather'; value: string }
-  | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number }
+  /** hpFrac、mpFrac：按上限的几成回，例如金疮药 hpFrac: 0.3 */
+  | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number; hpFrac?: number; mpFrac?: number }
+  /** 治伤（医馆、郎中）：不写 levels 治好全部伤；写了就从最重的那处起，一共减这么多级。治完记一条见闻 */
+  | { type: 'cure'; levels?: number }
   | { type: 'feedReset' }
   /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
   | { type: 'news' }
@@ -143,6 +157,9 @@ export interface RoomDef {
   map: [number, number];
 }
 
+/** 基础服务：医馆（看伤）、客栈（住店）、兵器铺、当铺、杂货铺。tests/content.test.ts「基础设施」按它查各地齐不齐 */
+export type Service = '医' | '宿' | '兵' | '当' | '杂';
+
 export interface NpcDef {
   id: string;
   name: string;
@@ -163,8 +180,13 @@ export interface NpcDef {
   brief: string;
   hint?: string;
   look: string;
-  /** 收到杏花等礼物时的反应，不写则用默认句子 */
+  /** 收到喜欢的礼物（likes 里的）时的反应，不写则用默认句子 */
   gift?: string;
+  /** 喜欢的道具 id：「赠礼」送对了关系升一级，送别的只是客气收下（docs/zhuangbei.md 第四节） */
+  likes?: string[];
+  /** 做什么营生：医馆、客栈、兵器铺、当铺、杂货。CI 按它查各地齐不齐（tests/content.test.ts「基础设施」）。
+   * 带「当」的人物自动有「典当」动作（engine/daoju.ts，按买价四成收），不用写进 verbs；其余服务写在动作里 */
+  service?: Service[];
   /** 动作列表的顺序。带 if 的动作只在条件成立时出现，例如真相揭开后才有的「求情」，免得按钮先剧透 */
   verbs: (Verb | { verb: Verb; if: Cond })[];
   actions: Partial<Record<Verb, Branch[]>>;
@@ -307,6 +329,15 @@ export type SkillCategory =
 export type SkillTeach = '入门' | '外门' | '内门' | '真传' | '奇遇';
 /** 门内地位：记名弟子 → 外门 → 内门 → 真传 */
 export type SectRank = '记名' | '外门' | '内门' | '真传';
+/**
+ * 怎样离开师门（docs/menpai.md 第七节）：
+ * 出师，做到真传、师父点头，所学全留，日后还能回来；
+ * 叛门，自己叛出，门派追杀，本门武功境界封顶，再也拜不回去；
+ * 逐出，犯了门规被师门除名，本门武功境界封顶，同样拜不回去，只是不追杀。
+ */
+export type LeaveHow = '出师' | '叛门' | '逐出';
+/** 离开过的一个师门 */
+export interface PastSect { school: string; how: LeaveHow }
 /** 性质相克：柔克刚、刚克阴、阴克阳、阳克柔；中正不克也不被克 */
 export type SkillNature = '刚' | '柔' | '阴' | '阳' | '中正';
 /** 兵器长短：一寸长一寸强，一寸短一寸险 */
@@ -429,10 +460,54 @@ export interface SkillDef {
   roots?: string[];
 }
 
+/* ---------- 道具与装备（docs/zhuangbei.md 第三到第五节） ---------- */
+
+/**
+ * 道具的类，决定行囊里能对它做什么：
+ * 药服用（战斗中也能），酒食饮用、请人喝，装备穿戴、典当，信物（含线索）只能细看、不卖不送，杂物赠人、典当。
+ */
+export type ItemKind = '药' | '酒食' | '装备' | '信物' | '杂物';
+/** 纸娃娃的六个装备位 */
+export type GearSlot = '兵器' | '冠' | '衣' | '靴' | '佩' | '饰';
+/** 装备的品级：凡品到神品（没有禁品） */
+export type GearGrade = Exclude<SkillGrade, '禁品'>;
+/**
+ * 装备的数值：小，锦上添花，一件神兵不能让三流打赢一流。
+ * 每件的上限按装备位和品级定（engine/zhuangbei.ts 的 GEAR_POINTS），tests/daoju.test.ts 校验。
+ */
+export interface GearStats {
+  /** 出手：伤害多百分之几（兵器） */
+  chushou?: number;
+  /** 护体：挨打的伤害少百分之几上下（衣、冠）。和根骨、功力的护体一样，并进气血上限 */
+  huti?: number;
+  /** 闪避：躲开普通出手的几率多几个百分点（靴、冠） */
+  shanbi?: number;
+  /** 内力上限多几点（佩） */
+  neili?: number;
+  /** 后天根基多几点（靴、佩、饰）：火候、检定都算 */
+  attr?: Partial<Record<AttrKey, number>>;
+}
+export interface EquipDef {
+  slot: GearSlot;
+  /** 兵器位必填：兵器的类型（剑法配剑……）、长短 */
+  weapon?: WeaponKind;
+  reach?: SkillReach;
+  /** 品级，数值的上限跟着它；没有数值的（信物、寻常兵器）可以不写 */
+  grade?: GearGrade;
+  stats?: GearStats;
+}
+
 export interface ItemDef {
-  id: string; name: string; desc: string; usable?: boolean; hidden?: boolean;
-  /** 能装备的兵器（纸娃娃的其余装备位见 docs/zhuangbei.md 第三节，以后再加） */
-  equip?: { slot: '兵器'; weapon: WeaponKind; reach: SkillReach };
+  id: string; name: string; desc: string; hidden?: boolean;
+  kind: ItemKind;
+  /** 服用、饮用的效果（药、酒食必写）：例如 { type: 'heal', hpFrac: 0.3 } 回三成气血 */
+  use?: Effect[];
+  /** 能穿戴：装备位、兵器类型和长短、品级、数值 */
+  equip?: EquipDef;
+  /** 买价，单位文。当铺按四成收；信物不写（不卖） */
+  price?: number;
+  /** 细看：先显示 desc，再接上第一个条件成立的分支（线索随剧情变化，和人物的「观察」一样） */
+  look?: Branch[];
 }
 
 export interface QuestDef {
@@ -525,6 +600,26 @@ export interface JobDef {
   k?: number;
 }
 
+/**
+ * 根基之眼（docs/foundation.md 第三节第一条第二款）：交手以外，每种根基读到不同的东西。
+ * 后天根基够了，场景描写下面、观察人物时，多出一行带根基名的话；可以顺手写下旗标，解锁别的做法
+ * （例如体魄好的人看得出屠千山左臂有旧伤，不必去问船夫）。
+ * 只写在关键场面上；一处至少写两种根基，偏科的人也总有自己看得出的那一层。写在自己的内容包里，不必改别人的文件。
+ */
+export interface EyeDef {
+  /** 挂在哪里：地点（场景描写下面）或者人物、物件（观察时），二选一 */
+  room?: string;
+  npc?: string;
+  attr: AttrKey;
+  /** 后天根基不低于这个数才看得出（常人二十，上限五十）：二十四上下是比常人强一截，三十以上是出类拔萃 */
+  atLeast: number;
+  if?: Cond;
+  /** 看出来的东西，主语用「你」，写具体的细节，不写「你觉得他不简单」这类空话 */
+  text: string;
+  /** 看见时执行（只用在人物、物件上，观察时执行），通常是写一个旗标，解锁别处的做法 */
+  do?: Effect[];
+}
+
 export interface ContentPack {
   regions?: Record<string, RegionDef>;
   rooms?: RoomDef[];
@@ -537,4 +632,5 @@ export interface ContentPack {
   skills?: SkillDef[];
   encounters?: EncounterDef[];
   jobs?: JobDef[];
+  eyes?: EyeDef[];
 }

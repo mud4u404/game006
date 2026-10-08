@@ -150,8 +150,8 @@ const pack: ContentPack = {
   rooms: ROOMS,
   npcs: NPCS,
   items: [
-    { id: 'mujian', name: '小木剑', desc: '江伯削给你的小木剑，剑柄被你小时候攥得发亮。' },
-    { id: 'fangzi', name: '江伯的药方', desc: '回春堂掌柜留着的旧方子，字迹清瘦，是江伯的手笔。' }
+    { id: 'mujian', name: '小木剑', kind: '信物', desc: '江伯削给你的小木剑，剑柄被你小时候攥得发亮。' },
+    { id: 'fangzi', name: '江伯的药方', kind: '信物', desc: '回春堂掌柜留着的旧方子，字迹清瘦，是江伯的手笔。' }
   ]
 };
 export default pack;
