@@ -53,7 +53,8 @@ export interface GameState {
   /** 师门：同一时间只有一个，见 docs/menpai.md 第七节 */
   sect?: { school: string; rank: SectRank };
   /** 离开过的师门 */
-  pastSects?: { school: string; how: '出师' | '叛门' }[];
+  /** 离开过的师门：出师的回得去，叛门、被逐出的回不去（engine/shicheng.ts） */
+  pastSects?: { school: string; how: '出师' | '叛门' | '逐出' }[];
   /** 功力（年）：一年一百点内力，靠静修的岁月熬（engine/ren.ts） */
   gongli: number;
   /** 身上的伤：手、足、内息各几级（零到三）。吃了重招才落下，打完才起作用，带到下一场；静修、歇息养好 */

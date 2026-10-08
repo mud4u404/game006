@@ -8,7 +8,7 @@ import { advanceMin, dayNo } from '../core/time';
 import { liang, pick } from '../core/util';
 import { NEWS, jobById, questById, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
-import type { Branch, Cond, Effect, PastSect } from '../content/types';
+import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
@@ -145,9 +145,9 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         S.sect = { school: e.school, rank: e.rank };
         break;
       }
-      // 离开师门：出师、叛门、逐出都记进来历。state.ts 的 pastSects 类型还没写上逐出，这里按 PastSect 记（见 engine/shicheng.ts 的 pastSectsOf）
+      // 离开师门：出师、叛门、逐出都记进来历（engine/shicheng.ts 的 pastSectsOf）
       case 'leaveSect':
-        if (S.sect) { ((S.pastSects ??= []) as PastSect[]).push({ school: S.sect.school, how: e.how }); delete S.sect; }
+        if (S.sect) { (S.pastSects ??= []).push({ school: S.sect.school, how: e.how }); delete S.sect; }
         break;
       case 'attr': growAttr(S, e.key, e.delta, '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;
