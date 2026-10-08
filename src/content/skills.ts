@@ -14,6 +14,12 @@ export const GRADES: [SkillGrade, string][] = [['凡品', 'fan'], ['良品', 'li
  * 境界的分量远大于品级：凡品练到「出神入化」（45）远胜上品停在「融会贯通」（22）。
  */
 export const GRADE_COEF: Record<SkillGrade, number> = { 凡品: 0.9, 良品: 1, 上品: 1.12, 绝品: 1.26, 神品: 1.42, 禁品: 1.6 };
+/**
+ * 学一门新武功要拿多少历练去换（负责人 10-08：「这个世界大多是有条件有代价的，极少存在唾手可得的东西」）。
+ * 历练本是闭关时化成功夫的见识：学新的，就少了练旧的。打赢一个不入流的对手一百，每高一档约翻一倍（engine/lilian.ts）。
+ * 剧情、奇遇里给的，在效果上写明 lilian（代价写在剧情里，例如江伯临终所传）。
+ */
+export const LEARN_LILIAN: Record<SkillGrade, number> = { 凡品: 40, 良品: 100, 上品: 250, 绝品: 600, 神品: 1500, 禁品: 1500 };
 
 /** 拳脚：徒手功夫 */
 export const FIST: SkillCategory[] = ['拳法', '掌法', '指法', '爪法', '腿法', '手法'];

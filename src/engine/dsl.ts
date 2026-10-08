@@ -157,7 +157,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       }
       case 'prof': out.breaks.push(...gainProf(e.skill, e.amount)); break;
       case 'lilian': addLilian(S, e.amount); break;
-      case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0)); break;
+      case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0, e.lilian)); break;
       // 拜师或升地位，只升不降；身在别派时无效（要先离开）。叛出、被逐出过这一派的，拜不回去（docs/menpai.md 第七节）
       case 'sect': {
         if (S.sect) {

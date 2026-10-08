@@ -3,14 +3,18 @@
  * 规则见 docs/menpai.md 第七节。
  */
 import { REALMS, SKILLS, skillById } from '../content';
-import { JIANGHU_RULE, ROOTED_CATS, ROOT_ANY, SCHOOL_STYLE, SECT_RANKS, TEACH_RANK } from '../content/skills';
+import { JIANGHU_RULE, LEARN_LILIAN, ROOTED_CATS, ROOT_ANY, SCHOOL_STYLE, SECT_RANKS, TEACH_RANK } from '../content/skills';
 import type { LeaveHow, PastSect, SkillDef } from '../content/types';
 import type { GameState } from '../core/state';
 import { houtianOf } from './ren';
 
-type St = Pick<GameState, 'skills' | 'attr' | 'loadout' | 'sect' | 'pastSects' | 'gear' | 'gongli' | 'name'>;
+type St = Pick<GameState, 'skills' | 'attr' | 'loadout' | 'sect' | 'pastSects' | 'gear' | 'gongli' | 'name'> & { lilian?: number };
 
-export type LearnCheck = { ok: true } | { ok: false; why: string };
+/** 学不成的原因；short 是只差历练的时候还差多少（师父肯教，你见识不够） */
+export type LearnCheck = { ok: true } | { ok: false; why: string; short?: number };
+
+/** 学这门武功要拿多少历练去换（content/skills.ts 的 LEARN_LILIAN） */
+export const learnCost = (def: Pick<SkillDef, 'grade'>): number => LEARN_LILIAN[def.grade] ?? 0;
 
 const rankIdx = (r: string): number => SECT_RANKS.indexOf(r as never);
 
@@ -29,8 +33,11 @@ export function barredFrom(s: { pastSects?: readonly PastSect[] }, school: strin
 /** 怎么离开的，写给人看的说法：「出师于」「叛出」「被逐出」，后面接门派名 */
 export const leaveWord = (how: LeaveHow): string => (how === '出师' ? '出师于' : how === '叛门' ? '叛出' : '被逐出');
 
-/** 学得了吗：门规 → 师门地位 → 前置武学 → 属性门槛 */
-export function canLearn(s: St, def: SkillDef): LearnCheck {
+/**
+ * 学得了吗：门规 → 师门地位 → 前置武学 → 属性门槛 → 历练够不够（学艺的代价）。
+ * cost 是这一回要拿多少历练去换，不写按品级（剧情、奇遇给的写 0）
+ */
+export function canLearn(s: St, def: SkillDef, cost: number = learnCost(def)): LearnCheck {
   const sect = s.sect;
   const jianghu = def.school === JIANGHU_RULE.school;
   // 寒江一脉是主角的家学，不受别派门规限制（docs/decisions.md）：拜过严门的人，主线里照样学得到
@@ -55,6 +62,8 @@ export function canLearn(s: St, def: SkillDef): LearnCheck {
   for (const [k, v] of Object.entries(def.needAttr || {})) {
     if ((h[k as keyof St['attr']] ?? 0) < (v ?? 0)) return { ok: false, why: `${k}不够，至少要 ${v}` };
   }
+  const have = Math.floor(s.lilian ?? 0);
+  if (have < cost) return { ok: false, why: `见识还浅：学「${def.name}」要历练 ${cost}，你眼下只有 ${have}。去江湖上走一走、打几场硬仗再来`, short: cost - have };
   return { ok: true };
 }
 

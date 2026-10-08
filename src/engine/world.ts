@@ -1,7 +1,7 @@
 import { S, pushFeed } from '../core/state';
 import { fmt } from '../core/util';
-import { npc, questById, room } from '../content';
-import type { Cond, EyeDef, NpcDef, Verb } from '../content/types';
+import { npc, questById, room, skillById } from '../content';
+import type { Branch, Cond, EyeDef, NpcDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
 import { advanceMin, shichen } from '../core/time';
 import { attrEffects } from './gengu';
@@ -9,6 +9,7 @@ import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
 import { dating, panwen, seeShi } from './shishi';
 import { shenfenOf } from './shenfen';
+import { canLearn } from './shicheng';
 
 /** 此刻在场的：带条件的（作息、剧情）按条件挑；同一人写了几处作息的，只算一次 */
 const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
@@ -121,10 +122,12 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
     for (const e of eyes) run(e.do, out);
     return { text: fmt(n.look, textVars()) + more, out, timed: b?.do?.some(e => e.type === 'time'), eyes };
   }
-  const b = pickBranch(n.actions[verb as keyof typeof n.actions]);
+  const bs = n.actions[verb as keyof typeof n.actions];
+  const b = pickBranch(bs);
   if (b) {
+    const short = lilianShort(bs, b);
     const out = run(b.do);
-    return { text: fmt(b.text ?? '', { ...textVars(), ...out.vars }), out, timed: b.do?.some(e => e.type === 'time') };
+    return { text: fmt(b.text ?? '', { ...textVars(), ...out.vars }) + (short ? `\n（${short}）` : ''), out, timed: b.do?.some(e => e.type === 'time') };
   }
   const who = npcName(id);
   const out = newOutcome();
@@ -141,6 +144,25 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
     case '偷窃': return { text: `你的手刚伸出去，${who}就警觉地看了过来。你只好装作整理衣襟。`, out };
     default: return { text: `${who}没有理你。`, out };
   }
+}
+
+/**
+ * 前头有一条教武功的分支，只差历练没学成（师父肯教，你见识不够）：说一声还差多少，
+ * 不然玩家只听到师父一句推托，不知道该去做什么
+ */
+function lilianShort(bs: Branch[] | undefined, picked: Branch): string {
+  for (const b of bs ?? []) {
+    if (b === picked) break;
+    const id = b.if?.canLearn;
+    const def = id ? skillById(id) : undefined;
+    if (!def || S.skills[def.id]) continue;
+    const r = canLearn(S, def);
+    if (r.ok || !r.short) continue;
+    const rest = { ...b.if };
+    delete rest.canLearn;
+    if (test(rest)) return r.why;
+  }
+  return '';
 }
 
 /** 进入地点时的触发 */

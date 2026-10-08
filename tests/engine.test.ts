@@ -93,10 +93,20 @@ describe('世界', () => {
     const { text } = act('yaopu', '购买');
     expect(text).toContain('一文都不能少');
   });
-  it('请教棋痴：没学过惊鸿剑时习得', () => {
+  it('请教棋痴：悟性、历练都够才悟得出惊鸿剑，拿历练去换；不够的看不懂，告诉你还差什么', () => {
     delete S.skills.jinghong;
+    S.lilian = 0;
+    S.attr.悟性 = 40;
+    expect(act('qichi', '请教').text).toContain('历练 250');
+    expect(S.skills.jinghong).toBeUndefined();
+    S.lilian = 300;
+    S.attr.悟性 = 20;
+    expect(act('qichi', '请教').text).toContain('看不懂');
+    expect(S.skills.jinghong).toBeUndefined();
+    S.attr.悟性 = 40;
     act('qichi', '请教');
     expect(S.skills.jinghong).toEqual({ r: 0, p: 120 });
+    expect(S.lilian).toBe(50);
   });
 });
 
@@ -289,7 +299,7 @@ describe('师承与前置', () => {
     const xingxiu = fake({ school: '星宿', teach: '奇遇' });
     S.sect = { school: '少林', rank: '内门' };
     expect(canLearn(S, wudang)).toMatchObject({ ok: false, why: expect.stringContaining('门规森严') });
-    expect(canLearn(S, SKILLS.find(k => k.id === 'jinghong')!).ok).toBe(true);
+    expect(canLearn(S, SKILLS.find(k => k.id === 'jh_taizu')!).ok).toBe(true);
     S.sect = { school: '丐帮', rank: '内门' };
     expect(canLearn(S, wudang).ok).toBe(true);
     expect(canLearn(S, xingxiu)).toMatchObject({ ok: false, why: expect.stringContaining('禁修阴毒') });
@@ -303,8 +313,23 @@ describe('师承与前置', () => {
     expect(S.skills.duanshui).toBeUndefined();
     expect(S.feed[0].x).toContain('根基未到');
     S.skills.hanjiang = { r: 0, p: 0 };
+    // 学艺有代价：断水是绝品，要拿六百历练去换（content/skills.ts 的 LEARN_LILIAN）
+    S.lilian = 599;
+    expect(cond({ canLearn: 'duanshui' })).toBe(false);
+    expect(learnSkill('duanshui')).toEqual([]);
+    expect(S.feed[0].x).toContain('见识还浅');
+    S.lilian = 650;
     expect(cond({ canLearn: 'duanshui' })).toBe(true);
     expect(learnSkill('duanshui')).toEqual(['习得「断水」']);
+    expect(S.lilian).toBe(50);
+  });
+
+  it('剧情、奇遇里写明了代价的，不花历练', () => {
+    delete S.skills.duanshui;
+    S.lilian = 0;
+    run([{ type: 'learn', skill: 'duanshui', lilian: 0 }]);
+    expect(S.skills.duanshui).toBeDefined();
+    expect(S.lilian).toBe(0);
   });
 
   it('拜师、升地位只升不降，身在别派时拜不了；出师、叛门都记下来', () => {

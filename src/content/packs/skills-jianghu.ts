@@ -44,6 +44,8 @@ const SKILLS: SkillDef[] = [
     id: 'jh_bagua', name: '八卦掌', grade: '上品', category: '掌法', school: '江湖', nature: '柔', reach: '徒手',
     desc: '走转换掌的功夫。绕圈走转，掌随步换，八八六十四路掌法藏在身法里，打人只在一转身。',
     learn: '八卦掌门名家各有师承，游学可遇',
+    // 走转换掌，先得有拳脚的底子
+    requires: [{ skill: 'jh_taizu', realm: 2 }],
     moves: [
       { name: '乾三连', text: '你三掌连绵推出，一气不断，如乾三连，尽落{foe}{part}。', wound: '瘀伤' },
       { name: '坤六断', text: '你六掌断续而出，忽轻忽重，如坤六断，{foe}捉摸不定，{part}已着了一掌。', wound: '瘀伤' },

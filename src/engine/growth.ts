@@ -3,7 +3,7 @@ import { emit } from '../core/bus';
 import { REALMS, REALM_NEED, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { autoSlot } from './wuxue';
-import { canLearn, realmCap, rootHint } from './shicheng';
+import { canLearn, realmCap, rootHint, learnCost } from './shicheng';
 import { profMul } from './gengu';
 import { syncBody } from './ren';
 
@@ -47,12 +47,16 @@ export function gainProf(id: SkillId, n: number): string[] {
   return out;
 }
 
-/** 习得新武功；已经会的则改为增加熟练度。前置、师门、门规不满足时学不成（见 docs/menpai.md 第七节） */
-export function learnSkill(id: SkillId, realm = 0, prof = 0): string[] {
+/**
+ * 习得新武功；已经会的则改为增加熟练度。前置、师门、门规不满足、历练不够时学不成（见 docs/menpai.md 第七节）。
+ * 学成了，拿历练去换（content/skills.ts 的 LEARN_LILIAN）；cost 不写按品级，剧情、奇遇给的写 0
+ */
+export function learnSkill(id: SkillId, realm = 0, prof = 0, cost?: number): string[] {
   if (S.skills[id]) return gainProf(id, prof);
   const sk = skillById(id);
   if (!sk) return [];
-  const can = canLearn(S, sk);
+  const price = cost ?? learnCost(sk);
+  const can = canLearn(S, sk, price);
   if (!can.ok) {
     const msg = `想学「${sk.name}」，可是${can.why}`;
     pushFeed('江湖', msg + '。');
@@ -60,10 +64,11 @@ export function learnSkill(id: SkillId, realm = 0, prof = 0): string[] {
     return [];
   }
   S.skills[id] = { r: realm, p: prof };
+  S.lilian = Math.max(0, (S.lilian ?? 0) - price);
   autoSlot(S, sk);
   const msg = `习得「${sk.name}」`;
-  pushFeed('突破', msg + '！');
-  emit('toast', msg + '！');
+  pushFeed('突破', msg + (price ? `！拿历练 ${price} 换的。` : '！'));
+  emit('toast', msg + (price ? `！历练 −${price}` : '！'));
   // 学到本门内功，内功位上却还是别的内功：记一条见闻，换不换由玩家定
   const hint = rootHint(S, sk);
   if (hint) pushFeed('江湖', hint);

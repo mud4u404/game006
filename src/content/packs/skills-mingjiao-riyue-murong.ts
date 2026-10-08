@@ -41,6 +41,8 @@ const SKILLS: SkillDef[] = [
     desc: '刻在圣火令上的波斯武功，招式古怪诡谲，全然不合中原武学的路数，教人无从捉摸。',
     learn: '波斯圣火令原件，唯教中高层得见',
     teach: '奇遇',
+    // 令上的武功古怪，没有圣火心法打底，看了也只是几块铁牌
+    requires: [{ skill: 'mr_shenghuoxinfa', realm: 3 }],
     needAttr: { 悟性: 28 },
     moves: [
       { name: '熊熊圣火', text: '你令刃翻飞，招势如烈焰腾起，扫向{foe}{part}。', wound: '割伤' },

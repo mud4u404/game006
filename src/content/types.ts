@@ -89,7 +89,8 @@ export type Effect =
   | { type: 'prof'; skill: SkillId; amount: number }
   /** 历练：江湖上的见识与实战，闭关时化为武功进境（engine/lilian.ts）。高人指点、奇遇用它；打架、了结任务由引擎自动给 */
   | { type: 'lilian'; amount: number }
-  | { type: 'learn'; skill: SkillId; realm?: number; prof?: number }
+  /** 学会一门武功，拿历练去换（content/skills.ts 的 LEARN_LILIAN，按品级）。剧情、奇遇里给的写明 lilian（多半是 0，代价写在剧情里） */
+  | { type: 'learn'; skill: SkillId; realm?: number; prof?: number; lilian?: number }
   /** 拜入门派，或在本门升到某个地位（只升不降）；身在别派时无效，要先离开；叛出、被逐出过这一派的，拜不回去 */
   | { type: 'sect'; school: string; rank: SectRank }
   /** 离开师门（见 LeaveHow）：出师所学全留，日后还能回来；叛门、逐出则本门武功境界封顶，再也拜不回去 */

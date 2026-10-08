@@ -73,7 +73,8 @@ const STORIES: StoryDef[] = [
       gains: ['半块玉佩', '断水残页', '习得绝技「断水」· 初窥门径'],
       choices: [{ label: '掩埋江伯', do: [
         { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 },
-        { type: 'learn', skill: 'duanshui', realm: 0, prof: 10 }
+        // 江伯临终所传：不花历练，代价是江伯的命（content/skills.ts 的 LEARN_LILIAN）
+        { type: 'learn', skill: 'duanshui', realm: 0, prof: 10, lilian: 0 }
       ] }] },
     { tag: '序章', title: '天明',
       paras: [

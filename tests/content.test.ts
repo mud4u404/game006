@@ -8,7 +8,7 @@ import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
 import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from './style-rules';
-import { ACTIVE_MAX, EFFICIENCY_BAND, JIANGHU_RULE, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
+import { ACTIVE_MAX, EFFICIENCY_BAND, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
 import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
 import { REL_WORDS } from '../src/engine/renqing';
 import { SHENFEN } from '../src/engine/shenfen';
@@ -109,7 +109,9 @@ function checkBranches(bs: Branch[] | undefined, where: string, errs: string[], 
     for (const e of b.do || []) {
       if (e.type !== 'learn') continue;
       const k = SKILLS.find(x => x.id === e.skill);
-      if (k && k.school !== JIANGHU_RULE.school && b.if?.canLearn !== e.skill) errs.push(`${where}[${i}]：教「${k.name}」的分支要带条件 canLearn: '${e.skill}'，学不成的情形另写一个分支`);
+      // 学艺有代价（content/skills.ts 的 LEARN_LILIAN）：教武功的分支带 canLearn，学不成的另写一个分支；江湖散学也一样。
+      // 剧情、奇遇里白给的，写明 lilian，把代价写进剧情
+      if (k && b.if?.canLearn !== e.skill && e.lilian === undefined) errs.push(`${where}[${i}]：教「${k.name}」的分支要带条件 canLearn: '${e.skill}'（历练、前置、师门都由它把关），学不成的情形另写一个分支；剧情里白给的写明 lilian`);
     }
   });
   if (needFallback && bs.length && bs[bs.length - 1].if) errs.push(`${where}：最后一个分支必须不带 if，保证总有回应`);

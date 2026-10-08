@@ -280,8 +280,11 @@ const NPCS: NpcDef[] = [
       ],
       请教: [
         { if: { flag: 'qichi' }, text: '「去去去，别挡着我的光。」' },
-        { if: { notLearned: 'jinghong' }, text: '老人指着棋盘：「这一子，退一步，海阔天空。」你盯着那局残棋看了半晌，三道剑光忽然在眼前连成一线——你竟从棋局里悟出了一套剑法。',
-          do: [{ type: 'flag', flag: 'qichi' }, { type: 'learn', skill: 'jinghong', realm: 0, prof: 120 }] },
+        // 残局里藏着剑意：悟性够、见识够（历练）的人才悟得出来，还要对着棋盘熬上半日
+        { if: { notLearned: 'jinghong', canLearn: 'jinghong' }, text: '老人指着棋盘：「这一子，退一步，海阔天空。」你盯着那局残棋，从晌午看到日头偏西，三道剑光忽然在眼前连成一线——你竟从棋局里悟出了一套剑法。',
+          do: [{ type: 'flag', flag: 'qichi' }, { type: 'time', add: 240 }, { type: 'learn', skill: 'jinghong', realm: 0, prof: 120 }] },
+        { if: { notLearned: 'jinghong' }, text: '老人指着棋盘：「这一子，退一步，海阔天空。」你盯着那局残棋看了一个时辰，只看得黑白交错，眼睛发酸。老人头也不抬：「看不懂，就是火候没到。悟性不够的看一辈子也是棋；悟性够了，还得在江湖上碰过壁，才认得出棋里的剑。」',
+          do: [{ type: 'time', add: 120 }] },
         { text: '老人指着棋盘：「这一子，退一步，海阔天空。」你望着那局残棋，忽觉「惊鸿照影」的第三剑，原来可以先退后进。',
           do: [{ type: 'flag', flag: 'qichi' }, { type: 'prof', skill: 'jinghong', amount: 120 }] }
       ]
