@@ -5,7 +5,7 @@
 import { setState, type GameState } from '../core/state';
 import { migrate, readSave, replaceSave, summary } from '../core/save';
 import { $ } from '../core/util';
-import { CloudError, archive, history, pull, session, signIn, signOut, signUp, type CloudSave } from '../net/cloud';
+import { CloudError, archive, cloudEnabled, history, pull, session, signIn, signOut, signUp, type CloudSave } from '../net/cloud';
 import { decide, lastSyncedFp, markSynced, pushNow, setLatest } from '../net/sync';
 import { closeSheet, openSheet, registerHandlers, render, toast } from './shell';
 import { showTitle } from './story';
@@ -45,6 +45,8 @@ async function auth(kind: 'in' | 'up'): Promise<void> {
 
 /** 登录后、或打开游戏时：把本机和云上的进度对齐 */
 export async function reconcile(): Promise<void> {
+  // 没配云端、或者是试玩预览（不连云存档，core/preview.ts）：什么也不做
+  if (!cloudEnabled()) return;
   const s = session();
   if (!s) return;
   let cloud: CloudSave | null;

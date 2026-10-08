@@ -495,3 +495,15 @@ svg{display:block}
 .r-h .tags{display:flex;gap:4px;flex-wrap:wrap}
 .look{padding:10px 12px;border-radius:12px;background:var(--bg);font-size:14px;line-height:1.75}
 .btn:disabled{opacity:.45}
+
+/* ---------- 试玩预览（/preview/，core/preview.ts）：顶上一行提示，画面整体往下让出这一行，不盖住任何按钮 ---------- */
+.pv-bar{display:none}
+html.preview{--pv-h:24px}
+html.preview .pv-bar{flex-shrink:0;height:var(--pv-h);display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;background:var(--warn-soft);color:var(--warn);box-shadow:inset 0 -1px 0 var(--warn-line);font-size:12px;font-weight:700;letter-spacing:1px;white-space:nowrap;overflow:hidden}
+html.preview .pv-bar::before{content:'';flex-shrink:0;width:6px;height:6px;border-radius:50%;background:var(--warn-dot)}
+html.preview #app{height:calc(100% - var(--pv-h))}
+@media (min-width:600px) and (min-height:560px){
+  html.preview body{flex-direction:column;gap:8px}
+  html.preview .pv-bar{border-radius:12px;box-shadow:inset 0 0 0 1px var(--warn-line)}
+  html.preview #app{--fh:min(calc(100dvh - 56px - var(--pv-h)),880px);height:var(--fh)}
+}

@@ -9,6 +9,7 @@
 《江湖夜雨》：单机、手机竖屏、全程点按操作的中文文字武侠游戏。目标是「武侠 MUD 里的 GTA」：世界大，做什么都行。
 
 - 试玩网址：https://mud4u404.github.io/game006/ 。main 一更新，就自动部署到这里。
+- 试玩预览：https://mud4u404.github.io/game006/preview/ 。维护者分支的最新构建，负责人合并 PR 之前先在这里玩。见下面「试玩预览」。
 - 设计文档：`docs/design.md`。第八节「规模化路线」是接下来的主线工作。
 - 剧情文档：`docs/story.md`。第二节是只给设计者看的真相。
 - 内容格式：`docs/content-guide.md`。
@@ -28,6 +29,25 @@
 | 五 | 经济与身份：钱来自替人办事。身份（`engine/shenfen.ts`：渔家、游侠、镖师，地位新进、正经、老手，降到零被辞退）；差事（`JobDef`，报酬按身份和档次算，接下就是一个约，误了降地位）；嚼用（静修住店一日一百文，钱不够就露宿，伤好得慢）；示范 `biaoju.ts`（威远镖局、府衙悬赏榜、好刀和小院的价钱） | 已做。更多镖、更多榜交给协作者；钱的去处（赠礼、打点、赎人、置业）随内容加 |
 
 还没并进来的：门派对战模拟（`engine/combat.ts`、`engine/sim.ts`）到第二步「武学」时换成 `duel.ts`；`src/lab/model/kernel.ts` 是设计时的验证记录，交手的验收已经改在 `tests/duel.test.ts` 量真引擎。
+
+## 试玩预览（合并之前先玩）
+
+负责人合并维护者的 PR 之前，只看截图不够，要能先玩一下。
+
+- **网址**：https://mud4u404.github.io/game006/preview/ 。放的是维护者分支 `claude/determined-hawking-7fpvbg` 的最新构建；正式版（根目录）照旧是 main。
+- **怎样更新**：维护者分支一推送，`.github/workflows/pages.yml` 就转到 main 上部署一次（`github-pages` 环境默认只许 main 部署），每次把 main 和维护者分支各构建一遍，一起放上去。两三分钟后刷新预览网址即可。部署排队、不互相打断；排在后面的那次总带着两边最新的代码。
+- **存档和正式版分开**（`src/core/preview.ts`，`tests/preview.test.ts` 把关）。同一个网站的浏览器存储不分子目录，云存档也是同一个账号，预览版的新存档格式可能把正式存档改坏，所以预览页：
+  - 本机存储的键全部换成 `jhyy-preview-` 开头（正式版是 `jhyy-`），存档、元数据、每日备份、读不出来的旧档都在这一套里，碰不到正式版的；
+  - 不连云存档：不登录、不上传、不下载，登录入口换成一句「预览版不连云存档」；
+  - 页面顶上一行「试玩预览：存档与正式版分开」。
+  - 想用正式版的进度试新功能：正式版「人物 → 存档 → 导出存档码」，到预览版「导入存档码」。反过来不要做。
+- **安全闸**：部署时在预览版的构建里找 `jhyy-preview-`，找不到（分支落后于 main，还没有这套隔离）就不放预览，只部署 main；预览版构建失败也一样。这时把最新的 main 合进维护者分支再推一次。
+- **维护者开 PR 时**，在正文里写上预览网址和「怎样试玩验证」，例如：
+
+  > 试玩预览：https://mud4u404.github.io/game006/preview/ （分支推送后两三分钟更新；存档与正式版分开，不连云存档）
+  > 怎样验证：标题画面点「新的江湖」→ ……
+
+- 维护者分支名写在 `pages.yml` 的 `PREVIEW_BRANCH` 和 `on.push.branches` 两处，换分支时两处一起改。
 
 ## 先读这四份
 
@@ -81,13 +101,14 @@
 ## 代码地图
 
 ```
-src/core/     状态 S、存档（键 jhyy-save-v2）、时间、工具函数
+src/core/     状态 S、存档（键 jhyy-save-v2；试玩预览换成 jhyy-preview- 开头，preview.ts）、时间、工具函数
 src/content/  types.ts 数据格式；index.ts 合并内容包（自动补回程出口，按 at 放置人物）
               skills.ts 武功与境界；packs/*.ts 内容包，按文件自动收录
 src/engine/   dsl.ts 条件与效果；world.ts 寻路、动作；formulas.ts「以己之长」成算；growth.ts 熟练度与突破
 src/ui/       shell.ts 外壳与 hooks；explore/fight/story.ts；views/ 下是五个标签页
 tests/        content.test.ts 内容校验；style-rules.ts 文风与剧透规则；engine.test.ts
 scripts/smoke.mjs  冒烟测试（npm run smoke）
+scripts/luandian.mjs  乱点测试（npm run luandian）：从「新的江湖」起随机点四百下，报错、卡死、白屏就失败；换种子 LUANDIAN_SEED=7，点几下 LUANDIAN_STEPS=1000
 ```
 
 几个关键约定：

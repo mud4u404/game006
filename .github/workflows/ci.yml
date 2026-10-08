@@ -63,6 +63,13 @@ jobs:
         env:
           SMOKE_CHANNEL: chrome
         run: npm run smoke
+      # 冒烟测试走认好的路，乱点测试随机点四百下，找没人走过的路：不报错、不卡死、不白屏。
+      # 冒烟测试已经打过包，这里直接用 dist；失败时日志里有种子和最近二十次点击，本机 LUANDIAN_SEED=种子 npm run luandian 复现
+      - name: 乱点测试：随机点四百下
+        timeout-minutes: 5
+        env:
+          SMOKE_CHANNEL: chrome
+        run: node scripts/luandian.mjs
 
   # 协作者推送任务分支后，自动建 PR（已有就沿用）。维护者的 claude/ 分支不在此列。
   open-pr:
