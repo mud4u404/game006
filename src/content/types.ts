@@ -30,6 +30,8 @@ export interface Cond {
   silver?: number;
   item?: { id: string; atLeast?: number };
   noItem?: string;
+  /** 身上有伤（手、足、内息任一处大于零）；写 false 表示没伤。医馆「看伤」用它分有伤、没伤 */
+  wounded?: boolean;
   rel?: { npc: string; is?: string[]; not?: string[] };
   learned?: SkillId;
   notLearned?: SkillId;
@@ -88,6 +90,8 @@ export type Effect =
   | { type: 'time'; add?: number; set?: number }
   | { type: 'weather'; value: string }
   | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number }
+  /** 治伤（医馆、郎中）：不写 levels 治好全部伤；写了就从最重的那处起，一共减这么多级。治完记一条见闻 */
+  | { type: 'cure'; levels?: number }
   | { type: 'feedReset' }
   /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
   | { type: 'news' }
@@ -143,6 +147,9 @@ export interface RoomDef {
   map: [number, number];
 }
 
+/** 基础服务：医馆（看伤）、客栈（住店）、兵器铺、当铺、杂货铺。tests/content.test.ts「基础设施」按它查各地齐不齐 */
+export type Service = '医' | '宿' | '兵' | '当' | '杂';
+
 export interface NpcDef {
   id: string;
   name: string;
@@ -151,6 +158,8 @@ export interface NpcDef {
    * 物品（obj: true）放进 objs，人物放进 npcs。
    */
   at?: { room: string; if?: Cond };
+  /** 这个人提供什么基础服务。只是标签，供机器检查和以后地图标注用；服务本身写在动作里 */
+  service?: Service[];
   /** 条件成立时改用另一个名字，例如通报姓名之后 */
   altName?: { if: Cond; name: string };
   /** 头像上的单字；物品用 icon */
