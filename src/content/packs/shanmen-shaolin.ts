@@ -49,6 +49,8 @@ const SMSL_OUT: Cond['sect'] = { school: '少林', rank: '外门' };
 const SM_JOIN: Effect[] = [
   { type: 'sect', school: '少林', rank: '记名' },
   { type: 'flag', flag: 'smsl_in' },
+  // 走「领考」拜入的，挑水的任务一并收尾（任务不能再悬在半截）
+  { type: 'quest', id: 'smsl_shui', stage: 1 },
   { type: 'rel', npc: 'smsl_jizhao', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '金山寺挂单的少林长老，收你做了记名弟子' },
   { type: 'feed', tag: '江湖', text: '你拜入少林，做了寂照长老门下的记名弟子。长老当面立了门规：不杀生，不偷盗，不饮酒；门规严，在门期间，不学别派的武功。' },
   { type: 'toast', text: '拜入少林 · 记名弟子' }
