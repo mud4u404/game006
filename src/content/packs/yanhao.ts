@@ -14,9 +14,9 @@ const ROOMS: RoomDef[] = [
     exits: [['西', 'cheng', '东']],
     road: '你沿东关街往东走到头，汪家盐号的金字招牌就在眼前……',
     onEnter: [
-      { if: { flag: 'huafang_taken', notFlag: 'yh_seen' },
+      { if: { flag: 'huafang_taken', notFlag: 'yh_taken_seen' },
         do: [
-          { type: 'flag', flag: 'yh_seen' },
+          { type: 'flag', flag: 'yh_taken_seen' }, { type: 'flag', flag: 'yh_seen' },
           { type: 'quest', id: 'side_yanhao', stage: 0 },
           { type: 'feed', tag: '江湖', text: '后院舂盐的女子，正是被汪家架上岸抵债的云娘。她的身契，锁在柜上那口契匣里。' }
         ] },
@@ -38,7 +38,7 @@ const NPCS: NpcDef[] = [
       交谈: [
         { if: { flag: 'yh_freed' },
           text: '「公子……说好了的。」毕掌柜头都不敢抬，「契的事，谁也没见过。」' },
-        { if: { quest: { id: 'side_yanhao', is: 1 } },
+        { if: { quest: { id: 'side_yanhao', is: 1 }, flag: 'yh_zhangmu' },
           text: '你把账上那笔「漕上使费」轻轻放在柜台上，说要拿去给府衙的周捕头看看。毕掌柜脸色由白转青，颤着手开了契匣，取出一张身契：「公子，求你嘴下留情——这契，就当汪家积德放了的。」',
           do: [
             { type: 'flag', flag: 'yh_freed' }, { type: 'flag', flag: 'yh_guanbao' },
@@ -91,7 +91,7 @@ const NPCS: NpcDef[] = [
       ],
       观察: [{ text: '他袖口磨得发亮，佛珠却是真沉香。茶碗里的茶是凉的——坐了一上午，事没谈成，谁也不敢给他续水。' }],
       旧事: [
-        { if: { flag: 'huafang_taken', notFlag: 'yh_freed' },
+        { if: { flag: 'huafang_taken', notFlag: 'yh_freed', any: [{ flag: 'ly_maishen_exposed' }, { flag: 'ly_maishen_kind' }, { flag: 'ly_maishen_yanhao' }] },
           text: '你提起当年被撵出盐号、险些冻死在城门洞的老脚夫。汪老爷捻珠的手停了：「……陈年旧账。」半晌，他朝里屋喊：「毕掌柜！把该放的人放了——汪家不做绝事。」',
           do: [
             { type: 'flag', flag: 'yh_ya' }, { type: 'flag', flag: 'yh_freed' },

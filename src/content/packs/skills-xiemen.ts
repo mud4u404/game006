@@ -58,7 +58,7 @@ const SKILLS: SkillDef[] = [
   },
   {
     id: 'xm_huagong', name: '化功大法', grade: '绝品', category: '内功', school: '星宿', nature: '阴',
-    desc: '星宿派镇派奇功。真气一运，如海绵吸水，将敌手攻来的内力尽数化解，反纳入自家经脉，愈战愈厚。',
+    desc: '星宿派镇派奇功。真气一运，将敌手攻来的内力尽数化解，中者真气涣散，苦练多年的功力一朝尽废。',
     learn: '星宿派秘传，非掌门弟子不授',
     teach: '真传',
     requires: [{ skill: 'xm_fushi', realm: 3 }, { skill: 'xm_chousui', realm: 3 }],
@@ -262,7 +262,7 @@ const SKILLS: SkillDef[] = [
   {
     id: 'xm_xuedaojing', name: '血刀经', grade: '上品', category: '内功', school: '血刀门', nature: '阳',
     desc: '血刀门内功。至阳至刚的路子，却练得轻快狠戾，气血一到手上，脚下生风，刀法快得邪性。',
-    learn: '血刀门内密，须与刀法同修',
+    learn: '血刀门秘传，须与刀法同修',
     teach: '外门',
     passive: [{ kind: 'haste', value: 5 }]
   }

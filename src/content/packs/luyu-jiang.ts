@@ -10,7 +10,7 @@ const NIGHT = { hour: { from: 19, to: 5 } };
 const ENCOUNTERS: EncounterDef[] = [
   { id: 'luyu_jiang_chabang', region: ['gz'], to: ['gz_pier'], once: true, if: NIGHT, weight: 0.8, story: 'ly_jiang_chabang' },
   { id: 'luyu_jiang_feng', region: ['gz'], to: ['gz_duchuan'], story: 'ly_jiang_feng' },
-  { id: 'luyu_jiang_duju', region: ['gz'], to: ['gz_duchuan'], weight: 0.6, story: 'ly_jiang_duju' },
+  { id: 'luyu_jiang_duju', region: ['gz'], to: ['gz_duchuan'], once: true, weight: 0.6, story: 'ly_jiang_duju' },
   { id: 'luyu_jiang_luoshui', region: ['gz'], to: ['gz_duchuan'], once: true, story: 'ly_jiang_luoshui' },
   { id: 'luyu_jiang_yanye', region: ['gz'], to: ['gz_duchuan'], once: true, if: NIGHT, weight: 0.5, story: 'ly_jiang_yanye' },
   { id: 'luyu_jiang_jiangtun', region: ['zj'], to: ['zj_xijin'], weight: 0.7, story: 'ly_jiang_jiangtun' }
@@ -28,7 +28,7 @@ const STORIES: StoryDef[] = [
           result: '灯笼在你面前停了停。你神色如常。头目盯着你看了一阵，挥挥手放了行——夜里赶路的客人，见得多了。',
           do: [{ type: 'flag', flag: 'ly_jiang_cha' }], next: -1 },
         { label: '替船家垫上查船的规矩钱', sub: '银两 −20',
-          result: '你把二十文塞给船家。船家会意，双手奉上。头目掂了掂钱袋：「船单齐全，走罢。」船家的白礼服了礼，一路再没敢大声出气。',
+          result: '你把二十文塞给船家。船家会意，双手奉上。头目掂了掂钱袋：「船单齐全，走罢。」船家连声道谢，一路再没敢大声出气。',
           do: [
             { type: 'silver', delta: -20 }, { type: 'flag', flag: 'ly_jiang_cha_qian' },
             { type: 'feed', tag: '江湖', text: '运河夜里的查船规矩钱，你替船家垫上了。' }
@@ -43,7 +43,7 @@ const STORIES: StoryDef[] = [
   ] },
 
   { id: 'ly_jiang_feng', cards: [
-    { tag: '路遇', title: '运河起风',
+    { tag: '路遇', title: '江心起风',
       paras: [
         '渡船行到江心，天色骤然阴下来，江面起了大浪。船身颠得厉害，桅索呜呜作响，船家一个人忙不过来，扯着嗓子喊搭手。',
         '一个浪头打上船舷，甲板上全是水。'
@@ -68,7 +68,7 @@ const STORIES: StoryDef[] = [
       ],
       choices: [
         { label: '拆穿他的千术', sub: '悟性',
-          result: '你冷冷开口：「这位庄家起牌的手法，是练过的。」满舱寂然。庄家脸上一阵红一阵白，把赢来的钱往桌上一推，连夜在下一站下了船。',
+          result: '你冷冷开口：「这位庄家起牌的手法，是练过的。」满舱寂然。庄家脸上一阵红一阵白，把赢来的钱往桌上一推，到岸便下了船。',
           do: [
             { type: 'flag', flag: 'ly_jiang_duju_chai' }, { type: 'lilian', amount: 20 },
             { type: 'feed', tag: '江湖', text: '渡船上的赌局出了千，被你一句拆穿。庄家连夜下了船。' }
@@ -108,8 +108,8 @@ const STORIES: StoryDef[] = [
   { id: 'ly_jiang_yanye', cards: [
     { tag: '路遇', title: '夜里没灯的船',
       paras: [
-        '后半夜，你被极轻的橹声惊醒。从舷窗望出去：一条没有灯的大船贴着河心的暗影，与客船擦肩而过。',
-        '船上的人都压着斗笠，没人出声。船家不知何时也醒了，朝你做了个「噤声」的手势，屏着呼吸，直到那条船走远。'
+        '夜渡大江，你靠在舷边，忽然听见极轻的橹声。借着月色望去：一条没有灯的大船贴着江心的暗影，与渡船擦肩而过。',
+        '船上的人都压着斗笠，没人出声。船家也看见了，朝你做了个「噤声」的手势，屏着呼吸，直到那条船走远。'
       ],
       choices: [
         { label: '默记船形', sub: '记下它有多长、吃水多深',
