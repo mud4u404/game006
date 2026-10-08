@@ -2,9 +2,9 @@
  * 师承与前置：能不能学一门武功、能不能使它的绝招、外功最多练到第几重。
  * 规则见 docs/menpai.md 第七节。
  */
-import { REALMS, skillById } from '../content';
+import { REALMS, SKILLS, skillById } from '../content';
 import { JIANGHU_RULE, ROOTED_CATS, ROOT_ANY, SCHOOL_STYLE, SECT_RANKS, TEACH_RANK } from '../content/skills';
-import type { SkillDef } from '../content/types';
+import type { LeaveHow, PastSect, SkillDef } from '../content/types';
 import type { GameState } from '../core/state';
 import { houtianOf } from './ren';
 
@@ -13,6 +13,21 @@ type St = Pick<GameState, 'skills' | 'attr' | 'loadout' | 'sect' | 'pastSects' |
 export type LearnCheck = { ok: true } | { ok: false; why: string };
 
 const rankIdx = (r: string): number => SECT_RANKS.indexOf(r as never);
+
+/**
+ * 离开过的师门。存档里的 pastSects 由 core/state.ts 定义；这里一律按 PastSect 读，逐出也读得到。
+ * （state.ts 的类型还写着「出师 | 叛门」，等纸娃娃那边合并后改成 PastSect[]，这个转接就可以去掉。）
+ */
+export const pastSectsOf = (s: { pastSects?: readonly PastSect[] }): readonly PastSect[] => s.pastSects ?? [];
+
+/** 拜不回去的门派：叛出过、被逐出过的，返回是怎么离开的；出师的、没拜过的返回 undefined */
+export function barredFrom(s: { pastSects?: readonly PastSect[] }, school: string): '叛门' | '逐出' | undefined {
+  for (const p of pastSectsOf(s)) if (p.school === school && p.how !== '出师') return p.how;
+  return undefined;
+}
+
+/** 怎么离开的，写给人看的说法：「出师于」「叛出」「被逐出」，后面接门派名 */
+export const leaveWord = (how: LeaveHow): string => (how === '出师' ? '出师于' : how === '叛门' ? '叛出' : '被逐出');
 
 /** 学得了吗：门规 → 师门地位 → 前置武学 → 属性门槛 */
 export function canLearn(s: St, def: SkillDef): LearnCheck {
@@ -27,6 +42,8 @@ export function canLearn(s: St, def: SkillDef): LearnCheck {
   }
   if (!jianghu && def.teach && def.teach !== '奇遇') {
     const need = TEACH_RANK[def.teach];
+    const barred = barredFrom(s, def.school);
+    if (barred && sect?.school !== def.school) return { ok: false, why: `你${leaveWord(barred)}过${def.school}，${def.school}的武功不会再传给你` };
     if (sect?.school !== def.school) return { ok: false, why: `这是${def.school}的武功，要先拜入${def.school}门下` };
     if (rankIdx(sect.rank) < rankIdx(need)) return { ok: false, why: `要做到${def.school}${need}弟子才能学` };
   }
@@ -54,9 +71,22 @@ export function menguiText(school: string): string {
   return `门规宽：可以兼修别派，只是别派的外功没有本门内功打底，只剩普通招式${forbid}。`;
 }
 
-/** 来历：离开过的师门，例如「出师于丐帮；叛出军伍」 */
-export const pastSectText = (s: Pick<GameState, 'pastSects'>): string =>
-  (s.pastSects ?? []).map(x => (x.how === '出师' ? `出师于${x.school}` : `叛出${x.school}`)).join('；');
+/** 来历：离开过的师门，例如「出师于丐帮；叛出军伍；被逐出六扇门」 */
+export const pastSectText = (s: { pastSects?: readonly PastSect[] }): string =>
+  pastSectsOf(s).map(x => `${leaveWord(x.how)}${x.school}`).join('；');
+
+/**
+ * 拜师学到本门内功时，内功位上还是别的内功：提醒玩家去武功页换上（不替玩家换，换不换玩家自己定）。
+ * 内功位空着的，学会时自动放进去（engine/wuxue.ts 的 autoSlot），用不着提醒；
+ * 位上的内功本来就能给本门武功打底（同门，或写在 roots 里的有渊源的内功），也不提醒。
+ */
+export function rootHint(s: Pick<GameState, 'sect' | 'loadout'>, def: SkillDef): string | undefined {
+  if (def.category !== '内功' || s.sect?.school !== def.school) return undefined;
+  const cur = s.loadout.neigong ? skillById(s.loadout.neigong) : undefined;
+  if (!cur || cur.id === def.id || cur.school === def.school) return undefined;
+  if (SKILLS.some(k => k.school === def.school && ROOTED_CATS.includes(k.category) && !k.roots?.includes(ROOT_ANY) && rootsOn(k, cur))) return undefined;
+  return `「${def.name}」是${def.school}的根本。内功位上还是「${cur.name}」，${def.school}的绝招要本门内功来使，想使就去武功页换上。`;
+}
 
 /** 这门内功能不能给这门武功打底 */
 export function rootsOn(def: SkillDef, neigong: SkillDef): boolean {
@@ -74,7 +104,7 @@ export function canPerform(s: Pick<GameState, 'loadout'>, def: SkillDef): boolea
 
 /**
  * 这门武功最多能练到第几重：外功、暗器、绝技不能比打底的内功高出一重以上；
- * 没有本门内功打底的别派外功，不能高过最高的那门内功；叛出的师门，武功境界就此封顶。
+ * 没有本门内功打底的别派外功，不能高过最高的那门内功；叛出、被逐出的师门，武功境界就此封顶。
  */
 export function realmCap(s: St, def: SkillDef): number {
   let cap = REALMS.length - 1;
@@ -88,6 +118,7 @@ export function realmCap(s: St, def: SkillDef): number {
     }
     cap = Math.min(cap, rooted >= 0 ? rooted + 1 : Math.max(0, any));
   }
-  if (s.pastSects?.some(x => x.school === def.school && x.how === '叛门')) cap = Math.min(cap, s.skills[def.id]?.r ?? 0);
+  // 叛出、被逐出的师门，本门武功就此封顶；出师的不封
+  if (barredFrom(s, def.school)) cap = Math.min(cap, s.skills[def.id]?.r ?? 0);
   return cap;
 }

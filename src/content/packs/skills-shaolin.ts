@@ -1,14 +1,22 @@
 import type { ContentPack, SkillDef } from '../types';
 
 /**
- * 少林的八门武功。文风与数值规则见 docs/wuxue.md。
+ * 少林的十门武功。文风与数值规则见 docs/wuxue.md。
  * id 一律以 sl_ 开头，避免和别的批次重名。修订版（Issue #53）：句式重写、考据订正、描写与机制对齐。
+ *
+ * 武学树（docs/menpai.md 第七节）：
+ *   入门：混元一气功（内功）、罗汉拳
+ *   外门：金钟罩（混元一气功融会贯通）、一苇渡江（同上）、韦陀掌、疯魔杖法（罗汉拳融会贯通）
+ *   内门：拈花指（韦陀掌炉火纯青）、燃木刀法（金钟罩炉火纯青）
+ *   真传：易筋经（金钟罩登堂入室）、狮子吼（混元一气功登堂入室）
+ * 少林是浑厚加刚猛：护体、疗伤为主，破绽、震慑为辅。不点穴、不用火毒，那是擒拿、阴毒的路子。
  */
 const SKILLS: SkillDef[] = [
   {
     id: 'sl_yijinjing', name: '易筋经', grade: '神品', category: '内功', school: '少林', nature: '中正',
     desc: '少林镇寺之宝，达摩祖师所传。行功时周身气血如江河奔涌，外可护体，内可疗伤，是天下内功的根基之一。',
-    learn: '少林方丈亲传，寺中禁地参修',
+    learn: '少林方丈亲传，寺中禁地参修', teach: '真传',
+    requires: [{ skill: 'sl_jinzhong', realm: 4 }],
     passive: [{ kind: 'guard', value: 12 }, { kind: 'heal', value: 8 }],
     combos: [
       { with: 'sl_ranmu', name: '刀禅一体', text: '你易筋经真气透入刀身，燃木刀的热力更烈，刀锋未至，灼意已先侵人。', bonus: 5, fx: [{ kind: 'guard', value: 8 }] }
@@ -17,13 +25,27 @@ const SKILLS: SkillDef[] = [
   {
     id: 'sl_yiwei', name: '一苇渡江', grade: '上品', category: '轻功', school: '少林', nature: '中正',
     desc: '少林轻功，取达摩一苇渡江之意。身轻如苇，踏水不沉，练到深处，来去只在一念之间。',
-    learn: '少林达摩院首座传授',
+    learn: '少林达摩院首座传授', teach: '外门',
+    requires: [{ skill: 'sl_hunyuan', realm: 2 }],
     passive: [{ kind: 'haste', value: 13 }]
+  },
+  {
+    id: 'sl_hunyuan', name: '混元一气功', grade: '良品', category: '内功', school: '少林', nature: '阳',
+    desc: '少林入门的内功。不求速成，只讲一个「厚」字：晨钟暮鼓里吐纳打坐，气沉丹田，一层一层往上垒，垒得越厚，挨打越扛得住，伤也好得快。',
+    learn: '少林入门武僧晨课所习', teach: '入门',
+    passive: [{ kind: 'guard', value: 5 }, { kind: 'heal', value: 5 }]
+  },
+  {
+    id: 'sl_jinzhong', name: '金钟罩', grade: '上品', category: '内功', school: '少林', nature: '刚',
+    desc: '少林护体的硬功。内息贯注周身皮肉筋骨，练到深处，刀砍上去如撞铜钟，嗡嗡作响；气血也养得厚，挨了重手缓得过来。',
+    learn: '少林罗汉堂传外门弟子', teach: '外门',
+    requires: [{ skill: 'sl_hunyuan', realm: 2 }],
+    passive: [{ kind: 'guard', value: 8 }, { kind: 'heal', value: 5 }]
   },
   {
     id: 'sl_luohan', name: '罗汉拳', grade: '凡品', category: '拳法', school: '少林', nature: '刚', reach: '徒手',
     desc: '少林入门拳法，一招一式规矩端严，如十八罗汉列阵。看似朴素，却是少林武功的根脚。',
-    learn: '少林入门武僧皆学',
+    learn: '少林入门武僧皆学', teach: '入门',
     moves: [
       { name: '罗汉伏虎', text: '你沉肩坐马，一拳自腰际击出，如罗汉降虎，正捣在{foe}{part}。', wound: '瘀伤' },
       { name: '罗汉合掌', text: '你双拳合拢又分，如僧人合十行礼，礼未行完，双拳已撞上{foe}{part}。', wound: '瘀伤' },
@@ -44,7 +66,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'sl_weituo', name: '韦陀掌', grade: '良品', category: '掌法', school: '少林', nature: '刚', reach: '徒手',
     desc: '少林掌法，取护法韦陀之意。掌势沉厚，一招推出，如金刚怒目，正大刚猛。',
-    learn: '少林达摩院传中级弟子',
+    learn: '少林达摩院传中级弟子', teach: '外门',
+    requires: [{ skill: 'sl_luohan', realm: 2 }],
     moves: [
       { name: '韦陀托杵', text: '你双掌上托，如韦陀托杵，把{foe}来势整个托偏。', wound: '瘀伤' },
       { name: '金刚推山', text: '你双掌齐推，掌力如山，{foe}连人带架被推得倒退。', wound: '瘀伤' },
@@ -58,8 +81,8 @@ const SKILLS: SkillDef[] = [
     performs: [
       { name: '金刚推山', text: '你双掌齐推，掌力如山压来，{foe}{part}受力不住，门户大开。',
         mp: 65, cd: 1, hits: 1, dmg: [110, 130], acc: 0.85, fx: [{ kind: 'break', value: 8, rounds: 1 }] },
-      { name: '韦陀护法', realm: 3, text: '你双掌外分，掌影如金身护法笼罩四野，{foe}心头一凛，{part}连中两掌。',
-        mp: 65, cd: 3, hits: 2, dmg: [105, 140], acc: 0.8, fx: [{ kind: 'fear', value: 10 }] }
+      { name: '韦陀护法', realm: 3, text: '你双掌外分，掌影如韦陀金身立在身前，{foe}的攻势撞上来如撞铜墙，你掌缘顺势连切其{part}两记。',
+        mp: 65, cd: 3, hits: 2, dmg: [90, 120], acc: 0.8, fx: [{ kind: 'guard', value: 10, rounds: 2 }] }
     ],
     combos: [
       { with: 'sl_luohan', name: '金刚合击', text: '你罗汉拳刚猛，韦陀掌沉厚，两般少林拳掌相合，{foe}难以招架。', bonus: 5 }
@@ -68,7 +91,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'sl_nianhua', name: '拈花指', grade: '绝品', category: '指法', school: '少林', nature: '柔', reach: '徒手',
     desc: '少林七十二绝技之一，取世尊拈花、迦叶微笑之意。指力轻灵，举重若轻，一点之下暗劲透骨。',
-    learn: '少林般若堂参悟七十二绝技',
+    learn: '少林般若堂参悟七十二绝技', teach: '内门',
+    requires: [{ skill: 'sl_weituo', realm: 3 }],
     moves: [
       { name: '拈花一笑', text: '你两指轻捻，如拈花一笑，指风点向{foe}{part}。', wound: '瘀伤' },
       { name: '一指禅', text: '你并指一点，快得只剩一道细痕，直取{foe}{part}——七十二绝技里最朴素的一式。', wound: '瘀伤' },
@@ -80,8 +104,8 @@ const SKILLS: SkillDef[] = [
       { name: '万法归一', text: '你指影散尽，只余平平一指，千钧之力尽在其中，点向{foe}{part}。', wound: '内伤', realm: 5 }
     ],
     performs: [
-      { name: '拈花点穴', text: '你指如拈花，轻轻拂过{foe}腕上，指力一透，{foe}气血立时滞住。',
-        mp: 20, cd: 3, hits: 1, dmg: [10, 15], acc: 0.8, fx: [{ kind: 'busy', rounds: 2 }, { kind: 'weaken', value: 10, rounds: 2 }] },
+      { name: '拈花一笑', text: '你两指轻轻拂过{foe}{part}，一触即收，指力已透骨；周身真气随之一敛，{foe}再攻过来，如击败絮。',
+        mp: 20, cd: 3, hits: 1, dmg: [80, 100], acc: 0.85, fx: [{ kind: 'guard', value: 20, rounds: 2 }] },
       { name: '顽石点头', realm: 4, text: '你屈指连弹，指风铮铮如木鱼急敲，{foe}{part}接连中招，破绽大露。',
         mp: 70, cd: 3, hits: 2, dmg: [150, 190], acc: 0.8, fx: [{ kind: 'break', value: 10, rounds: 2 }] }
     ]
@@ -89,7 +113,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'sl_ranmu', name: '燃木刀法', grade: '绝品', category: '刀法', school: '少林', nature: '阳', reach: '短',
     desc: '少林七十二绝技之一。刀锋所过，木毫不伤，刀上热力却已透入木纹，从里往外燃起来。练至化境，刀未及身而热气已至。',
-    learn: '少林七十二绝技，须过木人巷',
+    learn: '少林七十二绝技，须过木人巷', teach: '内门',
+    requires: [{ skill: 'sl_jinzhong', realm: 3 }],
     moves: [
       { name: '燃木取火', text: '你刀锋掠过廊柱，木面无损，柱心却已焦黑——刀上热力尽数逼向{foe}{part}。', wound: '灼伤' },
       { name: '刀光如焰', text: '你舞刀成圈，刀光如焰腾腾，卷向{foe}{part}。', wound: '割伤' },
@@ -101,16 +126,17 @@ const SKILLS: SkillDef[] = [
       { name: '燎原之势', text: '你刀气层层叠加，如野火燎原，压向{foe}{part}。', wound: '灼伤', realm: 5 }
     ],
     performs: [
-      { name: '燃木焚天', text: '你一刀劈出，刀气赤烈如焰，灼上{foe}{part}，衣发俱焦。',
-        mp: 70, cd: 2, hits: 1, dmg: [170, 205], acc: 0.8, fx: [{ kind: 'burn', value: 20, rounds: 3 }] },
-      { name: '焚木成灰', realm: 4, text: '你连挥数刀，刀气交织如火网，{foe}{part}无处可避，皮肉为之焦灼。',
-        mp: 70, cd: 3, hits: 2, dmg: [145, 185], acc: 0.78, fx: [{ kind: 'burn', value: 15, rounds: 2 }, { kind: 'break', value: 8, rounds: 2 }] }
+      { name: '燃木焚天', text: '你一刀劈出，刀气赤烈如焰，{foe}{part}衣发俱焦；刀上的热力倒灌回来，你周身热血跟着翻滚。',
+        mp: 65, cd: 2, hits: 1, dmg: [170, 205], acc: 0.8, fx: [{ kind: 'rage', value: 30 }] },
+      { name: '焚木成灰', realm: 4, text: '你连挥数刀，刀气交织如火网，{foe}{part}无处可避，门户大开；你越砍越热，胸中一团火直往上冒。',
+        mp: 70, cd: 3, hits: 2, dmg: [145, 185], acc: 0.78, fx: [{ kind: 'break', value: 8, rounds: 2 }, { kind: 'rage', value: 15 }] }
     ]
   },
   {
     id: 'sl_fengmo', name: '疯魔杖法', grade: '上品', category: '杖法', school: '少林', nature: '刚', reach: '长',
     desc: '少林杖法，人杖合一，杖势颠狂如醉。看似散乱，实则招招藏着杀机，令人防不胜防。',
-    learn: '少林达摩院传，须戒律精严',
+    learn: '少林达摩院传，须戒律精严', teach: '外门',
+    requires: [{ skill: 'sl_luohan', realm: 2 }],
     moves: [
       { name: '疯魔乱舞', text: '你杖势大开大合，如疯魔乱舞，杖影罩得{foe}无处转身。', wound: '砸伤' },
       { name: '醉打山门', text: '你脚步踉跄，杖却笔直捣出，正撞{foe}{part}。', wound: '砸伤' },
@@ -131,7 +157,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'sl_shizihou', name: '狮子吼', grade: '绝品', category: '绝技', school: '少林', nature: '刚',
     desc: '佛门正宗吼功，一声长啸，声震屋瓦，百兽辟易。内力愈深，吼声愈远，可乱人心神。',
-    learn: '少林般若堂秘传，须内力深厚',
+    learn: '少林般若堂秘传，须内力深厚', teach: '真传',
+    requires: [{ skill: 'sl_hunyuan', realm: 4 }],
     ult: {
       title: '狮子吼 · 杀招',
       text: '你丹田一沉，张口一声长啸——吼声如万千狮子齐鸣，滚滚而出，声震屋瓦！{foe}心神俱裂，耳中嗡鸣不止，双膝一软当堂跪倒，兵刃拄地才撑住身子。',

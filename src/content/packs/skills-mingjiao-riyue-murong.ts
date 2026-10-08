@@ -216,6 +216,7 @@ const SKILLS: SkillDef[] = [
     desc: '铁掌帮轻功。蹬萍渡水，踏浪而行，论在水上施展，江湖中无出其右。',
     learn: '铁掌帮帮主亲传，须立功于帮',
     teach: '外门',
+    requires: [{ skill: 'mr_tieqiao', realm: 2 }],
     passive: [{ kind: 'haste', value: 13 }]
   },
   {
