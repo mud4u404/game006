@@ -18,7 +18,7 @@ const K = Number(env.MODEL_K ?? 3);
 
 /** 验收标准的结果：true 通过，false 不通过（已经查明原因，写在报告的备注里） */
 const EXPECT: Record<string, boolean> = {
-  C1: true, C2: true, C3: true, C4: false, C5: true, C6: true, C7: true, C8: true, C9: true, C10: true,
+  C1: true, C2: true, C3: true, C4: true, C5: true, C6: true, C7: true, C8: true, C9: true, C10: true,
   E1: true, G1: true, G2: true, G3: true, G4: true, G5: true, G6: false, G7: true, G8: true,
   M1: true, M2: true, M3: true, M4: true, T1: true, T2: true, T3: true, X1: true, A1: true, A2: true, A3: true, A4: true, A5: true
 };

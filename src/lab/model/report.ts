@@ -61,7 +61,7 @@ export function buildReport(k: number, inp: Inputs): Report {
   const crowd = (ht: number, ft: number, cnt: number, morale: number, salt: number): number =>
     many(H(standard(ht, 'outer')), F(standard(ft, 'light')), SKILLED, { ...R, morale }, n * 2, salt, { n: cnt, maxAtk: 3 }).win;
   const c4 = { a: crowd(5, 0, 20, 0, 41), b: crowd(5, 2, 3, 0, 42), c0: crowd(3, 2, 2, 0, 43), c5: crowd(3, 2, 2, 0.5, 44) };
-  add({ id: 'C4', area: '交手', std: '围攻：宗师对二十个不入流不低于 95%；宗师对三个二流不低于 90%；一流对两个二流在 40% 到 60%', got: `宗师对二十个不入流 ${pct(c4.a)}；宗师对三个二流 ${pct(c4.b)}；一流对两个二流：乌合之众 ${pct(c4.c5)}，同门死士 ${pct(c4.c0)}`, pass: c4.a >= 0.95 && c4.b >= 0.9 && inb(c4.c5, 0.4, 0.6) && inb(c4.c0, 0.4, 0.6), note: '乌合之众（同伙倒下一半人会溜）通过；同门死士不通过。连打两个、中间不能喘气，和 C2 在数学上冲突，请负责人定' });
+  add({ id: 'C4', area: '交手', std: '围攻：宗师对二十个不入流不低于 95%；宗师对三个二流不低于 90%；一流对两个二流，乌合之众在 40% 到 60%，同门死士在 20% 到 35%', got: `宗师对二十个不入流 ${pct(c4.a)}；宗师对三个二流 ${pct(c4.b)}；一流对两个二流：乌合之众 ${pct(c4.c5)}，同门死士 ${pct(c4.c0)}`, pass: c4.a >= 0.95 && c4.b >= 0.9 && inb(c4.c5, 0.4, 0.6) && inb(c4.c0, 0.2, 0.35), note: '同门死士的目标原来也是 40% 到 60%：连打两个、中间不能喘气，和 C2（高一档胜八成）在数学上冲突。负责人 10-08 定：改为 20% 到 35%，同门死士本来就该难打' });
   const rote = pairs(2, 2, ROTE, R, n, 51).win, rnd = pairs(2, 2, RANDOM, R, n, 52).win;
   add({ id: 'C5', area: '交手', std: '以己之长比固定套路（「重则避」这类找规律的打法）同档胜率高出 10 个点以上，比随手乱选高出 15 个点以上', got: `以己之长 ${pct(same[1].win)}，固定套路 ${pct(rote)}，随手乱选 ${pct(rnd)}`, pass: same[1].win - rote >= 0.1 && same[1].win - rnd >= 0.15, note: '原标准写的是「以己之长对固定套路胜率不低于六成」；内核里玩家和对手的流程不对称，所以改为对同一个对手比胜率差' });
   const shifts: string[] = [];
