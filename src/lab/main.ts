@@ -6,14 +6,14 @@ import { cheng } from '../engine/formulas';
 import { xiuwei } from '../engine/wuxue';
 import { buildState, oddsTable, performReport } from './calc';
 
-const SLOTS: Slot[] = ['neigong', 'qinggong', 'main', 'off', 'ult'];
+const SLOTS: Slot[] = ['neigong', 'qinggong', 'fist', 'weapon', 'ult'];
 const ATTRS: AttrKey[] = ['体魄', '根骨', '身法', '悟性', '胆魄'];
 const NATURES: SkillNature[] = ['刚', '柔', '阴', '阳', '中正'];
 const REACHES: SkillReach[] = ['长', '短', '徒手'];
 const PWK: (keyof TellDef['pw'])[] = ['li', 'su', 'qiao', 'xi'];
 const PW_NAME: Record<string, string> = { li: '力', su: '速', qiao: '巧', xi: '隙' };
 
-const loadout: Partial<Record<Slot, string>> = { neigong: 'xinfa', qinggong: 'taxue', main: 'hanjiang', off: 'jinghong' };
+const loadout: Partial<Record<Slot, string>> = { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' };
 const realms: Record<string, number> = { xinfa: 1, taxue: 2, hanjiang: 1, jinghong: 0 };
 const attr: Record<AttrKey, number> = { 体魄: 14, 根骨: 12, 身法: 16, 悟性: 15, 胆魄: 11 };
 const pw: TellDef['pw'] = { li: 30, su: 30, qiao: 30, xi: 30 };

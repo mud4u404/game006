@@ -9,7 +9,7 @@
  * - 内容里的 id 只增不删（tests/ids.test.ts 把关）；万一存档里的地点已经不存在，送回安全的地方。
  */
 import { ROOMS, SKILLS } from '../content';
-import { fits } from '../engine/wuxue';
+import { defaultLoadout, fits } from '../engine/wuxue';
 import { syncAttr } from '../engine/gengu';
 import { migrateRel } from '../engine/renqing';
 import type { Loadout } from '../engine/wuxue';
@@ -17,7 +17,7 @@ import type { Slot } from '../content/types';
 import { newGame, skipToYangzhou, type GameState } from './state';
 import { dateStr } from './time';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const KEY = 'jhyy-save-v2';
 const META = 'jhyy-save-meta';
 const BROKEN = 'jhyy-save-broken-';
@@ -44,13 +44,28 @@ const st = (): SaveStore | null => store ?? browserStore();
 
 type Raw = Record<string, unknown> & { v?: unknown };
 
-/** 第 n 版升到第 n+1 版的办法。例：2: o => ({ ...o, v: 3, 新字段: 默认值 }) */
-const MIGRATIONS: Record<number, (o: Raw) => Raw> = {};
+/**
+ * 第二版的搭配：主手、副手（还没有搭配的更早的存档，按当时的固定搭配排：心法、踏雪、寒江、惊鸿、断水）。
+ * 第三版改成拳脚、兵刃两个位置（docs/zhuangbei.md 第二节）：主手、副手里的外功按门类分进去，
+ * 同一类的两门，主手那门留下，另一门照样学会，只是不在位置上。青锋剑变成真正的兵器，拿在手里。
+ */
+const V2_LEGACY: [string, string][] = [['neigong', 'xinfa'], ['qinggong', 'taxue'], ['main', 'hanjiang'], ['off', 'jinghong'], ['ult', 'duanshui']];
+function v2toV3(o: Raw): Raw {
+  const skills = (o.skills ?? {}) as GameState['skills'];
+  const old = (o.loadout ?? Object.fromEntries(V2_LEGACY.filter(([, id]) => skills[id]))) as Record<string, string>;
+  const lo: Loadout = {};
+  for (const slot of ['neigong', 'qinggong', 'ult'] as Slot[]) if (old[slot]) lo[slot] = old[slot];
+  for (const id of [old.main, old.off]) {
+    const def = id ? SKILLS.find(k => k.id === id) : undefined;
+    const slot: Slot | undefined = def && fits(def, 'fist') ? 'fist' : def && fits(def, 'weapon') ? 'weapon' : undefined;
+    if (slot && !lo[slot]) lo[slot] = id;
+  }
+  const items = { qingfeng: 1, ...((o.items ?? {}) as Record<string, number>) };
+  return { ...o, v: 3, loadout: lo, items, gear: { weapon: 'qingfeng' } };
+}
 
-/** 改版前的固定搭配：心法硬接、踏雪闪避、寒江拆招、惊鸿抢攻、断水绝招。旧存档照这个排，成算不变 */
-const LEGACY: [Slot, string][] = [['neigong', 'xinfa'], ['qinggong', 'taxue'], ['main', 'hanjiang'], ['off', 'jinghong'], ['ult', 'duanshui']];
-const legacyLoadout = (skills: GameState['skills']): Loadout =>
-  Object.fromEntries(LEGACY.filter(([, id]) => skills[id])) as Loadout;
+/** 第 n 版升到第 n+1 版的办法 */
+const MIGRATIONS: Record<number, (o: Raw) => Raw> = { 2: v2toV3 };
 
 /** 把读到的东西升到当前版本，补齐缺的字段，修掉指向已不存在内容的地方。不认识的版本直接抛错 */
 export function migrate(input: unknown): GameState {
@@ -72,13 +87,15 @@ function repair(s: GameState): GameState {
   const def = newGame() as unknown as Record<string, unknown>;
   const rec = s as unknown as Record<string, unknown>;
   // 同一版本里后来加的字段，用新游戏的默认值补上
-  if (rec.loadout === undefined) rec.loadout = legacyLoadout(s.skills ?? {});
+  if (rec.loadout === undefined) rec.loadout = defaultLoadout(s.skills ?? {});
   for (const k of Object.keys(def)) if (rec[k] === undefined) rec[k] = def[k];
   // 关系称谓统一到关系阶梯，根基折算进气血、内力上限（都可以反复执行）
   migrateRel(s);
   syncAttr(s);
   // 地点没了，送回这一回的起点
   if (!ROOMS.some(r => r.id === s.loc)) s.loc = s.chapter === 0 ? newGame().loc : skipToYangzhou().loc;
+  // 手里的兵器已经不在行囊里了，就空着手
+  if (s.gear.weapon && !(s.items[s.gear.weapon] > 0)) delete s.gear.weapon;
   // 搭配里指向没学会、或已经没有的武功，就空出来
   for (const [slot, id] of Object.entries(s.loadout) as [Slot, string][]) {
     const def = SKILLS.find(k => k.id === id);

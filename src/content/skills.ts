@@ -2,7 +2,7 @@
  * 武学库的常量与规矩。武功本身写在 src/content/packs/ 下的内容包里（skills 字段）。
  * 设计说明见 docs/wuxue.md。这里的数值上限由 tests/content.test.ts 校验每一门武功。
  */
-import type { FxKind, SectRank, SkillCategory, SkillGrade, SkillNature, SkillReach, SkillTeach, Slot, WoundKind } from './types';
+import type { FxKind, SectRank, SkillCategory, SkillGrade, SkillNature, SkillReach, SkillTeach, Slot, WeaponKind, WoundKind } from './types';
 
 export const REALMS = ['初窥门径', '略有小成', '融会贯通', '炉火纯青', '登堂入室', '出神入化', '一代宗师', '返璞归真', '大乘'];
 /** 每一重升到下一重所需的熟练度 */
@@ -19,8 +19,12 @@ export const GRADE_COEF: Record<SkillGrade, number> = { 凡品: 0.9, 良品: 1, 
 export const FIST: SkillCategory[] = ['拳法', '掌法', '指法', '爪法', '腿法', '手法'];
 /** 兵刃 */
 export const WEAPON: SkillCategory[] = ['剑法', '刀法', '枪法', '棍法', '杖法', '鞭法', '斧法', '锤法', '奇门'];
-/** 外功：拳脚和兵刃，可以放进主手、副手槽 */
+/** 外功：拳脚和兵刃 */
 export const OUTER: SkillCategory[] = [...FIST, ...WEAPON];
+/** 兵刃武功要拿着对得上的兵器才使得出来 */
+export const CAT_WEAPON: Partial<Record<SkillCategory, WeaponKind>> = {
+  剑法: '剑', 刀法: '刀', 枪法: '枪', 棍法: '棍', 杖法: '杖', 鞭法: '鞭', 斧法: '斧', 锤法: '锤', 奇门: '奇门'
+};
 /** 暗器、杂学暂不上搭配槽：暗器配合飞蝗石等物品使用，杂学是读书写字、医术、毒术、琴棋书画这类学问 */
 export const CATEGORIES: SkillCategory[] = ['内功', '轻功', ...OUTER, '暗器', '绝技', '杂学'];
 export const WOUNDS: WoundKind[] = ['瘀伤', '内伤', '刺伤', '割伤', '砸伤', '冻伤', '灼伤', '毒伤'];
@@ -44,9 +48,9 @@ export const SCHOOLS = [
 
 /** 每个槽位能放哪些武功 */
 export const SLOT_CATS: Record<Slot, SkillCategory[]> = {
-  neigong: ['内功'], qinggong: ['轻功'], main: OUTER, off: OUTER, ult: ['绝技']
+  neigong: ['内功'], qinggong: ['轻功'], fist: FIST, weapon: WEAPON, ult: ['绝技']
 };
-export const SLOT_NAME: Record<Slot, string> = { neigong: '内功', qinggong: '轻功', main: '主手', off: '副手', ult: '绝技' };
+export const SLOT_NAME: Record<Slot, string> = { neigong: '内功', qinggong: '轻功', fist: '拳脚', weapon: '兵刃', ult: '绝技' };
 
 /**
  * 绝招（perform）的预算上限。预算 = 期望伤害 + 效果当量，期望伤害 = 连击数 × 平均伤害 × 命中率；

@@ -4,7 +4,9 @@ import { cn, cleanName, fmt, liang } from '../src/core/util';
 import { dayName, minLabel, shichen, shichenKe } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
 import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
-import type { NpcDef } from '../src/content/types';
+import type { FoeDef, NpcDef } from '../src/content/types';
+import { fightKit, foeFighter, meFighter } from '../src/engine/zhaoshi';
+import { strike } from '../src/engine/combat';
 import { autoSlot } from '../src/engine/wuxue';
 import { npc as npcDef } from '../src/content';
 const NPCS_BY = { zhou: () => npcDef('fuya_zhou')!, csf: () => npcDef('zy_csf')! };
@@ -177,13 +179,14 @@ describe('条件与效果', () => {
     act('liaochen', '观察');
     expect(S.feed[0].x).toBe('日头偏西，天色向晚。');
   });
-  it('暗器、杂学不会被自动放进主手、副手', () => {
+  it('暗器、杂学不会被自动放进搭配；剑法进兵刃位，掌法进拳脚位', () => {
     const s = { loadout: {} };
     autoSlot(s, { id: 'yishu', category: '杂学' } as SkillDef);
     autoSlot(s, { id: 'feidao', category: '暗器' } as SkillDef);
     expect(s.loadout).toEqual({});
     autoSlot(s, { id: 'jian', category: '剑法' } as SkillDef);
-    expect(s.loadout).toEqual({ main: 'jian' });
+    autoSlot(s, { id: 'zhang', category: '掌法' } as SkillDef);
+    expect(s.loadout).toEqual({ weapon: 'jian', fist: 'zhang' });
   });
   it('望江楼买花雕：扣钱，也给酒', () => {
     S.silver = 100;
@@ -220,12 +223,15 @@ describe('见招拆招成算', () => {
     expect(huohou(S, 'dodge')).toBe(2 * 10 + 16);
     expect(huohou(S, 'parry')).toBe(1 * 10 + 15);
   });
-  it('没学会的武功不会出现在应对里；内力不够时硬接不可选', () => {
-    delete S.skills.jinghong;
+  it('出手的外功负责拆招和抢攻；没有外功就只剩硬接和闪避；内力不够时硬接不可选', () => {
     S.mp = 50;
-    const opts = respOptions(S, { li: 30, su: 30, qiao: 30, xi: 30 });
-    expect(opts.map(o => o.k)).toEqual(['block', 'dodge', 'parry']);
+    const pw = { li: 30, su: 30, qiao: 30, xi: 30 };
+    const opts = respOptions(S, pw);
+    expect(opts.map(o => o.k)).toEqual(['block', 'dodge', 'parry', 'rush']);
+    expect(opts.filter(o => o.k === 'parry' || o.k === 'rush').map(o => o.sname)).toEqual(['寒江剑法', '寒江剑法']);
     expect(opts.find(o => o.k === 'block')?.dis).toBe(true);
+    delete S.gear.weapon;  // 剑脱手了，又没有拳脚功夫
+    expect(respOptions(S, pw).map(o => o.k)).toEqual(['block', 'dodge']);
   });
 });
 
@@ -678,5 +684,47 @@ describe('重回瓜洲', () => {
     S.items.huadiao = 1;
     expect(act('gz_fenmu', '祭拜').text).toContain('花雕');
     expect(S.items.huadiao).toBe(0);
+  });
+});
+
+describe('武功上身：实战里的招式由搭配来', () => {
+  beforeEach(() => setState(skipToYangzhou()));
+
+  it('绝招来自出手的那门外功：境界够了才能用，不够的标出要练到哪一重', () => {
+    const k = fightKit(S);
+    expect(k.outer?.id).toBe('hanjiang');
+    expect(k.performs.map(x => x.p.name)).toEqual(['寒江孤影']);
+    expect(k.locked.map(p => p.name)).toEqual(['江枫渔火', '独钓寒江']);
+    S.skills.hanjiang!.r = 3;
+    expect(fightKit(S).performs.map(x => x.p.name)).toEqual(['寒江孤影', '江枫渔火', '独钓寒江']);
+  });
+
+  it('杀招来自绝技位；没有本门内功打底，绝招、杀招都使不出来', () => {
+    expect(fightKit(S).ult?.def.id).toBe('duanshui');
+    S.skills.jh_tuna = { r: 0, p: 0 };
+    S.loadout.neigong = 'jh_tuna';
+    const k = fightKit(S);
+    expect(k.performs).toEqual([]);
+    expect(k.unrooted).toBe(true);
+    expect(k.ult).toBeUndefined();
+  });
+
+  it('剑不在手里，换成拳脚位的功夫出手', () => {
+    S.skills.jh_bagua = { r: 0, p: 0 };
+    S.loadout.fist = 'jh_bagua';
+    delete S.gear.weapon;
+    const k = fightKit(S);
+    expect(k.outer?.id).toBe('jh_bagua');
+    expect(k.performs.every(x => x.move.name.startsWith('八卦掌'))).toBe(true);
+  });
+
+  it('绝招的效果交给战斗内核：点穴上身，对手要跳过出手', () => {
+    S.skills.hanjiang!.r = 3;
+    const k = fightKit(S);
+    const me = meFighter(S, k), foe = foeFighter({ id: 't', name: '木人', hp: 1000, atk: [1, 1], nature: undefined } as unknown as FoeDef);
+    const c = { round: 0, maxRounds: 99, f: [me, foe] as [typeof me, typeof foe], rng: () => 0 };
+    strike(c, me, foe, k.performs[2].move);
+    expect(foe.st.busy?.r).toBe(1);
+    expect(foe.hp).toBeLessThan(1000);
   });
 });

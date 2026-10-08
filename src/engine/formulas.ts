@@ -9,7 +9,7 @@
 import type { GameState } from '../core/state';
 import { clamp, liang } from '../core/util';
 import type { SkillId, SkillNature, SkillReach, TellDef } from '../content/types';
-import { RESP_SLOT, counterBonus, huohou, reachBonus, slotSkill, type RespKey } from './wuxue';
+import { counterBonus, huohou, reachBonus, respSkill, type RespKey } from './wuxue';
 
 export { huohou, type RespKey } from './wuxue';
 export type PwKey = keyof TellDef['pw'];
@@ -51,7 +51,7 @@ export interface RespOption extends RespDef { skill: SkillId; sname: string; p: 
 /** 列出玩家此刻能用的应对。槽位空着（或那门武功没学会）的应对不会出现 */
 export function respOptions(s: GameState, pw: TellDef['pw'], foe: FoeTraits = {}): RespOption[] {
   return RESP.flatMap(r => {
-    const def = slotSkill(s, RESP_SLOT[r.k]);
+    const def = respSkill(s, r.k);
     if (!def) return [];
     const bonus = counterBonus(def.nature, foe.nature) + reachBonus(r.k, def.reach, foe.reach);
     const p = clamp(odds(r.k, huohou(s, r.k), pw[r.pw]) + bonus, 0.05, 0.95);
