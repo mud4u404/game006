@@ -115,6 +115,8 @@ function repair(s: GameState): GameState {
   if (rec.loadout === undefined) rec.loadout = defaultLoadout(s.skills ?? {});
   // 现实的钟从换算的这一刻算起：旧存档里的江湖日子不算「跑在现实前头」
   if (!rec.real || typeof (rec.real as GameState['real']).start !== 'number') rec.real = { start: nowMs(), startDay: dayNo(s), seen: nowMs() };
+  // 营生：序章里是渔家，走出瓜洲就是游侠
+  if (!rec.shenfen || typeof (rec.shenfen as GameState['shenfen']).id !== 'string') rec.shenfen = { id: s.chapter === 0 ? 'yumin' : 'youxia', standing: 1, since: dayNo(s) };
   for (const k of Object.keys(def)) if (rec[k] === undefined) rec[k] = def[k];
   // 关系称谓统一到关系阶梯；气血、内力上限由「人」算出来（都可以反复执行）
   migrateRel(s);

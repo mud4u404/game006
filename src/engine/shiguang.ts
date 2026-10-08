@@ -17,6 +17,8 @@ import { npcName } from './world';
 
 /** 铁律的余裕（日）、一次离开最多算几日、现实一小时算江湖几日 */
 export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
+/** 嚼用：住下房一日一钱银子（一百文，docs/foundation.md 第三节第六条）；钱不够就露宿，不花钱，养伤慢一倍 */
+export const LODGING = { inn: 100, lusuHeal: 6 };
 /** 心魔：每层打几折；每个江湖日淡多少层；几层以上静修会走火，走火一日的几率、一次掉几成功力 */
 export const XINMO = { k: 0.2, decay: 1 / 40, zouhuoAt: 2, zouhuoP: 0.02, zouhuoLoss: 0.1, max: 3 };
 
@@ -51,6 +53,9 @@ export interface RestReport {
   zouhuo: number;
   news: string[];
   missed: string[];
+  /** 住处：客栈（花了多少文），还是露宿 */
+  lodging: 'inn' | 'lusu';
+  cost: number;
 }
 
 /** 静修 days 日：养伤、打坐、参悟，江湖历往前走，出关时气血内力回满。返回邸报要写的东西 */
@@ -58,7 +63,10 @@ export function jingxiu(s: GameState, days: number, rng: () => number = Math.ran
   const xm0 = s.xinmo.n;
   const xm1 = Math.max(0, xm0 - XINMO.decay * days);
   const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2);
-  const jx = jingxiuPlan(s, days, eff);
+  // 嚼用：钱够就住店；不够就露宿，伤好得慢
+  const cost = LODGING.inn * days, inn = s.silver >= cost;
+  if (inn) s.silver -= cost;
+  const jx = jingxiuPlan(s, days, eff, inn ? undefined : LODGING.lusuHeal);
   for (const [z, n] of Object.entries(jx.healed) as ['hand' | 'foot' | 'inner', number][]) s.wounds[z] = Math.max(0, s.wounds[z] - n);
   s.gongli = Math.round((s.gongli + jx.gongli) * 100) / 100;
   // 心魔重了，静修时会走火：功力掉一成
@@ -80,7 +88,7 @@ export function jingxiu(s: GameState, days: number, rng: () => number = Math.ran
   for (let i = 0; i < Math.min(3, Math.ceil(days / 5)) && pool.length; i++) news.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
   news.slice().reverse().forEach(n => pushFeed('传闻', n));
   const missed = checkYue(s);
-  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed };
+  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed, lodging: inn ? 'inn' : 'lusu', cost: inn ? cost : 0 };
 }
 
 /** 过了约期还没了结的约：失约。执行失约的后果，生一层心魔。返回失约的说明 */

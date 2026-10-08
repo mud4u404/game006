@@ -93,15 +93,15 @@ export function gongliCeiling(s: GameState): number {
 export interface JingxiuPlan { healed: Partial<Record<'hand' | 'foot' | 'inner', number>>; gongli: number; dazuoDays: number }
 
 /** 算出静修 days 日养好的伤、长的功力，不改存档 */
-export function jingxiuPlan(s: GameState, days: number, eff = 1): JingxiuPlan {
+export function jingxiuPlan(s: GameState, days: number, eff = 1, healDays = DAZUO.healDays): JingxiuPlan {
   const w = { ...s.wounds };
   const healed: JingxiuPlan['healed'] = {};
   let left = days;
   // 先养伤：每三日养好一级，先养最重的一处
-  while (left >= DAZUO.healDays) {
+  while (left >= healDays) {
     const z = (['inner', 'hand', 'foot'] as const).slice().sort((a, b) => w[b] - w[a])[0];
     if (w[z] <= 0) break;
-    w[z]--; healed[z] = (healed[z] ?? 0) + 1; left -= DAZUO.healDays;
+    w[z]--; healed[z] = (healed[z] ?? 0) + 1; left -= healDays;
   }
   const R = (s.skills[s.loadout.neigong ?? '']?.r ?? 0) + 1;
   const per = DAZUO.rate * (0.7 + 0.06 * R) * (1 + 0.01 * (s.attr.根骨 - 20));

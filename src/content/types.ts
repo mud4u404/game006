@@ -39,6 +39,12 @@ export interface Cond {
   attr?: { key: AttrKey; atLeast: number };
   /** 今天是这个约的约期，约还没了结（engine/shiguang.ts） */
   yue?: string;
+  /** 现在的营生是这个身份（engine/shenfen.ts）：youxia 游侠、biaoshi 镖师…… */
+  shenfen?: string;
+  /** 正在办这件差事（接下了，还没交差） */
+  job?: string;
+  /** 这件差事眼下接得（身份对、手上没有别的差事、上回办完已经隔了几日） */
+  jobOpen?: string;
   /** 侠义、恶名不低于 */
   xia?: number;
   eming?: number;
@@ -93,6 +99,16 @@ export type Effect =
   | { type: 'yueDone'; id: string }
   /** 心魔：做了违背信条的事加一层，化解了减一层（还诺、赔罪、了却） */
   | { type: 'xinmo'; delta: number; why?: string }
+  /** 换营生：做了镖师、回去做游侠……（engine/shenfen.ts）。原来的营生就此放下 */
+  | { type: 'shenfen'; id: string }
+  /** 本行里的地位升降：误了差事、违了行规降一级，降到底就被辞退；立了功、赔了罪升一级 */
+  | { type: 'standing'; delta: number }
+  /** 接一件差事（JobDef）：手上同时只有一件；接下以后定一个约，过了约期没交差就算误事 */
+  | { type: 'job'; id: string }
+  /** 交差：按身份和这件差事的档次给钱（engine/shenfen.ts 的 jobPay），了结那个约 */
+  | { type: 'jobDone'; id: string }
+  /** 差事办砸了（镖丢了、人跑了）：不给钱，地位降一级 */
+  | { type: 'jobFail'; id: string }
   /** 开打：战斗结束后由对手定义里的 results 决定后续 */
   | { type: 'fight'; foe: string }
   /** 打开一段剧情卡片 */
@@ -485,6 +501,30 @@ export interface EncounterDef {
  * 内容包：src/content/packs/ 下每个文件默认导出一个内容包，系统自动收录。
  * 新增内容时新建自己的内容包文件，尽量不要改别人的文件。
  */
+/**
+ * 差事：营生里能反复办的活（docs/foundation.md 第三节第六、八条）。走镖、悬赏、护院……
+ * 钱不写在这里：由身份和档次算（engine/shenfen.ts），本事越大接的活越大，宗师走一趟镖也不过三流的十来倍。
+ * 流程写在人物的动作里：发差事的人「接」（{ type: 'job' }），交差的人「交」（{ type: 'jobDone' }），
+ * 路上的凶险写成对手（fight），打输了 jobFail。
+ */
+export interface JobDef {
+  id: string;
+  /** 哪个身份的差事 */
+  shenfen: string;
+  /** 档次：0 不入流 … 5 宗师。报酬按它算；路上的对手也该是这一档上下 */
+  tier: number;
+  /** 差事簿上的一行 */
+  title: string;
+  /** 交差的人、在哪里、几日之内 */
+  npc: string;
+  at: string;
+  days: number;
+  /** 办完以后隔几个江湖日才能再接（不写为三日） */
+  again?: number;
+  /** 报酬的倍数（难办的差事多给些），不写为一 */
+  k?: number;
+}
+
 export interface ContentPack {
   regions?: Record<string, RegionDef>;
   rooms?: RoomDef[];
@@ -496,4 +536,5 @@ export interface ContentPack {
   news?: NewsDef[];
   skills?: SkillDef[];
   encounters?: EncounterDef[];
+  jobs?: JobDef[];
 }

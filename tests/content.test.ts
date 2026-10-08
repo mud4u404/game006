@@ -3,7 +3,7 @@
  * 报错信息会指出是哪个文件里的哪一条数据有问题。
  */
 import { describe, expect, it } from 'vitest';
-import { ENCOUNTERS, FOES, ITEMS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
+import { ENCOUNTERS, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
@@ -11,6 +11,7 @@ import { MODERN_WORDS, NEWS_MAX_LEN, SPOILER_ALLOWED_PACKS, SPOILER_WORDS } from
 import { ACTIVE_MAX, EFFICIENCY_BAND, JIANGHU_RULE, REALM_STEP, SCHOOL_STYLE, loosen, CATEGORIES, FX_PER_PERFORM, FX_RULES, GRADES, NATURES, OUTER, PASSIVE_MAX, REACHES, SCHOOLS, ULT_MAX, WOUNDS } from '../src/content/skills';
 import { passiveCost, performBudget, performEfficiency, performExpected, ultBudget } from '../src/engine/wuxue';
 import { REL_WORDS } from '../src/engine/renqing';
+import { SHENFEN } from '../src/engine/shenfen';
 
 const roomIds = new Set(ROOMS.map(r => r.id));
 const npcIds = new Set(NPCS.map(n => n.id));
@@ -19,6 +20,7 @@ const skillIds = new Set(SKILLS.map(s => s.id));
 const foeIds = new Set(FOES.map(f => f.id));
 const storyIds = new Set(STORIES.map(s => s.id));
 const quests = new Map(QUESTS.map(q => [q.id, q]));
+const jobIds = new Set(JOBS.map(j => j.id));
 const DEFAULT_VERBS = new Set(['观察', '赠礼', '请教', '切磋', '偷窃']);
 const PLACEHOLDERS = new Set(['given', 'name', 'story', 'news']);
 
@@ -35,11 +37,15 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
   if (c.sect && !SCHOOL_STYLE[c.sect.school]) errs.push(`${where}：条件里的门派「${c.sect.school}」没有定位（见 SCHOOL_STYLE）`);
   if (c.yue !== undefined) yueRead.add(c.yue);
+  if (c.shenfen !== undefined && !SHENFEN[c.shenfen]) errs.push(`${where}：条件里的身份「${c.shenfen}」不存在（见 engine/shenfen.ts）`);
+  for (const id of [c.job, c.jobOpen]) if (id !== undefined && !jobIds.has(id)) errs.push(`${where}：条件里的差事「${id}」不存在`);
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
 }
 
 /** 约：定下的约、读约的条件、了结的约，最后对一遍账 */
 const yueSet = new Set<string>(), yueRead = new Set<string>(), yueDone = new Set<string>();
+/** 差事：有人发（job）、有人收（jobDone），最后对一遍账 */
+const jobTaken = new Set<string>(), jobDoneSet = new Set<string>();
 
 function checkEffects(list: Effect[] | undefined, where: string, errs: string[]): void {
   for (const e of list || []) {
@@ -71,6 +77,11 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         checkEffects(e.miss, `${w} 的 miss`, errs);
         break;
       case 'yueDone': yueDone.add(e.id); break;
+      case 'shenfen': if (!SHENFEN[e.id]) errs.push(`${w}：身份「${e.id}」不存在（见 engine/shenfen.ts）`); break;
+      case 'job': case 'jobDone': case 'jobFail':
+        if (!jobIds.has(e.id)) errs.push(`${w}：差事「${e.id}」不存在`);
+        (e.type === 'job' ? jobTaken : e.type === 'jobDone' ? jobDoneSet : new Set<string>()).add(e.id);
+        break;
       default: break;
     }
   }
@@ -544,6 +555,29 @@ describe('约', () => {
       if (!yueDone.has(id)) errs.push(`约「${id}」：没有任何地方用 yueDone 了结它，守约的人也会被算成失约`);
     }
     for (const id of yueRead) if (!yueSet.has(id)) errs.push(`条件 { yue: '${id}' }：没有任何地方定过这个约`);
+    report(errs);
+  });
+});
+
+describe('差事', () => {
+  // 放在约的后面：前面的检查把所有效果都过了一遍，这里对账
+  it('身份、档次、期限有效；交差的人在交差的地方；有人发、有人收', () => {
+    const errs: string[] = [];
+    for (const j of JOBS) {
+      const w = `差事 ${j.id}`;
+      if (!SHENFEN[j.shenfen]) errs.push(`${w}：身份「${j.shenfen}」不存在（见 engine/shenfen.ts）`);
+      if (!(Number.isInteger(j.tier) && j.tier >= 0 && j.tier <= 5)) errs.push(`${w}：tier（档次）要是 0 到 5 的整数`);
+      if (!(Number.isInteger(j.days) && j.days >= 1)) errs.push(`${w}：days 要是一以上的整数`);
+      if (j.again !== undefined && !(Number.isInteger(j.again) && j.again >= 1)) errs.push(`${w}：again 要是一以上的整数`);
+      if (j.k !== undefined && !(j.k >= 0.5 && j.k <= 2)) errs.push(`${w}：k（报酬倍数）要在 0.5 到 2 之间`);
+      if (!j.title) errs.push(`${w}：要写 title（差事簿上的一行）`);
+      const r = ROOMS.find(x => x.id === j.at), n = NPCS.find(x => x.id === j.npc);
+      if (!r) errs.push(`${w}：交差的地点「${j.at}」不存在`);
+      if (!n) errs.push(`${w}：交差的人「${j.npc}」不存在`);
+      else if (r && n.at?.room !== j.at && ![...r.npcs, ...(r.objs ?? [])].some(x => (typeof x === 'string' ? x : x.id) === j.npc)) errs.push(`${w}：交差的人「${j.npc}」不在「${j.at}」`);
+      if (!jobTaken.has(j.id)) errs.push(`${w}：没有任何地方用 { type: 'job' } 发这件差事`);
+      if (!jobDoneSet.has(j.id)) errs.push(`${w}：没有任何地方用 { type: 'jobDone' } 交差，办完了也领不到钱`);
+    }
     report(errs);
   });
 });

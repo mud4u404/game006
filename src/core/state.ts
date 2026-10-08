@@ -61,6 +61,11 @@ export interface GameState {
   yue: Yue[];
   /** 心魔：几层（可以是小数，慢慢淡），为了什么事 */
   xinmo: { n: number; why: string };
+  /** 营生（engine/shenfen.ts）：渔家、游侠、镖师……；本行里的地位（零被辞退，一到三）；哪一日入的行 */
+  shenfen: { id: string; standing: number; since: number };
+  /** 手上的差事：哪一件、约期（江湖日）；办完的差事上回是哪一日办完的 */
+  job: { id: string; due: number } | null;
+  jobLog: Record<string, number>;
   /** 人情备注：为什么记得这个人，例如「湖畔切磋，不打不相识」 */
   relNote?: Record<string, string>;
   /** 历练：江湖上攒下的见识与实战，闭关时化为武功进境（engine/lilian.ts） */
@@ -90,7 +95,7 @@ export function newGame(): GameState {
     v: 4, chapter: 0, name: '孤舟', loc: 'gz_home', year: 0, month: 3, day: 5, min: 15 * 60 + 20, weather: '阴',
     // 气血、内力的上限由「人」算出来（engine/ren.ts 的 syncBody）；功力三年：江伯教过吐纳
     hp: 1e9, hpMax: 0, mp: 150, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
-    real: realNow(65), yue: [], xinmo: { n: 0, why: '' },
+    real: realNow(65), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
     silver: 30, items: { qingfeng: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
     flags: {}, rel: { jiangbo: '相依为命' }, title: '', xia: 0, eming: 0,
@@ -111,7 +116,7 @@ export function skipToYangzhou(): GameState {
   const s: GameState = {
     v: 4, chapter: 1, name: '孤舟', loc: 'hu', year: 0, month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
     hp: 1e9, hpMax: 0, mp: 1e9, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
-    real: realNow(67), yue: [], xinmo: { n: 0, why: '' },
+    real: realNow(67), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'youxia', standing: 1, since: 67 }, job: null, jobLog: {},
     silver: 120, items: { qingfeng: 1, jcy: 3, fhs: 5, jade: 1, scroll: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
     flags: { skipped: true }, rel: { liu: '素不相识' }, title: '', xia: 12, eming: 0,

@@ -5,7 +5,8 @@ import { ROOMS } from '../../content';
 import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
 import { gongliText, houtianOf, tierNow } from '../../engine/ren';
-import { yueText } from '../../engine/shiguang';
+import { LODGING, yueText } from '../../engine/shiguang';
+import { shenfenOf, shenfenText } from '../../engine/shenfen';
 import { fullDate } from '../../core/time';
 import { ZONE_NAME } from '../../engine/duel';
 import { cn } from '../../core/util';
@@ -36,6 +37,14 @@ function yueHTML(): string {
   return rows.length ? `<section class="card here"><div class="sec-h"><h2>约与心事</h2></div><div class="news">${rows.join('')}</div></section>` : '';
 }
 
+/** 营生：身份的义务和门路，过日子的开销（docs/foundation.md 第三节第六、八条） */
+function yingshengHTML(): string {
+  if (S.chapter === 0) return '';
+  return `<section class="card here"><div class="sec-h"><h2>营生</h2><span class="count">${shenfenText(S)}</span></div>
+    <p class="muted">${shenfenOf(S).desc}</p>
+    <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文）；钱不够就露宿，不花钱，伤好得慢。</span></div></div></section>`;
+}
+
 let confirmRestart = false;
 export const setConfirmRestart = (v: boolean): void => { confirmRestart = v; };
 
@@ -47,7 +56,7 @@ export function viewRenwu(): string {
   const meaningful = Object.values(S.rel).filter(v => relGroup(v) !== '萍水相逢').length;
   // 和江湖页一致：没有名号时显示修为档
   const tier = tierNow(S).name;
-  const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : '游侠 · ' + tier;
+  const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : shenfenOf(S).name + ' · ' + tier;
   const hurt = (Object.entries(S.wounds) as ['hand' | 'foot' | 'inner', number][]).filter(([, n]) => n > 0).map(([z, n]) => `${ZONE_NAME[z]}${cn(n)}级`).join('、');
   return `
   <section class="card status"><span class="ava t-accent">沈</span><div class="who"><b>${fullName()}</b><small>${who}</small></div></section>
@@ -56,13 +65,14 @@ export function viewRenwu(): string {
     <div class="rows">${effects}</div></section>
   <section class="card"><div class="kv">
     <div><span>气血</span><b>${S.hp} / ${S.hpMax}</b></div><div><span>内力</span><b>${S.mp} / ${S.mpMax}</b></div>
-    <div><span>身份</span><b>${S.chapter === 0 ? '渔家' : '游侠'}</b></div><div><span>门派</span><b>无门无派</b></div>
+    <div><span>身份</span><b>${shenfenText(S)}</b></div><div><span>门派</span><b>无门无派</b></div>
     <div><span>档次</span><b>${tier}</b></div><div><span>功力</span><b>${gongliText(S.gongli)}</b></div>
     <div><span>伤</span><b>${hurt || '无'}</b></div><div><span>历练</span><b>${S.lilian}</b></div>
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
     <div><span>江湖历</span><b>${fullDate(S)}</b></div>
   </div></section>
+  ${yingshengHTML()}
   ${yueHTML()}
   <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${meaningful}</span></div>${renqingHTML()}</section>
   <section class="card here"><div class="sec-h"><h2>存档</h2></div>
