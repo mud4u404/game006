@@ -31,6 +31,8 @@ export interface Cond {
   item?: { id: string; atLeast?: number };
   noItem?: string;
   /** 身上有伤（手、足、内息任一处大于零）；写 false 表示没伤。医馆「看伤」用它分有伤、没伤 */
+  /** 气血或内力不满（写 false 表示两样都满）：调养、喝药这类只回气血的，气血满了就别收钱 */
+  tired?: boolean;
   wounded?: boolean;
   rel?: { npc: string; is?: string[]; not?: string[] };
   learned?: SkillId;

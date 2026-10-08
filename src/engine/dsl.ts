@@ -48,6 +48,7 @@ export function test(c?: Cond): boolean {
   if (c.item && (S.items[c.item.id] || 0) < (c.item.atLeast ?? 1)) return false;
   if (c.noItem && (S.items[c.noItem] || 0) > 0) return false;
   if (c.wounded !== undefined && isWounded() !== c.wounded) return false;
+  if (c.tired !== undefined && (S.hp < S.hpMax || S.mp < S.mpMax) !== c.tired) return false;
   if (c.rel) {
     const r = S.rel[c.rel.npc] ?? '素不相识';
     if (c.rel.is && !c.rel.is.includes(r)) return false;

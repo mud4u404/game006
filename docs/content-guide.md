@@ -170,6 +170,7 @@ export default pack;
 | `{ item: { id: 'flower' } }` | 身上有杏花；`atLeast: 3` 表示至少 3 枝 |
 | `{ noItem: 'jade' }` | 身上没有玉佩 |
 | `{ wounded: true }` | 身上有伤（手、足、内息任一处）；`false` 表示没伤。看伤的分支用它分有伤、没伤 |
+| `{ tired: true }` | 气血或内力不满；`false` 表示两样都满。调养、喝药这类只回气血的，先写一支 `tired: false` 的「用不着」，免得满血也收钱 |
 | `{ rel: { npc: 'liu', is: ['相谈甚欢', '知交'] } }` | 关系在列出的几种之中；`not` 表示不在其中 |
 | `{ learned: 'jinghong' }` | 已学会惊鸿剑；`notLearned` 表示没学会 |
 | `{ attr: { key: '体魄', atLeast: 24 } }` | 后天根基不低于某值，例如斗酒看体魄、识破骗局看悟性（常人二十） |
