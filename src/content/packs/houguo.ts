@@ -29,10 +29,10 @@ const STORIES: StoryDef[] = [
         '「上回那个贼，又作案了。」他的声音里带着疲惫，「绸缎庄又丢了一匹缎子。你要是上回帮着拦一把就好了。」'
       ],
       choices: [
-        { label: '记下了', sub: '下次必拦',
+        { label: '记下了', sub: '不作声',
           result: '吴捕头点点头，没有多说什么，提着铁尺走了。他的背影在巷口拐弯处消失了。',
-          do: [{ type: 'xia', delta: 0 }], next: -1 },
-        { label: '──下次我帮你拦', sub: '侠义 +1',
+          next: -1 },
+        { label: '下次我帮你拦', sub: '侠义 +1',
           result: '吴捕头愣了一下，嘴角微微翘了翘：「好。六扇门记你这份心。」',
           do: [{ type: 'xia', delta: 1 }], next: -1 }
       ] }
@@ -44,7 +44,7 @@ const STORIES: StoryDef[] = [
         '他看见你，猛地低下了头，手里攥着几文钱，不知是讨来的还是做什么挣的。'
       ],
       choices: [
-        { label: '蹲下来跟他说几句话', sub: '侠义 +1',
+        { if: { silver: 5 }, label: '蹲下来跟他说几句话', sub: '侠义 +1，银两 −5',
           result: '你问他吃了吗。他摇摇头。你买了两个炊饼给他。他吃得很快，噎住了也不停。你拍拍他的头，走了。',
           do: [
             { type: 'silver', delta: -5 }, { type: 'xia', delta: 1 },
@@ -93,7 +93,7 @@ const STORIES: StoryDef[] = [
       ],
       choices: [
         { label: '收下干粮', sub: '船家的情',
-          result: '干粮又干又硬，但你知道这包东西的分量——是船家把最金口的告诫，包在了里面。',
+          result: '干粮又干又硬，但你知道这包东西的分量——是船家把最要紧的告诫，包在了里面。',
           next: -1 },
         { label: '问他到底那条船是什么', sub: '他不说',
           result: '「公子——」船家的声音抖了一下，「有些事，知道了就放不下了。求你，别问。」他把脸别到了一边。', next: -1 }
@@ -152,7 +152,7 @@ const pack: ContentPack = {
     { if: { flag: 'cangjing_juan' }, text: '大明寺藏经阁丢了经卷，方丈说是家贼。知客僧却说，经卷自己长了脚。' },
     { if: { flag: 'fuya_jiang_truth' }, text: '府衙的周捕头提起了瓜洲江家，说江家的孩子有骨气，敢在公堂上说实话。' },
     { if: { flag: 'fuya_jiang_hide' }, text: '府衙的周捕头问起瓜洲的人，没人说得出什么。他叹了口气，没再问。' },
-    { if: { flag: 'mem3_ask' }, text: '序章里那个问了巡检名字的孩子，如今已在江湖上行走了。有人说，他还记着那位的名字。' }
+    { if: { flag: 'mem3_ask' }, text: '瓜洲渡当年那个问巡检名字的孩子，如今已在江湖上行走了。有人说，他还记着那位巡检的名字。' }
   ]
 };
 export default pack;
