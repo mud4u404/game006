@@ -55,8 +55,8 @@ const SKILLS: SkillDef[] = [
       { name: '巽下断', text: '你走转中骤然回身，掌断其后路，反袭{foe}{part}。', wound: '割伤', realm: 6 }
     ],
     performs: [
-      { name: '走转连环', text: '你绕着{foe}走转，两掌一环扣一环地从转身里打出来，拆了一掌还有一掌。', mp: 45, cd: 1, hits: 2, dmg: [65, 85], acc: 0.75 },
-      { name: '游身八卦', realm: 3, text: '你游身疾走，掌影随步而生，两掌叠在{foe}{part}——人还在圈上转，掌已到了两回。', mp: 60, cd: 1, hits: 2, dmg: [100, 130], acc: 0.75 }
+      { name: '走转连环', text: '你绕着{foe}走转，两掌一环扣一环地从转身里打出来，拆了一掌还有一掌。', mp: 20, cd: 1, hits: 2, dmg: [35, 55], acc: 0.75 },
+      { name: '游身八卦', realm: 3, text: '你游身疾走，掌影随步而生，两掌叠在{foe}{part}——人还在圈上转，掌已到了两回。', mp: 20, cd: 1, hits: 2, dmg: [45, 60], acc: 0.75 }
     ],
     combos: [{ with: 'jh_yanqing', name: '柔掌相济', bonus: 3, text: '你八卦掌配着燕青的身法，走转里带腾挪，掌掌都从{foe}想不到的地方来。' }]
   },

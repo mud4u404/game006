@@ -8,7 +8,7 @@ const SKILLS: SkillDef[] = [
     desc: '苍梧根基内功。明面上养的是浩然正气，行气却走阴柔一路；练到深处，真气绵密如茧，寻常刀剑难伤，触之方知厉害。',
     learn: '苍梧外门弟子共习，进境全看心性',
     teach: '外门',
-    combos: [{ with: 'cw_qingya', name: '青崖同气', bonus: 5, text: '你心法剑法同出一门，真气顺着剑势游走，剑光看着平和，内里一记沉似一记。' }]
+    combos: [{ with: 'cw_qingya', name: '青崖同气', bonus: 3, text: '你心法剑法同出一门，真气顺着剑势游走，剑光看着平和，内里一记沉似一记。' }]
   },
   {
     id: 'cw_qingya', name: '青崖剑法', grade: '绝品', category: '剑法', school: '苍梧', nature: '中正', reach: '短',
