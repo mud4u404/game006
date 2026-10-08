@@ -3,17 +3,15 @@
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { advanceDays, dateStr } from '../core/time';
-import { PROTO, setXushi, xushiOn } from '../core/proto';
-import { $, reduceMotion } from '../core/util';
-import { NEWS, itemById, questById, room, skillById } from '../content';
-import type { SkillId, Slot, Verb } from '../content/types';
+import { $, cn, reduceMotion } from '../core/util';
+import { itemById, questById, room, skillById } from '../content';
+import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
-import { test } from '../engine/dsl';
-import { gainProf } from '../engine/growth';
-import { growAttr } from '../engine/gengu';
+import { gongliText } from '../engine/ren';
+import { jingxiu, restDays, skillName, yueText } from '../engine/shiguang';
+import { chuguanHTML } from './chuguan';
 import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
-import { retreatPlan } from '../engine/lilian';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
@@ -84,39 +82,28 @@ function doAct(verb: Verb): void {
   if (rp) rp.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
 }
 
-function retreat(days: number): void {
-  const label = ({ 1: '一日', 7: '七日', 30: '一月' } as Record<number, string>)[days];
+function retreat(want: number): void {
+  // 江湖跑不过现实；碰到约期，那天一早就出关（engine/shiguang.ts）
+  const r = restDays(S, want);
+  if (r.days < 1) {
+    openSheet(`<div class="r-h"><span class="tag accent">闭关</span><h2>${r.why === 'yue' ? '今日有约' : '江湖跑不过现实'}</h2></div>
+      <p class="muted">${r.why === 'yue' && r.yue ? yueText(S, r.yue) + '。先去赴约吧。' : '这几日江湖上的日子，已经走在现实前头了。下了线，现实里过一个时辰，江湖上就静修一日；回来先读出关邸报。'}</p>
+      <button class="btn" data-act="sheetClose">知道了</button>`);
+    return;
+  }
+  const label = r.days === 30 ? '一月' : `${cn(r.days)}日`;
   openSheet(`<div class="r-h"><span class="tag accent">闭关</span><h2>闭关${label}</h2></div><p class="muted">${dateStr(S)}起，闭门谢客，静心修炼……</p><div class="tr2"><i id="rtBar"></i></div>`);
   const b = $('#rtBar')!;
   void b.offsetWidth;
   b.style.transition = `width ${reduceMotion ? 50 : 1200}ms linear`;
   b.style.width = '100%';
   window.setTimeout(() => {
-    advanceDays(S, days);
-    S.min = 7 * 60 + 10;
-    S.mp = S.mpMax; S.hp = S.hpMax;
-    // 闭关是把江湖上攒下的历练消化成功夫；没有历练，闭门造车（engine/lilian.ts）
-    const { used, gains } = retreatPlan(S, days);
-    S.lilian -= used;
-    const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
-    // 闭关一月，打熬筋骨：体魄加一，最多三次（engine/gengu.ts）
-    if (days === 30) for (let i = 1; i <= 3; i++) if (!S.flags[`gg_体魄_闭关${i}`]) { S.flags[`gg_体魄_闭关${i}`] = true; growAttr(S, '体魄', 1, '闭关一月，打熬筋骨'); break; }
-    const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
-    const news: string[] = [];
-    for (let i = 0; i < ({ 1: 1, 7: 2, 30: 3 } as Record<number, number>)[days] && pool.length; i++) {
-      news.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-    }
-    news.slice().reverse().forEach(n => pushFeed('传闻', n));
-    const names = (id: SkillId): string => skillById(id)?.name ?? id;
-    const how = used ? `消化历练 ${used}` : '没有历练可消化，闭门造车，进境有限';
-    pushFeed('出关', `闭关${label}，${how}${gains[0] ? `，「${names(gains[0][0])}」熟练 +${gains[0][1]}` : ''}。`);
+    const rep = jingxiu(S, r.days);
+    const how = rep.used ? `消化历练 ${rep.used}` : '没有历练可消化，闭门造车，进境有限';
+    pushFeed('出关', `闭关${label}，${how}${rep.gains[0] ? `，「${skillName(rep.gains[0][0])}」熟练 +${rep.gains[0][1]}` : ''}${rep.gongli > 0 ? `；功力深到${gongliText(S.gongli)}` : ''}。`);
+    const stop = r.why === 'yue' && r.yue ? `想闭关${cn(want)}日，可约期到了，只好提前出关：${yueText(S, r.yue)}。` : r.why === 'tielv' ? `想闭关${cn(want)}日，可江湖跑不过现实，只修了${cn(r.days)}日。` : undefined;
     const panel = document.querySelector('#sheetLayer .panel');
-    if (panel) panel.innerHTML = `
-      <div class="r-h"><span class="tag accent">出关</span><h2>闭关${label}，今日${dateStr(S)}</h2></div>
-      <div class="rewards"><span class="tag ${used ? 'accent' : ''}">${used ? `消化历练 ${used}` : '闭门造车'}</span>${gains.map(([k, v]) => `<span class="tag accent">${names(k)} +${v}</span>`).join('')}${breaks.map(x => `<span class="tag info">${x}</span>`).join('')}</div>
-      <div class="r-sub">江湖见闻</div>
-      <div class="news">${news.map(n => `<div><span class="tag warn">传闻</span><span>${n}</span></div>`).join('')}</div>
-      <button class="btn" data-act="sheetClose">出关</button>`;
+    if (panel) panel.innerHTML = chuguanHTML(rep, `闭关${label}，今日是${dateStr(S)}。`, `闭关${label}`, stop);
     save();
   }, reduceMotion ? 150 : 1300);
 }
@@ -167,14 +154,12 @@ registerHandlers({
   use: v => {
     if (v !== 'jcy' || (S.items.jcy || 0) < 1 || S.hp >= S.hpMax) return;
     S.items.jcy--;
-    S.hp = Math.min(S.hpMax, S.hp + 260);
+    S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * 0.3));
     toast('气血回复');
     render();
   },
   retreat: v => retreat(Number(v)),
   sheetClose: () => { closeSheet(); render(); },
-  protoXushi: () => { setXushi(!xushiOn()); render(); },
-  protoFight: v => { if (PROTO) hooks.startFight?.(v); },
   restart: () => { setConfirmRestart(true); render(); },
   restartNo: () => { setConfirmRestart(false); render(); },
   restartYes: () => { setConfirmRestart(false); clearSave(); showTitle(false); },

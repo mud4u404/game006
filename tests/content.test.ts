@@ -34,8 +34,12 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
   if (c.realm && !skillIds.has(c.realm.skill)) errs.push(`${where}：条件里的武功「${c.realm.skill}」不存在`);
   if (c.canLearn && !skillIds.has(c.canLearn)) errs.push(`${where}：条件里的武功「${c.canLearn}」不存在`);
   if (c.sect && !SCHOOL_STYLE[c.sect.school]) errs.push(`${where}：条件里的门派「${c.sect.school}」没有定位（见 SCHOOL_STYLE）`);
+  if (c.yue !== undefined) yueRead.add(c.yue);
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
 }
+
+/** 约：定下的约、读约的条件、了结的约，最后对一遍账 */
+const yueSet = new Set<string>(), yueRead = new Set<string>(), yueDone = new Set<string>();
 
 function checkEffects(list: Effect[] | undefined, where: string, errs: string[]): void {
   for (const e of list || []) {
@@ -58,6 +62,15 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
       case 'fight': if (!foeIds.has(e.foe)) errs.push(`${w}：对手「${e.foe}」不存在`); break;
       case 'story': if (!storyIds.has(e.id)) errs.push(`${w}：剧情「${e.id}」不存在`); break;
       case 'sect': if (!SCHOOL_STYLE[e.school]) errs.push(`${w}：门派「${e.school}」没有定位（见 SCHOOL_STYLE）`); break;
+      case 'yue':
+        yueSet.add(e.id);
+        if (!npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
+        if (!roomIds.has(e.at)) errs.push(`${w}：地点「${e.at}」不存在`);
+        if (!(e.inDays >= 1 && Number.isInteger(e.inDays))) errs.push(`${w}：inDays 要是一以上的整数`);
+        if (!e.text) errs.push(`${w}：要写 text，告诉玩家约的是什么`);
+        checkEffects(e.miss, `${w} 的 miss`, errs);
+        break;
+      case 'yueDone': yueDone.add(e.id); break;
       default: break;
     }
   }
@@ -237,34 +250,50 @@ describe('任务、剧情、对手', () => {
     report(errs);
   });
 
-  it('对手的数值和结算有效', () => {
+  it('对手的档次、重招和结算有效', () => {
     const errs: string[] = [];
     for (const f of FOES) {
       const w = `对手 ${f.id}`;
       if (!f.tells.length) errs.push(`${w}：至少要有一招重招（tells）`);
-      for (const t of f.tells) {
-        if (Object.values(t.pw).some(v => v < 0 || v > 100)) errs.push(`${w} 的「${t.name}」：力速巧隙要在 0 到 100 之间`);
-      }
-      if (f.atk[0] > f.atk[1]) errs.push(`${w}：atk 的下限大于上限`);
+      for (const t of f.tells) if (!['li', 'su', 'qiao'].includes(t.dom)) errs.push(`${w} 的「${t.name}」：dom 只能写 li、su、qiao`);
+      if (!(f.rank >= 0 && f.rank <= 5)) errs.push(`${w}：rank（档次）要在 0 到 5 之间`);
+      if (f.weak !== undefined && !(f.weak > 0 && f.weak <= 1)) errs.push(`${w}：weak 要在 0 到 1 之间`);
       if (!f.moves.length || !f.flourish.length || !f.opening.length || !f.asides.length) errs.push(`${w}：moves、flourish、opening、asides 都不能为空`);
       for (const [k, r] of Object.entries(f.results)) {
         if (!r) continue;
         if (!r.silent && (!r.tag || !r.title || !r.story || !r.button)) errs.push(`${w} 的结算 ${k}：非 silent 的结算需要 tag、title、story、button`);
         checkEffects(r.do, `${w} 的结算 ${k}`, errs);
         checkEffects(r.then, `${w} 的结算 ${k} 的 then`, errs);
+        if (r.after && k !== 'win') errs.push(`${w} 的结算 ${k}：胜负以后（after）只写在 win 上`);
+        if (r.after) {
+          if (!r.after.plea) errs.push(`${w}：胜负以后要写 plea（对手倒下以后说的话）`);
+          if (r.after.opts.length < 2) errs.push(`${w}：胜负以后至少两条路`);
+          r.after.opts.forEach((o, i) => {
+            const ow = `${w} 胜负以后的第 ${i + 1} 条路`;
+            if (!o.label || !o.say || !o.later) errs.push(`${ow}：要写 label、say、later（later 写这件事以后在哪里回来）`);
+            checkCond(o.if, ow, errs);
+            checkEffects(o.do, ow, errs);
+          });
+        }
       }
       if (!f.spar && !f.script && !f.results.lose) errs.push(`${w}：会输的战斗需要 lose 结算`);
-      // 备战：每一项要有叙述；单项最多削四成，全部叠满也不能低于对手的一半
-      let hpAll = 1, atkAll = 1;
+      // 备战：每一项要有叙述；知彼单项最多打八五折（低一档的人备战做满，胜率不超过六成）；帮手一共最多替你打掉四成半
+      let share = 0;
       (f.prep ?? []).forEach((p, i) => {
         const pw = `${w} 的备战 ${i}`;
         checkCond(p.if, pw, errs);
         checkEffects(p.win, `${pw} 的 win`, errs);
         if (!p.text) errs.push(`${pw}：要写 text，开打时告诉玩家这项准备起了作用`);
-        for (const k of ['hp', 'atk', 'big'] as const) if (p[k] !== undefined && (p[k]! < 0.6 || p[k]! > 1)) errs.push(`${pw}：${k} 要在 0.6 到 1 之间`);
-        hpAll *= p.hp ?? 1; atkAll *= p.atk ?? 1;
+        for (const k of ['atk', 'big'] as const) if (p[k] !== undefined && (p[k]! < 0.85 || p[k]! > 1)) errs.push(`${pw}：${k} 要在 0.85 到 1 之间`);
+        if (p.ally) {
+          const a = p.ally;
+          if (!a.name || !a.say.length) errs.push(`${pw}：帮手要写 name 和 say`);
+          if (!(a.share >= 0.1 && a.share <= 0.3)) errs.push(`${pw}：帮手的 share 要在 0.1 到 0.3 之间`);
+          if (!a.at.length || a.at.some((x, j) => !Number.isInteger(x) || x < 1 || (j > 0 && x <= a.at[j - 1]))) errs.push(`${pw}：帮手的 at 是从小到大的合数`);
+          share += a.share;
+        }
       });
-      if (hpAll < 0.5 || atkAll < 0.5) errs.push(`${w}：备战全部叠满，对手的气血、出手不能低于一半`);
+      if (share > 0.45) errs.push(`${w}：帮手一共最多替你打掉四成半气血`);
     }
     report(errs);
   });
@@ -505,3 +534,40 @@ describe('文风与剧透', () => {
   });
 });
 
+
+describe('约', () => {
+  // 放在最后：前面的检查把所有效果、条件都过了一遍，这里对账
+  it('定下的约，都有地方赴（条件 yue）、有地方了结（yueDone）；读约的条件，都有人定过这个约', () => {
+    const errs: string[] = [];
+    for (const id of yueSet) {
+      if (!yueRead.has(id)) errs.push(`约「${id}」：没有任何地方用条件 { yue: '${id}' } 让玩家赴约`);
+      if (!yueDone.has(id)) errs.push(`约「${id}」：没有任何地方用 yueDone 了结它，守约的人也会被算成失约`);
+    }
+    for (const id of yueRead) if (!yueSet.has(id)) errs.push(`条件 { yue: '${id}' }：没有任何地方定过这个约`);
+    report(errs);
+  });
+});
+
+describe('后果看得见', () => {
+  /**
+   * 写下的旗标，一定要有地方读：一条后续路遇、一句传闻、人物的一句话、一个选项的条件……
+   * 只写不读，玩家做了选择却看不到任何不同（负责人试玩「放还是杀」时说的：「没有看到结局有什么区别」）。
+   * 下面是改版时就有的欠账，接上后续以后从这里删掉；新写的旗标不许进这张单子。
+   */
+  const DEBT = [
+    'zhou', 'yh_guanbao', 'yh_ya', 'yh_caught', 'cangjing_juan', 'fuya_jiang_truth', 'fuya_jiang_hide', 'mem3_ask',
+    'ly_maishen_walk', 'ly_maishen_yanhao', 'ly_xiaozei_walk', 'ly_tongchuan',
+    'ly_jiang_cha_qian', 'ly_jiang_cha_kan', 'ly_jiang_duju_chai', 'ly_jiang_duju_gen', 'ly_jiang_yanye_he', 'ly_jiang_tun_xiang',
+    'ly_yz_jianke_bye', 'ly_yz_tangzi', 'ly_yz_tangzi_bye', 'ly_yz_zhuifei_walk', 'ly_yz_huji_cao', 'ly_yz_huji_yanhao', 'ly_yz_huji_none',
+    'ly_yz_zouhai_alone', 'ly_yz_suanming_chai', 'ly_yz_shusheng_pay', 'ly_yz_shusheng_walk'
+  ];
+  it('写下的旗标都有地方读', () => {
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS });
+    const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));
+    const read = new Set([...all.matchAll(/(?<!"type":"flag",)"(?:flag|notFlag)":"([^"]+)"/g)].map(m => m[1]));
+    const unread = [...set].filter(f => !read.has(f));
+    const errs = unread.filter(f => !DEBT.includes(f)).map(f => `旗标「${f}」：写了却没有任何地方读。给它接一条后续（路遇、传闻、人物的话），玩家才看得到这个选择的后果`);
+    for (const f of DEBT) if (!unread.includes(f)) errs.push(`旗标「${f}」：已经有地方读了（或者不再写了），请从本测试的欠账单里删掉`);
+    report(errs);
+  });
+});

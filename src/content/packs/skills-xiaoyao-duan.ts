@@ -33,7 +33,7 @@ const SKILLS: SkillDef[] = [
     desc: '逍遥派镇派神功。引他人内力化为己用，如百川入海，蓄纳愈厚，取之愈雄，护体真气亦随之深厚。',
     learn: '无量山石洞遗卷，机缘方可得见',
     teach: '奇遇',
-    needAttr: { 悟性: 20 },
+    needAttr: { 悟性: 31 },
     passive: [{ kind: 'guard', value: 15 }],
     combos: [{
       with: 'xd_lingbo', name: '北冥凌波', bonus: 5,
@@ -229,7 +229,7 @@ const SKILLS: SkillDef[] = [
     learn: '大理天龙寺镇寺绝学，须一阳指登堂入室',
     teach: '奇遇',
     requires: [{ skill: 'xd_yiyang', realm: 4 }],
-    needAttr: { 悟性: 20 },
+    needAttr: { 悟性: 31 },
     moves: [
       { name: '少商剑', text: '你拇指少商穴一挺，一缕刚猛剑气激射而出，直刺{foe}{part}，势道雄浑。', wound: '刺伤' },
       { name: '商阳剑', text: '你食指商阳穴剑气吞吐，变幻难测，忽东忽西地袭向{foe}{part}。', wound: '刺伤' },

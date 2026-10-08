@@ -10,31 +10,31 @@ const STORIES: StoryDef[] = [
     { tag: '七岁', title: '风浪',
       paras: ['那年江伯第一次带你出船。船到江心，天色骤变，浪头一个接一个打上船帮。', '江伯在船尾掌舵，回头冲你喊了一句什么。风太大，你没听清。'],
       choices: [
-        { label: '死死抱住桅杆', sub: '体魄 +2　根骨 +1', do: [{ type: 'attr', key: '体魄', delta: 2 }, { type: 'attr', key: '根骨', delta: 1 }],
+        { label: '死死抱住桅杆', sub: '体魄 +3　根骨 +2', do: [{ type: 'attr', key: '体魄', delta: 3 }, { type: 'attr', key: '根骨', delta: 2 }],
           result: '你抱着桅杆，任凭浪头一次次打在身上，一声没吭。上岸后江伯摸着你的头说：「是块练武的料子，扛得住。」' },
-        { label: '学着江伯的样子撑篙', sub: '身法 +2　踏雪无痕熟练 +50', do: [{ type: 'attr', key: '身法', delta: 2 }, { type: 'prof', skill: 'taxue', amount: 50 }],
+        { label: '学着江伯的样子撑篙', sub: '身法 +3　踏雪无痕熟练 +50', do: [{ type: 'attr', key: '身法', delta: 3 }, { type: 'prof', skill: 'taxue', amount: 50 }],
           result: '你在摇晃的船头站稳了脚，一篙一篙撑得有模有样。江伯看了你半天，没说话，只是那天晚上多给你盛了一碗鱼汤。' },
-        { label: '盯着浪头，默数它的节奏', sub: '悟性 +2', do: [{ type: 'attr', key: '悟性', delta: 2 }],
+        { label: '盯着浪头，默数它的节奏', sub: '悟性 +3', do: [{ type: 'attr', key: '悟性', delta: 3 }],
           result: '三个大浪之后，必有一个小浪。你喊出来的时候，江伯愣了一下，随即顺着那个空当，把船稳稳地带出了风口。' }
       ] },
     { tag: '十二岁', title: '恶少',
       paras: ['镇上王家的少爷带着几个家丁，踢翻了卖鱼阿婆的鱼篮，还要她跪下来一条一条捡。', '围观的人不少，没有一个上前。'],
       choices: [
-        { label: '抡起扁担冲上去', sub: '胆魄 +2', do: [{ type: 'attr', key: '胆魄', delta: 2 }, { type: 'flag', flag: 'mem2_pole' }],
+        { label: '抡起扁担冲上去', sub: '胆魄 +4', do: [{ type: 'attr', key: '胆魄', delta: 4 }, { type: 'flag', flag: 'mem2_pole' }],
           result: '你被家丁按在地上揍了一顿，可那少爷的脑门上，也挨了你结结实实一扁担。' },
-        { label: '绕到后面绊他一跤', sub: '身法 +1　悟性 +1', do: [{ type: 'attr', key: '身法', delta: 1 }, { type: 'attr', key: '悟性', delta: 1 }, { type: 'flag', flag: 'mem2_trip' }],
+        { label: '绕到后面绊他一跤', sub: '身法 +1　悟性 +2', do: [{ type: 'attr', key: '身法', delta: 1 }, { type: 'attr', key: '悟性', delta: 2 }, { type: 'flag', flag: 'mem2_trip' }],
           result: '恶少摔了个狗啃泥，回头找人时，你早已钻进了人堆。' },
-        { label: '去叫来巡检，当面对质', sub: '根骨 +1　侠义 +5　结识周巡检', do: [{ type: 'attr', key: '根骨', delta: 1 }, { type: 'xia', delta: 5 }, { type: 'flag', flag: 'mem2_patrol' }],
+        { label: '去叫来巡检，当面对质', sub: '根骨 +2　侠义 +5　结识周巡检', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'xia', delta: 5 }, { type: 'flag', flag: 'mem2_patrol' }],
           result: '姓周的巡检秉公断了案，王家赔了阿婆一篮鱼钱。临走时，他记下了你的名字。' }
       ] },
     { tag: '十六岁', title: '剑光',
       paras: ['一个雨夜，你起身解手，看见江伯独自站在江边。', '他手里握着一柄你从没见过的长剑。剑光起落之间，雨幕像被什么东西生生斩开，又在他身后合拢。'],
       choices: [
-        { label: '躲在暗处偷学', sub: '悟性 +1　寒江剑法熟练 +80', do: [{ type: 'attr', key: '悟性', delta: 1 }, { type: 'prof', skill: 'hanjiang', amount: 80 }],
+        { label: '躲在暗处偷学', sub: '悟性 +2　寒江剑法熟练 +80', do: [{ type: 'attr', key: '悟性', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 80 }],
           result: '你记下了七八式，回去在床上比划了一夜。第二天江伯看你的眼神有些古怪，却什么也没说。' },
-        { label: '走出去，求他教你', sub: '胆魄 +1　寒江剑法熟练 +40', do: [{ type: 'attr', key: '胆魄', delta: 1 }, { type: 'prof', skill: 'hanjiang', amount: 40 }, { type: 'flag', flag: 'mem3_ask' }],
+        { label: '走出去，求他教你', sub: '胆魄 +2　寒江剑法熟练 +40', do: [{ type: 'attr', key: '胆魄', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 40 }, { type: 'flag', flag: 'mem3_ask' }],
           result: '江伯沉默了很久，才道：「这剑法，本不该由我来教你。」可从那以后，每个雨夜，他都会带你到江边。' },
-        { label: '回屋彻夜难眠，跟着他的呼吸打坐', sub: '根骨 +1　寒江心法熟练 +80', do: [{ type: 'attr', key: '根骨', delta: 1 }, { type: 'prof', skill: 'xinfa', amount: 80 }],
+        { label: '回屋彻夜难眠，跟着他的呼吸打坐', sub: '根骨 +2　寒江心法熟练 +80', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'prof', skill: 'xinfa', amount: 80 }],
           result: '不知过了多久，你觉得小腹里升起一缕暖意，顺着脊背缓缓流转。天亮时，你一点也不觉得困。' }
       ] },
     { tag: '名字', title: '你叫什么名字', input: 'name',
@@ -99,11 +99,11 @@ const STORIES: StoryDef[] = [
 
 const FOES: FoeDef[] = [
   { id: 'heiyi', name: '黑衣人', title: '夜行人', ini: '黑', tone: 'gray', weapon: '短刀', ws: '刀', tag: '序章',
-    hp: 520, atk: [24, 36], big: 80, script: 'win-at-zero', firstTell: 3,
+    rank: 0, build: 'outer', weak: 0.25, script: 'cup', firstTell: 3,
     moves: ['毒蛇吐信', '反手撩阴', '横抹咽喉'],
     flourish: ['贴身疾刺', '反手一抹', '刀光一闪'],
     tells: [
-      { name: '夺命三刀', text: '黑衣人压低身形，短刀反握，脚下悄无声息地绕向你左侧……', pw: { li: 15, su: 28, qiao: 20, xi: 20 }, after: '刀锋划破了窗纸。' }
+      { name: '夺命三刀', text: '黑衣人压低身形，短刀反握，脚下悄无声息地绕向你左侧……', dom: 'su', after: '刀锋划破了窗纸。' }
     ],
     asides: ['雨水从破了的屋顶漏下来，滴在江伯脸上。', '窗外的雨越下越大。'],
     opening: ['刀势一老', '脚下一滑', '收刀时露了空门'],
@@ -114,12 +114,12 @@ const FOES: FoeDef[] = [
     results: { win: { silent: true, then: [{ type: 'story', id: 'p_after1' }] } } },
 
   { id: 'heiyi2', name: '黑衣首领', title: '腰悬铜牌', ini: '首', tone: 'red', weapon: '雁翎刀', ws: '刀', tag: '序章',
-    hp: 3600, atk: [60, 90], big: 230, script: 'rescue', firstTell: 2,
+    rank: 2, script: 'rescue', firstTell: 2,
     moves: ['夜战八方', '雁落平沙', '斜劈华岳'],
     flourish: ['刀光如匹练', '挟着风雨横扫', '自上而下猛斩'],
     tells: [
-      { name: '夜叉探海', text: '黑衣首领单手拖刀，刀尖在地上划出一串火星，猛地自下而上撩起……', pw: { li: 38, su: 30, qiao: 25, xi: 15 }, after: '桌椅被劈成了两半！' },
-      { name: '鬼影迷踪', text: '黑衣首领身形一晃，竟在雨幕里拖出两道残影……', pw: { li: 20, su: 45, qiao: 35, xi: 20 }, after: '残影散去，墙上多了三道刀痕。' }
+      { name: '夜叉探海', text: '黑衣首领单手拖刀，刀尖在地上划出一串火星，猛地自下而上撩起……', dom: 'li', after: '桌椅被劈成了两半！' },
+      { name: '鬼影迷踪', text: '黑衣首领身形一晃，竟在雨幕里拖出两道残影……', dom: 'su', after: '残影散去，墙上多了三道刀痕。' }
     ],
     asides: ['江伯倒在墙角，胸口微微起伏。', '屋顶漏下的雨水，顺着刀锋往下淌。', '另外两个黑衣人守在门口，一动不动。'],
     opening: ['刀势一老', '回刀稍慢', '用力过猛，身形一晃'],

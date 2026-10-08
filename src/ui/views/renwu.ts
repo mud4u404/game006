@@ -4,9 +4,12 @@ import { npcName, roomNpcs } from '../../engine/world';
 import { ROOMS } from '../../content';
 import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
-import { xiuwei } from '../../engine/wuxue';
+import { gongliText, houtianOf, tierNow } from '../../engine/ren';
+import { yueText } from '../../engine/shiguang';
+import { fullDate } from '../../core/time';
+import { ZONE_NAME } from '../../engine/duel';
+import { cn } from '../../core/util';
 import { cloudRowHTML } from './account-link';
-import { PROTO, xushiOn } from '../../core/proto';
 
 const ATTRS: AttrKey[] = ['体魄', '根骨', '身法', '悟性', '胆魄'];
 
@@ -26,48 +29,47 @@ function renqingHTML(): string {
   return shown || casual ? shown + casual : '<p class="muted">还没有结识什么人。</p>';
 }
 
+/** 约与心事：答应过谁、哪天在哪里；心中有愧的事（docs/foundation.md 第三节第三、九条） */
+function yueHTML(): string {
+  const rows = S.yue.slice().sort((a, b) => a.due - b.due).map(y => `<div><span class="tag warn">约</span><span>${yueText(S, y)}</span></div>`);
+  if (S.xinmo.n >= 0.05) rows.push(`<div><span class="tag danger">心魔</span><span>心中有愧（${S.xinmo.why}），静修打${cn(Math.round((1 - 0.2 * S.xinmo.n) * 10))}折。还诺、赔罪、了却这件事，才化得开；不化解，也会随日子慢慢淡。</span></div>`);
+  return rows.length ? `<section class="card here"><div class="sec-h"><h2>约与心事</h2></div><div class="news">${rows.join('')}</div></section>` : '';
+}
+
 let confirmRestart = false;
 export const setConfirmRestart = (v: boolean): void => { confirmRestart = v; };
 
 export function viewRenwu(): string {
-  const attrs = ATTRS.map(a => `<div class="attr"><b>${S.attr[a]}</b><span>${a}</span></div>`).join('');
+  const h = houtianOf(S);
+  const attrs = ATTRS.map(a => `<div class="attr"><b>${S.attr[a]}</b><span>${a}</span><small>后天 ${h[a]}</small></div>`).join('');
   const lines = attrLines(S);
   const effects = ATTRS.map(a => `<div class="row"><span>${a}</span><small class="muted">${lines[a]}</small></div>`).join('');
   const meaningful = Object.values(S.rel).filter(v => relGroup(v) !== '萍水相逢').length;
   // 和江湖页一致：没有名号时显示修为档
-  const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : '游侠 · ' + xiuwei(S).rank;
+  const tier = tierNow(S).name;
+  const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : '游侠 · ' + tier;
+  const hurt = (Object.entries(S.wounds) as ['hand' | 'foot' | 'inner', number][]).filter(([, n]) => n > 0).map(([z, n]) => `${ZONE_NAME[z]}${cn(n)}级`).join('、');
   return `
   <section class="card status"><span class="ava t-accent">沈</span><div class="who"><b>${fullName()}</b><small>${who}</small></div></section>
-  <section class="card here"><div class="sec-h"><h2>根基</h2></div><div class="attrs">${attrs}</div><div class="rows">${effects}</div></section>
+  <section class="card here"><div class="sec-h"><h2>根基</h2><span class="count">常人各二十</span></div><div class="attrs">${attrs}</div>
+    <p class="muted">大字是先天，只有奇遇改得了；后天随武功长，内功长体魄、根骨，轻功长身法，外功长悟性、胆魄。交手看后天，多出常人的天赋另算。</p>
+    <div class="rows">${effects}</div></section>
   <section class="card"><div class="kv">
     <div><span>气血</span><b>${S.hp} / ${S.hpMax}</b></div><div><span>内力</span><b>${S.mp} / ${S.mpMax}</b></div>
     <div><span>身份</span><b>${S.chapter === 0 ? '渔家' : '游侠'}</b></div><div><span>门派</span><b>无门无派</b></div>
-    <div><span>修为</span><b>${xiuwei(S).rank}</b></div><div><span>修为值</span><b>${xiuwei(S).value}</b></div>
+    <div><span>档次</span><b>${tier}</b></div><div><span>功力</span><b>${gongliText(S.gongli)}</b></div>
+    <div><span>伤</span><b>${hurt || '无'}</b></div><div><span>历练</span><b>${S.lilian}</b></div>
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
+    <div><span>江湖历</span><b>${fullDate(S)}</b></div>
   </div></section>
-  ${PROTO ? protoHTML() : ''}
+  ${yueHTML()}
   <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${meaningful}</span></div>${renqingHTML()}</section>
   <section class="card here"><div class="sec-h"><h2>存档</h2></div>
     ${saveCardHTML()}
     ${confirmRestart
       ? `<p class="muted">清空前会先另存一份，之后在「找回备份」里还能换回来。</p><div class="btnrow"><button class="btn ghost" data-act="restartNo">算了</button><button class="btn warn" data-act="restartYes">清空存档</button></div>`
       : `<button class="act danger" data-act="restart">清空存档，重新开始</button>`}
-  </section>`;
-}
-
-/** 原型里可以直接试打的对手：前三个打倒以后问放还是杀；草上飞的差事、屠千山的剧情已经定了结局，只试虚实 */
-const PROTO_FOES: [string, string][] = [['ly_xiaozei', '小毛贼'], ['huafang_guard', '汪家护院'], ['cw_shuigui', '水鬼'], ['zy_csf', '草上飞'], ['tu', '屠千山']];
-
-/** 原型（docs/foundation.md 第三版第八节）：只在原型的构建里出现 */
-function protoHTML(): string {
-  const on = xushiOn();
-  return `<section class="card here"><div class="sec-h"><h2>原型</h2><span class="tag warn">试玩用</span></div>
-    <p class="muted">这一版里多了三样，请凭手感判断：打倒有名有姓的对手以后，放还是杀；应对得手以后，硬接、拆招还的那一下更重；还有虚实，可以开关对照着打。</p>
-    <div class="row"><span>虚实（随机应变）</span><small class="muted">${on ? '开着：对手的重招有虚有实，硬接最怕落空，拆招最不怕' : '关着：和正式的游戏一样'}</small></div>
-    <button class="act" data-act="protoXushi">${on ? '关掉虚实' : '打开虚实'}</button>
-    <p class="muted">不用满地图去找，在这里直接试打（原型的存档和正式的游戏分开，不会动你的进度）。打完一场，可以先到客栈歇息，养好伤再打。</p>
-    <div class="btnrow">${PROTO_FOES.map(([id, n]) => `<button class="act" data-act="protoFight:${id}">${n}</button>`).join('')}</div>
   </section>`;
 }
 

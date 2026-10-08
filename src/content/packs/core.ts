@@ -4,7 +4,7 @@ import type { ContentPack, ItemDef, NewsDef } from '../types';
 
 const ITEMS: ItemDef[] = [
   { id: 'qingfeng', name: '青锋剑', desc: '寻常青钢长剑，剑脊上刻着一个「沈」字。', equip: { slot: '兵器', weapon: '剑', reach: '短' } },
-  { id: 'jcy', name: '金疮药', desc: '止血生肌，回复气血 260。战斗中也能服用。', usable: true },
+  { id: 'jcy', name: '金疮药', desc: '止血生肌，回复三成气血。战斗中也能服用；伤筋动骨的伤，还得静养。', usable: true },
   { id: 'fhs', name: '飞蝗石', desc: '暗器。战斗中随手打出，伤敌不重，聊胜于无。' },
   { id: 'flower', name: '杏花', desc: '新折的杏花，可以送人。' },
   { id: 'med', name: '药', desc: '回春堂的两副药，用油纸包着，还带着余温。' },

@@ -1,10 +1,13 @@
 import { S, fullName } from '../../core/state';
-import { minLabel } from '../../core/time';
-import { npc, room } from '../../content';
+import { dayNo, minLabel } from '../../core/time';
+import { foeById, npc, room } from '../../content';
 import { curQuest, hopMin, npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
-import { xiuwei } from '../../engine/wuxue';
+import { tierNow } from '../../engine/ren';
+import { kanren } from '../../engine/zhaoshi';
+import { nextYue, yueText } from '../../engine/shiguang';
+import { test } from '../../engine/dsl';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
 
@@ -21,7 +24,10 @@ export function viewJianghu(): string {
     ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(travelMin(pathMin(S.loc, q.to)))}</span>${IC.chev}</button>`
     : `<div class="card quest"><span class="tag accent">${kind}</span><span class="qt">${q.title}</span></div>`;
   const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="任务簿" title="任务簿">${IC.quest}</button></div>`;
-  const who = S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : '游侠 · ' + xiuwei(S).rank;
+  // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
+  const y = nextYue(S);
+  const yueBar = y && y.due - dayNo(S) <= 3 ? `<div class="card quest"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span></div>` : '';
+  const who = S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : '游侠 · ' + tierNow(S).name;
   return `
   <section class="card status">
     <span class="ava t-accent">沈</span>
@@ -29,6 +35,7 @@ export function viewJianghu(): string {
     <div class="minibars">${mb('气血', S.hp, S.hpMax, 'hp')}${mb('内力', S.mp, S.mpMax, 'mp')}</div>
   </section>
   ${questBar}
+  ${yueBar}
   <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${feed ? `<div class="feed">${feed}</div>` : ''}</section>
   ${all.length ? `<section class="card here">
     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
@@ -52,7 +59,12 @@ function detail(id: string): string {
   if (!n) return '';
   const rel = n.obj ? '物品' : (S.rel[id] || '素不相识');
   const reply = S.reply && S.reply.id === id ? `<div class="reply">${S.reply.text}</div>` : '';
-  return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>
+  // 看人：能动手的人，先替你掂一掂他的斤两（engine/zhaoshi.ts 的 kanren）
+  const fid = (['动手', '切磋'] as const).filter(v => verbsOf(n).includes(v))
+    .map(v => (n.actions[v] ?? []).find(b => test(b.if))?.do?.find(e => e.type === 'fight')).find(Boolean);
+  const foe = fid && fid.type === 'fight' ? foeById(fid.foe) : undefined;
+  const look = foe ? `<p class="kanren">你掂了掂他的斤两：<b>${kanren(S, foe).say}</b></p>` : '';
+  return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
     <div class="acts">${verbsOf(n).map(v => `<button class="act ${VERB_CLS[v] || ''}" data-act="do:${v}">${v}</button>`).join('')}</div>${reply}</div>`;
 }
 

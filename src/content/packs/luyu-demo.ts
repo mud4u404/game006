@@ -33,7 +33,7 @@ const STORIES: StoryDef[] = [
         { label: '给她五十文', sub: '银两 −50　侠义 +2', if: { silver: 50 },
           result: '姑娘磕了个头，把铜钱揣进怀里。她抬头看你的那一眼，有点慌。',
           do: [{ type: 'silver', delta: -50 }, { type: 'xia', delta: 2 }, { type: 'flag', flag: 'ly_maishen_paid' }], next: -1 },
-        { label: '仔细看看那张草席', sub: '悟性', if: { attr: { key: '悟性', atLeast: 15 } }, next: 1 },
+        { label: '仔细看看那张草席', sub: '悟性', if: { attr: { key: '悟性', atLeast: 23 } }, next: 1 },
         { label: '走开',
           result: '你走出老远，回头看了一眼。姑娘还跪在那里，雨水顺着木牌往下淌。',
           do: [{ type: 'flag', flag: 'ly_maishen_walk' }], next: -1 }
@@ -70,7 +70,7 @@ const STORIES: StoryDef[] = [
         { label: '给他一个烧饼钱', sub: '银两 −10', if: { silver: 10 },
           result: '孩子一把抓过铜钱，愣了一下，扔下棍子就跑。跑出几步，又回头冲你喊了一句：「我会还你的！」',
           do: [{ type: 'silver', delta: -10 }, { type: 'flag', flag: 'ly_xiaozei_fed' }], next: -1 },
-        { label: '瞪他一眼', sub: '胆魄', if: { attr: { key: '胆魄', atLeast: 13 } },
+        { label: '瞪他一眼', sub: '胆魄', if: { attr: { key: '胆魄', atLeast: 26 } },
           result: '你什么也没说，只看了他一眼。孩子的棍子「当啷」掉在地上，转身钻进了巷子，跑丢了一只草鞋。',
           do: [{ type: 'flag', flag: 'ly_xiaozei_scared' }], next: -1 },
         { label: '绕开他',
@@ -161,12 +161,12 @@ const STORIES: StoryDef[] = [
 const XIAOZEI: FoeDef = {
   id: 'ly_xiaozei', name: '小毛贼', title: '饿急了的半大孩子', ini: '贼', tone: 'gray',
   weapon: '木棍', ws: '棍', tag: '路遇', nature: '刚', reach: '长',
-  hp: 240, atk: [6, 12], big: 30, firstTell: 3,
+  rank: 0, weak: 0.1, firstTell: 3,
   moves: ['乱打一气', '当头一棍', '横扫'],
   flourish: ['闭着眼睛抡过来', '棍子抡得呼呼响，脚下却直打晃', '咬着牙捅过来'],
   tells: [
-    { name: '拼命一棍', text: '孩子双手攥紧木棍，憋红了脸，像是要把全身的力气都砸下来……', pw: { li: 14, su: 8, qiao: 4, xi: 10 }, after: '木棍砸在墙上，断成了两截！' },
-    { name: '扑上来抱腿', text: '孩子忽然扔了棍子，弓着身子朝你腿上扑过来……', pw: { li: 6, su: 14, qiao: 8, xi: 6 }, after: '他扑了个空，摔在泥里。' }
+    { name: '拼命一棍', text: '孩子双手攥紧木棍，憋红了脸，像是要把全身的力气都砸下来……', dom: 'li', after: '木棍砸在墙上，断成了两截！' },
+    { name: '扑上来抱腿', text: '孩子忽然扔了棍子，弓着身子朝你腿上扑过来……', dom: 'su', after: '他扑了个空，摔在泥里。' }
   ],
   asides: ['巷口有人探头看了一眼，又缩了回去。', '孩子的草鞋带子断了。'],
   opening: ['抡空了棍子', '脚下打滑', '喘得直不起腰'],
@@ -176,7 +176,29 @@ const XIAOZEI: FoeDef = {
   results: {
     win: { tag: '路遇 · 胜', title: '夺下木棍', button: '收手',
       story: '孩子跌坐在泥里，抱着头等你打。他瘦得肩胛骨支棱着，手腕还没你的剑柄粗。你把木棍扔在他脚边，转身走了。',
-      do: [{ type: 'feed', tag: '江湖', text: '你在巷子里夺了一个小毛贼的棍子。那孩子瘦得只剩一把骨头。' }] },
+      // 胜负以后：三条路各接一条后续（渡口的阿九、码头上跟着喽啰跑腿的孩子们、城里的传闻）
+      after: {
+        plea: '孩子跌坐在泥里，抱着脑袋直哆嗦：「别、别打了……我三天没吃东西了……」',
+        opts: [
+          { label: '给他几个铜板', sub: '银两 −10　以后在渡口', if: { silver: 10 },
+            say: '你从怀里摸出十文钱，丢在他跟前：「去买两个馒头，往后别干这个了。」',
+            title: '十文钱',
+            story: '孩子愣愣地看着地上的铜板，又看看你，一把抓起来就跑。跑出几步，他又回头冲你喊了一句：「我会还你的！」',
+            do: [{ type: 'silver', delta: -10 }, { type: 'flag', flag: 'ly_xiaozei_beat', value: false }, { type: 'flag', flag: 'ly_xiaozei_fed' }],
+            later: '他说会还你。往后去渡口，留心那双露脚趾的草鞋。' },
+          { label: '把棍子扔还给他，走人', sub: '以后在渡口',
+            say: '你把木棍扔在他脚边，转身走了。',
+            do: [{ type: 'feed', tag: '江湖', text: '你在巷子里夺了一个小毛贼的棍子。那孩子瘦得只剩一把骨头。' }],
+            later: '东关街的小叫化子们会记得，有个佩剑的打过他们的人。往后在渡口，还会见到他。' },
+          { label: '下杀手', sub: '恶名 +3',
+            say: '你手起剑落。那孩子瘦得像根柴火，倒在泥里，轻得没有一点声音。',
+            title: '巷子里的一条人命',
+            story: '巷口探出几个脑袋，又飞快地缩了回去。没有人上前，也没有人说话。你提着剑走出巷子，背后静得出奇。',
+            do: [{ type: 'eming', delta: 3 }, { type: 'flag', flag: 'ly_xiaozei_beat', value: false }, { type: 'flag', flag: 'ly_xiaozei_dead' },
+              { type: 'feed', tag: '江湖', text: '东关街的巷子里，你杀了一个拦路讨钱的孩子。' }],
+            later: '城里会传开这件事。江湖上不会有人为它叫好。' }
+        ]
+      } },
     lose: { tag: '路遇 · 负', title: '阴沟里翻船', button: '爬起来',
       story: '等你爬起来，钱袋里少了十文，那孩子早跑没了影。巷口有人笑出了声。',
       do: [{ type: 'silver', delta: -10 }, { type: 'heal', hpAtLeast: 0.5 }] },
@@ -194,7 +216,8 @@ const pack: ContentPack = {
     { if: { flag: 'ly_maishen_kind' }, text: '盐号撵出来的老脚夫，这几日抓上了药。他逢人便说，有位少侠心善。' },
     { if: { flag: 'ly_maishen_paid' }, text: '东关街有个姑娘卖身葬父，讨到了钱就不见了。有人说，她爹压根没死。' },
     { if: { flag: 'ly_ajiu' }, text: '渡口新来个扛盐包的半大孩子，叫阿九，干活不惜力，见人就笑。' },
-    { if: { flag: 'ly_xiaozei_beat' }, text: '东关街一带的小叫化子，见了佩剑的人就躲。听说有人当街打过他们一个。' }
+    { if: { flag: 'ly_xiaozei_beat' }, text: '东关街一带的小叫化子，见了佩剑的人就躲。听说有人当街打过他们一个。' },
+    { if: { flag: 'ly_xiaozei_dead' }, text: '东关街的巷子里死了个讨饭的孩子，听说是叫一个佩剑的砍的。小叫化子们夜里都不敢出来了。' }
   ]
 };
 export default pack;

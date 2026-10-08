@@ -4,21 +4,24 @@ import { cn, cleanName, fmt, liang } from '../src/core/util';
 import { dayName, minLabel, shichen, shichenKe } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
 import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
-import type { FoeDef, NpcDef } from '../src/content/types';
-import { fightKit, foeFighter, meFighter } from '../src/engine/zhaoshi';
-import { strike } from '../src/engine/combat';
+import type { NpcDef } from '../src/content/types';
+import { activePrep, alliesOf, fightKit, foeSpec, heroSpec, personOf } from '../src/engine/zhaoshi';
+import { Duel, RULES, odds } from '../src/engine/duel';
+import { dmgMul } from '../src/engine/person';
 import { autoSlot } from '../src/engine/wuxue';
 import { npc as npcDef } from '../src/content';
 const NPCS_BY = { zhou: () => npcDef('fuya_zhou')!, csf: () => npcDef('zy_csf')! };
 import { canLearn, canPerform, realmCap } from '../src/engine/shicheng';
-import { COMMON, attrEffects, attrLines, growAttr } from '../src/engine/gengu';
+import { ATTR_MAX, COMMON, attrEffects, attrLines, growAttr } from '../src/engine/gengu';
+import { houtianOf, syncBody } from '../src/engine/ren';
+import type { AttrKey } from '../src/content/types';
 import { relGroup, warmer } from '../src/engine/renqing';
 import { gainProf, learnSkill } from '../src/engine/growth';
 import { SKILLS } from '../src/content';
 import type { SkillDef } from '../src/content/types';
-import { cheng, huohou, odds, realmPow, respOptions } from '../src/engine/formulas';
-import { FOE_WINDOW, RETREAT, fightLilian, retreatPlan } from '../src/engine/lilian';
-import { prepFoe } from '../src/engine/beizhan';
+import { cheng, huohou } from '../src/engine/formulas';
+import { FOE_WINDOW, RETREAT, fightLilian, foeLilian, gongliCeiling, jingxiuPlan, retreatPlan } from '../src/engine/lilian';
+import { FOES } from '../src/content';
 import { ENC_GAP, ENC_REPEAT_DAYS, eligible, encounterChance, markEncounter, rollEncounter } from '../src/engine/encounter';
 import { ENCOUNTERS } from '../src/content';
 
@@ -120,8 +123,9 @@ describe('条件与效果', () => {
     expect(S.rel.liu).toBe('点头之交');
   });
   it('属性、侠义、恶名、时辰条件', () => {
-    expect(cond({ attr: { key: '体魄', atLeast: 13 } })).toBe(true);
-    expect(cond({ attr: { key: '体魄', atLeast: 14 } })).toBe(false);
+    const ti = houtianOf(S).体魄;
+    expect(cond({ attr: { key: '体魄', atLeast: ti } })).toBe(true);
+    expect(cond({ attr: { key: '体魄', atLeast: ti + 1 } })).toBe(false);
     run([{ type: 'eming', delta: 5 }]);
     expect(cond({ eming: 5 })).toBe(true);
     expect(cond({ xia: 1 })).toBe(false);
@@ -211,27 +215,34 @@ describe('条件与效果', () => {
 
 describe('见招拆招成算', () => {
   beforeEach(() => setState(skipToYangzhou()));
-  it('限制在一成到九成半之间', () => {
-    expect(odds('dodge', 100, 0)).toBe(0.95);
-    expect(odds('block', 0, 100)).toBe(0.05);
-    expect(odds('rush', 20, 20)).toBeCloseTo(0.35);
+  it('成算是一条 S 形曲线：火候和这一招打平时五成（抢攻三成半），差得再多也不到零、不到满', () => {
+    expect(odds(RULES, 'dodge', 30, 30)).toBeCloseTo(0.5);
+    expect(odds(RULES, 'rush', 30, 30)).toBeCloseTo(0.35);
+    expect(odds(RULES, 'block', 200, 0)).toBeLessThan(1);
+    expect(odds(RULES, 'block', 0, 200)).toBeGreaterThan(0);
+    expect(odds(RULES, 'parry', 40, 30)).toBeGreaterThan(odds(RULES, 'parry', 30, 30));
     expect(cheng(0.2)).toBe('两成');
   });
-  it('火候由境界和属性决定', () => {
+  it('火候由境界和根基决定：武功每深一重，火候涨五点多', () => {
+    const d0 = huohou(S, 'dodge'), p0 = huohou(S, 'parry');
     S.skills.taxue = { r: 2, p: 0 };
     S.skills.hanjiang = { r: 1, p: 0 };
-    expect(huohou(S, 'dodge')).toBe(2 * 10 + 16);
-    expect(huohou(S, 'parry')).toBe(1 * 10 + 15);
+    expect(huohou(S, 'dodge') - d0).toBeGreaterThan(2 * 5);
+    expect(huohou(S, 'parry') - p0).toBeGreaterThan(5);
+    S.attr.身法 += 3;
+    expect(huohou(S, 'dodge')).toBeGreaterThan(d0 + 10);
   });
   it('出手的外功负责拆招和抢攻；没有外功就只剩硬接和闪避；内力不够时硬接不可选', () => {
-    S.mp = 50;
-    const pw = { li: 30, su: 30, qiao: 30, xi: 30 };
-    const opts = respOptions(S, pw);
+    S.mp = 20;
+    const tu = FOES.find(f => f.id === 'tu')!;
+    const duel = (): Duel => new Duel(heroSpec(S, fightKit(S), tu), foeSpec(tu, []), { rng: () => 0.5 });
+    const d = duel();
+    const opts = d.options(d.tells[0]);
     expect(opts.map(o => o.k)).toEqual(['block', 'dodge', 'parry', 'rush']);
-    expect(opts.filter(o => o.k === 'parry' || o.k === 'rush').map(o => o.sname)).toEqual(['寒江剑法', '寒江剑法']);
     expect(opts.find(o => o.k === 'block')?.dis).toBe(true);
     delete S.gear.weapon;  // 剑脱手了，又没有拳脚功夫
-    expect(respOptions(S, pw).map(o => o.k)).toEqual(['block', 'dodge']);
+    const d2 = duel();
+    expect(d2.options(d2.tells[0]).map(o => o.k)).toEqual(['block', 'dodge']);
   });
 });
 
@@ -260,7 +271,7 @@ describe('师承与前置', () => {
   const fake = (o: Partial<SkillDef>): SkillDef => ({ id: 'x', name: '某功', grade: '上品', category: '剑法', school: '少林', nature: '刚', desc: '', learn: '', ...o } as SkillDef);
 
   it('门派武功要拜师、地位够；前置、属性不够学不成', () => {
-    const k = fake({ teach: '外门', requires: [{ skill: 'hanjiang', realm: 3 }], needAttr: { 悟性: 30 } });
+    const k = fake({ teach: '外门', requires: [{ skill: 'hanjiang', realm: 3 }], needAttr: { 悟性: 40 } });
     expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('拜入少林') });
     S.sect = { school: '少林', rank: '记名' };
     expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('外门弟子') });
@@ -268,7 +279,8 @@ describe('师承与前置', () => {
     expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('寒江剑法') });
     S.skills.hanjiang = { r: 3, p: 0 };
     expect(canLearn(S, k)).toMatchObject({ ok: false, why: expect.stringContaining('悟性') });
-    S.attr.悟性 = 30;
+    // 门槛看后天：寒江剑法第四重，悟性后天多八点
+    S.attr.悟性 = 32;
     expect(canLearn(S, k).ok).toBe(true);
   });
 
@@ -319,7 +331,7 @@ describe('师承与前置', () => {
   });
 
   it('外功不能比内功高出一重以上；到了瓶颈熟练照涨，内功突破后跟着突破', () => {
-    S.attr = { ...COMMON }; // 常人根基：练功不加不减，数字才好算
+    S.attr = { 体魄: COMMON, 根骨: COMMON, 身法: COMMON, 悟性: COMMON, 胆魄: COMMON }; // 常人根基：练功不加不减，数字才好算
     S.skills.xinfa = { r: 1, p: 0 };
     S.skills.hanjiang = { r: 2, p: 0 };
     const hj = SKILLS.find(k => k.id === 'hanjiang')!;
@@ -362,7 +374,7 @@ describe('缉拿草上飞走得完', () => {
     expect(pathTo('dukou', 'zhuyuwan')).toEqual(['zhuyuwan']);
     expect(act('zy_yuweng', '交谈').text).toContain('又是府衙的');
     expect(S.flags.csf_clue2).toBeFalsy();
-    S.attr.悟性 = 12;
+    S.attr.悟性 = 18;
     expect(act('zy_poshuan', '细看').text).toContain('问问村里的人');
     S.silver = 50;
     act('zy_yuweng', '买鱼');
@@ -371,7 +383,7 @@ describe('缉拿草上飞走得完', () => {
     expect(S.flags.csf_clue2).toBe(true);
     // 另一条路：悟性够，自己看出来
     delete S.flags.csf_clue2;
-    S.attr.悟性 = 15;
+    S.attr.悟性 = 21;  // 后天再加寒江剑法第一重的两点，二十三
     expect(act('zy_poshuan', '细看').text).toContain('铁爪');
     expect(S.flags.csf_clue2).toBe(true);
     S.min = 12 * 60;
@@ -427,42 +439,57 @@ describe('缉拿草上飞走得完', () => {
 });
 
 describe('根基有实效', () => {
-  beforeEach(() => { setState(skipToYangzhou()); S.attr = { ...COMMON }; S.attrApplied = undefined; S.hpMax = 1000; S.mpMax = 800; });
+  const common = (): Record<AttrKey, number> => ({ 体魄: COMMON, 根骨: COMMON, 身法: COMMON, 悟性: COMMON, 胆魄: COMMON });
+  beforeEach(() => { setState(skipToYangzhou()); S.attr = common(); syncBody(S); });
 
-  it('体魄长气血上限，根骨长内力上限；加了根基马上生效，不会重复加', () => {
-    run([{ type: 'attr', key: '体魄', delta: 2 }]);
-    expect(S.hpMax).toBe(1080);
-    run([{ type: 'attr', key: '根骨', delta: 1 }]);
-    expect(S.mpMax).toBe(830);
-    run([{ type: 'attr', key: '体魄', delta: -1 }]);
-    expect(S.hpMax).toBe(1040);
+  it('常人各二十；先天高出常人，气血、内力跟着变；改了马上生效，不会重复加', () => {
+    const hp = S.hpMax, mp = S.mpMax;
+    run([{ type: 'attr', key: '体魄', delta: 10 }]);
+    expect(S.hpMax / hp).toBeCloseTo(1.1, 2);
+    run([{ type: 'attr', key: '根骨', delta: 10 }]);
+    expect(S.mpMax / mp).toBeCloseTo(1.1, 2);
+    run([{ type: 'attr', key: '体魄', delta: -10 }]);
+    expect(Math.abs(S.hpMax / hp - 1.05 ** 0.07 / 1.05 ** 0.07 * (1 + 0.005 * 10))).toBeLessThan(0.01);
+    syncBody(S);
+    const again = S.hpMax;
+    syncBody(S);
+    expect(S.hpMax).toBe(again);
   });
 
-  it('悟性管外功、根骨管内功练得快慢；身法管赶路', () => {
+  it('悟性管外功、根骨管内功练得快慢，每高常人一点快一分；身法管赶路', () => {
     S.skills.hanjiang = { r: 0, p: 0 };
-    S.attr.悟性 = COMMON.悟性 + 5;
+    S.attr.悟性 = COMMON + 15;
     gainProf('hanjiang', 100);
     expect(S.skills.hanjiang!.p).toBe(115);
-    S.attr.身法 = COMMON.身法 + 10;
+    S.attr.身法 = COMMON + 20;
     expect(attrEffects(S).travel).toBeCloseTo(0.8);
-    S.attr.身法 = COMMON.身法 + 40;
+    S.attr.身法 = ATTR_MAX;
     expect(attrEffects(S).travel).toBe(0.7);
   });
 
-  it('武功练到第四重，根基跟着长，每一重只长一次', () => {
+  it('先天只有奇遇改得了；后天随武功长，内功每深一重，体魄、根骨各长两点', () => {
     S.skills.xinfa = { r: 1, p: 0 };
+    const h0 = houtianOf(S);
     gainProf('xinfa', 600 + 1200);
     expect(S.skills.xinfa!.r).toBe(3);
-    expect(S.attr.根骨).toBe(COMMON.根骨 + 1);
-    expect(S.feed.some(e => e.x.includes('根骨加一'))).toBe(true);
+    expect(S.attr.根骨).toBe(COMMON);
+    expect(houtianOf(S).根骨 - h0.根骨).toBe(4);
+    expect(houtianOf(S).体魄 - h0.体魄).toBe(4);
     growAttr(S, '根骨', 100, '测试');
-    expect(S.attr.根骨).toBe(30);
+    expect(S.attr.根骨).toBe(ATTR_MAX);
+  });
+
+  it('根基的条件看后天：武功练深了，看得出的东西多了', () => {
+    const need = { attr: { key: '悟性' as const, atLeast: houtianOf(S).悟性 + 2 } };
+    expect(cond(need)).toBe(false);
+    S.skills.hanjiang!.r += 1;
+    expect(cond(need)).toBe(true);
   });
 
   it('人物页写的是实际的数，不是空话', () => {
-    S.attr.体魄 = COMMON.体魄 + 2;
-    expect(attrLines(S).体魄).toBe('气血上限 +80');
-    expect(attrLines(S).胆魄).toBe('开战怒气 +0 · 抢攻');
+    S.attr.体魄 = COMMON + 10;
+    expect(attrLines(S).体魄).toContain('天赋 +10%');
+    expect(attrLines(S).胆魄).toContain('怒气 +0');
   });
 });
 
@@ -487,34 +514,51 @@ describe('从零练武：成长从江湖上来', () => {
   it('开局不入流：寒江三门都在初窥门径；出手轻重随境界，初窥门径打八成，大乘一倍六', () => {
     const g = newGame();
     expect(Object.values(g.skills).every(x => x!.r === 0 && x!.p === 0)).toBe(true);
-    expect(realmPow(S, 'hanjiang')).toBeCloseTo(0.8);
+    const lo = dmgMul(personOf(S));
+    expect(lo).toBeGreaterThan(0.75);
+    expect(lo).toBeLessThan(0.95);
     S.skills.hanjiang!.r = 8;
-    expect(realmPow(S, 'hanjiang')).toBeCloseTo(1.6);
-    expect(realmPow(S, 'jinghong')).toBeCloseTo(0.8);
+    expect(dmgMul(personOf(S)) / lo).toBeCloseTo(Math.pow(1.04, 8), 2);
   });
 
-  it('内功每突破一重，气血上限 +60、内力上限 +40；外功突破不加', () => {
-    const hp = S.hpMax, mp = S.mpMax;
+  it('内功每突破一重，气血上限跟着涨（由「人」算出来），涨的那一截直接补上；内力看功力，不看重数；轻功突破不加气血', () => {
+    const hp = S.hpMax, mp = S.mpMax, cur = S.hp;
     S.skills.xinfa = { r: 0, p: 0 };
     gainProf('xinfa', 300);
     expect(S.skills.xinfa.r).toBe(1);
-    expect(S.hpMax).toBe(hp + 60);
-    expect(S.mpMax).toBe(mp + 40);
+    expect(S.hpMax).toBeGreaterThan(hp * 1.07);
+    expect(S.hp - cur).toBe(S.hpMax - hp);
+    expect(S.mpMax).toBe(mp);
+    const hp2 = S.hpMax;
     S.skills.taxue = { r: 0, p: 0 };
     gainProf('taxue', 300);
-    expect(S.hpMax).toBe(hp + 60);
+    expect(S.hpMax).toBe(hp2);
   });
 
-  it('打一架攒历练：赢了得对手气血的一成，输了一半，逃跑没有；七天内反复打同一人，一次减半', () => {
+  it('静修：先养伤（一级三日），再打坐长功力；功力有天花板，内功练不上去就熬不深', () => {
+    S.wounds = { hand: 1, foot: 0, inner: 2 };
+    const p = jingxiuPlan(S, 7);
+    expect(p.healed).toEqual({ inner: 2 });
+    expect(p.dazuoDays).toBe(1);
+    const q = jingxiuPlan({ ...S, wounds: { hand: 0, foot: 0, inner: 0 } }, 30);
+    expect(q.gongli).toBeGreaterThan(0.8);
+    expect(q.gongli).toBeLessThan(1);
+    const capped = jingxiuPlan({ ...S, wounds: { hand: 0, foot: 0, inner: 0 }, gongli: gongliCeiling(S) }, 30);
+    expect(capped.gongli).toBe(0);
+  });
+
+  it('打一架攒历练：对手每高一档约翻一倍；赢了全得，输了一半，逃跑没有；七天内反复打同一人，一次减半', () => {
     S.lilian = 0;
-    const foe = { id: 'tu', hp: 3000 };
-    expect(fightLilian(S, foe, 'lose')).toBe(150);
-    expect(fightLilian(S, foe, 'lose')).toBe(75);
-    expect(fightLilian(S, foe, 'win')).toBe(75);
-    expect(S.lilian).toBe(300);
+    const foe = { id: 'tu', rank: 1 };
+    expect(foeLilian({ rank: 0 })).toBe(100);
+    expect(foeLilian(foe)).toBe(213);
+    expect(foeLilian({ rank: 0, weak: 0.1 })).toBe(10);
+    expect(fightLilian(S, foe, 'lose')).toBe(107);
+    expect(fightLilian(S, foe, 'lose')).toBe(53);
+    expect(fightLilian(S, foe, 'win')).toBe(53);
     S.day += FOE_WINDOW;
-    expect(fightLilian(S, foe, 'win')).toBe(300);
-    expect(fightLilian(S, { id: 'liu', hp: 1400 }, 'flee')).toBe(0);
+    expect(fightLilian(S, foe, 'win')).toBe(213);
+    expect(fightLilian(S, { id: 'liu', rank: 0.3 }, 'flee')).toBe(0);
   });
 
   it('一件事了结时给历练，只给一次', () => {
@@ -540,16 +584,23 @@ describe('从零练武：成长从江湖上来', () => {
     expect(retreatPlan(S, 1).used).toBe(RETREAT[1].cap);
   });
 
-  it('备战：条件成立的准备都生效，可以叠加；没有准备就是原来的对手', async () => {
-    const { FOES } = await import('../src/content');
+  it('备战：条件成立的准备都生效，可以叠加；知彼让对手出手打折，帮手真的进场出手', () => {
     const tu = FOES.find(f => f.id === 'tu')!;
-    expect(prepFoe(tu).foe).toBe(tu);
+    expect(activePrep(tu)).toEqual([]);
+    expect(foeSpec(tu, []).bigMul).toBeUndefined();
     S.flags.tu_scar = true;
     S.flags.tu_allies = true;
-    const { foe, active } = prepFoe(tu);
+    const active = activePrep(tu);
     expect(active).toHaveLength(2);
-    expect(foe.hp).toBe(Math.round(tu.hp * 0.75));
-    expect(foe.big).toBe(Math.round(tu.big * 0.85));
+    expect(foeSpec(tu, active).bigMul).toBeCloseTo(0.85);
+    const allies = alliesOf(active);
+    expect(allies.map(a => a.name)).toEqual(['漕帮']);
+    // 帮手按时出手，伤害记在明处
+    const d = new Duel(heroSpec(S, fightKit(S), tu), foeSpec(tu, active), { rng: () => 0.99, allies });
+    const evs = [];
+    for (let i = 0; i < 3 && !d.over; i++) { evs.push(...d.tick()); if (d.prompt) d.respond(null); }
+    const hit = evs.find(e => e.k === 'ally');
+    expect(hit && hit.k === 'ally' && hit.dmg).toBeGreaterThan(d.ehpMax * 0.05);
   });
 });
 
@@ -586,7 +637,7 @@ describe('渡口一剑：弱小的少年怎么赢', () => {
     expect(S.flags.tu_allies).toBe(true);
     const { FOES } = await import('../src/content');
     const tu = FOES.find(f => f.id === 'tu')!;
-    run([...tu.results.win.do!, ...prepFoe(tu).active.flatMap(p => p.win ?? [])]);
+    run([...tu.results.win.do!, ...activePrep(tu).flatMap(p => p.win ?? [])]);
     expect(S.flags.tu_with_allies).toBe(true);
     expect(act('guanshi', '交谈').text).toContain('撑篙');
   });
@@ -597,7 +648,7 @@ describe('渡口一剑：弱小的少年怎么赢', () => {
     expect(act('liu', '交谈').text).toContain('算我一个');
     expect(S.flags.tu_liu).toBe(true);
     const { FOES } = await import('../src/content');
-    run(prepFoe(FOES.find(f => f.id === 'tu')!).active.flatMap(p => p.win ?? []));
+    run(activePrep(FOES.find(f => f.id === 'tu')!).flatMap(p => p.win ?? []));
     S.quests.main1 = 2;
     expect(act('liu', '交谈').text).toContain('跟谁学的');
   });
@@ -693,10 +744,10 @@ describe('武功上身：实战里的招式由搭配来', () => {
   it('绝招来自出手的那门外功：境界够了才能用，不够的标出要练到哪一重', () => {
     const k = fightKit(S);
     expect(k.outer?.id).toBe('hanjiang');
-    expect(k.performs.map(x => x.p.name)).toEqual(['寒江孤影']);
+    expect(k.performs.map(x => x.name)).toEqual(['寒江孤影']);
     expect(k.locked.map(p => p.name)).toEqual(['江枫渔火', '独钓寒江']);
     S.skills.hanjiang!.r = 3;
-    expect(fightKit(S).performs.map(x => x.p.name)).toEqual(['寒江孤影', '江枫渔火', '独钓寒江']);
+    expect(fightKit(S).performs.map(x => x.name)).toEqual(['寒江孤影', '江枫渔火', '独钓寒江']);
   });
 
   it('杀招来自绝技位；没有本门内功打底，绝招、杀招都使不出来', () => {
@@ -715,16 +766,22 @@ describe('武功上身：实战里的招式由搭配来', () => {
     delete S.gear.weapon;
     const k = fightKit(S);
     expect(k.outer?.id).toBe('jh_bagua');
-    expect(k.performs.every(x => x.move.name.startsWith('八卦掌'))).toBe(true);
+    expect(k.performs.length).toBeGreaterThan(0);
+    expect(k.performs.every(x => k.outer!.performs!.includes(x))).toBe(true);
   });
 
-  it('绝招的效果交给战斗内核：点穴上身，对手要跳过出手', () => {
+  it('绝招的效果交给交手引擎：点穴上身，对手要跳过出手，一次只定一合', () => {
     S.skills.hanjiang!.r = 3;
-    const k = fightKit(S);
-    const me = meFighter(S, k), foe = foeFighter({ id: 't', name: '木人', hp: 1000, atk: [1, 1], nature: undefined } as unknown as FoeDef);
-    const c = { round: 0, maxRounds: 99, f: [me, foe] as [typeof me, typeof foe], rng: () => 0 };
-    strike(c, me, foe, k.performs[2].move);
-    expect(foe.st.busy?.r).toBe(1);
-    expect(foe.hp).toBeLessThan(1000);
+    S.mp = S.mpMax;
+    const k = fightKit(S), foe = FOES.find(f => f.id === 'tu')!;
+    const i = k.performs.findIndex(p => p.fx?.some(x => x.kind === 'busy'));
+    expect(i).toBeGreaterThanOrEqual(0);
+    const d = new Duel(heroSpec(S, k, foe), foeSpec(foe, []), { rng: () => 0 });
+    d.perform(i);
+    expect(d.foeStatus()).toContain('busy');
+    expect(d.ehp).toBeLessThan(d.ehpMax);
+    const ev = d.tick();
+    expect(ev.some(e => e.k === 'held')).toBe(true);
+    expect(d.foeStatus()).not.toContain('busy');
   });
 });

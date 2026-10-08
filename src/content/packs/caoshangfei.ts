@@ -38,7 +38,7 @@ const FOUND: Effect[] = [
 ];
 
 /** 劝得动草上飞：侠义够，或者胆魄够 */
-const PERSUADE: Cond = { any: [{ xia: 10 }, { attr: { key: '胆魄', atLeast: 13 } }] };
+const PERSUADE: Cond = { any: [{ xia: 10 }, { attr: { key: '胆魄', atLeast: 26 } }] };
 
 const NPCS: NpcDef[] = [
   {
@@ -74,7 +74,7 @@ const NPCS: NpcDef[] = [
     verbs: ['观察', '细看'],
     actions: {
       细看: [
-        { if: { ...HUNTING, notFlag: 'csf_clue2', attr: { key: '悟性', atLeast: 15 } },
+        { if: { ...HUNTING, notFlag: 'csf_clue2', attr: { key: '悟性', atLeast: 23 } },
           text: '你蹲下细看：船舷上有几道新鲜的划痕，三道一组，像是铁爪抓出来的；舱底散着几粒干粮渣子，还没泡软。有人在这里落脚，就在这几天，而且白天不在。',
           do: FOUND },
         { if: { ...HUNTING, notFlag: 'csf_clue2' }, text: '你绕着破船看了一圈，只看见积水、烂苇席和几只受惊的螃蟹。要是有人在这里落脚，你也看不出来——或许该问问村里的人。' },
@@ -131,13 +131,13 @@ const LOST: FightResult = {
 const FOES: FoeDef[] = [
   {
     id: 'zy_csf', name: '草上飞', title: '江洋大盗', ini: '飞', tone: 'red', weapon: '飞爪', ws: '爪', tag: '缉拿',
-    nature: '柔', reach: '长', hp: 1600, atk: [30, 46], big: 120, firstTell: 2,
+    nature: '柔', reach: '长', rank: 0.3, build: 'light', firstTell: 2,
     moves: ['燕子穿帘', '凌空探爪', '草上飞', '旱地拔葱'],
     flourish: ['飞爪一抖，斜斜抓来', '身子贴着船板滑开', '足尖在船舷上一点', '飞爪绕着桅杆一荡'],
     tells: [
-      { name: '双爪锁喉', text: '草上飞退到船尾，两只飞爪在手里越转越快……', pw: { li: 20, su: 35, qiao: 30, xi: 25 }, after: '飞爪擦着船篷飞过，带下一大片苇席。' },
-      { name: '踏苇而行', text: '草上飞纵身跃上芦苇梢头，竟在苇叶上站住了……', pw: { li: 15, su: 45, qiao: 25, xi: 30 }, after: '苇梢一弯一弹，他人已到了你身后。' },
-      { name: '断指一击', text: '草上飞忽然欺近，缺了小指的左手化掌为刀……', pw: { li: 35, su: 25, qiao: 30, xi: 20 }, after: '掌风扫过，船舷上的油灯应声而灭。' }
+      { name: '双爪锁喉', text: '草上飞退到船尾，两只飞爪在手里越转越快……', dom: 'su', after: '飞爪擦着船篷飞过，带下一大片苇席。' },
+      { name: '踏苇而行', text: '草上飞纵身跃上芦苇梢头，竟在苇叶上站住了……', dom: 'su', after: '苇梢一弯一弹，他人已到了你身后。' },
+      { name: '断指一击', text: '草上飞忽然欺近，缺了小指的左手化掌为刀……', dom: 'li', after: '掌风扫过，船舷上的油灯应声而灭。' }
     ],
     asides: ['芦苇荡里惊起一群水鸟。', '远处渔家的窗户亮了一亮，又熄了。', '破船吱呀作响，船底渗进水来。'],
     opening: ['飞爪收得慢了', '落脚处船板一滑', '换气时露了空门', '回身稍迟'],

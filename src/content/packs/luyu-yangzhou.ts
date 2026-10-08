@@ -90,7 +90,7 @@ const STORIES: StoryDef[] = [
             { type: 'flag', flag: 'ly_yz_huji_cao' }, { type: 'xia', delta: 1 },
             { type: 'feed', tag: '江湖', text: '码头装卸钱起了争执，有人帮漕帮的苦力说了话。漕帮管事记下了这份人情。' }
           ], next: -1 },
-        { label: '帮盐商说话', sub: '契在纸上有据', if: { attr: { key: '悟性', atLeast: 13 } },
+        { label: '帮盐商说话', sub: '契在纸上有据', if: { attr: { key: '悟性', atLeast: 20 } },
           result: '你要过契纸一看，白纸黑字，装卸钱确实按船计。你把契纸念给众人听。漕帮的把头臊红了脸，盐商的伙计朝你连声道谢。',
           do: [
             { type: 'flag', flag: 'ly_yz_huji_yanhao' }, { type: 'lilian', amount: 30 },
@@ -116,7 +116,7 @@ const STORIES: StoryDef[] = [
             { type: 'lilian', amount: 30 },
             { type: 'feed', tag: '江湖', text: '夜里你把一个走失的孩子送到了府衙。' }
           ], next: -1 },
-        { label: '蹲下来看看他的手腕', sub: '悟性', if: { attr: { key: '悟性', atLeast: 14 } }, next: 1 },
+        { label: '蹲下来看看他的手腕', sub: '悟性', if: { attr: { key: '悟性', atLeast: 22 } }, next: 1 },
         { label: '给他几文钱，让他自己找店',
           result: '你给他几文钱。孩子攥着钱，怯生生地问了家客栈的名号，一步一挪地走了。夜风里，那点小小的背影看着叫人放心不下。',
           do: [{ type: 'flag', flag: 'ly_yz_zouhai_alone' }], next: -1 }
@@ -200,7 +200,7 @@ const STORIES: StoryDef[] = [
         '「分明是他撞我一下栽赃！」书生的箱子摔开了，里头全是书，一本绸缎也没有。'
       ],
       choices: [
-        { label: '细看那段绸子', sub: '悟性', if: { attr: { key: '悟性', atLeast: 14 } }, next: 1 },
+        { label: '细看那段绸子', sub: '悟性', if: { attr: { key: '悟性', atLeast: 22 } }, next: 1 },
         { label: '替他赔钱了事', sub: '银两 −30',
           result: '你替书生赔了绸缎钱。掌柜的收钱放人。书生朝你长揖到地：「君子可欺以其方……但终究是多谢。」他抱着书箱，狼狈地走了。',
           do: [{ type: 'silver', delta: -30 }, { type: 'flag', flag: 'ly_yz_shusheng_pay' }], next: -1 },
@@ -228,12 +228,12 @@ const STORIES: StoryDef[] = [
 const JIANKE: FoeDef = {
   id: 'ly_yz_jianke', name: '使剑的船工', title: '湖上讨生活的老师傅', ini: '船', tone: 'blue',
   weapon: '老剑', ws: '剑', tag: '路遇', spar: true,
-  hp: 900, atk: [24, 40], big: 100, firstTell: 2,
+  rank: 0, build: 'light', weak: 0.6, firstTell: 2,
   moves: ['顺水推舟', '逆流斩', '回头浪'],
   flourish: ['剑势如船橹摇水，绵绵不断', '脚下随着不存在的浪头起伏', '哈哈一笑，剑更快了'],
   tells: [
-    { name: '顺水推舟', text: '船工长剑平送，借着前冲之势直刺，剑走的是水路的巧劲……', pw: { li: 14, su: 30, qiao: 34, xi: 12 }, after: '剑尖擦衣而过，带起一缕布屑！' },
-    { name: '回头浪', text: '船工剑势一老，忽然回锋倒卷，如回头浪打在船头……', pw: { li: 28, su: 16, qiao: 20, xi: 26 }, after: '回锋卷起一片尘土！' }
+    { name: '顺水推舟', text: '船工长剑平送，借着前冲之势直刺，剑走的是水路的巧劲……', dom: 'qiao', after: '剑尖擦衣而过，带起一缕布屑！' },
+    { name: '回头浪', text: '船工剑势一老，忽然回锋倒卷，如回头浪打在船头……', dom: 'li', after: '回锋卷起一片尘土！' }
   ],
   asides: ['湖上有渔船摇过，船家见惯不怪。', '柳絮粘在他的剑穗上。'],
   opening: ['剑势起得慢', '脚步稳', '笑眯眯地活动手腕'],
@@ -255,12 +255,12 @@ const JIANKE: FoeDef = {
 const TANGZI: FoeDef = {
   id: 'ly_yz_tangzi', name: '镖局趟子手', title: '威远镖局的年轻人', ini: '趟', tone: 'amber',
   weapon: '单刀', ws: '刀', tag: '路遇', spar: true,
-  hp: 750, atk: [22, 38], big: 90, firstTell: 2,
+  rank: 0, build: 'outer', weak: 0.5, firstTell: 2,
   moves: ['开山式', '截腰式', '护头式'],
   flourish: ['刀走轻灵，一看就下过苦功', '嘴里念着镖局的口诀', '年轻，劲却足'],
   tells: [
-    { name: '开山裂石', text: '趟子手大喝一声，单刀自上而下全力劈落，刀风扑面……', pw: { li: 32, su: 14, qiao: 12, xi: 20 }, after: '地上的石板被劈出一道白印！' },
-    { name: '缠头裹脑', text: '趟子手刀交左手，刀背护头，刀刃连环横削……', pw: { li: 12, su: 26, qiao: 30, xi: 18 }, after: '刀光绕着脑袋转了一圈！' }
+    { name: '开山裂石', text: '趟子手大喝一声，单刀自上而下全力劈落，刀风扑面……', dom: 'li', after: '地上的石板被劈出一道白印！' },
+    { name: '缠头裹脑', text: '趟子手刀交左手，刀背护头，刀刃连环横削……', dom: 'qiao', after: '刀光绕着脑袋转了一圈！' }
   ],
   asides: ['后巷里有伙计探头看热闹，喊着加油。', '他的刀穗上拴着一枚铜钱，是镖局的记号。'],
   opening: ['起手式扎得稳', '年轻力壮', '刀鞘还没完全出鞘'],

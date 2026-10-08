@@ -4,14 +4,15 @@
  */
 import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
-import { advanceMin } from '../core/time';
+import { advanceMin, dayNo } from '../core/time';
 import { pick } from '../core/util';
 import { NEWS, questById, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { canLearn } from './shicheng';
-import { syncAttr } from './gengu';
+import { growAttr } from './gengu';
+import { houtianOf } from './ren';
 import { addLilian, questDone } from './lilian';
 
 export function test(c?: Cond): boolean {
@@ -40,9 +41,12 @@ export function test(c?: Cond): boolean {
     if (c.realm.atLeast !== undefined && r < c.realm.atLeast) return false;
     if (c.realm.below !== undefined && r >= c.realm.below) return false;
   }
-  if (c.attr && S.attr[c.attr.key] < c.attr.atLeast) return false;
+  // 根基的条件看后天：武功练深了，眼力、胆气跟着长（engine/ren.ts）
+  if (c.attr && houtianOf(S)[c.attr.key] < c.attr.atLeast) return false;
   if (c.xia !== undefined && S.xia < c.xia) return false;
   if (c.eming !== undefined && S.eming < c.eming) return false;
+  // 约：今天是约期，约还没了结（engine/shiguang.ts）
+  if (c.yue !== undefined && !S.yue.some(y => y.id === c.yue && y.due === dayNo(S))) return false;
   if (c.hour) {
     const h = Math.floor(S.min / 60);
     const { from, to } = c.hour;
@@ -108,7 +112,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'leaveSect':
         if (S.sect) { (S.pastSects ??= []).push({ school: S.sect.school, how: e.how }); delete S.sect; }
         break;
-      case 'attr': S.attr[e.key] += e.delta; syncAttr(S); break;
+      case 'attr': growAttr(S, e.key, e.delta, '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;
       case 'eming': S.eming = Math.max(0, S.eming + e.delta); break;
       case 'title': S.title = e.value; break;
@@ -120,7 +124,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         break;
       case 'weather': S.weather = e.value; break;
       case 'heal':
-        if (e.hp === 'full') S.hp = S.hpMax; else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
+        if (e.hp === 'full') {
+          S.hp = S.hpMax;
+          // 好好歇一夜，最重的那一处伤缓一级
+          const z = (['inner', 'hand', 'foot'] as const).slice().sort((x, y) => S.wounds[y] - S.wounds[x])[0];
+          if (S.wounds[z] > 0) S.wounds[z]--;
+        } else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
         if (e.mp === 'full') S.mp = S.mpMax; else if (typeof e.mp === 'number') S.mp = Math.min(S.mpMax, S.mp + e.mp);
         if (e.hpAtLeast) S.hp = Math.max(S.hp, Math.round(S.hpMax * e.hpAtLeast));
         break;
@@ -131,6 +140,17 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         out.vars.news = n;
         break;
       }
+      case 'yue':
+        S.yue = S.yue.filter(y => y.id !== e.id).concat({ id: e.id, npc: e.npc, at: e.at, due: dayNo(S) + e.inDays, text: e.text, miss: e.miss });
+        pushFeed('江湖', `定了约：${e.text}`);
+        break;
+      case 'yueDone': S.yue = S.yue.filter(y => y.id !== e.id); break;
+      case 'xinmo':
+        // 心魔：最多三层；化解到零就清掉缘由（engine/shiguang.ts 的 addXinmo 同一套规矩）
+        S.xinmo.n = Math.max(0, Math.min(3, S.xinmo.n + e.delta));
+        if (e.delta > 0 && e.why) S.xinmo.why = e.why;
+        if (S.xinmo.n <= 0) S.xinmo = { n: 0, why: '' };
+        break;
       case 'fight': out.fight = e.foe; break;
       case 'story': out.story = e.id; break;
     }

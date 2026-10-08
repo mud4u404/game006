@@ -41,7 +41,7 @@ const SKILLS: SkillDef[] = [
     desc: '刻在圣火令上的波斯武功，招式古怪诡谲，全然不合中原武学的路数，教人无从捉摸。',
     learn: '波斯圣火令原件，唯教中高层得见',
     teach: '奇遇',
-    needAttr: { 悟性: 18 },
+    needAttr: { 悟性: 28 },
     moves: [
       { name: '熊熊圣火', text: '你令刃翻飞，招势如烈焰腾起，扫向{foe}{part}。', wound: '割伤' },
       { name: '焚我残躯', text: '你不顾自身门户，连招抢攻，招招搏命，直取{foe}{part}。', wound: '割伤' },
@@ -103,7 +103,7 @@ const SKILLS: SkillDef[] = [
     desc: '日月神教神功。吸人内力贮于己身，威力绝伦，只是异种真气积于经脉，隐患极深，练者不可不慎。',
     learn: '西湖梅庄湖底铁板刻字，历代教主口耳相传',
     teach: '奇遇',
-    needAttr: { 根骨: 20 },
+    needAttr: { 根骨: 36 },
     passive: [{ kind: 'guard', value: 15 }],
     combos: [{ with: '门派:日月神教', name: '吸元化劲', bonus: 5, text: '你吸来的内力顺着招式绵绵渡出，敌手斗得越久气越短，你却越长。', fx: [{ kind: 'guard', value: 8 }] }]
   },
@@ -112,7 +112,7 @@ const SKILLS: SkillDef[] = [
     desc: '福建林家辟邪剑谱，流入日月神教。快到极处，以速破敌，敌招再妙，也快不过这一剑；只是谱上开篇写得分明：习此剑者，须先自宫。',
     learn: '辟邪剑谱残卷，须付非常代价',
     teach: '奇遇',
-    needAttr: { 身法: 20 },
+    needAttr: { 身法: 29 },
     moves: [
       { name: '流星赶月', text: '你剑光一闪即至，如流星赶月，快得只剩残影，直刺{foe}{part}。', wound: '刺伤' },
       { name: '快雨惊风', text: '你连剑斜挥，如快雨惊风，眨眼间数剑齐落{foe}{part}。', wound: '割伤' },

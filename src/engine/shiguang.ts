@@ -1,0 +1,127 @@
+/**
+ * 光阴：江湖的钟怎样走（docs/foundation.md 第三节第三、九、十条，数由 src/lab/model/life.ts 验过）。
+ * - 江湖跑不过现实（铁律）：江湖的日数，最多比开局以来的现实小时数多十日。闭关、歇息都拨不过这条线。
+ * - 下线就是静修：现实一小时算江湖一日，一次离开最多算十六日。回来先读出关邸报。
+ * - 静修：先养伤，再打坐长功力、参悟化历练（engine/lilian.ts）。心魔每一层，成效打八折；重了会走火。
+ * - 约：人物和你定约。静修碰到约期，就在约期那天一早出关；过了约期还没了结，就是失约，生一层心魔。
+ */
+import { pushFeed, type GameState, type Yue } from '../core/state';
+import { advanceDays, dayNo, nowMs } from '../core/time';
+import { NEWS, room, skillById } from '../content';
+import type { SkillId } from '../content/types';
+import { run, test } from './dsl';
+import { gainProf } from './growth';
+import { jingxiuPlan, retreatPlan } from './lilian';
+import { syncBody } from './ren';
+import { npcName } from './world';
+
+/** 铁律的余裕（日）、一次离开最多算几日、现实一小时算江湖几日 */
+export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
+/** 心魔：每层打几折；每个江湖日淡多少层；几层以上静修会走火，走火一日的几率、一次掉几成功力 */
+export const XINMO = { k: 0.2, decay: 1 / 40, zouhuoAt: 2, zouhuoP: 0.02, zouhuoLoss: 0.1, max: 3 };
+
+const H = 3.6e6;
+/** 开局以来过了几个现实小时 */
+export const realHours = (s: GameState): number => Math.max(0, (nowMs() - s.real.start) / H);
+/** 铁律：现在还能往前拨几个江湖日 */
+export const allowance = (s: GameState): number => Math.max(0, Math.floor(realHours(s) + SHIGUANG.slack - (dayNo(s) - s.real.startDay)));
+/** 离开了几个现实小时 */
+export const awayHours = (s: GameState): number => Math.max(0, (nowMs() - s.real.seen) / H);
+
+/** 最近一个还没到期的约 */
+export const nextYue = (s: GameState): Yue | undefined => s.yue.filter(y => y.due >= dayNo(s)).sort((a, b) => a.due - b.due)[0];
+
+/** 想静修 want 日，实际能修几日：受铁律约束；碰到约期，就在约期那天一早出关 */
+export function restDays(s: GameState, want: number): { days: number; why?: 'tielv' | 'yue'; yue?: Yue } {
+  let days = Math.max(0, Math.floor(want)), why: 'tielv' | 'yue' | undefined, yue: Yue | undefined;
+  const al = allowance(s);
+  if (al < days) { days = al; why = 'tielv'; }
+  const y = nextYue(s);
+  if (y && y.due - dayNo(s) < days) { days = Math.max(0, y.due - dayNo(s)); why = 'yue'; yue = y; }
+  return { days, why, yue };
+}
+
+export interface RestReport {
+  days: number;
+  used: number;
+  gains: [SkillId, number][];
+  breaks: string[];
+  healed: Partial<Record<'hand' | 'foot' | 'inner', number>>;
+  gongli: number;
+  zouhuo: number;
+  news: string[];
+  missed: string[];
+}
+
+/** 静修 days 日：养伤、打坐、参悟，江湖历往前走，出关时气血内力回满。返回邸报要写的东西 */
+export function jingxiu(s: GameState, days: number, rng: () => number = Math.random): RestReport {
+  const xm0 = s.xinmo.n;
+  const xm1 = Math.max(0, xm0 - XINMO.decay * days);
+  const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2);
+  const jx = jingxiuPlan(s, days, eff);
+  for (const [z, n] of Object.entries(jx.healed) as ['hand' | 'foot' | 'inner', number][]) s.wounds[z] = Math.max(0, s.wounds[z] - n);
+  s.gongli = Math.round((s.gongli + jx.gongli) * 100) / 100;
+  // 心魔重了，静修时会走火：功力掉一成
+  let zouhuo = 0;
+  if (xm0 >= XINMO.zouhuoAt) for (let i = 0; i < days; i++) if (rng() < XINMO.zouhuoP) { s.gongli = Math.round(s.gongli * (1 - XINMO.zouhuoLoss) * 100) / 100; zouhuo++; }
+  s.xinmo.n = Math.round(xm1 * 1000) / 1000;
+  if (s.xinmo.n < 0.05) s.xinmo = { n: 0, why: '' };
+  // 参悟：把历练化成功夫
+  const { used, gains } = retreatPlan(s, days, eff);
+  s.lilian -= used;
+  const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
+  syncBody(s);
+  advanceDays(s, days);
+  s.min = 7 * 60 + 10;
+  s.hp = s.hpMax; s.mp = s.mpMax;
+  // 静修的日子里，江湖上的传闻
+  const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
+  const news: string[] = [];
+  for (let i = 0; i < Math.min(3, Math.ceil(days / 5)) && pool.length; i++) news.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  news.slice().reverse().forEach(n => pushFeed('传闻', n));
+  const missed = checkYue(s);
+  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed };
+}
+
+/** 过了约期还没了结的约：失约。执行失约的后果，生一层心魔。返回失约的说明 */
+export function checkYue(s: GameState): string[] {
+  const today = dayNo(s), out: string[] = [];
+  for (const y of s.yue.filter(x => x.due < today)) {
+    s.yue = s.yue.filter(x => x !== y);
+    const who = npcName(y.npc);
+    if (y.miss) run(y.miss);
+    addXinmo(s, 1, `失约于${who}`);
+    const line = `你没有赴${who}的约（${y.text}）。`;
+    pushFeed('江湖', line);
+    out.push(line);
+  }
+  return out;
+}
+
+/** 心魔加减：加的时候记下为了什么 */
+export function addXinmo(s: GameState, d: number, why?: string): void {
+  s.xinmo.n = Math.max(0, Math.min(XINMO.max, s.xinmo.n + d));
+  if (d > 0 && why) s.xinmo.why = why;
+  if (s.xinmo.n <= 0) s.xinmo = { n: 0, why: '' };
+}
+
+/** 约的说法：「三日后，柳寒舟在瘦西湖畔等你」 */
+export function yueText(s: GameState, y: Yue): string {
+  const d = y.due - dayNo(s);
+  const when = d <= 0 ? '今日' : d === 1 ? '明日' : `${['', '一', '两', '三', '四', '五', '六', '七', '八', '九', '十'][d] ?? d}日后`;
+  return `${when}，${npcName(y.npc)}在${room(y.at).name}等你：${y.text}`;
+}
+
+/** 下线回来：离开的现实小时，算成静修的日子（一次最多十六日，受铁律和约约束）。不够一日不算 */
+export function settleAway(s: GameState, rng: () => number = Math.random): (RestReport & { hours: number; why?: 'tielv' | 'yue'; yue?: Yue }) | null {
+  const hours = awayHours(s);
+  const want = Math.min(SHIGUANG.awayCap, Math.floor(hours * SHIGUANG.perHour));
+  if (want < 1) return null;
+  const r = restDays(s, want);
+  s.real.seen = nowMs();
+  if (r.days < 1) return null;
+  return { ...jingxiu(s, r.days, rng), hours, why: r.why, yue: r.yue };
+}
+
+/** 武功的名字 */
+export const skillName = (id: SkillId): string => skillById(id)?.name ?? id;

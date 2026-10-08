@@ -2,10 +2,9 @@ import { REL_LEGACY } from '../src/engine/renqing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { clearSaveSafely, exportCode, importCode, listBackups, migrate, readSave, useStore, writeSave, KEY, SAVE_VERSION, type SaveStore } from '../src/core/save';
 import { newGame, skipToYangzhou } from '../src/core/state';
-import { huohou } from '../src/engine/formulas';
-import { skillPower, synergy } from '../src/engine/wuxue';
-import { skillById } from '../src/content';
 import type { GameState } from '../src/core/state';
+import { personOf } from '../src/engine/ren';
+import { hpMaxOf } from '../src/engine/person';
 
 /** 内存里的 localStorage */
 class MemStore implements SaveStore {
@@ -47,15 +46,13 @@ describe('存档：更新游戏不丢档', () => {
     expect(s.loadout).toEqual({ neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang', ult: 'duanshui' });
     expect(s.skills.jinghong).toEqual({ r: 2, p: 40 });
     expect(s.eming).toBe(0);
-    // 惊鸿剑是上品、境界再高，旧存档里的寒江剑法也不会被换下来；拆招、硬接、闪避的成算和改版前一样
+    // 惊鸿剑是上品、境界再高，旧存档里的寒江剑法也不会被换下来
     for (const [hj, jh] of [[1, 1], [2, 2], [3, 2], [1, 3], [4, 4]]) {
       const raw = JSON.parse(FIXTURES['./fixtures/saves/v2-before-loadout.json']);
       raw.skills = { ...raw.skills, hanjiang: { r: hj, p: 0 }, jinghong: { r: jh, p: 0 } };
       const m = migrate(raw);
       expect(m.loadout.weapon).toBe('hanjiang');
-      // 改版前拆招看主手：寒江剑法的功力 + 悟性 + 同源
-      expect(huohou(m, 'parry')).toBe(skillPower(skillById('hanjiang')!, hj) + m.attr.悟性 + synergy(m));
-      expect(huohou(m, 'block')).toBe(skillPower(skillById('xinfa')!, m.skills.xinfa!.r) + m.attr.根骨 + synergy(m) + Math.round((m.mp / m.mpMax) * 10));
+      expect(m.skills.hanjiang).toEqual({ r: hj, p: 0 });
     }
     // 第二版最后的样子：主手寒江剑法、副手八卦掌，各进各的位置
     const latest = migrate(JSON.parse(FIXTURES['./fixtures/saves/v2-latest.json']));
@@ -119,11 +116,27 @@ describe('存档：更新游戏不丢档', () => {
     expect(() => importCode(exportCode(s).slice(0, 40))).toThrow('不完整');
   });
 
-  it('关系称谓统一到阶梯：旧词换成阶梯里的词，有味道的留作人情备注；根基折算进气血上限，反复读档也不重复加', () => {
-    const s = migrate({ ...skipToYangzhou(), rel: { liu: '不打不相识', fuya_zhou: '初识' }, attr: { ...skipToYangzhou().attr, 体魄: 15 }, hpMax: 1000, attrApplied: undefined } as GameState);
+  it('关系称谓统一到阶梯：旧词换成阶梯里的词，有味道的留作人情备注；气血上限由「人」算出来，反复读档也不变', () => {
+    const s = migrate({ ...skipToYangzhou(), rel: { liu: '不打不相识', fuya_zhou: '初识' }, hpMax: 1000 } as GameState);
     expect(s.rel).toEqual({ liu: '相谈甚欢', fuya_zhou: '点头之交' });
     expect(s.relNote).toEqual({ liu: '湖畔切磋，不打不相识' });
-    expect(s.hpMax).toBe(1080);
-    expect(migrate(JSON.parse(JSON.stringify(s))).hpMax).toBe(1080);
+    expect(s.hpMax).toBe(hpMaxOf(personOf(s)));
+    expect(migrate(JSON.parse(JSON.stringify(s))).hpMax).toBe(s.hpMax);
+  });
+
+  it('第三版升第四版：根基按常人的比例换成二十的刻度；内力去掉根基那一截，一百点算一年功力；气血、内力按原来的比例保留；没有伤', () => {
+    const raw = JSON.parse(FIXTURES['./fixtures/saves/v3-latest.json']);
+    const s = migrate(raw);
+    expect(s.v).toBe(4);
+    expect(s.attr).toEqual({ 体魄: 22, 根骨: 22, 身法: 23, 悟性: 23, 胆魄: 22 });
+    expect(s.gongli).toBeCloseTo((800 - 30) / 100);
+    expect(s.wounds).toEqual({ hand: 0, foot: 0, inner: 0 });
+    expect(s.hpMax).toBe(hpMaxOf(personOf(s)));
+    expect(s.hp / s.hpMax).toBeCloseTo(820 / 1000, 2);
+    expect(s.mp / s.mpMax).toBeCloseTo(460 / 800, 2);
+    expect((s as unknown as Record<string, unknown>).attrApplied).toBeUndefined();
+    expect((s as unknown as Record<string, unknown>).hpFrac).toBeUndefined();
+    // 再读一次不变
+    expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
   });
 });

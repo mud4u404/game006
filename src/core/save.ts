@@ -10,15 +10,14 @@
  */
 import { ROOMS, SKILLS } from '../content';
 import { defaultLoadout, fits } from '../engine/wuxue';
-import { syncAttr } from '../engine/gengu';
+import { syncBody } from '../engine/ren';
 import { migrateRel } from '../engine/renqing';
 import type { Loadout } from '../engine/wuxue';
-import type { Slot } from '../content/types';
+import type { AttrKey, Slot } from '../content/types';
 import { newGame, skipToYangzhou, type GameState } from './state';
-import { dateStr } from './time';
-import { PROTO } from './proto';
+import { dateStr, dayNo, nowMs } from './time';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 export const KEY = 'jhyy-save-v2';
 const META = 'jhyy-save-meta';
 const BROKEN = 'jhyy-save-broken-';
@@ -37,21 +36,9 @@ export interface SaveStore {
 
 let store: SaveStore | null = null;
 const browserStore = (): SaveStore | null => {
-  try { return typeof localStorage === 'undefined' ? null : PROTO ? prefixed(localStorage, 'jhyy-proto:') : localStorage; } catch { return null; }
+  try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
 };
 
-/** 原型（?proto=1）用单独的一套存档（键名加前缀），不碰正式的进度 */
-export function prefixed(s: SaveStore, p: string): SaveStore {
-  const own = (): string[] => {
-    const ks: string[] = [];
-    for (let i = 0; i < s.length; i++) { const k = s.key(i); if (k?.startsWith(p)) ks.push(k.slice(p.length)); }
-    return ks;
-  };
-  return {
-    getItem: k => s.getItem(p + k), setItem: (k, v) => s.setItem(p + k, v), removeItem: k => s.removeItem(p + k),
-    key: i => own()[i] ?? null, get length() { return own().length; }
-  };
-}
 /** 测试用：换一个存储 */
 export const useStore = (s: SaveStore | null): void => { store = s; };
 const st = (): SaveStore | null => store ?? browserStore();
@@ -78,8 +65,32 @@ function v2toV3(o: Raw): Raw {
   return { ...o, v: 3, loadout: lo, items, gear: { weapon: 'qingfeng' } };
 }
 
+/**
+ * 第四版：「人」（docs/foundation.md 第三版，大换血第二步）。
+ * - 根基换刻度：旧的常人是 13、11、14、13、10，新的常人各二十，按相对常人的比例折算，四舍五入。
+ * - 功力以年计：旧的内力上限去掉根基折进去的那一截，一百点算一年。
+ * - 伤：新加，没有伤。
+ * - 气血、内力上限由「人」算出来（读档时 repair 里算），当前值按原来的比例保留。
+ */
+const OLD_COMMON: Record<AttrKey, number> = { 体魄: 13, 根骨: 11, 身法: 14, 悟性: 13, 胆魄: 10 };
+function v3toV4(o: Raw): Raw {
+  const a = (o.attr ?? {}) as Record<AttrKey, number>;
+  const attr = Object.fromEntries((Object.keys(OLD_COMMON) as AttrKey[]).map(k =>
+    [k, Math.max(1, Math.min(50, Math.round((20 * (a[k] ?? OLD_COMMON[k])) / OLD_COMMON[k])))])) as Record<AttrKey, number>;
+  const applied = (o.attrApplied as { mp?: number } | undefined)?.mp ?? 30 * ((a.根骨 ?? 11) - 11);
+  const mpMax = Number(o.mpMax) || 300, hpMax = Number(o.hpMax) || 600;
+  const gongli = Math.max(0.5, Math.round(((mpMax - applied) / 100) * 100) / 100);
+  const { attrApplied: _drop, ...rest } = o;
+  void _drop;
+  // 比例先记下，repair 算出新的上限以后按比例还原
+  return {
+    ...rest, v: 4, attr, gongli, wounds: { hand: 0, foot: 0, inner: 0 },
+    hpFrac: Math.max(0.01, Math.min(1, (Number(o.hp) || hpMax) / hpMax)), mpFrac: Math.max(0, Math.min(1, (Number(o.mp) || 0) / mpMax))
+  };
+}
+
 /** 第 n 版升到第 n+1 版的办法 */
-const MIGRATIONS: Record<number, (o: Raw) => Raw> = { 2: v2toV3 };
+const MIGRATIONS: Record<number, (o: Raw) => Raw> = { 2: v2toV3, 3: v3toV4 };
 
 /** 把读到的东西升到当前版本，补齐缺的字段，修掉指向已不存在内容的地方。不认识的版本直接抛错 */
 export function migrate(input: unknown): GameState {
@@ -102,10 +113,17 @@ function repair(s: GameState): GameState {
   const rec = s as unknown as Record<string, unknown>;
   // 同一版本里后来加的字段，用新游戏的默认值补上
   if (rec.loadout === undefined) rec.loadout = defaultLoadout(s.skills ?? {});
+  // 现实的钟从换算的这一刻算起：旧存档里的江湖日子不算「跑在现实前头」
+  if (!rec.real || typeof (rec.real as GameState['real']).start !== 'number') rec.real = { start: nowMs(), startDay: dayNo(s), seen: nowMs() };
   for (const k of Object.keys(def)) if (rec[k] === undefined) rec[k] = def[k];
-  // 关系称谓统一到关系阶梯，根基折算进气血、内力上限（都可以反复执行）
+  // 关系称谓统一到关系阶梯；气血、内力上限由「人」算出来（都可以反复执行）
   migrateRel(s);
-  syncAttr(s);
+  for (const k of ['hand', 'foot', 'inner'] as const) s.wounds[k] = Math.max(0, Math.min(3, Math.round(Number(s.wounds[k]) || 0)));
+  if (!(s.gongli > 0)) s.gongli = 0.5;
+  syncBody(s);
+  const fr = rec as { hpFrac?: number; mpFrac?: number };
+  if (fr.hpFrac !== undefined) { s.hp = Math.max(1, Math.round(s.hpMax * fr.hpFrac)); delete fr.hpFrac; }
+  if (fr.mpFrac !== undefined) { s.mp = Math.round(s.mpMax * fr.mpFrac); delete fr.mpFrac; }
   // 地点没了，送回这一回的起点
   if (!ROOMS.some(r => r.id === s.loc)) s.loc = s.chapter === 0 ? newGame().loc : skipToYangzhou().loc;
   // 手里的兵器已经不在行囊里了，就空着手

@@ -49,7 +49,7 @@ const STORIES: StoryDef[] = [
         '一个浪头打上船舷，甲板上全是水。'
       ],
       choices: [
-        { label: '攀上船头帮着稳桅索', sub: '身法', if: { attr: { key: '身法', atLeast: 14 } },
+        { label: '攀上船头帮着稳桅索', sub: '身法', if: { attr: { key: '身法', atLeast: 20 } },
           result: '你攀着湿滑的帆索上去，风浪里腾挪走位，替船家把歪了的桅索重新绑正。风头过去，船家抹着脸上的水直道谢。',
           do: [
             { type: 'lilian', amount: 30 },
@@ -89,7 +89,7 @@ const STORIES: StoryDef[] = [
         '船上乱作一团，艄公急着调头，货郎的妻子抱着孩子哭喊救命。'
       ],
       choices: [
-        { label: '扎进江里救人', sub: '体魄', if: { attr: { key: '体魄', atLeast: 14 } },
+        { label: '扎进江里救人', sub: '体魄', if: { attr: { key: '体魄', atLeast: 22 } },
           result: '你扎进江里，几个划水追上货郎，拽着他的领子游回船边。众人七手八脚拉上来，货郎吐了几口水，缓过气来，抱着妻小放声大哭。',
           do: [
             { type: 'flag', flag: 'ly_jiang_jiu' }, { type: 'xia', delta: 3 },
@@ -133,7 +133,7 @@ const STORIES: StoryDef[] = [
         '满船的客人都趴到舷边看稀奇。船家却变了脸色，念念有词地从舱里请出一炉香：「江豚拜风，大风就要来了——客官们，抓稳了！」'
       ],
       choices: [
-        { label: '帮船家抢收帆布', sub: '体魄', if: { attr: { key: '体魄', atLeast: 13 } },
+        { label: '帮船家抢收帆布', sub: '体魄', if: { attr: { key: '体魄', atLeast: 20 } },
           result: '你抢在风头前帮船家把帆布收拢捆紧。风果然来了，船晃得像片叶子，却因帆收得及时，稳稳当当靠了岸。船家非说这炉香灵验。',
           do: [
             { type: 'lilian', amount: 20 },

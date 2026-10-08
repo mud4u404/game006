@@ -150,7 +150,7 @@ const NPCS: NpcDef[] = [
         { text: '匣子上着锁，不知道里头锁着什么。' }
       ],
       撬锁: [
-        { if: { flag: 'huafang_taken', notFlag: 'yh_freed', hour: { from: 19, to: 5 }, attr: { key: '身法', atLeast: 18 } },
+        { if: { flag: 'huafang_taken', notFlag: 'yh_freed', hour: { from: 19, to: 5 }, attr: { key: '身法', atLeast: 26 } },
           text: '夜里你摸到柜前，一根铁签探进锁孔——身法够快，簧片轻轻一让，锁开了。身契到手，匣子照原样摆好，没人察觉。',
           do: [
             { type: 'flag', flag: 'yh_tou' },

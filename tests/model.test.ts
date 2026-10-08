@@ -6,9 +6,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import { migrate } from '../src/core/save';
-import { skipToYangzhou } from '../src/core/state';
-import { FOES } from '../src/content';
-import { syncAttr } from '../src/engine/gengu';
 import { XIUWEI, xiuwei } from '../src/engine/wuxue';
 import { buildReport, sensitivity, type Report } from '../src/lab/model/report';
 
@@ -37,14 +34,11 @@ const SENS_FRAGILE: string[] = ['成算的尺度（26）', '对手气血的厚�
 function inputs() {
   const saves = Object.entries(FIXTURES).map(([f, raw]) => {
     const state = migrate(JSON.parse(raw));
+    const old = JSON.parse(raw);
     const rank = xiuwei(state).rank;
-    return { file: f.replace('./fixtures/saves/', '').replace('.json', ''), state, oldTier: XIUWEI.findIndex(([, r]) => r === rank) };
+    return { file: f.replace('./fixtures/saves/', '').replace('.json', ''), state, raw: { attr: old.attr, mpMax: old.mpMax, attrApplied: old.attrApplied }, oldTier: XIUWEI.findIndex(([, r]) => r === rank) };
   });
-  // 现有实战的基准：在扬州练了几个时辰的玩家，对屠千山
-  const s = skipToYangzhou();
-  s.skills.hanjiang = { r: 2, p: 0 }; s.skills.xinfa = { r: 1, p: 0 }; s.skills.taxue = { r: 1, p: 0 };
-  syncAttr(s);
-  return { saves, baseline: { state: s, foe: FOES.find(f => f.id === 'tu')! } };
+  return { saves };
 }
 
 function print(r: Report): void {
