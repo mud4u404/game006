@@ -547,3 +547,27 @@ describe('约', () => {
     report(errs);
   });
 });
+
+describe('后果看得见', () => {
+  /**
+   * 写下的旗标，一定要有地方读：一条后续路遇、一句传闻、人物的一句话、一个选项的条件……
+   * 只写不读，玩家做了选择却看不到任何不同（负责人试玩「放还是杀」时说的：「没有看到结局有什么区别」）。
+   * 下面是改版时就有的欠账，接上后续以后从这里删掉；新写的旗标不许进这张单子。
+   */
+  const DEBT = [
+    'zhou', 'yh_guanbao', 'yh_ya', 'yh_caught', 'cangjing_juan', 'fuya_jiang_truth', 'fuya_jiang_hide', 'mem3_ask',
+    'ly_maishen_walk', 'ly_maishen_yanhao', 'ly_xiaozei_walk', 'ly_tongchuan',
+    'ly_jiang_cha_qian', 'ly_jiang_cha_kan', 'ly_jiang_duju_chai', 'ly_jiang_duju_gen', 'ly_jiang_yanye_he', 'ly_jiang_tun_xiang',
+    'ly_yz_jianke_bye', 'ly_yz_tangzi', 'ly_yz_tangzi_bye', 'ly_yz_zhuifei_walk', 'ly_yz_huji_cao', 'ly_yz_huji_yanhao', 'ly_yz_huji_none',
+    'ly_yz_zouhai_alone', 'ly_yz_suanming_chai', 'ly_yz_shusheng_pay', 'ly_yz_shusheng_walk'
+  ];
+  it('写下的旗标都有地方读', () => {
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS });
+    const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));
+    const read = new Set([...all.matchAll(/(?<!"type":"flag",)"(?:flag|notFlag)":"([^"]+)"/g)].map(m => m[1]));
+    const unread = [...set].filter(f => !read.has(f));
+    const errs = unread.filter(f => !DEBT.includes(f)).map(f => `旗标「${f}」：写了却没有任何地方读。给它接一条后续（路遇、传闻、人物的话），玩家才看得到这个选择的后果`);
+    for (const f of DEBT) if (!unread.includes(f)) errs.push(`旗标「${f}」：已经有地方读了（或者不再写了），请从本测试的欠账单里删掉`);
+    report(errs);
+  });
+});
