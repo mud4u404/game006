@@ -57,7 +57,7 @@ at: [{ room: 'cheng', if: { hour: { from: 7, to: 18 } } }, { room: 'cheng_tavern
 
 ### 量一量：闲逛的密度
 
-`npm run xianguang`：机器玩家在扬州随便逛三天，从第二天起每走十步碰上几件新鲜事（10-08：改之前 0.38 件，改之后 1.27 件）。新写的地方，也要让这个数不往下掉。
+`npm run xianguang`：机器玩家在扬州随便逛三天，从第二天起每走十步碰上几件新鲜事（10-08：改之前 0.38 件，改之后 1.27 件）。新写的地方，也要让这个数不往下掉。量别的地区：`XIANGUANG_REGION=zj npm run xianguang`（地区 id 见各内容包的 `regions`），新城池要量到一件以上。
 
 ---
 

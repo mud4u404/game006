@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import { S, setState, skipToYangzhou } from '../src/core/state';
 import { absMin, advanceMin, setNowMs } from '../src/core/time';
-import { ROOMS, npc, room } from '../src/content';
+import { REGIONS, ROOMS, npc, room } from '../src/content';
 import { act, enter, roomDesc, roomNpcs, travelMin, hopMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
 import { tickShi } from '../src/engine/shishi';
@@ -24,7 +24,9 @@ const env = (globalThis as { process?: { env: Record<string, string | undefined>
  * 10-08 量的：做活的江湖以前 0.38 件（大半是路遇），做了世事、作息、打听、歇脚以后 1.27 件。门槛留一些余地。
  */
 const MIN_PER_10 = 1.0;
-const DAYS = 3, REGION = 'yz', SEEDS = 12;
+/** 量哪个地区：默认扬州（门槛只管扬州）；协作者写新地方时 XIANGUANG_REGION=sz npm run xianguang 量自己的 */
+const REGION = env.XIANGUANG_REGION ?? 'yz';
+const DAYS = 3, SEEDS = 12;
 
 interface Tally { steps: number; fresh: number; kinds: Record<string, number> }
 
@@ -37,6 +39,7 @@ function wander(seed: number): Tally {
   S.quests.main1 = 3;
   S.track = '';
   S.silver = 2000;
+  if (room(S.loc).region !== REGION) S.loc = ROOMS.find(r => r.region === REGION)!.id;
   const t0 = absMin(S);
   const seenNpc = new Set<string>(), seenDesc = new Set<string>(), seenShi = new Set<string>();
   const t: Tally = { steps: 0, fresh: 0, kinds: {} };
@@ -94,10 +97,10 @@ describe('闲逛的密度', () => {
   const kinds: Record<string, number> = {};
   for (const x of all) for (const [k, n] of Object.entries(x.kinds)) kinds[k] = (kinds[k] ?? 0) + n;
   const per10 = (fresh / steps) * 10;
-  const line = `闲逛扬州 ${SEEDS} 局，第二、三天共 ${steps} 步，碰上新鲜事 ${fresh} 件，每十步 ${per10.toFixed(2)} 件（${Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join('，')}）`;
+  const line = `闲逛${REGIONS[REGION]?.name ?? REGION} ${SEEDS} 局，第二、三天共 ${steps} 步，碰上新鲜事 ${fresh} 件，每十步 ${per10.toFixed(2)} 件（${Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join('，')}）`;
   if (env.XIANGUANG !== undefined || env.ZOUBIAN) console.log(line);
 
   it(`第二天起，每走十步至少碰上 ${MIN_PER_10} 件新鲜事`, () => {
-    expect(per10, line).toBeGreaterThanOrEqual(MIN_PER_10);
+    if (REGION === 'yz') expect(per10, line).toBeGreaterThanOrEqual(MIN_PER_10);
   });
 });
