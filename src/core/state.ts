@@ -1,14 +1,14 @@
 import type { AttrKey, FeedTag, SectRank, SkillId } from '../content/types';
 import type { Loadout } from '../engine/wuxue';
 import { clearSaveSafely, readSave, writeSave } from './save';
-import { syncAttr } from '../engine/gengu';
+import { syncBody } from '../engine/ren';
 
 export interface SkillProg { r: number; p: number }
 export interface FeedEntry { t: FeedTag; x: string; n: number }
 export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
 
 export interface GameState {
-  v: 3;
+  v: 4;
   /** 0 为序章，1 起为第几回 */
   chapter: number;
   /** 名，姓固定为沈 */
@@ -32,6 +32,7 @@ export interface GameState {
   xia: number;
   /** 恶名，与侠义互不抵消 */
   eming: number;
+  /** 先天根基，常人各二十（engine/person.ts） */
   attr: Record<AttrKey, number>;
   skills: Partial<Record<SkillId, SkillProg>>;
   /** 搭配：各槽位放的武功，见 docs/zhuangbei.md 第二节 */
@@ -42,8 +43,10 @@ export interface GameState {
   sect?: { school: string; rank: SectRank };
   /** 离开过的师门 */
   pastSects?: { school: string; how: '出师' | '叛门' }[];
-  /** 根基已经折算进气血、内力上限的部分（engine/gengu.ts 的 syncAttr 用） */
-  attrApplied?: { hp: number; mp: number };
+  /** 功力（年）：一年一百点内力，靠静修的岁月熬（engine/ren.ts） */
+  gongli: number;
+  /** 身上的伤：手、足、内息各几级（零到三）。吃了重招才落下，打完才起作用，带到下一场；静修、歇息养好 */
+  wounds: { hand: number; foot: number; inner: number };
   /** 人情备注：为什么记得这个人，例如「湖畔切磋，不打不相识」 */
   relNote?: Record<string, string>;
   /** 历练：江湖上攒下的见识与实战，闭关时化为武功进境（engine/lilian.ts） */
@@ -61,30 +64,35 @@ export interface GameState {
   tab: Tab;
 }
 
-export const ATTR0: Record<AttrKey, number> = { 体魄: 14, 根骨: 12, 身法: 16, 悟性: 15, 胆魄: 11 };
+/** 跳过序章时的根基：和走完童年三忆的样子相当（常人各二十） */
+export const ATTR0: Record<AttrKey, number> = { 体魄: 22, 根骨: 22, 身法: 23, 悟性: 23, 胆魄: 22 };
 
 /** 新游戏：从序章「瓜洲夜雨」开始。一个只会几招粗浅功夫的渔家少年，属性略低，由童年三忆补上 */
 export function newGame(): GameState {
-  return {
-    v: 3, chapter: 0, name: '孤舟', loc: 'gz_home', month: 3, day: 5, min: 15 * 60 + 20, weather: '阴',
-    hp: 600, hpMax: 600, mp: 150, mpMax: 300,
+  const s: GameState = {
+    v: 4, chapter: 0, name: '孤舟', loc: 'gz_home', month: 3, day: 5, min: 15 * 60 + 20, weather: '阴',
+    // 气血、内力的上限由「人」算出来（engine/ren.ts 的 syncBody）；功力三年：江伯教过吐纳
+    hp: 1e9, hpMax: 0, mp: 150, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
     silver: 30, items: { qingfeng: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
     flags: {}, rel: { jiangbo: '相依为命' }, title: '', xia: 0, eming: 0,
-    attr: { 体魄: 13, 根骨: 11, 身法: 14, 悟性: 13, 胆魄: 10 }, lilian: 0, encLog: {}, lastEnc: -1e9,
+    attr: { 体魄: 20, 根骨: 20, 身法: 20, 悟性: 20, 胆魄: 20 }, lilian: 0, encLog: {}, lastEnc: -1e9,
     // 渔家少年：江伯只教过几招防身的粗浅功夫，都还没入门（从零练起，见 docs/audit.md）
     skills: { hanjiang: { r: 0, p: 0 }, xinfa: { r: 0, p: 0 }, taxue: { r: 0, p: 0 } },
     loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'qingfeng' },
     feed: [{ t: '传闻', x: '江上这两天来了几条生船，不打鱼，专打听人。', n: 0 }],
     story: '', sel: null, reply: null, tab: 'jianghu'
   };
+  syncBody(s);
+  s.mp = Math.round(s.mpMax / 2);
+  return s;
 }
 
 /** 跳过序章，直接从扬州开始：和走完序章的样子相当（江伯故去，学了断水的起手；惊鸿剑要自己去小金山悟） */
 export function skipToYangzhou(): GameState {
   const s: GameState = {
-    v: 3, chapter: 1, name: '孤舟', loc: 'hu', month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
-    hp: 520, hpMax: 600, mp: 200, mpMax: 300,
+    v: 4, chapter: 1, name: '孤舟', loc: 'hu', month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
+    hp: 1e9, hpMax: 0, mp: 1e9, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
     silver: 120, items: { qingfeng: 1, jcy: 3, fhs: 5, jade: 1, scroll: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
     flags: { skipped: true }, rel: { liu: '素不相识' }, title: '', xia: 12, eming: 0,
@@ -98,8 +106,10 @@ export function skipToYangzhou(): GameState {
     ],
     story: '', sel: 'liu', reply: null, tab: 'jianghu'
   };
-  // 根基折算进气血、内力上限（engine/gengu.ts）
-  syncAttr(s);
+  // 气血、内力上限由「人」算出来；那一夜的伤还没全好，气血八成半、内力三分之二
+  syncBody(s);
+  s.hp = Math.round(s.hpMax * 0.85);
+  s.mp = Math.round(s.mpMax * 2 / 3);
   return s;
 }
 

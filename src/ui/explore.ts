@@ -10,9 +10,10 @@ import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { test } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
-import { growAttr } from '../engine/gengu';
+import { syncBody, gongliText } from '../engine/ren';
+import { ZONE_NAME } from '../engine/duel';
 import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
-import { retreatPlan } from '../engine/lilian';
+import { jingxiuPlan, retreatPlan } from '../engine/lilian';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
@@ -91,6 +92,11 @@ function retreat(days: number): void {
   b.style.transition = `width ${reduceMotion ? 50 : 1200}ms linear`;
   b.style.width = '100%';
   window.setTimeout(() => {
+    // 先养伤，再打坐：伤养好了几级、功力长了多少（engine/lilian.ts 的 jingxiuPlan）
+    const jx = jingxiuPlan(S, days);
+    for (const [z, n] of Object.entries(jx.healed) as ['hand' | 'foot' | 'inner', number][]) S.wounds[z] = Math.max(0, S.wounds[z] - n);
+    S.gongli = Math.round((S.gongli + jx.gongli) * 100) / 100;
+    syncBody(S);
     advanceDays(S, days);
     S.min = 7 * 60 + 10;
     S.mp = S.mpMax; S.hp = S.hpMax;
@@ -98,8 +104,6 @@ function retreat(days: number): void {
     const { used, gains } = retreatPlan(S, days);
     S.lilian -= used;
     const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
-    // 闭关一月，打熬筋骨：体魄加一，最多三次（engine/gengu.ts）
-    if (days === 30) for (let i = 1; i <= 3; i++) if (!S.flags[`gg_体魄_闭关${i}`]) { S.flags[`gg_体魄_闭关${i}`] = true; growAttr(S, '体魄', 1, '闭关一月，打熬筋骨'); break; }
     const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
     const news: string[] = [];
     for (let i = 0; i < ({ 1: 1, 7: 2, 30: 3 } as Record<number, number>)[days] && pool.length; i++) {
@@ -108,11 +112,12 @@ function retreat(days: number): void {
     news.slice().reverse().forEach(n => pushFeed('传闻', n));
     const names = (id: SkillId): string => skillById(id)?.name ?? id;
     const how = used ? `消化历练 ${used}` : '没有历练可消化，闭门造车，进境有限';
-    pushFeed('出关', `闭关${label}，${how}${gains[0] ? `，「${names(gains[0][0])}」熟练 +${gains[0][1]}` : ''}。`);
+    const healTxt = Object.entries(jx.healed).map(([z, n]) => `${ZONE_NAME[z as 'hand']}伤好了${n === 1 ? '一' : n === 2 ? '两' : '三'}级`).join('、');
+    pushFeed('出关', `闭关${label}，${how}${gains[0] ? `，「${names(gains[0][0])}」熟练 +${gains[0][1]}` : ''}${jx.gongli > 0 ? `；功力深到${gongliText(S.gongli)}` : ''}${healTxt ? `；${healTxt}` : ''}。`);
     const panel = document.querySelector('#sheetLayer .panel');
     if (panel) panel.innerHTML = `
       <div class="r-h"><span class="tag accent">出关</span><h2>闭关${label}，今日${dateStr(S)}</h2></div>
-      <div class="rewards"><span class="tag ${used ? 'accent' : ''}">${used ? `消化历练 ${used}` : '闭门造车'}</span>${gains.map(([k, v]) => `<span class="tag accent">${names(k)} +${v}</span>`).join('')}${breaks.map(x => `<span class="tag info">${x}</span>`).join('')}</div>
+      <div class="rewards"><span class="tag ${used ? 'accent' : ''}">${used ? `消化历练 ${used}` : '闭门造车'}</span>${gains.map(([k, v]) => `<span class="tag accent">${names(k)} +${v}</span>`).join('')}${breaks.map(x => `<span class="tag info">${x}</span>`).join('')}${jx.gongli > 0 ? `<span class="tag accent">功力 +${jx.gongli.toFixed(2)} 年</span>` : ''}${healTxt ? `<span class="tag">${healTxt}</span>` : ''}</div>
       <div class="r-sub">江湖见闻</div>
       <div class="news">${news.map(n => `<div><span class="tag warn">传闻</span><span>${n}</span></div>`).join('')}</div>
       <button class="btn" data-act="sheetClose">出关</button>`;
@@ -166,7 +171,7 @@ registerHandlers({
   use: v => {
     if (v !== 'jcy' || (S.items.jcy || 0) < 1 || S.hp >= S.hpMax) return;
     S.items.jcy--;
-    S.hp = Math.min(S.hpMax, S.hp + 260);
+    S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * 0.3));
     toast('气血回复');
     render();
   },

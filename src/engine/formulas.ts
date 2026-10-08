@@ -7,7 +7,7 @@ import { clamp, liang } from '../core/util';
 import type { Pw, RespKey } from './duel';
 import { huohouOf } from './person';
 import { respSkill } from './wuxue';
-import { personOf } from './zhaoshi';
+import { personOf } from './ren';
 
 export type { RespKey } from './duel';
 

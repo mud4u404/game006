@@ -285,7 +285,7 @@ const FOES: FoeDef[] = [
       win: { tag: '首领战 · 胜', title: '大败黑风寨主', story: '@compose', button: '收下，回到渡口',
         do: [{ type: 'flag', flag: 'boss' }, { type: 'quest', id: 'main1', stage: 2 }, { type: 'title', value: '渡口一剑' },
           { type: 'prof', skill: 'hanjiang', amount: 300 }, { type: 'xia', delta: 20 }, { type: 'silver', delta: 200 },
-          { type: 'item', id: 'blade', delta: 1 }, { type: 'attr', key: '胆魄', delta: 1 },
+          { type: 'item', id: 'blade', delta: 1 }, { type: 'attr', key: '胆魄', delta: 2 },
           { type: 'feed', tag: '江湖', text: '有人在运河渡口斗败了黑风寨主屠千山，江湖人称「渡口一剑」。' }] },
       lose: { tag: '首领战 · 负', title: '败走渡口', growth: true, button: '起身',
         story: '你醒来时，已躺在大明寺的禅房里。了尘大师说，是渡口的船夫冒雨把你背上了蜀冈。窗外钟声悠悠，你摸了摸胸口的伤，心里只想着一件事：以眼下的修为，那几刀究竟该怎么接？',

@@ -37,7 +37,8 @@ function pairs(ht: number, ft: number, pol: Policy, rules: Rules, n: number, sal
 
 export interface Inputs {
   /** 现有的存档样本（JSON 读出来、已经迁移到当前版本的） */
-  saves: { file: string; state: GameState; oldTier: number }[];
+  /** raw 是迁移以前的样子（旧刻度的根基、旧的内力上限），state 是游戏读档迁移以后的 */
+  saves: { file: string; state: GameState; raw: { attr: GameState['attr']; mpMax: number; attrApplied?: { mp: number } }; oldTier: number }[];
 }
 
 export function buildReport(k: number, inp: Inputs): Report {
@@ -213,10 +214,12 @@ export function buildReport(k: number, inp: Inputs): Report {
   add({ id: 'A1', area: '资产', std: '迁移后，银两、物品、任务、旗标、人情原样不变', got: mig.map(x => x.file).join('、') + ' 全部原样', pass: mig.every(x => JSON.stringify(x.m.kept) === JSON.stringify({ silver: x.state.silver, items: x.state.items, quests: x.state.quests, flags: x.state.flags, rel: x.state.rel })) });
   const ratioOk = (x: (typeof mig)[number]): boolean => (Object.entries(OLD_COMMON) as [keyof typeof OLD_COMMON, number][]).every(([k, c]) => {
     const key = ({ 体魄: 'ti', 根骨: 'gen', 身法: 'shen', 悟性: 'wu', 胆魄: 'dan' } as const)[k];
-    return Math.abs(x.m.attr[key] / 20 - x.state.attr[k] / c) < 0.01;
+    // 存档第四版把根基四舍五入成整数，误差在半点（二十分之零点五）以内
+    return Math.abs(x.m.attr[key] / 20 - x.raw.attr[k] / c) <= 0.026;
   });
   add({ id: 'A2', area: '资产', std: '根基五项一一对应，相对常人的比例不变', got: mig.map(x => `${x.file}：` + (Object.keys(ATTR_NAME) as (keyof typeof ATTR_NAME)[]).map(k => `${ATTR_NAME[k]}${x.m.attr[k]}`).join(' ')).join('；'), pass: mig.every(ratioOk), note: '第二版折成四项、总和 80，把胆魄并进了悟性；第三版改回五项' });
-  add({ id: 'A3', area: '资产', std: '功力等于原来的内力上限除以 100', got: mig.map(x => `${x.file} ${x.state.mpMax} → ${x.m.gongli} 年`).join('；'), pass: mig.every(x => x.m.gongli === x.state.mpMax / 100) });
+  const oldG = (x: (typeof mig)[number]): number => (x.raw.mpMax - (x.raw.attrApplied?.mp ?? 30 * (x.raw.attr.根骨 - 11))) / 100;
+  add({ id: 'A3', area: '资产', std: '功力等于原来的内力上限（去掉根基折进去的那一截）除以 100', got: mig.map(x => `${x.file} ${x.raw.mpMax} → ${x.m.gongli} 年`).join('；'), pass: mig.every(x => Math.abs(x.m.gongli - oldG(x)) < 0.01), note: '迁移写在游戏里（src/core/save.ts 的 v3toV4），这里量的是游戏读档以后的结果' });
   add({ id: 'A4', area: '资产', std: '显示的档次不低于迁移前', got: mig.map(x => `${x.file} ${TN[x.oldTier]} → ${TN[x.m.tier]}`).join('；'), pass: mig.every(x => x.m.tier >= x.oldTier), note: '档次看身上练得最高的那一门；只看主修的话，老玩家会掉档' });
   add({ id: 'A5', area: '资产', std: '加上「年」以后，路遇和对手记录的间隔，换算前后一致', got: '旧存档都算景和元年，绝对日数等于旧的「一年里的第几天」，间隔不变', pass: mig.every(x => x.m.absDay(67) - x.m.absDay(60) === 7) });
 

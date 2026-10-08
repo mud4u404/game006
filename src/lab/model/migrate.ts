@@ -23,8 +23,9 @@ export interface Migrated {
   absDay: (dayNo: number) => number;
 }
 
-export function migrateAttr(a: GameState['attr']): Migrated['attr'] {
-  const r = (k: keyof typeof OLD_COMMON): number => Math.round((20 * a[k]) / OLD_COMMON[k] * 10) / 10;
+/** 第三版存档（旧刻度）的根基换成模型的刻度；第四版存档已经是常人二十的刻度，原样取 */
+export function migrateAttr(a: GameState['attr'], v = 3): Migrated['attr'] {
+  const r = (k: keyof typeof OLD_COMMON): number => (v >= 4 ? a[k] : Math.round((20 * a[k]) / OLD_COMMON[k] * 10) / 10);
   return { ti: r('体魄'), gen: r('根骨'), shen: r('身法'), wu: r('悟性'), dan: r('胆魄') };
 }
 
@@ -40,9 +41,10 @@ export function migrateSave(s: GameState): Migrated {
   const realms: Record<string, number> = {};
   for (const [id, p] of Object.entries(s.skills)) if (p) realms[id] = p.r + 1;
   const equipped = Object.values(s.loadout).filter((id): id is string => !!id && id in realms).map(id => realms[id]);
-  const gongli = s.mpMax / 100;
+  // 第四版存档里功力已经以年计（src/core/save.ts 的 v3toV4）
+  const gongli = s.gongli ?? s.mpMax / 100;
   return {
-    attr: migrateAttr(s.attr), gongli, realms, tier: tierOf(equipped, gongli),
+    attr: migrateAttr(s.attr, s.v), gongli, realms, tier: tierOf(equipped, gongli),
     kept: { silver: s.silver, items: s.items, quests: s.quests, flags: s.flags, rel: s.rel },
     absDay: dayNo => dayNo
   };

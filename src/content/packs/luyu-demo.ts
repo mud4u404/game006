@@ -33,7 +33,7 @@ const STORIES: StoryDef[] = [
         { label: '给她五十文', sub: '银两 −50　侠义 +2', if: { silver: 50 },
           result: '姑娘磕了个头，把铜钱揣进怀里。她抬头看你的那一眼，有点慌。',
           do: [{ type: 'silver', delta: -50 }, { type: 'xia', delta: 2 }, { type: 'flag', flag: 'ly_maishen_paid' }], next: -1 },
-        { label: '仔细看看那张草席', sub: '悟性', if: { attr: { key: '悟性', atLeast: 15 } }, next: 1 },
+        { label: '仔细看看那张草席', sub: '悟性', if: { attr: { key: '悟性', atLeast: 23 } }, next: 1 },
         { label: '走开',
           result: '你走出老远，回头看了一眼。姑娘还跪在那里，雨水顺着木牌往下淌。',
           do: [{ type: 'flag', flag: 'ly_maishen_walk' }], next: -1 }
@@ -70,7 +70,7 @@ const STORIES: StoryDef[] = [
         { label: '给他一个烧饼钱', sub: '银两 −10', if: { silver: 10 },
           result: '孩子一把抓过铜钱，愣了一下，扔下棍子就跑。跑出几步，又回头冲你喊了一句：「我会还你的！」',
           do: [{ type: 'silver', delta: -10 }, { type: 'flag', flag: 'ly_xiaozei_fed' }], next: -1 },
-        { label: '瞪他一眼', sub: '胆魄', if: { attr: { key: '胆魄', atLeast: 13 } },
+        { label: '瞪他一眼', sub: '胆魄', if: { attr: { key: '胆魄', atLeast: 26 } },
           result: '你什么也没说，只看了他一眼。孩子的棍子「当啷」掉在地上，转身钻进了巷子，跑丢了一只草鞋。',
           do: [{ type: 'flag', flag: 'ly_xiaozei_scared' }], next: -1 },
         { label: '绕开他',

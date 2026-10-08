@@ -34,8 +34,9 @@ const SENS_FRAGILE: string[] = ['成算的尺度（26）', '对手气血的厚�
 function inputs() {
   const saves = Object.entries(FIXTURES).map(([f, raw]) => {
     const state = migrate(JSON.parse(raw));
+    const old = JSON.parse(raw);
     const rank = xiuwei(state).rank;
-    return { file: f.replace('./fixtures/saves/', '').replace('.json', ''), state, oldTier: XIUWEI.findIndex(([, r]) => r === rank) };
+    return { file: f.replace('./fixtures/saves/', '').replace('.json', ''), state, raw: { attr: old.attr, mpMax: old.mpMax, attrApplied: old.attrApplied }, oldTier: XIUWEI.findIndex(([, r]) => r === rank) };
   });
   return { saves };
 }

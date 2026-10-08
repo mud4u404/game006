@@ -90,7 +90,7 @@ const STORIES: StoryDef[] = [
             { type: 'flag', flag: 'ly_yz_huji_cao' }, { type: 'xia', delta: 1 },
             { type: 'feed', tag: '江湖', text: '码头装卸钱起了争执，有人帮漕帮的苦力说了话。漕帮管事记下了这份人情。' }
           ], next: -1 },
-        { label: '帮盐商说话', sub: '契在纸上有据', if: { attr: { key: '悟性', atLeast: 13 } },
+        { label: '帮盐商说话', sub: '契在纸上有据', if: { attr: { key: '悟性', atLeast: 20 } },
           result: '你要过契纸一看，白纸黑字，装卸钱确实按船计。你把契纸念给众人听。漕帮的把头臊红了脸，盐商的伙计朝你连声道谢。',
           do: [
             { type: 'flag', flag: 'ly_yz_huji_yanhao' }, { type: 'lilian', amount: 30 },
@@ -116,7 +116,7 @@ const STORIES: StoryDef[] = [
             { type: 'lilian', amount: 30 },
             { type: 'feed', tag: '江湖', text: '夜里你把一个走失的孩子送到了府衙。' }
           ], next: -1 },
-        { label: '蹲下来看看他的手腕', sub: '悟性', if: { attr: { key: '悟性', atLeast: 14 } }, next: 1 },
+        { label: '蹲下来看看他的手腕', sub: '悟性', if: { attr: { key: '悟性', atLeast: 22 } }, next: 1 },
         { label: '给他几文钱，让他自己找店',
           result: '你给他几文钱。孩子攥着钱，怯生生地问了家客栈的名号，一步一挪地走了。夜风里，那点小小的背影看着叫人放心不下。',
           do: [{ type: 'flag', flag: 'ly_yz_zouhai_alone' }], next: -1 }
@@ -200,7 +200,7 @@ const STORIES: StoryDef[] = [
         '「分明是他撞我一下栽赃！」书生的箱子摔开了，里头全是书，一本绸缎也没有。'
       ],
       choices: [
-        { label: '细看那段绸子', sub: '悟性', if: { attr: { key: '悟性', atLeast: 14 } }, next: 1 },
+        { label: '细看那段绸子', sub: '悟性', if: { attr: { key: '悟性', atLeast: 22 } }, next: 1 },
         { label: '替他赔钱了事', sub: '银两 −30',
           result: '你替书生赔了绸缎钱。掌柜的收钱放人。书生朝你长揖到地：「君子可欺以其方……但终究是多谢。」他抱着书箱，狼狈地走了。',
           do: [{ type: 'silver', delta: -30 }, { type: 'flag', flag: 'ly_yz_shusheng_pay' }], next: -1 },

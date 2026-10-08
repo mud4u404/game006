@@ -4,7 +4,9 @@ import { npcName, roomNpcs } from '../../engine/world';
 import { ROOMS } from '../../content';
 import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
-import { xiuwei } from '../../engine/wuxue';
+import { gongliText, houtianOf, tierNow } from '../../engine/ren';
+import { ZONE_NAME } from '../../engine/duel';
+import { cn } from '../../core/util';
 import { cloudRowHTML } from './account-link';
 
 const ATTRS: AttrKey[] = ['体魄', '根骨', '身法', '悟性', '胆魄'];
@@ -29,19 +31,25 @@ let confirmRestart = false;
 export const setConfirmRestart = (v: boolean): void => { confirmRestart = v; };
 
 export function viewRenwu(): string {
-  const attrs = ATTRS.map(a => `<div class="attr"><b>${S.attr[a]}</b><span>${a}</span></div>`).join('');
+  const h = houtianOf(S);
+  const attrs = ATTRS.map(a => `<div class="attr"><b>${S.attr[a]}</b><span>${a}</span><small>后天 ${h[a]}</small></div>`).join('');
   const lines = attrLines(S);
   const effects = ATTRS.map(a => `<div class="row"><span>${a}</span><small class="muted">${lines[a]}</small></div>`).join('');
   const meaningful = Object.values(S.rel).filter(v => relGroup(v) !== '萍水相逢').length;
   // 和江湖页一致：没有名号时显示修为档
-  const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : '游侠 · ' + xiuwei(S).rank;
+  const tier = tierNow(S).name;
+  const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : '游侠 · ' + tier;
+  const hurt = (Object.entries(S.wounds) as ['hand' | 'foot' | 'inner', number][]).filter(([, n]) => n > 0).map(([z, n]) => `${ZONE_NAME[z]}${cn(n)}级`).join('、');
   return `
   <section class="card status"><span class="ava t-accent">沈</span><div class="who"><b>${fullName()}</b><small>${who}</small></div></section>
-  <section class="card here"><div class="sec-h"><h2>根基</h2></div><div class="attrs">${attrs}</div><div class="rows">${effects}</div></section>
+  <section class="card here"><div class="sec-h"><h2>根基</h2><span class="count">常人各二十</span></div><div class="attrs">${attrs}</div>
+    <p class="muted">大字是先天，只有奇遇改得了；后天随武功长，内功长体魄、根骨，轻功长身法，外功长悟性、胆魄。交手看后天，多出常人的天赋另算。</p>
+    <div class="rows">${effects}</div></section>
   <section class="card"><div class="kv">
     <div><span>气血</span><b>${S.hp} / ${S.hpMax}</b></div><div><span>内力</span><b>${S.mp} / ${S.mpMax}</b></div>
     <div><span>身份</span><b>${S.chapter === 0 ? '渔家' : '游侠'}</b></div><div><span>门派</span><b>无门无派</b></div>
-    <div><span>修为</span><b>${xiuwei(S).rank}</b></div><div><span>修为值</span><b>${xiuwei(S).value}</b></div>
+    <div><span>档次</span><b>${tier}</b></div><div><span>功力</span><b>${gongliText(S.gongli)}</b></div>
+    <div><span>伤</span><b>${hurt || '无'}</b></div><div><span>历练</span><b>${S.lilian}</b></div>
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
   </div></section>

@@ -6,8 +6,9 @@ import { REALMS, skillById } from '../content';
 import { JIANGHU_RULE, ROOTED_CATS, ROOT_ANY, SCHOOL_STYLE, SECT_RANKS, TEACH_RANK } from '../content/skills';
 import type { SkillDef } from '../content/types';
 import type { GameState } from '../core/state';
+import { houtianOf } from './ren';
 
-type St = Pick<GameState, 'skills' | 'attr' | 'loadout' | 'sect' | 'pastSects'>;
+type St = Pick<GameState, 'skills' | 'attr' | 'loadout' | 'sect' | 'pastSects' | 'gear' | 'gongli' | 'name'>;
 
 export type LearnCheck = { ok: true } | { ok: false; why: string };
 
@@ -31,8 +32,10 @@ export function canLearn(s: St, def: SkillDef): LearnCheck {
   for (const r of def.requires || []) {
     if ((s.skills[r.skill]?.r ?? -1) < r.realm) return { ok: false, why: `根基未到，要先把「${skillById(r.skill)?.name ?? r.skill}」练到「${REALMS[r.realm]}」` };
   }
+  // 根基的门槛看后天（engine/ren.ts）：武功练深了，悟性、根骨跟着长
+  const h = houtianOf(s);
   for (const [k, v] of Object.entries(def.needAttr || {})) {
-    if ((s.attr[k as keyof St['attr']] ?? 0) < (v ?? 0)) return { ok: false, why: `${k}不够，至少要 ${v}` };
+    if ((h[k as keyof St['attr']] ?? 0) < (v ?? 0)) return { ok: false, why: `${k}不够，至少要 ${v}` };
   }
   return { ok: true };
 }

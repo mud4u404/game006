@@ -5,12 +5,15 @@
  * - 备战：知彼（对手出手打折）、帮手（答应来的人真的进场出手）。
  */
 import type { GameState } from '../core/state';
-import { GRADE_COEF } from '../content';
 import type { FoeDef, FxKind, PerformDef, PrepDef, SkillDef, UltDef } from '../content/types';
-import type { AllySpec, FoeSpec, HeroSpec, RespKey } from './duel';
-import { COMMON, standard, type Attr, type Person } from './person';
+import { Duel, SKILLED, simulate, type AllySpec, type FoeSpec, type HeroSpec, type RespKey } from './duel';
+import { mulberry32 } from './rng';
+import { standard, type Person } from './person';
+import { personOf } from './ren';
 import { canPerform } from './shicheng';
 import { activeOuter, counterBonus, reachBonus, slotSkill, wielded } from './wuxue';
+
+export { personOf } from './ren';
 import { test } from './dsl';
 
 /** 绝招按钮最多几个 */
@@ -41,24 +44,6 @@ export function fightKit(s: GameState): FightKit {
   return { outer, performs, locked, ult, unrooted: !!outer && all.length > 0 && !rooted };
 }
 
-/** 存档里的根基还是旧刻度（常人 13/11/14/13/10），换成常人二十的刻度；存档第四版换算以后去掉 */
-export const OLD_COMMON: Attr = { 体魄: 13, 根骨: 11, 身法: 14, 悟性: 13, 胆魄: 10 };
-const toNew = (a: GameState['attr']): Attr => ({
-  体魄: (COMMON * a.体魄) / OLD_COMMON.体魄, 根骨: (COMMON * a.根骨) / OLD_COMMON.根骨, 身法: (COMMON * a.身法) / OLD_COMMON.身法,
-  悟性: (COMMON * a.悟性) / OLD_COMMON.悟性, 胆魄: (COMMON * a.胆魄) / OLD_COMMON.胆魄
-});
-
-/** 玩家这个「人」：武功的重数从一起（存档里的境界从零起），功力以年计（内力一百点一年） */
-export function personOf(s: GameState): Person {
-  const o = activeOuter(s), ng = slotSkill(s, 'neigong'), qg = slotSkill(s, 'qinggong');
-  const R = (d?: SkillDef): number => (d ? (s.skills[d.id]?.r ?? 0) + 1 : 1);
-  const G = (d?: SkillDef): number => (d ? GRADE_COEF[d.grade] : GRADE_COEF.凡品);
-  return {
-    name: s.name, attr: toNew(s.attr), outer: R(o), neigong: R(ng), qinggong: R(qg),
-    grade: { outer: G(o), neigong: G(ng), qinggong: G(qg) }, gongli: s.mpMax / 100
-  };
-}
-
 /** 对手这个「人」：档次、路数 */
 export const foePerson = (f: FoeDef): Person => standard(f.rank, f.build ?? 'even', f.name);
 
@@ -75,7 +60,7 @@ export function heroSpec(s: GameState, kit: FightKit, f: FoeDef): HeroSpec {
     if (d) bonus[k] = counterBonus(d.nature, f.nature) + reachBonus(k, d.reach, f.reach);
   }
   return {
-    person: personOf(s), name: s.name, hp: s.hp, hpMax: s.hpMax, mp: s.mp, mpMax: s.mpMax,
+    person: personOf(s), name: s.name, hp: s.hp, hpMax: s.hpMax, mp: s.mp, mpMax: s.mpMax, wounds: { ...s.wounds },
     has: { block: !!ng, dodge: !!qg, parry: !!o, rush: !!o }, bonus,
     performs: kit.performs.map(p => ({ name: p.name, mp: p.mp, cd: p.cd, hits: p.hits, dmg: p.dmg, acc: p.acc, fx: p.fx ?? [] })),
     ult: kit.ult ? { dmg: kit.ult.u.dmg, fx: kit.ult.u.fx ?? [] } : undefined
@@ -129,3 +114,19 @@ export const FX_SAY: Partial<Record<FxKind, (foe: string) => string>> = {
   haste: () => '你身形一飘，脚下轻快了许多。',
   heal: () => '你调匀气息，伤势缓了一缓。'
 };
+
+/**
+ * 看人（docs/foundation.md 第三节第二条，验证 E1）：后台先替玩家照现在的本事试打几十场（备战、帮手都算上），
+ * 按胜率说七句话之一。新手靠它避开打不过的仗。种子固定，同样的本事看同一个人，说法不会忽高忽低。
+ */
+const KANREN: [number, string][] = [[0.95, '不堪一击'], [0.75, '远不如你'], [0.55, '稍逊一筹'], [0.45, '旗鼓相当'], [0.25, '略胜一筹'], [0.05, '远胜于你'], [-1, '深不可测']];
+export function kanren(s: GameState, f: FoeDef, n = 40): { p: number; say: string } {
+  const prep = activePrep(f), kit = fightKit(s);
+  let w = 0;
+  for (let i = 0; i < n; i++) {
+    const d = new Duel(heroSpec(s, kit, f), foeSpec(f, prep), { rng: mulberry32(9001 + i * 7919), allies: alliesOf(prep) });
+    if (simulate(d, SKILLED).res === 'win') w++;
+  }
+  const p = w / n;
+  return { p, say: KANREN.find(([lo]) => p >= lo)![1] };
+}

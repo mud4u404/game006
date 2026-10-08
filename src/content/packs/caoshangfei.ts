@@ -38,7 +38,7 @@ const FOUND: Effect[] = [
 ];
 
 /** 劝得动草上飞：侠义够，或者胆魄够 */
-const PERSUADE: Cond = { any: [{ xia: 10 }, { attr: { key: '胆魄', atLeast: 13 } }] };
+const PERSUADE: Cond = { any: [{ xia: 10 }, { attr: { key: '胆魄', atLeast: 26 } }] };
 
 const NPCS: NpcDef[] = [
   {
@@ -74,7 +74,7 @@ const NPCS: NpcDef[] = [
     verbs: ['观察', '细看'],
     actions: {
       细看: [
-        { if: { ...HUNTING, notFlag: 'csf_clue2', attr: { key: '悟性', atLeast: 15 } },
+        { if: { ...HUNTING, notFlag: 'csf_clue2', attr: { key: '悟性', atLeast: 23 } },
           text: '你蹲下细看：船舷上有几道新鲜的划痕，三道一组，像是铁爪抓出来的；舱底散着几粒干粮渣子，还没泡软。有人在这里落脚，就在这几天，而且白天不在。',
           do: FOUND },
         { if: { ...HUNTING, notFlag: 'csf_clue2' }, text: '你绕着破船看了一圈，只看见积水、烂苇席和几只受惊的螃蟹。要是有人在这里落脚，你也看不出来——或许该问问村里的人。' },

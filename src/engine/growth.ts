@@ -4,7 +4,8 @@ import { REALMS, REALM_NEED, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { autoSlot } from './wuxue';
 import { canLearn, realmCap } from './shicheng';
-import { milestoneGrowth, neigongGrowth, profMul } from './gengu';
+import { profMul } from './gengu';
+import { syncBody } from './ren';
 
 /** 按境界上限把攒够的熟练度换成突破，返回突破说明 */
 function settle(id: SkillId): string[] {
@@ -17,8 +18,11 @@ function settle(id: SkillId): string[] {
     s.p -= REALM_NEED[s.r];
     s.r++;
     out.push(`「${sk.name}」突破至「${REALMS[s.r]}」`);
-    milestoneGrowth(S, sk, s.r);
-    neigongGrowth(S, sk);
+  }
+  // 武功深了一重，后天根基跟着长，气血、内力由「人」重新算（engine/ren.ts）
+  if (out.length) {
+    const { dh } = syncBody(S);
+    if (dh > 0) pushFeed('突破', `「${sk.name}」深了一层，气血上限 +${dh}。`);
   }
   return out;
 }

@@ -123,7 +123,7 @@ const NPCS: NpcDef[] = [
     verbs: ['观察', '细看'],
     actions: {
       细看: [
-        { if: { attr: { key: '悟性', atLeast: 15 } },
+        { if: { attr: { key: '悟性', atLeast: 23 } },
           text: '你眯眼细看：沉船舱里码着几口木箱，箱缝里渗出白花花的盐卤。好端端的沉船，装盐做什么？',
           do: [{ type: 'flag', flag: 'cw_kanguo' }] },
         { text: '沉船半沉在泥里，船舱黑洞洞的，水汽里隐隐有股咸腥气。' }
@@ -136,7 +136,7 @@ const NPCS: NpcDef[] = [
     verbs: ['细看'],
     actions: {
       细看: [
-        { if: { attr: { key: '悟性', atLeast: 15 } },
+        { if: { attr: { key: '悟性', atLeast: 23 } },
           text: '你蹲下细看：脚印赤着脚，可脚踝上有一圈勒痕——是常年绑着什么沉东西留下的。脚印尽头是桥底第三根桩子，桩子上的水草被蹭得精光：那底下，是换气的气口。',
           do: [
             { type: 'flag', flag: 'cw_qikou' },
@@ -153,7 +153,7 @@ const NPCS: NpcDef[] = [
     verbs: ['细看'],
     actions: {
       细看: [
-        { if: { attr: { key: '悟性', atLeast: 15 } },
+        { if: { attr: { key: '悟性', atLeast: 23 } },
           text: '你凑近了闻：油花底下透出盐卤的苦涩味——这不是船漏的油，是盐包浸出来卤水。谁家好端端的，往船坞里沉盐？',
           do: [{ type: 'flag', flag: 'cw_kanguo' }] },
         { text: '水面的油花黑黢黢的，像船漏的油，看不出名堂。' }

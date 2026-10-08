@@ -53,7 +53,7 @@ const NPCS: NpcDef[] = [
         { if: { flag: 'zhao_doujiu_lose' },
           text: '赵铁衣按住酒坛直摆手：「打住，打住！今日便到这里，再喝要出人命了。」' },
         { if: { flag: 'biaoju_invite' }, text: '赵铁衣笑着摆手：「已经结交了，就不必再斗了吧？」' },
-        { if: { attr: { key: '体魄', atLeast: 15 } },
+        { if: { attr: { key: '体魄', atLeast: 23 } },
           text: '赵铁衣跟你连碰三坛，你脸不变色。他放下酒坛，哈哈大笑：「好！好兄弟！」一拍酒坛：「威远镖局少镖头赵铁衣，请了！」',
           do: [
             { type: 'rel', npc: 'zhao_tieyi', value: '相谈甚欢', from: ['素不相识', '点头之交'] },

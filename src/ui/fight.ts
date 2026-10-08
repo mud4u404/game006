@@ -11,7 +11,7 @@ import type { AfterDef, AfterOpt, Effect, FightResult, FoeDef, PrepDef, TellDef 
 import { run, test, textVars } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
 import { fightLilian } from '../engine/lilian';
-import { Duel, type DuelRes, type Ev, type Opt, type RespKey } from '../engine/duel';
+import { Duel, ZONE_NAME, type DuelRes, type Ev, type Opt, type RespKey, type Wounds } from '../engine/duel';
 import { RESP_ACT, cheng, chengN, judgeText } from '../engine/formulas';
 import { respSkill } from '../engine/wuxue';
 import { npcName } from '../engine/world';
@@ -59,6 +59,8 @@ interface Fight {
   res?: DuelRes; then?: Effect[];
   /** 胜负以后：问不问、选了哪条路 */
   after?: AfterDef | null; pick?: AfterOpt;
+  /** 这一场新落下的伤 */
+  hurt?: Partial<Wounds>;
 }
 let C: Fight | null = null;
 export const inFight = (): boolean => !!C;
@@ -740,6 +742,12 @@ function endFight(res: DuelRes): void {
   setPromptUI(false);
   cancelCharge();
   sync();
+  // 这一场吃重招落下的伤，打完才起作用，带到下一场（切磋点到为止、剧本战不落伤）
+  if (!c.f.spar && !c.f.script) {
+    const hurt: Partial<Wounds> = {};
+    for (const [z, n] of Object.entries(c.d.log.taken) as [keyof Wounds, number][]) if (n > 0) { S.wounds[z] = Math.min(3, S.wounds[z] + n); hurt[z] = n; }
+    c.hurt = hurt;
+  }
   if (res === 'win' && c.f.win) bubble('foe', c.f.win);
   else if (res === 'lose' && c.f.lose) bubble('sys', c.f.lose);
   updAll();
@@ -848,11 +856,14 @@ function showResult(): void {
   const lg = c.d.log;
   const statline = `<p class="statline">共 ${c.d.round} 合 · 见招拆招得手 ${lg.parry} 次${lg.saw ? ` · 看破虚招 ${lg.saw} 次` : ''}${lg.fooled ? ` · 上当 ${lg.fooled} 次` : ''} · 破绽 ${lg.open} 次 · 杀招 ${lg.ult} 次</p>`;
   const fateLine = pk ? `<div class="r-sub">胜负以后 · ${pk.label}</div><p class="story">${pk.later}</p>` : '';
+  const hurt = Object.entries(c.hurt ?? {}) as [keyof Wounds, number][];
+  const WHAT: Record<keyof Wounds, string> = { hand: '拆招、抢攻差一截，出手轻一成', foot: '闪避差一截', inner: '硬接差一截，内力回得慢' };
+  const hurtLine = hurt.length ? `<div class="r-sub">落下的伤</div><div class="news">${hurt.map(([z]) => `<div><span class="tag danger">${ZONE_NAME[z]}伤 ${liang(S.wounds[z])}级</span><span>${WHAT[z]}。闭关养伤，一级三日。</span></div>`).join('')}</div>` : '';
   const chips = rewardChips([...(r.do ?? []), ...extra, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])]).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
   c.then = r.then;
   save();
   openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${pk?.title ?? (r.title || '')}</h2></div>
-    ${r.story === '@compose' && !pk?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${alliesHTML(c)}${statline}
+    ${r.story === '@compose' && !pk?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${alliesHTML(c)}${hurtLine}${statline}
     ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? GROWTH : ''}
     <button class="btn" data-act="fResult">${r.button || '继续'}</button>`);
 }
