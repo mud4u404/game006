@@ -657,13 +657,7 @@ describe('后果看得见', () => {
    * 只写不读，玩家做了选择却看不到任何不同（负责人试玩「放还是杀」时说的：「没有看到结局有什么区别」）。
    * 下面是改版时就有的欠账，接上后续以后从这里删掉；新写的旗标不许进这张单子。
    */
-  const DEBT = [
-    'zhou', 'yh_guanbao', 'yh_ya', 'yh_caught', 'cangjing_juan', 'fuya_jiang_truth', 'fuya_jiang_hide', 'mem3_ask',
-    'ly_maishen_walk', 'ly_xiaozei_walk', 'ly_tongchuan',
-    'ly_jiang_cha_qian', 'ly_jiang_cha_kan', 'ly_jiang_duju_chai', 'ly_jiang_duju_gen', 'ly_jiang_yanye_he', 'ly_jiang_tun_xiang',
-    'ly_yz_jianke_bye', 'ly_yz_tangzi', 'ly_yz_tangzi_bye', 'ly_yz_zhuifei_walk', 'ly_yz_huji_cao', 'ly_yz_huji_yanhao', 'ly_yz_huji_none',
-    'ly_yz_zouhai_alone', 'ly_yz_suanming_chai', 'ly_yz_shusheng_pay', 'ly_yz_shusheng_walk'
-  ];
+  const DEBT: string[] = [];
   it('写下的旗标都有地方读', () => {
     const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES });
     const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));
