@@ -132,7 +132,7 @@ svg{display:block}
 .act.danger{background:var(--danger-soft);color:var(--danger)}
 .act.strong{background:var(--danger-fill);color:var(--on-danger);font-weight:700}
 .act.spar{background:var(--accent-soft);color:var(--accent);font-weight:700}
-.reply{padding:10px 12px;border-radius:12px;background:var(--bg);font-size:14px;line-height:1.75;animation:fin .3s ease-out}
+.reply{padding:10px 12px;border-radius:12px;background:var(--bg);font-size:14px;line-height:1.75;white-space:pre-line;animation:fin .3s ease-out}
 
 .go{display:flex;flex-direction:column;gap:8px;padding-top:4px}
 .go h2{font-size:15px;font-weight:700}
@@ -460,3 +460,8 @@ svg{display:block}
 .slotrow .sv b{font-size:15px}
 .slotrow .sv small{text-align:left}
 .slotrow .chev{flex-shrink:0;font-size:12px;color:var(--accent)}
+
+/* 根基之眼：根基够了多看出的一层（engine/yan.ts） */
+.eye{display:flex;gap:8px;align-items:baseline;margin:8px 0 0;font-size:14px;line-height:1.7;color:var(--fg)}
+.eye .tag{flex:none;background:var(--accent-soft);color:var(--accent)}
+.reply .eye:first-of-type{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}

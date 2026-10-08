@@ -6,9 +6,12 @@ import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
 import { kanren } from '../../engine/zhaoshi';
+import { eyesOn } from '../../engine/yan';
+import type { EyeDef } from '../../content/types';
+import { fmt } from '../../core/util';
 import { nextYue, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
-import { test } from '../../engine/dsl';
+import { test, textVars } from '../../engine/dsl';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
 
@@ -40,7 +43,7 @@ export function viewJianghu(): string {
   </section>
   ${questBar}
   ${yueBar}
-  <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${feed ? `<div class="feed">${feed}</div>` : ''}</section>
+  <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
   ${all.length ? `<section class="card here">
     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
     <div class="avas">${all.map(avaBtn).join('')}</div>
@@ -77,3 +80,6 @@ function detail(id: string): string {
 function exitBtn(d: string, id: string, solo: boolean, questTo?: string): string {
   return `<button class="exit${solo ? ' solo' : ''}" data-act="travel:${id}"><span class="dir">${d}</span><span class="en"><b>${room(id).name}</b><small>${minLabel(travelMin(hopMin(S.loc, id)))}</small></span>${questTo === id ? '<span class="tag info">主线</span>' : ''}</button>`;
 }
+
+/** 根基之眼的一行：根基名做标签，后面是看出来的东西（engine/yan.ts） */
+export const eyeLine = (e: EyeDef): string => `<p class="eye"><span class="tag eye-${e.attr}">${e.attr}</span><span>${fmt(e.text, textVars())}</span></p>`;

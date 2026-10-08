@@ -1,11 +1,12 @@
 import { S, pushFeed } from '../core/state';
 import { fmt } from '../core/util';
 import { npc, questById, room } from '../content';
-import type { Cond, NpcDef, Verb } from '../content/types';
+import type { Cond, EyeDef, NpcDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
 import { advanceMin, shichen } from '../core/time';
 import { attrEffects } from './gengu';
 import { warmer } from './renqing';
+import { eyesOn } from './yan';
 
 const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
   (list || []).filter(x => typeof x === 'string' || test(x.if)).map(x => (typeof x === 'string' ? x : x.id));
@@ -83,7 +84,7 @@ const DEFAULT_MIN = 10;
 const DUSK: Record<string, string> = { 酉时: '日头偏西，天色向晚。', 戌时: '天黑了，街上点起了灯。', 子时: '夜深了，四下里静悄悄的。', 卯时: '天蒙蒙亮了。' };
 
 /** 对人物、物件做一个动作：执行分支，再按动作花掉时间 */
-export function act(id: string, verb: Verb): { text: string; out: Outcome } {
+export function act(id: string, verb: Verb): { text: string; out: Outcome; eyes: EyeDef[] } {
   const r = doAct(id, verb);
   if (!r.timed && !r.out.fight && !r.out.story && npc(id)) {
     const before = shichen(S.min);
@@ -91,10 +92,10 @@ export function act(id: string, verb: Verb): { text: string; out: Outcome } {
     const now = shichen(S.min);
     if (now !== before && DUSK[now]) pushFeed('江湖', DUSK[now]);
   }
-  return { text: r.text, out: r.out };
+  return { text: r.text, out: r.out, eyes: r.eyes ?? [] };
 }
 
-function doAct(id: string, verb: Verb): { text: string; out: Outcome; timed?: boolean } {
+function doAct(id: string, verb: Verb): { text: string; out: Outcome; timed?: boolean; eyes?: EyeDef[] } {
   const n = npc(id);
   if (!n) return { text: '', out: newOutcome() };
   if (verb === '观察') {
@@ -102,7 +103,10 @@ function doAct(id: string, verb: Verb): { text: string; out: Outcome; timed?: bo
     const b = pickBranch(n.actions['观察']);
     const out = b ? run(b.do) : newOutcome();
     const more = b?.text ? '\n' + fmt(b.text, { ...textVars(), ...out.vars }) : '';
-    return { text: fmt(n.look, textVars()) + more, out, timed: b?.do?.some(e => e.type === 'time') };
+    // 根基之眼：根基够了，多看出一层（engine/yan.ts）；看见的同时写下的旗标，解锁别处的做法
+    const eyes = eyesOn({ npc: id });
+    for (const e of eyes) run(e.do, out);
+    return { text: fmt(n.look, textVars()) + more, out, timed: b?.do?.some(e => e.type === 'time'), eyes };
   }
   const b = pickBranch(n.actions[verb as keyof typeof n.actions]);
   if (b) {

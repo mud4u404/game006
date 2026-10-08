@@ -3,7 +3,7 @@
  * 报错信息会指出是哪个文件里的哪一条数据有问题。
  */
 import { describe, expect, it } from 'vitest';
-import { ENCOUNTERS, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
+import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
@@ -596,7 +596,7 @@ describe('后果看得见', () => {
     'ly_yz_zouhai_alone', 'ly_yz_suanming_chai', 'ly_yz_shusheng_pay', 'ly_yz_shusheng_walk'
   ];
   it('写下的旗标都有地方读', () => {
-    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS });
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES });
     const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));
     const read = new Set([...all.matchAll(/(?<!"type":"flag",)"(?:flag|notFlag)":"([^"]+)"/g)].map(m => m[1]));
     const unread = [...set].filter(f => !read.has(f));

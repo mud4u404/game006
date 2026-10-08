@@ -18,6 +18,7 @@ import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
+import { eyeLine } from './views/jianghu';
 
 let traveling = false;
 
@@ -81,10 +82,12 @@ export function travelTo(dest: string, onArrive?: () => void): void {
 function doAct(verb: Verb): void {
   const id = S.sel;
   if (!id) return;
-  const { text, out } = act(id, verb);
+  const { text, out, eyes } = act(id, verb);
   lateYue();
   if (out.story || out.fight) { afterOutcome(out); return; }
-  S.reply = text ? { id, text } : null;
+  // 根基之眼：观察时根基够了多看出的那一层，跟在描写后面（engine/yan.ts）
+  const seen = eyes.map(e => eyeLine(e)).join('');
+  S.reply = text || seen ? { id, text: text + seen } : null;
   render();
   const rp = document.querySelector('.reply');
   if (rp) rp.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });

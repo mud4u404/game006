@@ -525,6 +525,26 @@ export interface JobDef {
   k?: number;
 }
 
+/**
+ * 根基之眼（docs/foundation.md 第三节第一条第二款）：交手以外，每种根基读到不同的东西。
+ * 后天根基够了，场景描写下面、观察人物时，多出一行带根基名的话；可以顺手写下旗标，解锁别的做法
+ * （例如体魄好的人看得出屠千山左臂有旧伤，不必去问船夫）。
+ * 只写在关键场面上；一处至少写两种根基，偏科的人也总有自己看得出的那一层。写在自己的内容包里，不必改别人的文件。
+ */
+export interface EyeDef {
+  /** 挂在哪里：地点（场景描写下面）或者人物、物件（观察时），二选一 */
+  room?: string;
+  npc?: string;
+  attr: AttrKey;
+  /** 后天根基不低于这个数才看得出（常人二十，上限五十）：二十四上下是比常人强一截，三十以上是出类拔萃 */
+  atLeast: number;
+  if?: Cond;
+  /** 看出来的东西，主语用「你」，写具体的细节，不写「你觉得他不简单」这类空话 */
+  text: string;
+  /** 看见时执行（只用在人物、物件上，观察时执行），通常是写一个旗标，解锁别处的做法 */
+  do?: Effect[];
+}
+
 export interface ContentPack {
   regions?: Record<string, RegionDef>;
   rooms?: RoomDef[];
@@ -537,4 +557,5 @@ export interface ContentPack {
   skills?: SkillDef[];
   encounters?: EncounterDef[];
   jobs?: JobDef[];
+  eyes?: EyeDef[];
 }
