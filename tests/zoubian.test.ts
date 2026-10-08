@@ -11,9 +11,9 @@ import { describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { advanceDays, advanceMin, dayNo, setNowMs } from '../src/core/time';
 import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, SHI, STORIES, foeById, jobById, npc, questById, room, shiById, storyById } from '../src/content';
-import { run, test, type Outcome } from '../src/engine/dsl';
+import { pickBranch, run, test, type Outcome } from '../src/engine/dsl';
 import type { Effect } from '../src/content/types';
-import { act, curQuest, enter, hopMin, pathTo, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
+import { act, curQuest, enter, hopMin, pathTo, payFare, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
 import { Duel, RANDOM, SKILLED, simulate, type DuelRes, type Policy } from '../src/engine/duel';
 import { activePrep, alliesOf, fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
@@ -21,7 +21,7 @@ import { brace, fateOpts, settle, takeWounds } from '../src/engine/jiesuan';
 import { XIEJIAO, checkYue, jingxiu, nextYue, waitMin } from '../src/engine/shiguang';
 import { mulberry32 } from '../src/engine/rng';
 import { tierNow } from '../src/engine/ren';
-import { tickShi } from '../src/engine/shishi';
+import { isEnding, tickShi } from '../src/engine/shishi';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const VERBOSE = !!env.ZOUBIAN;
@@ -169,11 +169,25 @@ function actions(): Act[] {
  * 盯着一件世事时往这些人那里去（往告示、闲人那里去没用）
  */
 const pushes = (x: unknown, id: string): boolean => !!x && JSON.stringify(x).includes(`"type":"shi","id":"${id}","to"`);
-const SHI_NPC = new Map(SHI.map(d => [d.id, new Set(NPCS.filter(n => {
-  if (pushes(n.actions, d.id)) return true;
-  const ids = [...JSON.stringify(n.actions).matchAll(/"type":"(?:fight|story)","(?:foe|id)":"([^"]+)"/g)].map(m => m[1]);
-  return ids.some(x => pushes(foeById(x), d.id) || pushes(storyById(x), d.id));
-}).map(n => n.id))]));
+/** 这些条件里要的旗标 */
+const flagsIn = (x: unknown): string[] => [...JSON.stringify(x ?? {}).matchAll(/"flag":"([^"]+)"/g)].map(m => m[1]);
+/** 谁的动作会写下这个旗标（递线索的人：文朝奉说了，严捕头那里才有「报线」） */
+const setters = (flag: string): string[] => NPCS.filter(n => JSON.stringify(n.actions).includes(`"type":"flag","flag":"${flag}"}`)).map(n => n.id);
+const SHI_NPC = new Map(SHI.map(d => {
+  const direct = NPCS.filter(n => {
+    if (pushes(n.actions, d.id)) return true;
+    const ids = [...JSON.stringify(n.actions).matchAll(/"type":"(?:fight|story)","(?:foe|id)":"([^"]+)"/g)].map(m => m[1]);
+    return ids.some(x => pushes(foeById(x), d.id) || pushes(storyById(x), d.id));
+  });
+  // 往回多找一层：推动它的那个动作要先有的旗标，是谁递的
+  const need = direct.flatMap(n => Object.entries(n.actions).flatMap(([v, bs]) => {
+    const push = (bs ?? []).filter(b => pushes(b, d.id));
+    if (!push.length) return [];
+    const gate = n.verbs.find(x => typeof x !== 'string' && x.verb === v);
+    return flagsIn([gate, push.map(b => b.if)]);
+  }));
+  return [d.id, new Set([...direct.map(n => n.id), ...need.flatMap(setters)])];
+}));
 
 /** 从这里出发，最近的一处有没点过的动作的地点，返回往那里走的第一步 */
 function nearestNew(): string | null {
@@ -241,6 +255,12 @@ function choose(list: Act[], seen: Set<string>): Act {
     let x = a.k === 'go' ? 1 : 2;
     if (!cov.branch.has(a.key) && a.k === 'act') x += 12;
     if (a.k === 'act' && cur?.shi && SHI_NPC.get(cur.shi)!.has(a.id)) x += 30;
+    // 盯着世事：这个动作眼下会把它推到还没走过的那一步，直奔；推到走过的那一步（会就此了结），先放一放
+    if (a.k === 'act' && cur?.shi) {
+      const n = npc(a.id)!, b = pickBranch(n.actions[a.v as keyof typeof n.actions]);
+      const to = (b?.do ?? []).find(e => e.type === 'shi' && e.id === cur!.shi && e.to);
+      if (to) x = pushesNew([to]) ? x + 60 : x * 0.1;
+    }
     if (!seen.has(a.key)) x += 4;
     if (a.k === 'go' && a.quest) x += S.yue.length ? 40 : 6;
     // 盯着世事：能推动它的人就在附近（人犯出没的时辰短），直奔过去
@@ -260,6 +280,7 @@ function travel(to: string): void {
   S.min += m;
   if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
   S.loc = to; S.sel = null; S.reply = null;
+  payFare(to);
   cov.room.add(to);
   const enc = rollEncounter(from, to, rng);
   if (enc) { markEncounter(enc); cov.enc.add(enc.id); playStory(enc.story, 0); }
@@ -337,6 +358,8 @@ function play(r: Run): void {
     try { step(seen); checkYue(S); tickShi(); } catch (e) { err(`${where}报错：${(e as Error).message}`); }
     for (const [id, st] of Object.entries(S.shi ?? {})) cov.shi.add(`${id}.${st.at}`);
     if (r.shi && Object.keys(shiById(r.shi)!.steps).every(k => cov.shi.has(`${r.shi}.${k}`))) break;
+    // 这件事了结了，还有没走过的路：从头再起一回（另一个玩家会走另一条路）
+    if (r.shi) { const d = shiById(r.shi)!, at = S.shi?.[r.shi]?.at; if (at && isEnding(d, at)) run([{ type: 'shi', id: r.shi, to: d.first }]); }
     // 过了约期的约不该还挂着（界面上会一直写「今日」）
     if (S.yue.some(y => y.due < dayNo(S))) err('过了约期的约还挂着');
     check(where.replace(/第 \d+ 步/, '某一步'));
@@ -354,7 +377,7 @@ describe('机器玩家走遍江湖', () => {
   for (const q of QUESTS) for (let k = 0; k < 24 && !done(q.id); k++) play({ start: k % 2 ? 'skip' : 'new', steps: 5000, seed: 1000 + k, focus: q.id });
   // 还有没走到的世事的步，盯着那件事再走几局（往牵扯到它的人那里去，认真打，胜负以后挑没走过的路）
   const shiLeft = (id: string): boolean => Object.keys(shiById(id)!.steps).some(k => !cov.shi.has(`${id}.${k}`));
-  for (const d of SHI) for (let k = 0; k < 12 && shiLeft(d.id); k++) play({ start: 'skip', steps: 3000, seed: 2000 + k, shi: d.id });
+  for (const d of SHI) for (let k = 0; k < 24 && shiLeft(d.id); k++) play({ start: 'skip', steps: 3000, seed: 2000 + k, shi: d.id });
   const ms = Date.now() - t0;
 
   // 覆盖报告

@@ -8,7 +8,7 @@
 import { tickShi } from './shishi';
 import { pushFeed, type GameState, type Yue } from '../core/state';
 import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
-import { NEWS, room, skillById } from '../content';
+import { NEWS, npc, room, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { run, test } from './dsl';
 import { gainProf } from './growth';
@@ -144,7 +144,14 @@ export function addXinmo(s: GameState, d: number, why?: string): void {
 /** 约的说法：「三日后，柳寒舟在瘦西湖畔等你」 */
 export function yueText(s: GameState, y: Yue): string {
   const d = y.due - dayNo(s);
-  const when = d <= 0 ? '今日' : d === 1 ? '明日' : `${['', '一', '两', '三', '四', '五', '六', '七', '八', '九', '十'][d] ?? d}日后`;
+  const n = ['', '一', '两', '三', '四', '五', '六', '七', '八', '九', '十'][d] ?? String(d);
+  // 差事是限期（几日之内交差都算），约是那一天见面
+  if (y.id.startsWith('job_')) {
+    // 交给人是「找某某交差」，交到榜上是「在某处的悬赏榜交差」
+    const to = npc(y.npc)?.obj ? `到${room(y.at).name}的${npcName(y.npc)}交差` : `到${room(y.at).name}找${npcName(y.npc)}交差`;
+    return `${d <= 0 ? '今日之内' : d === 1 ? '明日之内' : `${n}日之内`}：${y.text}（${to}）`;
+  }
+  const when = d <= 0 ? '今日' : d === 1 ? '明日' : `${n}日后`;
   return `${when}，${npcName(y.npc)}在${room(y.at).name}等你：${y.text}`;
 }
 

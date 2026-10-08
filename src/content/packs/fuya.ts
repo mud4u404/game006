@@ -4,8 +4,12 @@ import type { ContentPack, NpcDef, QuestDef, RoomDef, StoryDef } from '../types'
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_fuya', name: '扬州府衙', area: '扬州 · 府前街', region: 'yz', t: 10, map: [24, 84],
-    desc: '朱漆大门两旁蹲着一对石狮，照壁上贴满了告示。两个衙役拄着水火棍，打着哈欠。正堂门口，一个穿皂靴的中年汉子正翻着卷宗，眉头拧得像打了结。',
+    id: 'yz_fuya', name: '扬州府衙', area: '扬州 · 府前街', region: 'yz', t: 10, map: [24, 84], nightQuiet: true,
+    desc: [
+      { if: { hour: { from: 21, to: 5 } },
+        text: '府衙的大门关了，只开着一扇角门。门房里一盏油灯，值夜的衙役抱着水火棍打盹；后头大牢里有人在喊冤，喊两声又没了动静。照壁上的告示在风里哗哗地响。' },
+      { text: '朱漆大门两旁蹲着一对石狮，照壁上贴满了告示。两个衙役拄着水火棍，打着哈欠。正堂门口，一个穿皂靴的中年汉子正翻着卷宗，眉头拧得像打了结。' }
+    ],
     npcs: ['fuya_zhou', 'fuya_yayi'], objs: [{ id: 'fuya_gaoshi', if: { notFlag: 'fuya_gaoshi_taken' } }],
     exits: [['东', 'cheng', '西']],
     road: '你沿城墙根往西走，府衙的鼓楼渐渐近了……'
@@ -97,7 +101,7 @@ const NPCS: NpcDef[] = [
     }
   },
   {
-    id: 'fuya_yayi', name: '衙役', ini: '衙', tone: 'gray', brief: '打着哈欠',
+    id: 'fuya_yayi', name: '衙役', ini: '衙', tone: 'gray', brief: '打着哈欠', night: true,
     look: '皂衣歪戴，腰牌上的漆掉了一半，一看就是混日子的。水火棍靠在墙根下，棍头沾着半片落叶，腰间挂着个酒葫芦。',
     verbs: ['交谈', '观察', '打赏'],
     actions: {

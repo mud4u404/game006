@@ -89,6 +89,8 @@ export interface GameState {
   gongxian?: Record<string, number>;
   /** 打听：每个人今天问过没有（江湖日） */
   asked?: Record<string, number>;
+  /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts） */
+  away?: Record<string, number>;
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */
   encLog: Record<string, number>;
   lastEnc: number;
@@ -115,7 +117,8 @@ export function newGame(): GameState {
     real: realNow(65), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
     silver: 30, items: { qingfeng: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
-    flags: {}, rel: { jiangbo: '相依为命' }, title: '', xia: 0, eming: 0,
+    // 回春堂掌柜看着你长大（开口就是「惊澜来了」）
+    flags: {}, rel: { jiangbo: '相依为命', huichun: '点头之交' }, title: '', xia: 0, eming: 0,
     attr: { 体魄: 20, 根骨: 20, 身法: 20, 悟性: 20, 胆魄: 20 }, lilian: 0, encLog: {}, lastEnc: -1e9,
     // 渔家少年：江伯只教过几招防身的粗浅功夫，都还没入门（从零练起，见 docs/audit.md）
     skills: { hanjiang: { r: 0, p: 0 }, xinfa: { r: 0, p: 0 }, taxue: { r: 0, p: 0 } },

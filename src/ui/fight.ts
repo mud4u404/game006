@@ -63,6 +63,8 @@ interface Fight {
   after?: AfterDef | null; pick?: AfterOpt;
   /** 这一场新落下的伤 */
   hurt?: Partial<Wounds>;
+  /** 气血见底提醒过了 */
+  lowWarned?: boolean;
 }
 let C: Fight | null = null;
 export const inFight = (): boolean => !!C;
@@ -121,7 +123,7 @@ function fightHTML(c: Fight): string {
       ${c.kit.performs.map((p, i) => `<button class="skb" id="skP${i}" data-act="fSkill:p${i}"><b>${p.name}</b><small></small></button>`).join('')}
       ${c.kit.locked.map(p => `<button class="skb" disabled><b>${p.name}</b><small>${REALMS[p.realm ?? 0]}可用</small></button>`).join('')}
       <button class="skb" id="skCharge"><b>运功</b><small>长按蓄力</small></button>
-      <button class="skb ult" id="skUlt" data-act="fSkill:ult"><b>${c.kit.ult ? '杀招·' + c.kit.ult.def.name : '杀招'}</b><small></small></button>
+      <button class="skb ult" id="skUlt" data-act="fSkill:ult"${c.kit.ult ? '' : ' hidden'}><b>${c.kit.ult ? '杀招·' + c.kit.ult.def.name : '杀招'}</b><small></small></button>
       <button class="skb minor" id="skJcy" data-act="fSkill:jcy"></button>
       <button class="skb minor" id="skDart" data-act="fSkill:dart"></button>
       ${f.spar ? '<button class="skb minor" data-act="fSkill:yield">认输</button>' : '<button class="skb minor" data-act="fSkill:flee">逃跑</button>'}
@@ -151,7 +153,10 @@ function bubble(type: string, html: string, dmg?: number, kind?: 'out' | 'in' | 
 function myMove(part: string): { name: string; text: string } {
   const o = C!.kit.outer;
   const r = o ? S.skills[o.id]?.r ?? 0 : 0;
-  const ms = (o?.moves ?? []).filter(m => (m.realm ?? 0) <= r);
+  // 跟绝招同名的招不当普通招式使：不然战报里刚使过「江枫渔火」，按钮上的「江枫渔火」却还灰着
+  const perf = new Set((o?.performs ?? []).map(p => p.name));
+  const all = (o?.moves ?? []).filter(m => (m.realm ?? 0) <= r);
+  const ms = all.some(m => !perf.has(m.name)) ? all.filter(m => !perf.has(m.name)) : all;
   if (!ms.length) return { name: '随手一拳', text: `你挥拳打向${C!.f.name}${part}。` };
   const m = pick(ms);
   return { name: m.name, text: fmt(m.text, { foe: C!.f.name, part }) };
@@ -199,7 +204,8 @@ function narrate(evs: Ev[]): void {
           else if (e.res === 'parry') bubble('me', t + pick(FOE_PARRY)(f));
           else { bubble('me', t + pick(FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
         } else {
-          let t = `${f.name}一招${MO(pick(f.moves))}，${f.weapon}${pick(f.flourish)}，直取你${p}！`;
+          // 花样是自成一句的（「一脚踢翻了粥桶」「刀光一闪」），前面不拼兵器名：拼了就成「尖刀一脚踹翻了箩筐」
+          let t = `${f.name}一招${MO(pick(f.moves))}，${pick(f.flourish)}，直取你${p}！`;
           if (e.res === 'dodge') bubble('foe', t + pick(ME_DODGE));
           else if (e.res === 'parry') bubble('foe', t + pick(ME_PARRY)(weaponWord(S)));
           else {
@@ -697,8 +703,16 @@ function updMom(): void {
 }
 
 function updPlayer(): void {
-  const d = C!.d;
-  $('#pBars')!.innerHTML = mb('气血', Math.round(d.hp), d.hpMax, 'hp') + mb('内力', Math.round(d.mp), d.mpMax, 'mp') + mb('怒气', Math.floor(d.rage), 100, 'rage');
+  const c = C!, d = c.d;
+  // 没有杀招的（序章头一场），怒气攒满了也没处使：不摆怒气条
+  $('#pBars')!.innerHTML = mb('气血', Math.round(d.hp), d.hpMax, 'hp') + mb('内力', Math.round(d.mp), d.mpMax, 'mp') + (c.kit.ult ? mb('怒气', Math.floor(d.rage), 100, 'rage') : '');
+  // 气血见底：攻守之势再好，也该吃药、该走了（势和气血是两回事）
+  const low = d.hp > 0 && d.hp < d.hpMax * 0.25;
+  $('#pBars')!.classList.toggle('low', low);
+  if (low && !c.lowWarned && !d.over) {
+    c.lowWarned = true;
+    bubble('sys', '你气血见底了。攻守之势再好，挨上一记重的也撑不住——该吃药，或者走。');
+  }
 }
 
 function setSkill(id: string, disabled: boolean, sub: string): HTMLButtonElement {
@@ -794,7 +808,7 @@ function composeStory(c: Fight): string {
 }
 
 /** 由结算效果自动生成奖励标签 */
-function rewardChips(effects: Effect[] | undefined): string[] {
+function rewardChips(effects: Effect[] | undefined, hpEnd = 0): string[] {
   const chips: string[] = [];
   for (const e of effects || []) {
     if (e.type === 'prof') chips.push(`<span class="tag accent">${skillById(e.skill)?.name} 熟练 +${e.amount}</span>`);
@@ -805,10 +819,11 @@ function rewardChips(effects: Effect[] | undefined): string[] {
     else if (e.type === 'silver') chips.push(e.delta > 0 ? `<span class="tag accent">银两 +${e.delta} 文</span>` : `<span class="tag danger">银两 −${-e.delta} 文</span>`);
     else if (e.type === 'item' && e.delta > 0) chips.push(`<span class="tag accent">获得 ${itemById(e.id)?.name}</span>`);
     else if (e.type === 'title') chips.push(`<span class="tag purple">名号「${e.value}」</span>`);
-    else if (e.type === 'heal' && e.hpAtLeast) chips.push(`<span class="tag">气血恢复至${cn(Math.round(e.hpAtLeast * 10))}成</span>`);
+    // 打完时气血本就不止这几成的，不说「恢复」
+    else if (e.type === 'heal' && e.hpAtLeast && hpEnd < S.hpMax * e.hpAtLeast) chips.push(`<span class="tag">气血恢复至${cn(Math.round(e.hpAtLeast * 10))}成</span>`);
     else if (e.type === 'rel') chips.push(`<span class="tag">${npcName(e.npc)} · ${e.value}</span>`);
     else if (e.type === 'jobDone') { const j = jobById(e.id); if (j) chips.push(`<span class="tag accent">交差 · ${j.sect ? `${j.sect}贡献 +${jobGongxian(j)}` : `银两 +${jobPay(j)} 文`}</span>`); }
-    else if (e.type === 'jobFail') chips.push('<span class="tag danger">差事办砸了 · 地位降一级</span>');
+    else if (e.type === 'jobFail') chips.push(`<span class="tag danger">差事办砸了 · ${jobById(e.id)?.sect ? '扣门派贡献' : '地位降一级'}</span>`);
     else if (e.type === 'standing' && e.delta > 0) chips.push(`<span class="tag accent">地位升一级</span>`);
     else if (e.type === 'shenfen') chips.push(`<span class="tag purple">身份 · ${SHENFEN[e.id]?.name ?? e.id}</span>`);
   }
@@ -851,7 +866,7 @@ function showResult(): void {
   const hurt = Object.entries(c.hurt ?? {}) as [keyof Wounds, number][];
   const WHAT: Record<keyof Wounds, string> = { hand: '拆招、抢攻差一截，出手轻一成', foot: '闪避差一截', inner: '硬接差一截，内力回得慢' };
   const hurtLine = hurt.length ? `<div class="r-sub">落下的伤</div><div class="news">${hurt.map(([z]) => `<div><span class="tag danger">${ZONE_NAME[z]}伤 ${liang(S.wounds[z])}级</span><span>${WHAT[z]}。闭关养伤，一级三日。</span></div>`).join('')}</div>` : '';
-  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])]).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
+  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])], c.d.hp).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
   c.then = r.then;
   save();
   openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${pk?.title ?? (r.title || '')}</h2></div>

@@ -36,7 +36,8 @@ const ROOMS: RoomDef[] = [
     exits: [['西', 'gz_home'], ['南', 'gz_pier']],
     road: '你沿着江堤往镇上走，风里带着雨意……',
     onEnter: [
-      { if: { notFlag: 'ssgz_seen' },
+      // 「还是老样子」是重回瓜洲时说的话：序章里主角天天在这条街上
+      { if: { ...AFTER, notFlag: 'ssgz_seen' },
         do: [{ type: 'flag', flag: 'ssgz_seen' }, { type: 'feed', tag: '江湖', text: '瓜洲的老街还是老样子，鱼腥味混着药香。渡口的船来来去去，镇上人的日子照旧过。' }] }
     ] },
   { id: 'gz_pier', name: '瓜洲码头', area: '瓜洲渡', region: 'gz', t: 5, map: [62, 78],
@@ -59,15 +60,18 @@ const ROOMS: RoomDef[] = [
     npcs: [], objs: [{ id: 'shengchuan', if: { quest: { id: 'prologue', below: 3 } } }],
     exits: [['北', 'gz_town']],
     road: '你穿过老街，走到江边码头……' },
-  { id: 'gz_fen', name: '江伯坟', area: '瓜洲 · 江堤', region: 'gz', t: 5, map: [24, 70],
+  // 序章里江伯还活着：这里只是江堤上一株老柳，坟是序章以后才有的
+  { id: 'gz_fen', name: '江堤老柳', area: '瓜洲 · 江堤', region: 'gz', t: 5, map: [24, 70],
     desc: [
+      { if: { quest: { id: 'prologue', below: 3 } },
+        text: '江堤下游一株老柳，枝条垂到了水面。江伯补网的时候爱坐在这截树根上，说这里风顺，听得见上游来船。树根叫他坐得发亮。' },
       { if: { flag: 'gz_fen_wine' }, text: '江堤上那株老柳下，坟前的土还洇着酒气。木牌上「江伯之墓」四个字，刻得歪歪扭扭。' },
       { text: '江堤上那株老柳下，一座新坟的土还没长草。坟前插着一块木牌，「江伯之墓」四个字，是那天清晨你用刀一笔一笔刻的。' }
     ],
-    npcs: [], objs: ['gz_fenmu'],
+    npcs: [], objs: [{ id: 'gz_fenmu', if: AFTER }],
     exits: [['北', 'gz_home', '南']],
     road: '你沿着江堤往下游走，老柳的枝条垂到了水面……',
-    onEnter: [{ if: { notFlag: 'gz_fen_seen' },
+    onEnter: [{ if: { ...AFTER, notFlag: 'gz_fen_seen' },
       text: '你在江伯坟前站了很久。',
       do: [{ type: 'flag', flag: 'gz_fen_seen' }, { type: 'rel', npc: 'jiangbo', value: '阴阳两隔', note: '葬在瓜洲江堤的老柳下' }] }] }
 ];

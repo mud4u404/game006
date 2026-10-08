@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { S, setState, skipToYangzhou } from '../src/core/state';
-import { advanceDays, setNowMs } from '../src/core/time';
+import { advanceDays, advanceMin, setNowMs } from '../src/core/time';
 import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NEWS, NPCS, QUESTS, REGIONS, ROOMS, SHI, STORIES, npc, shiById } from '../src/content';
 import type { Cond } from '../src/content/types';
 import { run, test as cond } from '../src/engine/dsl';
@@ -100,6 +100,35 @@ describe('作息不挡路', () => {
     }
     report(errs);
   });
+  it('入夜回家的地点（RoomDef.nightQuiet）：要有夜景；住店看病的、有约在这儿等的照旧在，其余回家', () => {
+    const errs = ROOMS.filter(r => r.nightQuiet && !(Array.isArray(r.desc) && r.desc.some(b => timed(b.if))))
+      .map(r => `${r.id}（${r.name}）写了 nightQuiet，desc 里要有一段带 hour 条件的夜景：人都回家了，场景不能还写着人来人往`);
+    report(errs);
+    setState(skipToYangzhou());
+    S.min = 10 * 60;
+    expect(roomNpcs('cheng')).toContain('bs2_hu');
+    expect(roomNpcs('yz_fuya')).toContain('fuya_zhou');
+    S.min = 23 * 60;
+    expect(roomNpcs('cheng')).not.toContain('bs2_hu');
+    expect(roomNpcs('cheng')).toContain('ss_gengfu');
+    expect(roomNpcs('yz_fuya')).not.toContain('fuya_zhou');
+    expect(roomNpcs('yz_fuya')).toContain('fuya_yayi');
+    // 有约在这儿等你的，夜里也等着
+    run([{ type: 'yue', id: 'test_zhou', npc: 'fuya_zhou', at: 'yz_fuya', inDays: 1, text: '回话' }]);
+    expect(roomNpcs('yz_fuya')).toContain('fuya_zhou');
+  });
+
+  it('暂时走开的人（away），时辰到了才回来', () => {
+    setState(skipToYangzhou());
+    S.min = 22 * 60;
+    run([{ type: 'job', id: 'xs_hezei' }]);
+    expect(roomNpcs('dukou')).toContain('xs_hezei');
+    run([{ type: 'away', npc: 'xs_hezei', hours: 12 }]);
+    expect(roomNpcs('dukou')).not.toContain('xs_hezei');
+    advanceMin(S, 23 * 60);
+    expect(roomNpcs('dukou')).toContain('xs_hezei');
+  });
+
   it('说书人白天在东关街，晚上在望江楼，夜深了不在外头', () => {
     setState(skipToYangzhou());
     S.min = 10 * 60;

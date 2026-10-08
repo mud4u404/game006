@@ -15,10 +15,10 @@ const NPCS: NpcDef[] = [
         { if: { flag: 'xsb_xiong_done' }, text: '书办合上册子：「缉凶的那桩，凶犯到案了。遗孀在灵前烧了纸，说是终于能睡了。」' },
         { if: { flag: 'xsb_jf_han' }, text: '蜀冈山上有个猎户帮着剿匪，箭无虚发。山下的采药人都说老韩好样的。' },
     { if: { flag: 'xsb_jf_ercapt' }, text: '黑风寨的二当家叫人拿住了，匪徒们散伙回了家。蜀冈山道太平了。' },
-    { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙。赏银五十两，全城称快。' },
+    { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。' },
     { if: { flag: 'xsb_jf_sha' }, text: '黑风寨叫人一把火烧了。跑得慢的匪徒，烟熏死在了山洞里。' },
     { if: { flag: 'xsb_jf_done' }, text: '「剿匪的那桩，山寨也平了。」书办竖了个大拇指，「四张榜全叫你揭了——游侠里头，你算头一份。」' },
-        { text: '书办翻开海捕文书的底册：「四张榜都还挂着——寻人、寻物、缉凶、剿匪。公子有兴致尽管揭，领了赏来我这儿登记。」' },
+        { text: '书办翻开底册：「四张榜都还挂着——寻人、寻物、缉凶、剿匪。一回只揭一张，手上的差事交了，再来揭下一张。领了赏来我这儿登记。」' },
       ],
       揭寻人: [{ do: [{ type: 'job', id: 'xsb_xunren' }] }],
       揭寻物: [{ do: [{ type: 'job', id: 'xsb_xunwu' }] }],
@@ -26,45 +26,41 @@ const NPCS: NpcDef[] = [
       揭剿匪: [{ do: [{ type: 'job', id: 'xsb_jiaofei' }] }],
       交寻人: [
         { if: { job: 'xsb_xunren', flag: 'xsb_xr_found' },
-          text: '书办在册子上画了个勾：「学徒找到了，赏银十文。」（银两 +10 文）',
+          text: '书办在册子上画了个勾：「学徒找到了。」他从柜里点出一串铜钱。',
           do: [
             { type: 'jobDone', id: 'xsb_xunren' },
             { type: 'flag', flag: 'xsb_xr_done' },
-            { type: 'silver', delta: 10 },
-            { type: 'feed', tag: '江湖', text: '你完成了寻人的悬赏，领了十文赏钱。' }
+            { type: 'feed', tag: '江湖', text: '你完成了寻人的悬赏，领了赏钱。' }
           ] },
         { text: '「寻人的榜还没结果——找到了再来领赏。」' }
       ],
       交寻物: [
         { if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' },
-          text: '书办验了玉佩：「正是寡妇周氏丢的那块。」他在册子上画了个勾，「赏银二十文。」（银两 +20 文）',
+          text: '书办验了玉佩：「正是寡妇周氏丢的那块。」他在册子上画了个勾，他从柜里点出一串铜钱。',
           do: [
             { type: 'jobDone', id: 'xsb_xunwu' },
             { type: 'flag', flag: 'xsb_xw_done' },
-            { type: 'silver', delta: 20 },
-            { type: 'feed', tag: '江湖', text: '你完成了寻物的悬赏，领了二十文赏钱。' }
+            { type: 'feed', tag: '江湖', text: '你完成了寻物的悬赏，领了赏钱。' }
           ] },
         { text: '「寻物的榜还没结果——找到了再来领赏。」' }
       ],
       交缉凶: [
         { if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat' },
-          text: '书办验看了凶手：「赵屠户，命案在身——正是海捕文书上的人。」他在册子上画了个勾，「赏银五十文。」（银两 +50 文）',
+          text: '书办验看了凶手：「赵屠户，命案在身——正是海捕文书上的人。」他在册子上画了个勾，他从柜里点出一串铜钱，比前两张榜都沉。',
           do: [
             { type: 'jobDone', id: 'xsb_xiong' },
             { type: 'flag', flag: 'xsb_xiong_done' },
-            { type: 'silver', delta: 50 },
-            { type: 'feed', tag: '江湖', text: '你缉拿了命案凶手赵屠户，领了五十文赏钱。' }
+            { type: 'feed', tag: '江湖', text: '你缉拿了命案凶手赵屠户，领了赏钱。' }
           ] },
         { text: '「缉凶的榜还没结果——拿住了再来领赏。」' }
       ],
       交剿匪: [
         { if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' },
-          text: '书办验了二当家的九环大刀：「黑风寨二当家，正是榜上要拿的人。」他在册子上画了个勾，「赏银一百文。」（银两 +100 文）',
+          text: '书办验了二当家的九环大刀：「黑风寨二当家，正是榜上要拿的人。」他在册子上画了个勾，他让衙役抬出一只钱匣：「剿匪的赏，府台亲批的。」',
           do: [
             { type: 'jobDone', id: 'xsb_jiaofei' },
             { type: 'flag', flag: 'xsb_jf_done' },
-            { type: 'silver', delta: 100 },
-            { type: 'feed', tag: '江湖', text: '你剿灭了黑风寨，领了一百文赏钱。' }
+            { type: 'feed', tag: '江湖', text: '你剿灭了黑风寨，领了赏钱。' }
           ] },
         { text: '「剿匪的榜还没结果——平了山寨再来领赏。」' }
       ]
@@ -239,12 +235,12 @@ const JIAOFEI: FoeDef = {
               { type: 'feed', tag: '江湖', text: '你只拿了二当家，其余匪徒散伙回家。老韩说，蜀冈山道终于太平了。' }
             ],
             later: '蜀冈山道的匪患平了。猎户们重新上山打猎，老韩说这全是你的功劳。' },
-          { label: '尽数拿送官府', sub: '银两 +50',
-            say: '你把二当家和匪徒们全捆了，押下山去。府衙的吴捕头点人数——二十三口，一个不少。赏银五十两。',
+          { label: '尽数拿送官府', sub: '银两 +460',
+            say: '你把二当家和匪徒们全捆了，押下山去。府衙的吴捕头点人数——二十三口，一个不少。榜外另有人头钱，一口二十文，四百六十文。',
             do: [
               { type: 'flag', flag: 'xsb_jf_all' }, { type: 'flag', flag: 'xsb_jf_done' },
-              { type: 'silver', delta: 50 },
-              { type: 'feed', tag: '江湖', text: '你把黑风寨的匪徒尽数拿送府衙，赏银五十两。' }
+              { type: 'silver', delta: 460 },
+              { type: 'feed', tag: '江湖', text: '你把黑风寨的匪徒尽数拿送府衙，另领了四百六十文人头钱。' }
             ],
             later: '黑风寨的匪徒全叫人拿送府衙。蜀冈一带的猎户采药人，都松了一口气。' },
           { label: '烧了山寨，赶尽杀绝', sub: '恶名 +3',
@@ -273,7 +269,7 @@ const NEWS: NewsDef[] = [
   { if: { flag: 'xsb_xiong_done' }, text: '命案凶手赵屠户到案了。遗孀周氏说，终于能睡个安稳觉了。' },
   { if: { flag: 'xsb_jf_han' }, text: '蜀冈山上有个猎户帮着剿匪，箭无虚发。山下的采药人都说老韩好样的。' },
     { if: { flag: 'xsb_jf_ercapt' }, text: '黑风寨的二当家叫人拿住了，匪徒们散伙回了家。蜀冈山道太平了。' },
-    { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙。赏银五十两，全城称快。' },
+    { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。' },
     { if: { flag: 'xsb_jf_sha' }, text: '黑风寨叫人一把火烧了。跑得慢的匪徒，烟熏死在了山洞里。' },
     { if: { flag: 'xsb_jf_done' }, text: '蜀冈黑风寨叫人平了。山下的猎户采药人，都说是位侠客帮了大忙。' },
     { if: { flag: 'xsb_xr_clue1' }, text: '布庄的学徒小栓失踪前，他舅舅来过一趟。掌柜的逢人便念叨这孩子。' },
@@ -287,11 +283,10 @@ const NEWS: NewsDef[] = [
 const NPC_OBJ: NpcDef[] = [
   {
     id: 'xsb_bang', name: '海捕文书', obj: true, icon: 'stele', brief: '照壁一角的木榜',
-    look: '照壁一角钉着一块木榜，榜上贴着四张悬赏，墨迹有新有旧。揭走了的，留下一块浆糊印。',
+    look: '照壁一角钉着一块木榜，榜上贴着几张海捕文书，画着画像，写着案由和赏银，墨迹有新有旧。揭走了的，留下一块浆糊印。最底下一行小字：有能者揭榜，赴府衙登记。',
     at: { room: 'yz_fuya' },
-    verbs: ['交谈', '细看'],
+    verbs: ['观察', '细看'],
     actions: {
-      交谈: [{ text: '海捕文书上画着几幅画像，写着案由和赏银。最底下一行小字：有能者揭榜，赴府衙登记。' }],
       // 海捕文书上的人犯（packs/liushanmen.ts）：一个了结，下一个才贴出来
       细看: [
         { if: { shi: { id: 'lsm_qian', at: ['zaitao', 'zuoan'] } },

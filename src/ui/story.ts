@@ -7,7 +7,7 @@ import { dateStr } from '../core/time';
 import { $, cleanName, fmt } from '../core/util';
 import { storyById } from '../content';
 import type { StoryDef } from '../content/types';
-import { newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
+import { lackOf, newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
 import { afterOutcome, hooks, registerHandlers, render } from './shell';
 import { welcomeBack } from './chuguan';
 
@@ -36,7 +36,12 @@ function draw(): void {
     : '';
   const choices = cur.result !== undefined
     ? `<button class="choice primary" data-act="stNext"><b>继续</b></button>`
-    : card.choices.map((c, k) => test(c.if) ? `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${c.sub ? `<small>${c.sub}</small>` : ''}</button>` : '').join('');
+    : card.choices.map((c, k) => {
+      if (test(c.if)) return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${c.sub ? `<small>${c.sub}</small>` : ''}</button>`;
+      // 够不着的路也摆出来、写明差什么（钱、根基、侠义……）；剧情上的条件不成立的照旧藏着
+      const lack = lackOf(c.if);
+      return lack ? `<button class="choice locked" disabled><b>${c.label}</b><small>${lack}</small></button>` : '';
+    }).join('');
   $('#storyLayer')!.innerHTML = `<div class="story-l" role="dialog" aria-label="${card.title}">
     ${card.tag ? `<span class="tag accent">${card.tag}</span>` : ''}
     <h2>${fmt(card.title, v)}</h2>

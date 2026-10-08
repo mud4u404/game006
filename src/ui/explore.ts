@@ -12,7 +12,7 @@ import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
 import { XIEJIAO, checkYue, jingxiu, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
-import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
+import { act, curQuest, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
@@ -63,6 +63,7 @@ export function travelTo(dest: string, onArrive?: () => void): void {
       S.min += m;
       if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
       S.loc = nx; S.sel = null; S.reply = null;
+      payFare(nx);
       lateYue();
       // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
       const enc = rollEncounter(from, nx);
@@ -161,6 +162,8 @@ registerHandlers({
     closeSheet();
     travelTo(to);
   },
+  // 见闻簿里差事的「去」：赶到交差的地方
+  jgo: v => { if (!v || v === S.loc) return; closeSheet(); travelTo(v); },
   retreat: v => retreat(Number(v)),
   // 歇脚：等到某个钟点（engine/shiguang.ts 的 waitUntil）
   xiejiao: v => {
