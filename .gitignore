@@ -3,6 +3,8 @@ dist/
 .vite/
 *.log
 .DS_Store
+# macOS 在外接硬盘（exFAT）上生成的 AppleDouble 垃圾文件，不提交
+._*
 
 # Trae 自动生成的本地文件，留在本机，不提交
 CODE_WIKI.md
