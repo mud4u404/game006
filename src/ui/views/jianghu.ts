@@ -30,12 +30,12 @@ export function viewJianghu(): string {
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
   // 横幅标签按任务种类：序章、主线（main 开头）、其余都是支线
   const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
-  const side = !q ? '' : q.state !== '能做'
-    ? `<span class="qs ${q.state === '卡住' ? 'danger' : 'warn'}">${q.state === '卡住' ? '卡住' : '要等'}：${q.why.replace(/^差：/, '差')}</span>`
-    : q.to ? `<span class="qd">${q.dist === 0 ? '就在此处' : '约' + minLabel(q.dist)}</span>` : '';
+  // 要等、卡住的缘故另起一行写在标题下面，免得挤成半句
+  const why = q && q.state !== '能做' ? `<small class="qs ${q.state === '卡住' ? 'danger' : 'warn'}">${q.state}：${q.why.replace(/^差：/, '差')}</small>` : '';
+  const dist = q?.to && q.state === '能做' ? `<span class="qd">${q.dist === 0 ? '就在此处' : '约' + minLabel(q.dist)}</span>` : '';
   const quest = !q ? '' : q.to
-    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}</span>${side}${IC.chev}</button>`
-    : `<button class="card quest" data-act="questbook"><span class="tag accent">${kind}</span><span class="qt">${q.title}</span>${side}</button>`;
+    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}${why}</span>${dist}${IC.chev}</button>`
+    : `<button class="card quest" data-act="questbook"><span class="tag accent">${kind}</span><span class="qt">${q.title}${why}</span></button>`;
   const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button></div>`;
   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
   const y = nextYue(S);
@@ -59,7 +59,7 @@ export function viewJianghu(): string {
     <div class="avas">${all.map(avaBtn).join('')}</div>
     ${S.sel ? detail(S.sel) : ''}
   </section>` : ''}
-  <section class="go"><h2>去处</h2><div class="exits">${exits.map(([d, id]) => exitBtn(d, id, exits.length === 1, q && q.state !== '卡住' ? q.to : undefined)).join('')}</div></section>
+  <section class="go"><h2>去处</h2><div class="exits">${exits.map(([d, id]) => exitBtn(d, id, exits.length === 1, q?.to)).join('')}</div></section>
   ${xiejiaoHTML()}`;
 }
 

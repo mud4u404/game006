@@ -184,10 +184,10 @@ registerHandlers({
   travel: v => travelTo(v),
   travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
   quest: () => {
+    // 卡住的也照去：差的那一步多半就在那儿办（缘故横幅上已经写着）
     const q = S.track ? questNav(S.track) : null;
-    if (q?.state === '卡住') toast(q.why);
-    else if (q?.to && q.to !== S.loc) travelTo(q.to);
-    else toast(q?.state === '要等' ? q.why : '就在此处');
+    if (q?.to && q.to !== S.loc) travelTo(q.to);
+    else toast(q && q.state !== '能做' ? q.why : '就在此处');
   },
   questbook: () => { openQuestbook(); },
   // 住处三选一（engine/shiguang.ts 的 zhuOf）

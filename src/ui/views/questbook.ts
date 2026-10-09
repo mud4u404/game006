@@ -100,9 +100,10 @@ function questRow(n: QuestNav, trackId: string): string {
   const goBtn = live && n.to
     ? `<button class="qb-go${here ? ' dim' : ''}" data-act="qgo:${n.id}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button>` : '';
   const toLine = live && n.toName ? `<small class="qb-to">${n.toName} · ${here ? '就在此处' : '约' + minLabel(n.dist)}</small>` : '';
-  const why = n.why ? `<small class="qb-why ${n.state === '卡住' ? 'bad' : ''}">${n.why}</small>` : '';
+  // 只因人不在而要等的，「找某某」那一行已经写了什么时辰在哪，不再重复
+  const why = n.why && !(n.who && !n.who.now && live) ? `<small class="qb-why ${n.state === '卡住' ? 'bad' : ''}">${n.why}</small>` : '';
   const needs = live && n.needs.length
-    ? n.needs.map(x => `<li class="${x.ok ? 'ok' : 'no'}">${x.ok ? '✓' : '✗'} ${x.text}${x.lack ? `（${x.lack}）` : ''}</li>`).join('') : '';
+    ? n.needs.map(x => `<li class="${x.ok ? 'ok' : 'no'}">${x.ok ? '✓' : '×'} ${x.text}${x.lack ? `（${x.lack}）` : ''}</li>`).join('') : '';
   const detail = live ? `${n.hint ? `<p class="qb-hint">${n.hint}</p>` : ''}${whoLine(n) || needs ? `<ul class="qb-need">${whoLine(n)}${needs}</ul>` : ''}` : '';
   const past = n.past.length
     ? `<details class="qb-past"><summary>前情 · ${n.past.length} 步</summary><ul>${n.past.map(t => `<li>✓ ${t}</li>`).join('')}</ul></details>` : '';

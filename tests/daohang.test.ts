@@ -77,7 +77,7 @@ describe('导航算得对', () => {
     S.quests.side_yanhao = 2;
     S.min = 10 * 60;
     const html = questbookSheetHtml();
-    expect(html).toContain('✗ 身契带在身上');
+    expect(html).toContain('× 身契带在身上');
     expect(html).toContain('前情 · 2 步');
     expect(html).toMatch(/找云娘：/);
   });
