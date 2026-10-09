@@ -5,7 +5,7 @@ import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, trav
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
-import { questNav } from '../../engine/daohang';
+import { leadsNear, questNav } from '../../engine/daohang';
 import { kanren } from '../../engine/zhaoshi';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef, Verb } from '../../content/types';
@@ -52,6 +52,7 @@ export function viewJianghu(): string {
   </section>
   ${questBar}
   ${yueBar}
+  ${leadsCard()}
   <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
   ${gone}
   ${all.length ? `<section class="card here-card">
@@ -61,6 +62,14 @@ export function viewJianghu(): string {
   </section>` : ''}
   <section class="go"><h2>去处</h2><div class="exits">${exits.map(([d, id]) => exitBtn(d, id, exits.length === 1, q?.to)).join('')}</div></section>
   ${xiejiaoHTML()}`;
+}
+
+/** 近处有事：眼下接得到的差事，派差的人在哪、约多久（最多三行，点了先看耗时再走）。不推你去做，只是告诉你哪里有事 */
+function leadsCard(): string {
+  if (S.chapter === 0) return '';
+  const ls = leadsNear();
+  if (!ls.length) return '';
+  return `<section class="card leads"><div class="sec-h"><h2>近处有事</h2></div>${ls.map(l => `<button class="lead" data-act="travelAsk:${l.to}"><span class="lt">${l.text}</span><span class="ld">${l.toName} · 约${minLabel(l.min)}</span>${IC.chev}</button>`).join('')}</section>`;
 }
 
 /** 歇脚：等到天亮、晌午、傍晚、入夜（人有作息，有的人、有的事只在夜里）。序章里不歇 */

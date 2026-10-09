@@ -3,7 +3,7 @@
  * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
-import { advanceDays, dateStr } from '../core/time';
+import { advanceDays, dateStr, minLabel } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
 import { room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
@@ -13,7 +13,7 @@ import { gongliText } from '../engine/ren';
 import { XIEJIAO, checkYue, jingxiu, nightBlock, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
-import { act, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
+import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
 import { run } from '../engine/dsl';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
@@ -179,6 +179,18 @@ registerHandlers({
     render();
   },
   mapRegion: v => { setMapRegion(v); render(); },
+  // 地图点地名：先写明这趟路要多久、花多少钱，再由玩家决定走不走（地图审查第一条）
+  travelAsk: v => {
+    if (!v || v === S.loc) return;
+    const c = tripCost(v);
+    if (!c) { toast('从这里去不了那儿'); return; }
+    const short = c.fee > S.silver;
+    openSheet(`<h2>去${room(v).name}</h2>
+      <p>路上约 <b>${minLabel(c.min)}</b>，经过 ${cn(c.hops)} 处${c.fee ? `；船钱和过路钱共 <b>${cn(c.fee)} 文</b>` : '；一路不花钱'}。</p>
+      ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}
+      <div class="acts"><button class="btn" data-act="travelGo:${v}">出发</button><button class="btn ghost" data-act="sheetClose">再看看</button></div>`, true);
+  },
+  travelGo: v => { closeSheet(); travelTo(v); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
   do: v => doAct(v as Verb),

@@ -66,7 +66,7 @@ await p.waitForTimeout(1200);
 await click('[data-act="stPick:0"]');                 // 拔剑迎敌
 
 async function fight(tag, pickBest = true) {
-  for (let i = 0; i < 500; i++) {
+  for (let i = 0; i < 300; i++) {
     await p.waitForTimeout(200);
     if (!(await p.$('#fightLayer:not([hidden])'))) return 'closed';
     if (await p.$('#sheetLayer:not([hidden]) [data-act="fResult"]')) return 'result';
@@ -93,10 +93,20 @@ async function fight(tag, pickBest = true) {
     // 杀招、绝招：按钮由搭配生成（engine/zhaoshi.ts）
     for (const s of ['#skUlt', '#skP0', '#skP1', '#skP2']) { const el = await p.$(s + ':not([disabled])'); if (el) { await el.click().catch(() => {}); break; } }
   }
+  // 打斗卡住时把界面上看得见的东西打出来，CI 的日志里才查得出卡在哪
+  const dump = await p.evaluate(() => ({
+    按钮: [...document.querySelectorAll('#fightLayer button, #sheetLayer button')].filter(b => b.offsetParent).map(b => `${b.dataset.act || b.id}:${b.textContent.trim().slice(0, 10)}${b.disabled ? '(灰)' : ''}`).slice(0, 24),
+    应对中: !!document.querySelector('#fsheet.alert'),
+    破绽: !!document.querySelector('#opening:not([hidden])'),
+    合数: document.querySelector('#fRound')?.textContent,
+    战报末三条: [...document.querySelectorAll('#flog .b')].slice(-3).map(x => x.textContent.trim().slice(0, 50))
+  })).catch(e => String(e));
+  console.log('· 打斗卡住时的界面：', JSON.stringify(dump));
   return 'timeout';
 }
 
 // 赶路途中可能遇到路遇（随机）：弹出剧情就点第一个选项，开打就打完，直到路走完
+let stuck = 0;
 async function settle() {
   for (let i = 0; i < 80; i++) {
     await p.waitForTimeout(250);
@@ -107,7 +117,12 @@ async function settle() {
     }
     // 先看结算页：打完以后结算页盖在战斗层上面，战斗层这时还没收起
     if (await p.$('#sheetLayer:not([hidden]) [data-act="fResult"]')) { await p.click('[data-act="fResult"]').catch(() => {}); continue; }
-    if (await p.$('#fightLayer:not([hidden])')) { log('路遇开打', await fight(null)); continue; }
+    if (await p.$('#fightLayer:not([hidden])')) {
+      const r = await fight(null);
+      log('路遇开打', r);
+      if (r === 'timeout' && ++stuck >= 2) throw new Error('路遇的打斗两次都打不完，卡住了（界面见上一行）');
+      continue;
+    }
     if (await p.$('#travel:not([hidden])')) continue;
     return;
   }

@@ -1,3 +1,4 @@
+import { sectHome } from '../../engine/daohang';
 import { S, fullName } from '../../core/state';
 import type { AttrKey } from '../../content/types';
 import { npcName, roomNpcs } from '../../engine/world';
@@ -57,6 +58,8 @@ function shimenHTML(): string {
   if (S.sect) rows.push(`<div><span class="tag">贡献</span><span>${S.sect.school}贡献 ${gongxianOf(S)}。替师门办差事攒下；升地位、学外门以上的武功要拿它去换。</span></div>`);
   if (past) rows.push(`<div><span class="tag">来历</span><span>${past}。</span></div>`);
   // 离开师门的两条路：辞别好聚好散，一辈子一回；叛门再也回不去（docs/paiban.md E05）。点了先弹一张卡把后果说清
+  const home = S.sect ? sectHome() : null;
+  if (home) rows.push(`<div><span class="tag">去处</span><span>${home.name}</span><button class="act" data-act="travelAsk:${home.to}">去</button></div>`);
   const acts = S.sect ? `<div class="acts">${canCibie() ? '<button class="act" data-act="sectLeaveAsk:辞别">辞别师门</button>' : ''}<button class="act danger" data-act="sectLeaveAsk:叛门">叛出师门</button></div>` : '';
   return `<section class="card here-card"><div class="sec-h"><h2>师门</h2><span class="count">${sectText(S)}</span></div><div class="news">${rows.join('')}</div>${acts}</section>`;
 }

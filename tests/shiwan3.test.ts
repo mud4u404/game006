@@ -8,7 +8,9 @@ import { S, setState, skipToYangzhou } from '../src/core/state';
 import { setNowMs } from '../src/core/time';
 import { run } from '../src/engine/dsl';
 import { retreatBlock } from '../src/engine/shiguang';
-import { verbPoor, verbPrice } from '../src/engine/world';
+import { act, tripCost, verbPoor, verbPrice } from '../src/engine/world';
+import { leadsNear, sectHome } from '../src/engine/daohang';
+import { viewDitu } from '../src/ui/views/ditu';
 import { growthHTML } from '../src/ui/growth';
 import { pickFresh } from '../src/ui/fresh';
 import { SKILLS } from '../src/content';
@@ -128,5 +130,64 @@ describe('战报选句：一场里不连着重复', () => {
         expect(a).toContain('{part}');
       }
     }
+  });
+});
+
+describe('误事不再一次就被开除', () => {
+  it('新进的镖师头一回丢镖只记一过，再丢一回才被辞退；交差之后记过清掉；赔罪不收钱', () => {
+    S.shenfen = { id: 'biaoshi', standing: 1 } as typeof S.shenfen;
+    run([{ type: 'job', id: 'bj_gz' }]);
+    run([{ type: 'jobFail', id: 'bj_gz' }]);
+    expect(S.shenfen.id).toBe('biaoshi');
+    expect(S.shenfen.standing).toBe(1);
+    expect(S.flags.jobWarn).toBe(true);
+    run([{ type: 'job', id: 'bj_gz' }]);
+    run([{ type: 'jobDone', id: 'bj_gz' }]);
+    expect(S.flags.jobWarn).toBeUndefined();
+    run([{ type: 'job', id: 'bj_zj' }]);
+    run([{ type: 'jobFail', id: 'bj_zj' }]);
+    run([{ type: 'job', id: 'bj_zj' }]);
+    run([{ type: 'jobFail', id: 'bj_zj' }]);
+    expect(S.shenfen.id).toBe('youxia');
+    S.flags.bj_joined = true;
+    S.silver = 0;
+    const r = act('bj_zhao', '赔罪');
+    expect(r.text).toContain('旧账不提');
+    expect(S.shenfen.id).toBe('biaoshi');
+    expect(S.silver).toBe(0);
+  });
+});
+
+describe('地图与找事：看得见成本、有快捷、近处有事', () => {
+  it('tripCost：写明总耗时、经过几处、船钱；原地不用算', () => {
+    S.loc = 'jc_yz_yuanmen';
+    const c = tripCost('jc_yz_kezhan');
+    if (c) { expect(c.min).toBeGreaterThan(0); expect(c.hops).toBeGreaterThan(0); expect(c.fee).toBeGreaterThanOrEqual(0); }
+    expect(tripCost('jc_yz_yuanmen')).toBeNull();
+  });
+
+  it('地图上的地名点了先看耗时，不直接赶路', () => {
+    S.loc = 'jc_yz_yuanmen';
+    const html = viewDitu();
+    expect(html).toContain('data-act="travelAsk:');
+    expect(html).not.toContain('data-act="travel:');
+  });
+
+  it('拜了师门：地图顶上有「回师门」，没拜的没有', () => {
+    S.loc = 'jc_yz_yuanmen';
+    delete S.sect;
+    expect(viewDitu()).not.toContain('回师门');
+    S.sect = { school: '少林', rank: '记名' };
+    const home = sectHome();
+    if (home && home.to !== S.loc) expect(viewDitu()).toContain('回师门');
+  });
+
+  it('近处有事：最多三件，各带地点和耗时；序章里和已接着差事时不列', () => {
+    S.loc = 'jc_yz_yuanmen';
+    const ls = leadsNear();
+    expect(ls.length).toBeLessThanOrEqual(3);
+    for (const l of ls) { expect(l.min).toBeGreaterThan(0); expect(l.toName.length).toBeGreaterThan(0); }
+    S.job = { id: 'bj_gz', due: 99999 } as typeof S.job;
+    expect(leadsNear()).toEqual([]);
   });
 });
