@@ -712,6 +712,11 @@ describe('后果看得见', () => {
     expect(bad, bad.join('\n')).toEqual([]);
   });
 
+  it('交谈只说话，不推世事：插手要用专门的动作、要有代价（审查 C01、C02：跟何税吏说句话，渡船的事就了结了）', () => {
+    const bad = NPCS.flatMap(n => (n.actions['交谈'] ?? []).filter(b => b.do?.some(e => e.type === 'shi' && e.to)).map(() => n.id));
+    expect(bad, `这些人物的「交谈」会推世事：${bad.join('、')}。把推世事的那一步挪到一个专门的动作上（例：何税吏的「请他行文」）`).toEqual([]);
+  });
+
   it('只有序章、主线会自己挂上横幅：支线记不记挂由玩家定（docs/huojianghu.md 第四节，审查 B07）', () => {
     const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
     const bad = [...all.matchAll(/"type":"track","id":"([^"]+)"/g)].map(m => m[1]).filter(id => id !== 'prologue' && !id.startsWith('main'));
