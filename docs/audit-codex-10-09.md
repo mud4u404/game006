@@ -486,7 +486,7 @@
 dist/assets/formulas-BmqQeaIo.js   992.20 kB │ gzip: 359.22 kB
 
 ✓ built in 432ms
-[plugin builtin:vite-reporter] 
+[plugin builtin:vite-reporter]
 (!) Some chunks are larger than 500 kB after minification. Consider:
 - Using dynamic import() to code-split the application
 - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
