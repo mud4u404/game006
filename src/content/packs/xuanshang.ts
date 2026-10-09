@@ -11,14 +11,12 @@ const NPCS: NpcDef[] = [
     id: 'xsb_zhuren', name: '书办', ini: '书', tone: 'blue', brief: '抄着文书',
     look: '府衙的老书办，五十来岁，一笔馆阁体写得端正。管着海捕文书的张贴和撤换，也管登记领赏。',
     at: { room: 'yz_zhaobi' },
-    // 四张榜都还交不了差（线索、对手都没有入口，审查 B02、D01、F01）：补完以前不挂出来，交 zcode 补。
-    // 补完一张，把那一张条件里的 PENDING 删掉
-    verbs: ['交谈', '观察', { verb: '揭寻人', if: { jobOpen: 'xsb_xunren' } }, { verb: '揭寻物', if: { jobOpen: 'xsb_xunwu' } }, { verb: '揭缉凶', if: { jobOpen: 'xsb_xiong' } }, { verb: '揭剿匪', if: { jobOpen: 'xsb_jiaofei' } }, { verb: '揭河贼', if: { jobOpen: 'xs_hezei' } }, { verb: '交寻人', if: { job: 'xsb_xunren', flag: 'xsb_xr_found' } }, { verb: '交寻物', if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' } }, { verb: '交缉凶', if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat' } }, { verb: '交剿匪', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' } }, { verb: '交河贼', if: { job: 'xs_hezei', flag: 'xs_hezei_caught' } }],
+    verbs: ['交谈', '观察', { verb: '揭寻人', if: { jobOpen: 'xsb_xunren' } }, { verb: '揭寻物', if: { jobOpen: 'xsb_xunwu' } }, { verb: '揭缉凶', if: { jobOpen: 'xsb_xiong', notFlag: 'xsb_xiong_done' } }, { verb: '揭剿匪', if: { jobOpen: 'xsb_jiaofei' } }, { verb: '揭河贼', if: { jobOpen: 'xs_hezei' } }, { verb: '交寻人', if: { job: 'xsb_xunren', flag: 'xsb_xr_found' } }, { verb: '交寻物', if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' } }, { verb: '交缉凶', if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat', notFlag: 'xsb_xiong_gone', any: [{ flag: 'xsb_xiong_sent' }, { flag: 'xsb_xiong_self' }] } }, { verb: '交剿匪', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' } }, { verb: '交河贼', if: { job: 'xs_hezei', flag: 'xs_hezei_caught' } }],
     actions: {
       交谈: [
         { if: { flag: 'xsb_xr_done' }, text: '书办翻了翻册子：「寻人的那桩，学徒找到了。他师父已经领人回去了——多亏公子帮着打听。」' },
-        { if: { flag: 'xsb_xw_done' }, text: '「寻物的那桩也结了。」书办在册子上画了个勾，「东西找回来了，寡妇的玉佩失而复得。」' },
-        { if: { flag: 'xsb_xiong_done' }, text: '书办合上册子：「缉凶的那桩，凶犯到案了。遗孀在灵前烧了纸，说是终于能睡了。」' },
+        { if: { flag: 'xsb_xw_done' }, text: '书办在册子上画了个勾，道：「寻物的那桩也结了，阿蕙已经领回玉佩。」' },
+        { if: { notFlag: 'xsb_xiong_gone', any: [{ flag: 'xsb_xiong_sent' }, { flag: 'xsb_xiong_self' }] }, text: '书办合上册子：「缉凶的那桩，凶犯到案了。遗孀在灵前烧了纸，说是终于能睡了。」' },
         { if: { flag: 'xsb_jf_han' }, text: '蜀冈山上有个猎户帮着剿匪，箭无虚发。山下的采药人都说老韩好样的。' },
     { if: { flag: 'xsb_jf_ercapt' }, text: '黑风寨的二当家叫人拿住了，匪徒们散伙回了家。蜀冈山道太平了。' },
     { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。' },
@@ -57,7 +55,7 @@ const NPCS: NpcDef[] = [
       ],
       交寻物: [
         { if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' },
-          text: '书办验了玉佩：「正是寡妇周氏丢的那块。」他在册子上画了个勾，他从柜里点出一串铜钱。',
+          text: '书办对过阿蕙报失时画的花样，道：「玉上的蕙草纹、穗子上的结，都对得上。」他记下归还的日子，从柜里点出赏钱。',
           do: [
             { type: 'jobDone', id: 'xsb_xunwu' },
             { type: 'flag', flag: 'xsb_xw_done' },
@@ -66,14 +64,14 @@ const NPCS: NpcDef[] = [
         { text: '「寻物的榜还没结果——找到了再来领赏。」' }
       ],
       交缉凶: [
-        { if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat' },
+        { if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat', notFlag: 'xsb_xiong_gone', any: [{ flag: 'xsb_xiong_sent' }, { flag: 'xsb_xiong_self' }] },
           text: '书办验看了凶手：「郝屠户，命案在身——正是海捕文书上的人。」他在册子上画了个勾，他从柜里点出一串铜钱，比前两张榜都沉。',
           do: [
             { type: 'jobDone', id: 'xsb_xiong' },
             { type: 'flag', flag: 'xsb_xiong_done' },
             { type: 'feed', tag: '江湖', text: '你缉拿了命案凶手郝屠户，领了赏钱。' }
           ] },
-        { text: '「缉凶的榜还没结果——拿住了再来领赏。」' }
+        { text: '书办指着海捕文书道：「须得凶手到案，才发赏银。只在外头打赢了，不能销案。」' }
       ],
       交剿匪: [
         { if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' },
@@ -189,7 +187,7 @@ const CHAIN_NPCS: NpcDef[] = [
   },
   { id: 'xsb_zhao', name: '郝屠户', ini: '赵', tone: 'red', brief: '清早在肉铺帮工',
     look: '膀阔腰圆的屠户，换了个名字在东关街的肉铺帮工，围裙上的油渍洗不净，剔骨刀就别在腰后。',
-    at: { room: 'cheng', if: { hour: { from: 4, to: 6 }, flag: 'xsb_xiong_clue' } },
+    at: { room: 'cheng', if: { hour: { from: 4, to: 6 }, job: 'xsb_xiong', flag: 'xsb_xiong_clue', notFlag: 'xsb_xiong_done' } },
     verbs: ['交谈', '动手'],
     actions: {
       交谈: [{ text: '他剔骨的手一顿，刀尖在案板上点了点：「认错人了。肉要几斤？」' }],
@@ -224,8 +222,8 @@ const XUNREN: FoeDef = {
   win: '你一把夺过木棍，一脚踹在他屁股上。地痞连滚带爬地跑了。',
   lose: '木棍砸在你肩膀上，你踉跄了几步，地痞趁乱溜了。',
   results: {
-    win: { tag: '路遇', title: '赶走地痞', button: '继续问路',
-      story: '地痞跑了，你继续打听学徒的下落。',
+    win: { tag: '路遇', title: '救出小栓', button: '回府衙交差',
+      story: '地痞跑了。小栓放下麻袋，揉着磨破的肩头，向你作了一揖。他收拾起铺盖，道：「我这就回布庄去，师父只怕等急了。」',
       do: [{ type: 'flag', flag: 'xsb_xr_found' }, { type: 'lilian', amount: 10 }] },
     lose: { tag: '路遇', title: '吃了亏', button: '拍拍灰',
       story: '地痞占了上风，你得绕道走了。' }
@@ -257,7 +255,7 @@ const XIONGFAN: FoeDef = {
     lose: { tag: '缉凶 · 负', title: '刀光一错', button: '揉着肋下',
       story: '剔骨刀贴着你肋下划过，一凉——郝屠户收了手：「别再跟了。」你挣扎着爬起来，人已不见。',
       do: [{ type: 'heal', hpAtLeast: 0.3 }] },
-    win: { tag: '缉凶 · 胜', title: '凶手到案', button: '定他的下场',
+    win: { tag: '缉凶 · 胜', title: '拿住凶手', button: '定他的下场',
       story: '郝屠户跪在地上，剔骨刀掉在脚边。他的肩膀塌了下去——杀了人的那天起，他就一直在等这一天。',
       do: [{ type: 'flag', flag: 'xsb_xiong_beat' }],
       after: {
@@ -279,7 +277,7 @@ const XIONGFAN: FoeDef = {
               { type: 'feed', tag: '江湖', text: '郝屠户自己走去府衙自首了。周氏说，他总算做了回有担当的人。' }
             ],
             later: '郝屠户自己去了府衙自首。街上的人都说，这个杀猪的，走的时候有骨气。' },
-          { label: '放他走', sub: '恶名 +2',
+          { label: '放他走', sub: '恶名 +2 · 不得领赏',
             say: '你收了剑：「走吧。你身上背的人命，你自己掂量。」郝屠户朝你磕了个头，消失在了巷口。',
             do: [
               { type: 'flag', flag: 'xsb_xiong_gone' }, { type: 'flag', flag: 'xsb_xiong_done' },
@@ -368,8 +366,8 @@ const JOBS: JobDef[] = [
 
 const NEWS: NewsDef[] = [
   { if: { flag: 'xsb_xr_done' }, text: '布庄走失的学徒小栓找到了，他师父领着人回去了。街坊说，是一个佩剑的公子帮着打听的。', who: ['掌柜', '货郎', '小二'], about: 'you' },
-  { if: { flag: 'xsb_xw_done' }, text: '寡妇周氏丢的玉佩找回来了。有人说是一个江湖客从小偷手里追回来的。', who: ['货郎', '小二', '捕快'], about: 'you' },
-  { if: { flag: 'xsb_xiong_done' }, text: '命案凶手郝屠户到案了。遗孀周氏说，终于能睡个安稳觉了。', who: ['捕快', '衙役', '货郎', 'guan'] },
+  { if: { flag: 'xsb_xw_done' }, text: '绣娘阿蕙丢的玉佩找回来了。她把玉佩收进绣篮里，出摊时还向街坊说起那位寻物的江湖客。', who: ['货郎', '小二', '捕快'], about: 'you' },
+  { if: { notFlag: 'xsb_xiong_gone', any: [{ flag: 'xsb_xiong_sent' }, { flag: 'xsb_xiong_self' }] }, text: '命案凶手郝屠户到案了。遗孀周氏说，终于能睡个安稳觉了。', who: ['捕快', '衙役', '货郎', 'guan'] },
   { if: { flag: 'xsb_jf_han' }, text: '蜀冈山上有个猎户帮着剿匪，箭无虚发。山下的采药人都说老韩好样的。', who: ['猎户', '郎中', '脚夫', 'hei'] },
     { if: { flag: 'xsb_jf_ercapt' }, text: '黑风寨的二当家叫人拿住了，匪徒们散伙回了家。蜀冈山道太平了。', who: ['猎户', '脚夫', '捕快', 'hei'] },
     { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。', who: ['捕快', '衙役', 'guan', '猎户'] },

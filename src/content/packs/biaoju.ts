@@ -117,15 +117,15 @@ const NPCS: NpcDef[] = [
     actions: {
       交谈: [{ text: '老蔡朝镇外那片林子努了努嘴：「来的路上，林子里有人盯着。交了镖再说话。」' }],
       交镖: [
-        { if: { flag: 'bj_ztq_free' },
+        { if: { flag: 'bj_ztq_guan' },
+          text: '回春堂掌柜刚出来点货，镇外林子里窜出几条汉子，为首的一个黑脸膛：「钻天鹞是你送的官？今日连本带利讨回来！」老蔡一把扯开嗓子：「威——远——」',
+          do: [{ type: 'fight', foe: 'bj_jie_gz2' }] },
+        { if: { flag: 'bj_ztq_free', notFlag: 'bj_ztq_qing' },
           text: '镇外林子里有人吹了一声口哨，三长一短，再没动静。老蔡愣了愣：「钻天鹞的哨子……他认得你。」回春堂掌柜出来点了货，在镖单上按了手印。',
           do: [{ type: 'jobDone', id: 'bj_gz' }, { type: 'flag', flag: 'bj_ztq_qing' }] },
         { if: { flag: 'bj_ztq_qing' },
           text: '镇外林子里又是三长一短的哨子。钻天鹞从树后转出来，冲你抱了抱拳：「上回的情，还过了。今日各凭本事。」老蔡一把扯开嗓子：「威——远——」',
           do: [{ type: 'fight', foe: 'bj_jie_gz' }] },
-        { if: { flag: 'bj_ztq_guan' },
-          text: '回春堂掌柜刚出来点货，镇外林子里窜出几条汉子，为首的一个黑脸膛：「钻天鹞是你送的官？今日连本带利讨回来！」老蔡一把扯开嗓子：「威——远——」',
-          do: [{ type: 'fight', foe: 'bj_jie_gz2' }] },
         { text: '回春堂掌柜刚出来点货，镇外林子里窜出几条汉子，为首的一个瘦长条，手里一对短刀：「药材留下，人滚。」老蔡一把扯开嗓子：「威——远——」',
           do: [{ type: 'fight', foe: 'bj_jie_gz' }] }
       ]
@@ -255,7 +255,7 @@ const FOES: FoeDef[] = [
               later: '下回再走瓜洲这趟镖，林子里或许只会有一声口哨。孙镖头未必赞成。' },
             { label: '送官', sub: '侠义 +3',
               say: '你把他捆了，交给了瓜洲镇的巡检。钻天鹞一路骂骂咧咧，说他的弟兄不会放过你。',
-              do: [{ type: 'flag', flag: 'bj_ztq_guan' }, { type: 'xia', delta: 3 }],
+              do: [{ type: 'flag', flag: 'bj_ztq_guan' }, { type: 'flag', flag: 'bj_ztq_free', value: false }, { type: 'xia', delta: 3 }],
               later: '他的弟兄们还在这条道上。下回走瓜洲，劫镖的还会来。' }
           ]
         } },
@@ -347,7 +347,7 @@ const JOBS: JobDef[] = [
 
 const NEWS: NewsDef[] = [
   { if: { flag: 'bj_joined' }, text: '威远镖局新收了个镖师，听说是赵少镖头在望江楼斗酒斗来的。', who: ['镖师', '小二', '掌柜'], about: 'you' },
-  { if: { flag: 'bj_ztq_free' }, text: '瓜洲镇外那片林子近来太平了。有人说钻天鹞回家伺候老娘去了。', who: ['渔家', '船夫', '脚夫'] },
+  { if: { flag: 'bj_ztq_free', notFlag: 'bj_ztq_qing' }, text: '瓜洲镇外那片林子近来太平了。有人说钻天鹞回家伺候老娘去了。', who: ['渔家', '船夫', '脚夫'] },
   { if: { flag: 'bj_ztq_guan' }, text: '钻天鹞关进了瓜洲巡检司。他那几个弟兄放出话来，要找威远镖局算账。', who: ['渔家', '船夫', '镖师', '捕快'] },
   { if: { flag: 'yz_xiaoyuan' }, text: '东圈门里那处带枇杷树的小院，听说卖给了一位江湖上的少年。', who: ['牙子', '掌柜', '货郎'], about: 'you' }
 ];
