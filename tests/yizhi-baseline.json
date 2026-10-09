@@ -1,0 +1,39 @@
+{
+  "撞名": [
+    "人:云娘（yh_yunniang、yunnian）",
+    "人:老蔡（bj_cai_gz、bj_cai_zj）"
+  ],
+  "同姓": [
+    "秦教头（bs2_lsm_kao）",
+    "秦教头（bs2_qin）",
+    "赵屠户（xsb_xiongfan）"
+  ],
+  "写死兵器": [
+    "baishi.ts × 4",
+    "bangshou-guandao.ts × 1",
+    "genji-yan.ts × 1",
+    "houguo.ts × 1",
+    "jie-yangzhou.ts × 2",
+    "luyu-demo.ts × 4",
+    "luyu-yangzhou.ts × 6",
+    "suzhou.ts × 1",
+    "xuanshang.ts × 1",
+    "yanhao.ts × 1",
+    "zhenjiang.ts × 1"
+  ],
+  "抄来的台词": [
+    "你气血充盈，脉象平和，用不着吃药。…（jichu.ts#lsm_bai；jichu.ts#neishang）",
+    "威远镖局的货，从来不用操心。…（zoubiao.ts#zb_bu；zoubiao.ts#zb_zhaofeng）",
+    "揉在伤处，揉到发热为止。手脚上的重伤，一坛轻一级…（jichu.ts#jc_yz_langzhong；jichu.ts#jc_zj_ning；jichu.ts#prologue；suzhou.ts#sz_yelangzhong；yangzhou.ts#yaopu）",
+    "温水送服，一日一服。内息的重伤，一服轻一级。…（jichu.ts#dieda；suzhou.ts#dieda；yangzhou.ts#dieda）"
+  ],
+  "反例原文": [
+    "biaoju.ts：稳得像钉子",
+    "shanmen-tiezhang.ts：帮里的账干净，人不干净",
+    "shanmen-tiezhang.ts：攒够一百的贡献",
+    "shishi-yangzhou.ts：稳得像钉子",
+    "skills-mingjiao-riyue-murong.ts：你双掌平推，如排云见日，直直撞在",
+    "yan-jianghu.ts：这不是学出来的利索，是打小在马背上长出来的",
+    "yangzhou.ts：那伤落了根"
+  ]
+}

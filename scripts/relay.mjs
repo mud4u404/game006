@@ -5,6 +5,11 @@
 export const WORK_LABELS = ['内容', '功能'];
 /** 带这个标签的 Issue 先不做 */
 export const HOLD_LABEL = '暂缓';
+/**
+ * 指派：Issue 带「给:trae」这样的标签，只有自报名字叫 trae 的协作者（node scripts/wait-for-work.mjs --for trae）才领得到；
+ * 不报名字的协作者领不到任何带「给:」的任务，所以多个工具同时开着自动模式也不会抢同一件
+ */
+export const ROUTE_PREFIX = '给:';
 
 const labelNames = item => (item.labels ?? []).map(l => (typeof l === 'string' ? l : l.name));
 
@@ -21,9 +26,9 @@ export const branchIssue = name => (name.startsWith('claude/') ? null : Number(n
  * items：GitHub 接口 /issues?state=open 返回的数组，Issue 和 PR 混在一起（PR 带 pull_request 字段）。
  * branches：远端分支名。推送了任务分支、CI 还没来得及建 PR 时，也算有人在做。
  * 可以做的任务：带「内容」或「功能」标签，不带「暂缓」，还没有开着的 PR 标题写着 [#编号]，
- * 也没有对应的任务分支，依赖的 Issue、PR 都已关闭（合并）。编号最小的先做；没有就返回 null。
+ * 也没有对应的任务分支，依赖的 Issue、PR 都已关闭（合并），带「给:xxx」的只给自报名字 xxx 的人。编号最小的先做；没有就返回 null。
  */
-export function pickWork(items, branches = []) {
+export function pickWork(items, branches = [], me = '') {
   const prs = items.filter(i => i.pull_request);
   const issues = items.filter(i => !i.pull_request);
   // 依赖可以是 Issue，也可以是维护者的 PR（例如新格式在那个 PR 里，合并以前写了会报错）：开着的都算没好
@@ -36,7 +41,9 @@ export function pickWork(items, branches = []) {
     issues
       .filter(i => {
         const names = labelNames(i);
-        return names.some(n => WORK_LABELS.includes(n)) && !names.includes(HOLD_LABEL) && !taken.has(i.number);
+        const routed = names.filter(n => n.startsWith(ROUTE_PREFIX));
+        const mine = !routed.length || (me !== '' && routed.includes(`${ROUTE_PREFIX}${me.toLowerCase()}`));
+        return names.some(n => WORK_LABELS.includes(n)) && !names.includes(HOLD_LABEL) && !taken.has(i.number) && mine;
       })
       .filter(i => deps(i.body).every(d => !open.has(d)))
       .sort((a, b) => a.number - b.number)[0] ?? null
