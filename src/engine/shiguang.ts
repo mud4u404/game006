@@ -87,6 +87,11 @@ export function nightBlock(s: GameState): string | null {
   const y = s.yue.find(x => x.due === dayNo(s));
   return y ? `今日还约着${npcName(y.npc)}（${y.text}），过了半夜就是失约。先去赴了约再歇。` : null;
 }
+/**
+ * 闭关能不能开始（试玩第三轮：按钮提前灰掉并写原因，不要点了才弹窗）。一日也闭不了就说为什么：铁律，或今日有约。
+ * 闭得了返回 null
+ */
+export const retreatBlock = (s: GameState): string | null => (restDays(s, 1).days < 1 ? nightBlock(s) ?? TIELV_TEXT : null);
 /** 等得了吗：跨过半夜要多用一个江湖日，铁律还有余裕、今日没有未了的约才行 */
 export const canWait = (s: GameState, hour: number): boolean => s.min + waitMin(s, hour) < 1440 || !nightBlock(s);
 
