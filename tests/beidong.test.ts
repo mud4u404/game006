@@ -165,14 +165,23 @@ describe('共用的汇总算法：实战与模拟一致', () => {
     expect(heroSpec(S, fightKit(S), tu).passive).toMatchObject({ guard: 20, heal: 8 });
   });
 
-  it('合璧要真搭在身上用得上：刀不在手不成，说得出缘故；刀回到手里又成', () => {
+  it('合璧要真用得上：主是外功的，兵器不在手不成；主是内功的，刀搭在身上当搭档就成，不必在手', () => {
     wear({ neigong: 'sl_yijinjing', weapon: 'sl_ranmu' });
     delete S.gear.weapon;
-    const c0 = passivesNow(S).combos.find(c => c.combo.name === '刀禅一体');
-    expect(c0).toMatchObject({ paired: false, idle: true, on: false });
-    expect(heroSpec(S, fightKit(S), tu).passive).toMatchObject({ guard: 12, heal: 8 });
-    S.gear.weapon = 'jc_yaodao';
-    expect(passivesNow(S).combos.find(c => c.combo.name === '刀禅一体')?.on).toBe(true);
+    // 刀禅一体写在易筋经（内功）上，燃木刀只是搭档
+    expect(passivesNow(S).combos.find(c => c.combo.name === '刀禅一体')).toMatchObject({ paired: true, idle: false, on: true });
+    // 外功当主的合璧：太极剑写着太极合璧，剑不在手，主不出手，不成
+    wear({ neigong: 'wd_taijishengong', weapon: 'wd_taijijian', fist: 'wd_taijiquan' });
+    expect(passivesNow(S).combos.find(x => x.combo.name === '太极合璧')).toMatchObject({ paired: false, idle: true, on: false });
+  });
+
+  it('外功配外功：太极剑出手、太极拳搭在拳脚位，合璧成；太极剑不出手（剑不在手）就不成', () => {
+    wear({ neigong: 'wd_taijishengong', weapon: 'wd_taijijian', fist: 'wd_taijiquan' });
+    S.gear.weapon = 'jc_songwen';
+    const c = passivesNow(S).combos.find(x => x.combo.name === '太极合璧');
+    expect(c).toMatchObject({ paired: true, rooted: true, on: true });
+    delete S.gear.weapon;
+    expect(passivesNow(S).combos.find(x => x.combo.name === '太极合璧')).toMatchObject({ paired: false, idle: true, on: false });
   });
 
   it('搭档不在身上，合璧不成；没有本门内功打底，也不成，并说得出缘故', () => {
