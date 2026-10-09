@@ -154,7 +154,7 @@ function retreat(want: number): void {
   b.style.width = '100%';
   window.setTimeout(() => {
     const rep = jingxiu(S, r.days, undefined, r.grow);
-    const how = rep.used ? `消化历练 ${rep.used}` : '没有历练可消化，闭门造车，进境有限';
+    const how = rep.used ? `消化历练 ${rep.used}` : rep.grow === 0 ? TIELV_TEXT.replace(/。$/, '') : '没有历练可消化，闭门造车，进境有限';
     pushFeed('出关', `闭关${label}，${how}${rep.gains[0] ? `，「${skillName(rep.gains[0][0])}」熟练 +${rep.gains[0][1]}` : ''}${rep.gongli > 0 ? `；功力深到${gongliText(S.gongli)}` : ''}。`);
     const stop = r.why === 'yue' && r.yue ? `想闭关${cn(want)}日，可约期到了，只好提前出关：${yueText(S, r.yue)}。` : r.why === 'tielv' ? (r.grow ? `闭关${label}，其中${cn(r.grow)}日修为有长进；余下的日子，${TIELV_TEXT}` : TIELV_TEXT) : undefined;
     const panel = document.querySelector('#sheetLayer .panel');

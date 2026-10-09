@@ -89,6 +89,7 @@ const PASSIVE_LABEL: [keyof Pv['sum'], string][] = [['guard', '护体'], ['haste
 
 /** 一条合璧没生效的缘故 */
 function comboWhy(c: Pv['combos'][number]): string {
+  if (c.idle) return '搭档在身上，可这两门外功眼下没在使（兵器要在手，一次只出手一门）';
   if (!c.paired) {
     const w = c.combo.with;
     return w.startsWith('门派:') ? `身上没有${w.slice(3)}的另一门武功` : `身上没有「${skillById(w)?.name ?? '搭档'}」`;
@@ -101,9 +102,9 @@ function effectsHtml(): string {
   const pv = passivesNow(S);
   const ng = slotSkill(S, 'neigong');
   const sum = { ...pv.sum, haste: pv.sum.haste + pv.qinggongHaste };
-  const got = PASSIVE_LABEL.filter(([k]) => sum[k] > 0).map(([k, l]) => `${l} +${sum[k]}`);
+  const got = PASSIVE_LABEL.filter(([k]) => sum[k] > 0).map(([k, l]) => (k === 'heal' ? `${l} 每合${sum[k] / 10}%` : `${l} +${sum[k]}`));
   const head = got.length ? `<b>${got.join('　')}</b>` : ng ? `「${ng.name}」没有常驻之效` : '内功位空着，没有常驻之效';
-  const rows: string[] = [`<p class="muted">搭配之效：${head}。回血、怒气是每合所得；内力跌到一成五以下，这些尽皆断了。</p>`];
+  const rows: string[] = [`<p class="muted">搭配之效：${head}。回血、怒气是每合所得，回血一场最多回一成五气血，护体至多两成五；内力跌到一成五以下，这些尽皆断了。</p>`];
   for (const c of pv.combos) {
     const fx = (c.combo.fx ?? []).map(f => {
       const pk = PASSIVE_LABEL.find(([k]) => k === f.kind);

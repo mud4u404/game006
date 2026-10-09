@@ -162,9 +162,9 @@ export function jingxiu(s: GameState, days: number, rng: () => number = worldRng
   // 功力只在长修为的日子里长
   const gl = grow >= days ? jx.gongli : grow > 0 ? jingxiuPlan(s, grow, eff).gongli : 0;
   s.gongli = Math.round((s.gongli + gl) * 100) / 100;
-  // 心魔重了，静修时会走火：功力掉一成
+  // 心魔重了，静修时会走火：功力掉一成。走火是练功练岔的事，只在长修为的日子里算（其余的日子只养伤）
   let zouhuo = 0;
-  if (xm0 >= XINMO.zouhuoAt) for (let i = 0; i < days; i++) if (rng() < XINMO.zouhuoP) { s.gongli = Math.round(s.gongli * (1 - XINMO.zouhuoLoss) * 100) / 100; zouhuo++; }
+  if (xm0 >= XINMO.zouhuoAt) for (let i = 0; i < grow; i++) if (rng() < XINMO.zouhuoP) { s.gongli = Math.round(s.gongli * (1 - XINMO.zouhuoLoss) * 100) / 100; zouhuo++; }
   s.xinmo.n = Math.round(xm1 * 1000) / 1000;
   if (s.xinmo.n < 0.05) s.xinmo = { n: 0, why: '' };
   // 参悟：把历练化成功夫

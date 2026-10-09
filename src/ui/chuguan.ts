@@ -23,7 +23,7 @@ const hoursText = (h: number): string => {
 export function chuguanHTML(r: RestReport, head: string, title: string, stop?: string): string {
   const healTxt = Object.entries(r.healed).map(([z, n]) => `${ZONE_NAME[z as 'hand']}伤好了${liang(n as number)}级`).join('、');
   const chips = [
-    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `消化历练 ${r.used}` : '没有历练可消化，闭门造车'}</span>`,
+    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `消化历练 ${r.used}` : r.grow === 0 ? '这几日修为没有长进，伤照样养' : '没有历练可消化，闭门造车'}</span>`,
     ...r.gains.map(([k, v]) => `<span class="tag accent">${skillName(k)} +${v}</span>`),
     ...r.breaks.map(x => `<span class="tag info">${x}</span>`),
     // 写长了多少：原来三回出关都写「功力深到三年」，看着像一点没长（审查 G12）
