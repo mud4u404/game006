@@ -14,7 +14,7 @@ import { XIEJIAO, checkYue, jingxiu, restDays, skillName, waitUntil, yueText } f
 import { chuguanHTML } from './chuguan';
 import { act, curQuest, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
 import { markEncounter, rollEncounter } from '../engine/encounter';
-import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, toast } from './shell';
+import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
@@ -23,6 +23,8 @@ import { eyeLine } from './views/jianghu';
 import { pickItemFirst } from './daoju';
 
 let traveling = false;
+/** 赶路途中点了「停下」：走完这一段就停 */
+let stopAsked = false;
 
 /** 过了约期还在线的：赶路、做事以后就算失约，不必等到下一次闭关（机器玩家摸底时发现） */
 function lateYue(): void {
@@ -31,60 +33,86 @@ function lateYue(): void {
 }
 export const isTraveling = (): boolean => traveling;
 
+/**
+ * 赶路（负责人 10-09：「点着点着会卡住，个别选项点不中」）：
+ * 原来每走一段（0.76 秒）整块重画一次地点，手指底下的按钮被换掉，点空或点错。
+ * 现在起步时画一次，途中只改顶栏的地名时辰和赶路条上的字；下面的按钮一律灰着，赶路条上只留「停下」。
+ */
 export function travelTo(dest: string, onArrive?: () => void): void {
-  if (traveling) { toast('正在赶路……'); return; }
+  if (traveling) { toast('正在赶路……要停，点赶路条上的「停下」'); return; }
   if (dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
   const path = pathTo(S.loc, dest);
   if (!path.length) { toast('从这里去不了那儿'); return; }
   traveling = true;
-  S.tab = 'jianghu';
+  stopAsked = false;
+  S.tab = 'jianghu'; S.sel = null; S.reply = null;
   render();
   const bar = $('#travel')!;
+  const app = $('#app')!;
+  app.classList.add('traveling');
+  const finish = (): void => {
+    traveling = false;
+    stopAsked = false;
+    app.classList.remove('traveling');
+    bar.hidden = true;
+  };
   const arrive = (): void => {
+    render();
     $('#main')!.scrollTop = 0;
     const out = enter(S.loc);
     if (out) afterOutcome(out);
-    onArrive?.();
+    if (S.loc === dest) onArrive?.();
   };
   const step = (): void => {
-    const nx = path.shift();
+    const nx = stopAsked ? undefined : path.shift();
     if (!nx) {
-      traveling = false;
-      bar.hidden = true;
+      if (stopAsked && S.loc !== dest) toast(`在${room(S.loc).name}停下了`);
+      finish();
       arrive();
       return;
     }
     const from = S.loc;
     const ex = room(from).exits.find(x => x[1] === nx);
-    bar.innerHTML = `<b>往${ex ? ex[0] : ''} · ${room(nx).name}</b><small>${roadText(nx)}</small><div class="tb"><i></i></div>`;
+    bar.innerHTML = `<div class="tinfo"><b>往${ex ? ex[0] : ''} · ${room(nx).name}</b><small>${roadText(nx)}</small><div class="tb"><i></i></div></div><button class="tstop" data-act="travelStop">停下</button>`;
     bar.hidden = false;
     window.setTimeout(() => {
-      const m = travelMin(hopMin(from, nx));
-      S.min += m;
-      if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
-      S.loc = nx; S.sel = null; S.reply = null;
-      payFare(nx);
-      lateYue();
-      // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
-      const enc = rollEncounter(from, nx);
-      if (enc) {
-        markEncounter(enc);
-        traveling = false;
-        bar.hidden = true;
+      try {
+        const m = travelMin(hopMin(from, nx));
+        S.min += m;
+        if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
+        S.loc = nx;
+        payFare(nx);
+        lateYue();
+        // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
+        const enc = rollEncounter(from, nx);
+        if (enc) {
+          markEncounter(enc);
+          finish();
+          render();
+          hooks.openStory(enc.story, () => { if (S.loc === dest) arrive(); else travelTo(dest, onArrive); });
+          return;
+        }
+        renderBar();
+        step();
+      } catch (e) {
+        // 出了错也要复位，不然「正在赶路」永远不消，什么都点不了
+        finish();
         render();
-        hooks.openStory(enc.story, () => { if (S.loc === dest) arrive(); else travelTo(dest, onArrive); });
-        return;
+        throw e;
       }
-      render();
-      step();
     }, reduceMotion ? 250 : 760);
   };
   step();
 }
 
+/** 同一个人、同一个动作，连点两下只算一下（原来双击「交谈」会说两遍、花两份时辰） */
+let lastAct = { key: '', t: 0 };
 function doAct(verb: Verb): void {
   const id = S.sel;
   if (!id) return;
+  const key = `${id}|${verb}`, now = performance.now();
+  if (key === lastAct.key && now - lastAct.t < 450) return;
+  lastAct = { key, t: now };
   // 赠礼、典当：先从行囊里挑一件（ui/daoju.ts）
   if (pickItemFirst(id, verb)) return;
   const { text, out, eyes } = act(id, verb);
@@ -126,7 +154,7 @@ function retreat(want: number): void {
 
 registerHandlers({
   // 搭配：点一个位置，列出能放进去的武功；战斗中不能换（战斗界面盖住了武功页）
-  slotPick: v => openSheet(slotSheet(v as Slot)),
+  slotPick: v => openSheet(slotSheet(v as Slot), true),
   slotSet: v => {
     const [slot, id] = v.split(':') as [Slot, string];
     const def = id ? skillById(id) : undefined;
@@ -144,6 +172,7 @@ registerHandlers({
   sel: v => { S.sel = v; S.reply = null; render(); },
   do: v => doAct(v as Verb),
   travel: v => travelTo(v),
+  travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
   quest: () => {
     const q = curQuest();
     if (q?.to && q.to !== S.loc) travelTo(q.to);

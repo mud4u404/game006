@@ -35,7 +35,9 @@ await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
 await p.goto(url);
 await p.evaluate(() => localStorage.clear());
 await p.reload();
-const click = async sel => { await p.waitForSelector(sel, { timeout: 8000 }); await p.click(sel); };
+// 刚换上来的剧情卡、应对、胜负以后、结算，头三百多毫秒不收点击（ui/shell.ts 的 tooSoon，防连点误选）：像人一样看一眼再点
+const FRESH = /data-act="(st|fReact|fFate|fResult)/;
+const click = async sel => { await p.waitForSelector(sel, { timeout: 8000 }); if (FRESH.test(sel)) await p.waitForTimeout(400); await p.click(sel); };
 const snap = async name => { if (shots) await p.screenshot({ path: `${shots}/${name}.png` }); };
 const log = (...a) => console.log('·', ...a);
 
@@ -69,7 +71,8 @@ async function fight(tag, pickBest = true) {
     if (!(await p.$('#fightLayer:not([hidden])'))) return 'closed';
     if (await p.$('#sheetLayer:not([hidden]) [data-act="fResult"]')) return 'result';
     if (await p.$('#fsheet.alert')) {
-      await p.waitForTimeout(150);
+      // 应对按钮刚换上来，头三百多毫秒不收点击（防连点误选）：像人一样看一眼再点
+      await p.waitForTimeout(400);
       // 每个应对按钮都要露在屏幕里、点得到（不能靠自动滚动去找）
       const hidden = await p.$$eval('.ropt', els => els.filter(e => {
         const r = e.getBoundingClientRect(), cy = r.top + r.height / 2;
@@ -77,7 +80,8 @@ async function fight(tag, pickBest = true) {
         return !(top && (top === e || e.contains(top)));
       }).map(e => e.textContent.trim().slice(0, 8)));
       if (hidden.length) throw new Error('见招拆招的应对按钮在屏幕外或被挡住：' + hidden.join('、'));
-      const opts = await p.$$eval('.ropt', els => els.map(e => ({ act: e.dataset.act, dis: e.disabled, o: e.querySelector('.ro').textContent })));
+      const opts = await p.$$eval('#rOpts .ropt', els => els.map(e => ({ act: e.dataset.act, dis: e.disabled, o: e.querySelector('.ro')?.textContent ?? '' })));
+      if (!opts.length) continue;
       const live = opts.filter(o => !o.dis);
       const order = '一两三四五六七八九';
       const choice = pickBest ? live.sort((a, c) => order.indexOf(c.o[2]) - order.indexOf(a.o[2]))[0] : live[0];

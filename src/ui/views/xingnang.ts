@@ -25,9 +25,12 @@ export function viewXingnang(): string {
 function row(it: ItemDef): string {
   const uv = USE_VERB[it.kind];
   let btn = `<button class="use ghost" data-act="itemLook:${it.id}">细看</button>`;
+  let blocked = '';
   if (it.use && uv) {
     const why = useBlock(it);
-    btn = `<button class="use" data-act="itemUse:${it.id}"${why ? ` disabled title="${why}"` : ''}>${uv}</button>`;
+    btn = `<button class="use" data-act="itemUse:${it.id}"${why ? ' disabled' : ''}>${uv}</button>`;
+    // 用不了的原因写在下面：原来只放在 title 里，手机上看不到
+    if (why) blocked = `<small class="why">${why}</small>`;
   } else if (it.equip) {
     const key = GEAR_KEYS.find(k => GEAR_SLOT[k] === it.equip!.slot)!;
     const on = wornAt(it.id);
@@ -35,7 +38,7 @@ function row(it: ItemDef): string {
   }
   // 兵器：拿起来之前先说清楚兵刃位的武功使不使得出
   const note = it.equip?.slot === '兵器' && !wornAt(it.id) ? weaponNote(it) : '';
-  const sub = it.equip ? `<small>${[it.equip.slot, equipLine(it), note].filter(Boolean).join(' · ')}</small>` : '';
+  const sub = (it.equip ? `<small>${[it.equip.slot, equipLine(it), note].filter(Boolean).join(' · ')}</small>` : '') + blocked;
   return `<div class="item"><button class="ii" data-act="itemLook:${it.id}"><span class="it-h"><b>${it.name}</b>${itemTags(it, false)}</span>${sub}<p>${it.desc}</p></button>
     <span class="cnt">×${have(it.id)}</span>${btn}</div>`;
 }

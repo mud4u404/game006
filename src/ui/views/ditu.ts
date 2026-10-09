@@ -21,7 +21,7 @@ export function viewDitu(): string {
   const q = curQuest()?.to;
   // 摆地图（ui/maplayout.ts）：街边的去处收进那条街，压在一起的地名推开、不出框
   const w = Math.max(240, ((typeof document !== 'undefined' && document.getElementById('main')?.clientWidth) || 390) - 32);
-  const lay = layoutRegion(rooms, w);
+  const lay = layoutRegion(rooms, w, q);
   const pos = new Map(lay.nodes.map(n => [n.id, n]));
   const hubOf = new Map(lay.nodes.flatMap(n => n.leaves.map(l => [l, n.id] as const)));
   const shownAs = (id: string): string => hubOf.get(id) ?? id;

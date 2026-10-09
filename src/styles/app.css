@@ -62,6 +62,10 @@ body{margin:0;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,
 button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button:disabled{cursor:default}
+/* 按下去的样子：原来点下去没有任何反馈，分不清「没点中」和「点中了在等」（负责人 10-09）。iOS 要页面听过 touchstart 才显示，见 ui/shell.ts */
+button:not(:disabled):active{filter:brightness(.9)}
+.choice:active,.exit:active,.act:not(:disabled):active,.skb:not(:disabled):active,.btn:not(:disabled):active,.t-btn:active,.ropt:not(:disabled):active,.avab:active,.tab:active,.mleaf:active,.tstop:active{transform:scale(.97)}
+.choice,.exit,.act,.skb,.btn,.t-btn,.ropt,.avab,.tab,.mleaf{transition:transform .08s}
 h1,h2,p{margin:0}
 svg{display:block}
 
@@ -184,6 +188,7 @@ svg{display:block}
 .item .ii{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .item .ii b{font-size:15px}
 .item .ii p{font-size:13px;color:var(--muted);line-height:1.6}
+.item .ii small.why{font-size:12px;color:var(--warn)}
 .item .cnt{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .use{height:44px;padding:0 16px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:14px;flex-shrink:0}
 .use:disabled{opacity:.45}
@@ -210,11 +215,11 @@ svg{display:block}
 .mhub{display:flex;flex-direction:column;gap:6px}
 .mhub h3{font-size:13px;font-weight:700;color:var(--muted);margin:0}
 .mleaves{display:flex;flex-wrap:wrap;gap:6px}
-.mleaf{min-height:40px;padding:0 12px;border-radius:20px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.mleaf{min-height:44px;padding:0 12px;border-radius:20px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:14px;display:inline-flex;align-items:center;gap:6px}
 .mleaf.here{background:var(--accent);color:var(--on-accent);font-weight:700;box-shadow:none}
 .mtabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
 .mtabs::-webkit-scrollbar{display:none}
-.mtabs button{flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:18px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.mtabs button{flex:0 0 auto;min-height:44px;padding:0 14px;border-radius:18px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 .mtabs button.on{background:var(--chip);color:var(--fg);font-weight:700;box-shadow:inset 0 0 0 1px var(--accent)}
 .mtabs i{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block}
 .mout{display:flex;flex-direction:column;gap:6px}
@@ -225,16 +230,20 @@ svg{display:block}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
 
-.travel{position:absolute;left:16px;right:16px;bottom:72px;z-index:15;padding:12px 14px;border-radius:14px;background:var(--fg);color:var(--bg);display:flex;flex-direction:column;gap:6px;box-shadow:var(--lift);animation:fin .2s ease-out}
+.travel{position:absolute;left:16px;right:16px;bottom:72px;z-index:15;padding:12px 14px;border-radius:14px;background:var(--fg);color:var(--bg);display:flex;align-items:center;gap:12px;box-shadow:var(--lift);animation:fin .2s ease-out;pointer-events:none}
+.travel .tinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+/* 赶路条上只有「停下」能点；底下的地点画面灰着、点不了（ui/explore.ts 的 travelTo） */
+.travel .tstop{pointer-events:auto;flex:0 0 auto;min-height:44px;padding:0 16px;border-radius:12px;background:color-mix(in srgb,var(--bg) 18%,transparent);color:var(--bg);font-size:14px;font-weight:700}
+#app.traveling #main,#app.traveling #tabs{opacity:.45;pointer-events:none;transition:opacity .2s}
 .travel b{font-size:14px}
 .travel small{font-size:13px;opacity:.8}
 .travel .tb{height:3px;border-radius:2px;background:color-mix(in srgb,var(--bg) 25%,transparent);overflow:hidden}
 .travel .tb i{display:block;height:100%;background:var(--bg);animation:grow .75s linear forwards}
-.toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:90;max-width:calc(100% - 32px);padding:10px 16px;border-radius:12px;background:var(--fg);color:var(--bg);font-size:14px;font-weight:500;box-shadow:var(--lift);animation:tin .2s ease-out;text-align:center}
+.toast{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:90;max-width:calc(100% - 32px);padding:10px 16px;border-radius:12px;background:var(--fg);color:var(--bg);font-size:14px;font-weight:500;box-shadow:var(--lift);animation:tin .2s ease-out;text-align:center;pointer-events:none}
 
 #sheetLayer{position:absolute;inset:0;z-index:75}
 .scrim{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:flex-end;animation:fade .2s}
-.panel{width:100%;max-height:90%;overflow-y:auto;background:var(--card);border-radius:20px 20px 0 0;padding:22px 16px 18px;display:flex;flex-direction:column;gap:14px;animation:up .3s cubic-bezier(.2,.8,.2,1)}
+.panel{width:100%;max-height:90%;overflow-y:auto;overscroll-behavior:contain;background:var(--card);border-radius:20px 20px 0 0;padding:22px 16px 18px;display:flex;flex-direction:column;gap:14px;animation:up .3s cubic-bezier(.2,.8,.2,1)}
 .r-h{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .r-h h2{font-size:22px;font-weight:900;line-height:1.3}
 .r-sub{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:2px}
@@ -390,8 +399,10 @@ svg{display:block}
 .t-btn.ghost{background:transparent;color:var(--night-fg);box-shadow:inset 0 0 0 1px var(--night-line)}
 .t-link{min-height:44px;font-size:13px;color:var(--night-muted);text-decoration:underline;text-underline-offset:3px}
 .t-warn{font-size:13px;color:var(--night-muted);text-align:center}
-.story-l{position:absolute;inset:0;background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding:28px 20px 24px}
+.story-l{position:absolute;inset:0;background:var(--bg);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:16px;padding:28px 20px 24px}
 .story-l>*{animation:fin .35s ease-out both}
+/* 选项不做淡入：淡入的那一下看不清却点得着，连点的第二下就落在下一张卡的选项上 */
+.story-l>.choices{animation:none}
 .story-l .tag{align-self:flex-start}
 .story-l h2{font-family:var(--f-serif);font-size:26px;font-weight:900;line-height:1.35;text-wrap:balance}
 .sp{font-family:var(--f-serif);font-weight:600;font-size:16.5px;line-height:2;text-indent:2em}
@@ -402,8 +413,10 @@ svg{display:block}
 .choice b{font-size:15px}
 .choice small{font-size:12px;color:var(--muted)}
 .choice.primary{background:var(--accent);color:var(--on-accent);box-shadow:none;align-items:center}
-.choice.locked{opacity:.55;cursor:not-allowed}
+/* 够不着的选项：虚线框、不填底色，一眼看得出点不了；点了弹一句差什么（ui/story.ts） */
+.choice.locked{background:transparent;box-shadow:none;border:1.5px dashed var(--line);color:var(--muted)}
 .choice.locked small{color:var(--warn,var(--muted))}
+.choice.locked small::before{content:'差：'}
 .namebox{display:flex;align-items:center;gap:8px;font-family:var(--f-serif);font-size:24px;font-weight:900}
 .namebox input{flex:1;min-width:0;height:52px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:22px;padding:0 14px}
 .namebox input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -450,7 +463,7 @@ svg{display:block}
 .qb-go svg{width:14px;height:14px}
 .qb-go.dim, .qb-go:disabled{background:var(--chip);color:var(--muted);opacity:.6;cursor:default}
 /* 存档码 */
-.codebox{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--fg);font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:10px 12px;resize:vertical;word-break:break-all}
+.codebox{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--fg);font:16px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:10px 12px;resize:vertical;word-break:break-all}
 .row small.muted{display:block;font-size:12px}
 .row .act{flex-shrink:0;padding:0 16px}
 /* 账号 */
@@ -522,3 +535,6 @@ html.preview #app{height:calc(100% - var(--pv-h))}
   html.preview .pv-bar{border-radius:12px;box-shadow:inset 0 0 0 1px var(--warn-line)}
   html.preview #app{--fh:min(calc(100dvh - 56px - var(--pv-h)),880px);height:var(--fh)}
 }
+
+/* 运功要长按：手指稍动就被当成滚动、蓄力中断，按住它时不让滚动 */
+#skCharge{touch-action:none}

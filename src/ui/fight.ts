@@ -20,7 +20,7 @@ import { checkYue } from '../engine/shiguang';
 import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, weaponWord, type FightKit } from '../engine/zhaoshi';
 import { IC } from './icons';
 import { mb } from './widgets';
-import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render } from './shell';
+import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, tooSoon } from './shell';
 
 const ROUND_MS = 1500;
 const PARTS = ['左肩', '右肩', '左臂', '右臂', '胸口', '右肋', '左肋', '小腹', '左腿', '右腿'];
@@ -126,7 +126,7 @@ function fightHTML(c: Fight): string {
       <button class="skb ult" id="skUlt" data-act="fSkill:ult"${c.kit.ult ? '' : ' hidden'}><b>${c.kit.ult ? '杀招·' + c.kit.ult.def.name : '杀招'}</b><small></small></button>
       <button class="skb minor" id="skJcy" data-act="fSkill:jcy"></button>
       <button class="skb minor" id="skDart" data-act="fSkill:dart"></button>
-      ${f.spar ? '<button class="skb minor" data-act="fSkill:yield">认输</button>' : '<button class="skb minor" data-act="fSkill:flee">逃跑</button>'}
+      ${f.spar ? '<button class="skb minor" id="skOut" data-act="fSkill:yield">认输</button>' : '<button class="skb minor" id="skOut" data-act="fSkill:flee">逃跑</button>'}
     </div>
   </section>
   <div class="ult-layer" id="ultL" hidden><small id="ultLabel"></small><div class="ult-w"><div class="ult-word" id="ultWord"></div><span class="ult-seal" id="ultSeal"></span></div><span class="ult-slash"></span></div>
@@ -393,6 +393,7 @@ function setPromptUI(on: boolean): void {
   sh.classList.toggle('alert', on);
   $('#rBody')!.hidden = !on;
   $('#idleBody')!.hidden = on;
+  swapped();
   // 矮屏上底部面板放不下时可以滚动；出重招时滚到应对按钮露全，免得按钮在屏幕外、玩家以为卡死
   if (on) requestAnimationFrame(() => {
     const o = $('#rOpts');
@@ -501,6 +502,16 @@ function rescue(): void {
 
 /* ---------- 主动招式 ---------- */
 
+/**
+ * 出手以后的一小段时间锁（暗器、药、绝招、杀招、逃跑之后）：期间按钮真的变灰，锁一过再亮。
+ * 原来锁着却不变灰，玩家点了没反应，以为「点不中」（负责人 10-09）
+ */
+function lockFor(c: Fight, ms: number): void {
+  c.lock = performance.now() + ms;
+  updSkills();
+  window.setTimeout(() => { if (C === c) updSkills(); }, ms + 20);
+}
+
 function useSkill(k: string): void {
   const c = C;
   if (!c || c.d.over || c.paused || c.busy) return;
@@ -509,7 +520,7 @@ function useSkill(k: string): void {
   const f = c.f;
   if (k === 'dart') {
     if ((S.items.fhs || 0) < 1 || c.d.prompt) return;
-    c.lock = now + 500;
+    lockFor(c, 500);
     S.items.fhs--;
     const p = pick(PARTS), evs = c.d.dart(), e = evs.find(x => x.k === 'item');
     bubble('me', `你扬手打出一枚飞蝗石，「嗤」的一声正中${f.name}${H(p)}。`, e && e.k === 'item' ? e.v : 0, 'out');
@@ -518,11 +529,11 @@ function useSkill(k: string): void {
     return;
   }
   if (c.d.prompt) return;
-  if (k.startsWith('p')) { usePerform(Number(k.slice(1)), now); return; }
+  if (k.startsWith('p')) { usePerform(Number(k.slice(1))); return; }
   if (k === 'ult') {
     const u = c.kit.ult;
     if (!u || c.d.rage < 100) return;
-    c.busy = true; c.lock = now + 1500;
+    c.busy = true; lockFor(c, 1500);
     hideOpening();
     if (c.openPart) { c.openPart = null; c.d.dropOpening(); }
     clearTimeout(c.T.tick);
@@ -542,7 +553,7 @@ function useSkill(k: string): void {
   if (k === 'jcy') {
     if ((S.items.jcy || 0) < 1 || c.d.hp >= c.d.hpMax) return;
     S.items.jcy--;
-    c.lock = now + 1200;
+    lockFor(c, 1200);
     const evs = c.d.jcy(), e = evs.find(x => x.k === 'item');
     bubble('sys', '你服下一包金疮药，伤口一阵清凉。', e && e.k === 'item' ? e.v : 0, 'heal');
     act([]);
@@ -550,7 +561,7 @@ function useSkill(k: string): void {
   }
   if (k === 'yield' || k === 'flee') {
     if (f.script) { bubble('sys', '此时此地，无路可退。'); return; }
-    c.lock = now + 1000;
+    lockFor(c, 1000);
     if (k === 'yield') {
       if (f.spar) { bubble('me', '你收剑后退，抱拳道：「是我输了。」'); act(c.d.yieldUp()); return; }
       bubble('foe', `${f.name}狞笑：「认输？晚了！」`);
@@ -571,10 +582,10 @@ function sayFx(fx: string[]): void {
 }
 
 /** 施展一门绝招 */
-function usePerform(i: number, now: number): void {
+function usePerform(i: number): void {
   const c = C!, x = c.kit.performs[i];
   if (!x || !c.d.canPerform(i)) return;
-  c.lock = now + 600 + 150 * x.hits;
+  lockFor(c, 600 + 150 * x.hits);
   const part = pick(PARTS);
   bubble('me', fmt(x.text, { foe: c.f.name, part }));
   const evs = c.d.perform(i), e = evs.find(y => y.k === 'perform');
@@ -725,7 +736,8 @@ function setSkill(id: string, disabled: boolean, sub: string): HTMLButtonElement
 
 function updSkills(): void {
   const c = C!, d = c.d;
-  const dis = d.over || c.busy || c.paused || d.waiting, act0 = dis || !!d.prompt;
+  const locked = performance.now() < c.lock;
+  const dis = d.over || c.busy || c.paused || d.waiting || locked, act0 = dis || !!d.prompt;
   c.kit.performs.forEach((_, i) => setSkill(`#skP${i}`, act0 || !d.canPerform(i), d.pcd[i] > 0 ? `调息 ${d.pcd[i]} 合` : `内力 ${d.performCost(i)}`));
   const ch = $('#skCharge') as HTMLButtonElement;
   ch.disabled = act0;
@@ -742,6 +754,9 @@ function updSkills(): void {
   const dart = $('#skDart') as HTMLButtonElement;
   dart.textContent = `暗器 ×${S.items.fhs || 0}`;
   dart.disabled = act0 || (S.items.fhs || 0) < 1;
+  // 逃跑、认输也归这里管：原来从不变灰，锁着、暂停着点了也没反应
+  const out = $('#skOut') as HTMLButtonElement | null;
+  if (out) out.disabled = act0;
 }
 
 /* ---------- 收场 ---------- */
@@ -780,6 +795,7 @@ function showAftermath(): void {
   $('#fateOpts')!.innerHTML = c.after.opts.map((o, i) =>
     `<button class="ropt fate" data-act="fFate:${i}"><span class="rn"><b>${o.label}</b></span><span class="rx">${o.sub ?? ''}</span></button>`).join('');
   $('#fateBody')!.hidden = false;
+  swapped();
 }
 
 function chooseFate(i: number): void {
@@ -873,6 +889,7 @@ function showResult(): void {
     ${r.story === '@compose' && !pk?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${alliesHTML(c)}${hurtLine}${statline}
     ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? GROWTH : ''}
     <button class="btn" data-act="fResult">${r.button || '继续'}</button>`);
+  swapped();
 }
 
 function closeFight(): void {
@@ -889,12 +906,13 @@ function closeFight(): void {
 
 registerHandlers({
   fSkill: v => useSkill(v),
-  fReact: v => { if (C && C.ui) resolveTell(v as RespKey); },
+  fReact: v => { if (C && C.ui && !tooSoon()) resolveTell(v as RespKey); },
   fOpening: () => takeOpening(),
   fPause: () => pauseFight(),
   fResume: () => resumeFight(),
-  fFate: v => chooseFate(Number(v)),
+  fFate: v => { if (!tooSoon()) chooseFate(Number(v)); },
   fResult: () => {
+    if (tooSoon()) return;
     const then = C?.then;
     closeSheet();
     closeFight();

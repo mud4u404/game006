@@ -143,7 +143,7 @@ export function questbookSheetHtml(): string {
 }
 
 /** 打开见闻弹层（供 explore.ts 的 handler 调用） */
-export function openQuestbook(): void { openSheet(questbookSheetHtml()); }
+export function openQuestbook(): void { openSheet(questbookSheetHtml(), true); }
 
 /** 记挂一件心事：设 S.track、关闭弹层、刷新，顶部横幅随之切换；已经记挂着的，再点一下就放下（不挂横幅） */
 export function trackQuest(id: string): void {

@@ -25,6 +25,17 @@ describe('地图不乱', () => {
     expect(errs, '\n' + errs.join('\n') + '\n挪一挪这些地点的 map 坐标，或者让新去处挂在一条街上（只通那条街，四处以上会收进那条街）').toEqual([]);
   });
 
+  it('哪一处挂着任务小点，地名都不互相压着（小点让地名宽一截）', () => {
+    const errs: string[] = [];
+    for (const r of regions) {
+      const rooms = ROOMS.filter(x => x.region === r);
+      for (const mark of rooms) for (const w of WIDTHS) {
+        for (const [a, b] of overlaps(layoutRegion(rooms, w, mark.id).nodes)) errs.push(`${REGIONS[r].name}（地图宽 ${w}，小点在「${mark.name}」）：「${a}」和「${b}」压在一起`);
+      }
+    }
+    expect(errs, '\n' + errs.join('\n')).toEqual([]);
+  });
+
   it('一条街挂着好几处去处的，收进那条街；收进去的仍点得到', () => {
     const yz = ROOMS.filter(x => x.region === 'yz');
     const hubs = hubsOf(yz);

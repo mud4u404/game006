@@ -85,7 +85,7 @@ function pawnSheet(id: string): string {
 export function pickItemFirst(id: string, verb: Verb): boolean {
   const n = npc(id);
   if (!n || (verb !== '赠礼' && verb !== '典当') || n.actions[verb]) return false;
-  openSheet(verb === '赠礼' ? giftSheet(id) : pawnSheet(id));
+  openSheet(verb === '赠礼' ? giftSheet(id) : pawnSheet(id), true);
   return true;
 }
 
@@ -100,7 +100,7 @@ function reply(verb: Verb, item: string): void {
 }
 
 registerHandlers({
-  gearSlot: v => openSheet(gearSheet(v as GearKey)),
+  gearSlot: v => openSheet(gearSheet(v as GearKey), true),
   gearSet: v => {
     const [key, id] = v.split(':') as [GearKey, string];
     const it = id ? itemById(id) : undefined;
@@ -116,7 +116,7 @@ registerHandlers({
     if (!it) return;
     const r = lookItem(v);
     if (r.out.story || r.out.fight) { closeSheet(); afterOutcome(r.out); return; }
-    openSheet(itemSheet(it, r.text, r.more));
+    openSheet(itemSheet(it, r.text, r.more), true);
   },
   itemUse: v => {
     const r = useItem(v);
@@ -130,6 +130,6 @@ registerHandlers({
     const before = S.silver;
     reply('典当', v);
     if (S.silver > before) toast(`银两 +${S.silver - before} 文`);
-    if (S.sel) openSheet(pawnSheet(S.sel));
+    if (S.sel) openSheet(pawnSheet(S.sel), true);
   }
 });

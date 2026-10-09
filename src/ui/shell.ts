@@ -29,6 +29,14 @@ export const hooks = {
   openStory: (_id: string, _onDone?: () => void): void => {}
 };
 
+/**
+ * 刚换上来的一组按钮（下一张剧情卡、出重招时的应对、胜负以后、结算）：头三百多毫秒不收点击。
+ * 连点的第二下会落在新按钮上，等于没看清就选了（负责人 10-09：「个别选项点不中」）
+ */
+let swappedAt = 0;
+export const swapped = (): void => { swappedAt = performance.now(); };
+export const tooSoon = (ms = 350): boolean => performance.now() - swappedAt < ms;
+
 /** 统一处理一次动作产生的后果：先剧情，再开打，否则刷新画面 */
 export function afterOutcome(out: Outcome | null): void {
   if (out?.story) hooks.openStory(out.story);
@@ -53,9 +61,32 @@ export function buildShell(): void {
     <div id="toast" class="toast" role="status" hidden></div>`;
   if (built) return;
   built = true;
+  // 手指按下时底下是哪个按钮（负责人 10-09：「点着点着会卡住，个别选项点不中」）。
+  // 手机上的「点一下」是抬起时才算：按下到抬起之间画面换了（换了面板、下一张剧情卡），抬起处就成了别的按钮。
+  // 按下和抬起要落在同一个按钮上才算数；对不上的那一下不算，宁可再点一次，也不点错
+  let down: { el: HTMLElement | null; t: number } = { el: null, t: 0 };
+  document.addEventListener('pointerdown', e => {
+    down = { el: (e.target as HTMLElement).closest<HTMLElement>('[data-act]'), t: performance.now() };
+  }, { capture: true, passive: true });
+  // 合并着写的存档：切到后台、关页面时立刻写
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
+  window.addEventListener('pagehide', saveNow);
+  // iOS 要页面听过 touchstart，按钮的 :active（按下去的样子）才显示
+  document.addEventListener('touchstart', () => {}, { passive: true });
+  // 键盘收起以后把页面滚回原位：不然看到的按钮和实际点得到的位置错开（iOS、微信里常见）
+  document.addEventListener('focusout', e => {
+    const t = e.target as HTMLElement;
+    if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') window.setTimeout(() => window.scrollTo(0, 0), 60);
+  });
   document.addEventListener('click', e => {
     const el = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
+    // 键盘回车、程序触发的点击（detail 为 0）不查；按下已经过去很久（没有 pointer 事件的老浏览器）也不查
+    const fresh = performance.now() - down.t < 1500;
+    if (e.detail !== 0 && fresh && down.el !== el) { down = { el: null, t: 0 }; return; }
+    down = { el: null, t: 0 };
     if (!el || (el as HTMLButtonElement).disabled) return;
+    // 只认点在自己身上的（弹层的遮罩：点在面板里的空白处不算点了遮罩）
+    if (el.hasAttribute('data-self') && e.target !== el) return;
     const a = el.dataset.act || '';
     const i = a.indexOf(':');
     const k = i < 0 ? a : a.slice(0, i);
@@ -89,12 +120,14 @@ export function toast(text: string): void {
   toastTimer = window.setTimeout(() => { el.hidden = true; }, 1900);
 }
 
-export function openSheet(html: string): void {
+/** 打开底部弹层。dismiss：点外面（遮罩）就关（见闻簿、细看这类）；结算、出关这类非点按钮不可的不写 */
+export function openSheet(html: string, dismiss = false): void {
   const L = $('#sheetLayer');
   if (!L) return;
-  L.innerHTML = `<div class="scrim"><div class="panel" role="dialog" aria-modal="true">${html}</div></div>`;
+  L.innerHTML = `<div class="scrim"${dismiss ? ' data-act="scrimClose" data-self' : ''}><div class="panel" role="dialog" aria-modal="true">${html}</div></div>`;
   L.hidden = false;
 }
+registerHandlers({ scrimClose: () => closeSheet() });
 
 export function closeSheet(): void {
   const L = $('#sheetLayer');
@@ -106,16 +139,37 @@ export function closeSheet(): void {
 const VIEWS: Record<Tab, () => string> = { jianghu: viewJianghu, renwu: viewRenwu, wugong: viewWugong, xingnang: viewXingnang, ditu: viewDitu };
 const TABS: [Tab, string][] = [['jianghu', '江湖'], ['renwu', '人物'], ['wugong', '武功'], ['xingnang', '行囊'], ['ditu', '地图']];
 
+/** 只刷新顶栏（地名、时辰）：赶路途中用，不动下面的按钮 */
+export function renderBar(): void {
+  const r = room(S.loc), bar = $('#appbar');
+  if (bar) bar.innerHTML = `<div><h1>${r.name}</h1><div class="sub">${r.area} · ${dateStr(S)}</div></div><div class="timepill">${IC.rain}${shichenKe(S.min)} · ${S.weather}</div>`;
+}
+
+/**
+ * 存档合并着写：每画一次就写两三回本机存档，低端手机会顿一下。最多两秒写一次；切到后台、关页面时立刻写。
+ * 战斗结算、剧情收尾、闭关这些要紧处，照旧直接调 save()
+ */
+let saveTimer = 0;
+function saveSoon(): void {
+  if (saveTimer) return;
+  saveTimer = window.setTimeout(() => { saveTimer = 0; save(); }, 2000);
+}
+function saveNow(): void {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = 0;
+  save();
+}
+
 export function render(): void {
   // 过了约期还没赴的约，算失约（engine/shiguang.ts）：失约的后果、心魔，都记进见闻
   for (const m of checkYue(S)) toast(m);
   // 江湖自己往前走（engine/shishi.ts）：该起头的起头，到日子的往下走
   tickShi();
-  const r = room(S.loc);
-  const bar = $('#appbar'), main = $('#main'), tabs = $('#tabs');
-  if (!bar || !main || !tabs) return;
-  bar.innerHTML = `<div><h1>${r.name}</h1><div class="sub">${r.area} · ${dateStr(S)}</div></div><div class="timepill">${IC.rain}${shichenKe(S.min)} · ${S.weather}</div>`;
+  const main = $('#main'), tabs = $('#tabs');
+  if (!main || !tabs) return;
+  renderBar();
   main.innerHTML = (VIEWS[S.tab] || viewJianghu)();
   tabs.innerHTML = TABS.map(([k, l]) => `<button class="tab" data-act="tab:${k}"${S.tab === k ? ' aria-current="page"' : ''}>${IC[k]}${l}</button>`).join('');
-  save();
+  saveSoon();
 }
