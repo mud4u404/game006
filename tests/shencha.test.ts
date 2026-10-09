@@ -227,3 +227,21 @@ describe('文字（docs/wenfeng.md）', () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe('剧情选项写倾向，不写数（docs/paiban.md A9、A10、H16）', () => {
+  it('选之前：侠义、恶名、根基写成倾向，花钱照实写，历练和熟练不提', async () => {
+    const { leanText, gainTags } = await import('../src/ui/qingxiang');
+    expect(leanText('侠义 +2　恶名 −2')).toBe('侠义之举　洗些恶名');
+    expect(leanText('银两 −400 文，侠义 +5')).toBe('花四百文　侠义之举');
+    expect(leanText('悟性 +2　寒江剑法熟练 +80')).toBe('悟性见长');
+    expect(leanText('恶名 +3　汪家告官')).toBe('会落恶名　汪家告官');
+    expect(leanText('历练 +20')).toBe('');
+    expect(gainTags('侠义 +2　恶名 −2')).toEqual(['侠义 +2', '恶名 −2']);
+  });
+  it('童年三忆：三条路给的一样多，「求江伯教你」不再只得一半', async () => {
+    const { storyById } = await import('../src/content');
+    const card = storyById('p_open')!.cards.find(c => c.choices.some(x => x.label.includes('求他教你')))!;
+    const amount = (k: number): number => card.choices[k].do!.filter(e => e.type === 'prof').reduce((a, e) => a + (e as { amount: number }).amount, 0);
+    expect(new Set([0, 1, 2].map(amount)).size).toBe(1);
+  });
+});

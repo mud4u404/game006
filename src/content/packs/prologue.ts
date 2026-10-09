@@ -32,7 +32,7 @@ const STORIES: StoryDef[] = [
       choices: [
         { label: '躲在暗处偷学', sub: '悟性 +2　寒江剑法熟练 +80', do: [{ type: 'attr', key: '悟性', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 80 }],
           result: '你记下了七八式，回去在床上比划了一夜。第二天江伯看你的眼神有些古怪，却什么也没说。' },
-        { label: '走出去，求他教你', sub: '胆魄 +2　寒江剑法熟练 +40', do: [{ type: 'attr', key: '胆魄', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 40 }, { type: 'flag', flag: 'mem3_ask' }],
+        { label: '走出去，求他教你', sub: '胆魄 +2　寒江剑法熟练 +80', do: [{ type: 'attr', key: '胆魄', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 80 }, { type: 'flag', flag: 'mem3_ask' }],
           result: '江伯沉默了很久，才道：「这剑法，本不该由我来教你。」可从那以后，每个雨夜，他都会带你到江边。' },
         { label: '回屋彻夜难眠，学着他平日的吐纳打坐', sub: '根骨 +2　寒江心法熟练 +80', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'prof', skill: 'xinfa', amount: 80 }],
           result: '不知过了多久，你觉得小腹里升起一缕暖意，顺着脊背缓缓流转。天亮时，你一点也不觉得困。' }
@@ -43,6 +43,20 @@ const STORIES: StoryDef[] = [
     { tag: '序章 · 瓜洲夜雨', title: '三月初五 · 瓜洲渡',
       paras: ['你在瓜洲渡口长大，跟着江伯打鱼、撑船，偶尔替人送货过江。', '江伯这些日子咳得厉害，人也瘦了一圈。', '今天，天阴得很低。'],
       choices: [{ label: '去看看江伯', next: -1 }] }
+  ] },
+
+  // 跳过序章（docs/paiban.md A8）：也要取名，看一张三句话的前情，再去扬州
+  { id: 'p_skip', endChapter: { small: '第一回', big: '扬州' }, cards: [
+    { tag: '前情', title: '瓜洲夜雨',
+      paras: [
+        '你在瓜洲渡口长大，跟着江伯打鱼撑船，雨夜里偷看过他在江边练剑。',
+        '三月初五那一夜，一伙黑衣人闯进渡口小屋，江伯为护你挨了一刀，临去前塞给你半块玉佩、一页残谱，只说：「去扬州……大明寺……找了尘……」',
+        '黑衣人逃走时掉下一块铜牌，上面铸着一个「厂」字。你埋了江伯，搭上了去扬州的船。'
+      ],
+      choices: [{ label: '往下' }] },
+    { tag: '名字', title: '你叫什么名字', input: 'name',
+      paras: ['江伯说，你本姓沈。', '至于名字——'],
+      choices: [{ label: '就叫这个名字', next: -1 }] }
   ] },
 
   { id: 'p_night', cards: [
