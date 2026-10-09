@@ -854,7 +854,7 @@ describe('后果看得见', () => {
   });
 
   /** 每个对手都要有一处开打，不然写了也白写（审查 D02：断云虎没处开打，走药材交不了）。欠账同上 */
-  const NO_FIGHT_DEBT = ['xsb_xunren', 'xsb_xiongfan', 'xsb_jiaofei'];
+  const NO_FIGHT_DEBT: string[] = [];
   it('每个对手都有地方开打', () => {
     const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
     const fought = new Set([...all.matchAll(/"type":"fight","foe":"([^"]+)"/g)].map(m => m[1]));
@@ -870,7 +870,7 @@ describe('后果看得见', () => {
    */
   const ENGINE = ['skipped'];
   /** 欠账：书办四张榜、走官银、走布匹的亮名号和绕小路，都还没有入口（审查 B02、D01～D03），已交 zcode 补。补完从这里删掉 */
-  const NO_WRITER_DEBT = ['xsb_xr_found', 'xsb_xw_found', 'xsb_jf_ally', 'zb_tax_name', 'zb_tax_route', 'zb_yin_sent', 'zb_yin_open', 'zb_yin_refuse'];
+  const NO_WRITER_DEBT: string[] = [];
   it('条件里要的旗标都有地方写', () => {
     const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
     const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));

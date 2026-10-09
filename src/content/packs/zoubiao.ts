@@ -1,13 +1,10 @@
-import type { Cond, ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
+import type { ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
 
 /**
  * 威远镖局 · 再走三趟镖（Issue #107）。
  * 三趟镖凶险各异：不是打架的税关、要打架的劫镖、托镖人有鬼的暗路。
  * 程先生管镖单，三趟都由他派；高档的镖要走过低档的才接得了。
  */
-
-/** 还没补完、暂不挂出来的差事用它（没有地方写这个旗标）：补完了把这一条从条件里删掉 */
-const PENDING: Cond = { flag: 'zb_pending_open' };
 
 const NPCS: NpcDef[] = [
   {
@@ -18,7 +15,7 @@ const NPCS: NpcDef[] = [
       { verb: '走布匹', if: { jobOpen: 'zb_bu', shenfen: 'biaoshi' } },
       { verb: '走药材', if: { jobOpen: 'zb_yao', shenfen: 'biaoshi', flag: 'zb_bu_done' } },
       // 走官银还交不了差（验箱、开箱、撂挑子三条路没有入口，审查 D02）：补完以前不挂出来，交 zcode 补
-      { verb: '走官银', if: { jobOpen: 'zb_yin', shenfen: 'biaoshi', flag: 'zb_yao_done', any: [PENDING] } }],
+      { verb: '走官银', if: { jobOpen: 'zb_yin', shenfen: 'biaoshi', flag: 'zb_yao_done' } }],
     actions: {
       交谈: [
         { if: { job: 'zb_bu' }, text: '程先生推了推老花镜：「布匹装好了，在院里候着。瓜洲布行的朝奉会点数——少一匹，你的工钱扣一半。」' },
@@ -48,7 +45,7 @@ const NPCS: NpcDef[] = [
     id: 'zb_wukai', name: '税吏吴开', ini: '税', tone: 'gray', brief: '守着关卡',
     look: '关卡的木栅栏横在官道中央，吴开坐在旁边的凉棚里摇着蒲扇。他的官服洗得发白，腰带的钩子是黄铜的——擦得倒是亮。',
     at: { room: 'yz_guandao', if: { job: 'zb_bu' } },
-    verbs: ['交谈', '观察', '打点'],
+    verbs: ['交谈', '观察', '打点', '报名号', '绕小路'],
     actions: {
       交谈: [
         { text: '吴开摇着蒲扇，头也不抬：「关卡税，车三十文，人十文。镖局的？镖局的也是车——三十文，一文不能少。」' }
@@ -63,7 +60,19 @@ const NPCS: NpcDef[] = [
             { type: 'feed', tag: '江湖', text: '关卡打点了三十文，镖车顺利过关。' }
           ] },
         { text: '你摸了摸钱袋，三十文还凑不齐。吴开蒲扇一收：「没钱？那货物留下了，人可以走。」' }
-      ]
+      ],
+      报名号: [
+        { if: { notFlag: 'zb_tax_paid' },
+          text: '你把威远镖局的镖单亮出来。吴开眯眼看了看火印，蒲扇停了半拍：「威远的？赵老镖头救过我爹的腿。」他朝伙计摆手，「放行！」',
+          do: [{ type: 'flag', flag: 'zb_tax_name' }] },
+        { text: '吴开摆摆手：「这一车已经放行了。」' }
+      ],
+      绕小路: [
+        { if: { notFlag: 'zb_tax_paid' },
+          text: '你在棚子外头探头探脑，吴开叫破了：「想绕牵道？多半个时辰，翻车陷泥，钞关不担待。」你带着车绕了牵道，泥浆裹了半车布，总算擦着闸口过去了。',
+          do: [{ type: 'flag', flag: 'zb_tax_route' }] },
+        { text: '吴开蒲扇一指：「你这车都过了闸了，绕什么绕。」' }
+      ],
     }
   },
   {
@@ -131,7 +140,15 @@ const NPCS: NpcDef[] = [
     actions: {
       交谈: [{ text: '朝奉把戥子擦了又擦：「三百两，一两都不能差。点了数，写了回执，这趟才算完。」' }],
       交银: [
-        { if: { flag: 'zb_yin_sent', notFlag: 'zb_yin_out' },
+        { if: { flag: 'zb_yin_tibx', notFlag: 'zb_yin_open' },
+          text: '朝奉验了三层封条、一枚火印，一字不差。他点了银两，写了回执交给你：「封条完好，威远信得过。」',
+          do: [
+            { type: 'flag', flag: 'zb_yin_sent' },
+            { type: 'jobDone', id: 'zb_yin' },
+            { type: 'flag', flag: 'zb_yin_out' },
+            { type: 'feed', tag: '江湖', text: '三百两官银封条完好地送到了镇江银号。' }
+          ] },
+        { if: { flag: 'zb_yin_open', job: 'zb_yin' },
           text: '朝奉点了银两，一锭不少，写了回执交给你：「威远镖局的信誉，银号信得过。」',
           do: [
             { type: 'jobDone', id: 'zb_yin' },
@@ -160,7 +177,7 @@ const JIE: FoeDef = {
   flourish: ['厚背鬼头刀带着风声劈下来', '刀锋在月光下一闪', '他咬着牙，刀势不减速', '一脚踏碎了路旁的石子'],
   tells: [
     { name: '断山劈', text: '断云虎双手握刀高举过头，全身的力气灌进刀刃，劈下来带着风雷之音……', dom: 'li', after: '厚背刀砸在地上，碎石迸飞！' },
-    { name: '回风扫叶', text: '断云虎刀交左手，借着转身的势头横扫一记，又低又狠……', dom: 'su', after: '刀锋掠过小腿，衣角被削掉了一截！' }
+    { name: '回风扫叶', text: '断云虎刀交左手，借着转身的势头横扫一记，又低又狠……', dom: 'su', after: '刀风贴着地皮卷起来，沙石打在腿上生疼！' }
   ],
   asides: ['老蔡把镖车往后拉了拉，抄起了扁担。', '路旁的乌鸦被惊起来，呱呱地飞远了。'],
   opening: ['把刀往手心吐了口唾沫', '活动着脖子', '从腰间扯下布条缠紧刀柄'],
@@ -176,7 +193,7 @@ const JIE: FoeDef = {
   }],
   results: {
     lose: { tag: '劫镖 · 负', title: '药材被截', button: '回镖局复命',
-      story: '你眼睁睁看着断云虎的人把药材一箱箱搬走。老蔡蹲在路边，一句话不说。这趟镖，丢了。',
+      story: '你眼睁睁看着断云虎把药材一箱箱拖到路边。老蔡蹲在路边，一句话不说。这趟镖，丢了。',
       do: [{ type: 'jobFail', id: 'zb_yao' }, { type: 'flag', flag: 'zb_yao_lost' }] },
     flee: { tag: '劫镖', title: '且战且退', button: '撤',
       story: '你护着镖车退回了岔路口。断云虎没有追——他只要镖，不要命。老蔡擦了把汗：「回头多叫几个弟兄再来。」',
@@ -211,6 +228,41 @@ const JIE: FoeDef = {
   }
 };
 
+const NPCS_EXTRA: NpcDef[] = [
+  { id: 'zb_kuli', name: '府衙库吏', ini: '库', tone: 'gray', brief: '点着银箱',
+    look: '府衙库房的老库吏，戴鹿皮手套。交箱时眼睛一直瞟着跳板口。',
+    at: { room: 'yz_fuya', if: { job: 'zb_yin' } },
+    verbs: ['交谈', '提箱'],
+    actions: {
+      交谈: [{ text: '库吏验了镖单：「箱子点交。记死一条，路上谁让你开箱，都不开。」' }],
+      提箱: [
+        { text: '库吏把银箱抬上你的车，火印朝上：「三百两，五日镖期。西津渡有个姓兰的，别理他。」',
+          do: [{ type: 'flag', flag: 'zb_yin_tibx' }] }
+      ]
+    }
+  },
+  { id: 'zb_lanxiang', name: '姓兰的拦箱人', ini: '兰', tone: 'purple', brief: '在西津渡候着',
+    look: '绸衫中年人，笑面，两个随从一左一右。',
+    at: { room: 'gz_duchuan', if: { hour: { from: 20, to: 24 }, job: 'zb_yin', flag: 'zb_yin_tibx' } },
+    verbs: ['交谈', '开箱', '撂挑子'],
+    actions: {
+      交谈: [{ text: '姓兰的拱手笑道：「兄弟，这箱银子府台别院要用一急。开箱点五十两，回执照写三百两，谁也不亏。」' }],
+      开箱: [
+        { if: { notFlag: 'zb_yin_open' },
+          text: '你起了封条。箱里除了官银还压着几包来历不明的东西。姓兰的取了五十两，替你把封条重新贴上，贴歪了。',
+          do: [{ type: 'flag', flag: 'zb_yin_open' }] },
+        { text: '箱子已经交割。' }
+      ],
+      撂挑子: [
+        { if: { notFlag: 'zb_yin_open' },
+          text: '你把车往闸口一停：「这趟镖不走了。」你空手回了镖局。程先生在账本上写了一个字：「亏。」',
+          do: [{ type: 'jobFail', id: 'zb_yin' }, { type: 'flag', flag: 'zb_yin_refuse' }, { type: 'flag', flag: 'zb_yin_open' }] },
+        { text: '镖已经撂了。' }
+      ]
+    }
+  }
+];
+
 const JOBS: JobDef[] = [
   { id: 'zb_bu', shenfen: 'biaoshi', tier: 1, title: '保一车细布去瓜洲布行，路上有关卡', npc: 'zb_zhaofeng', at: 'gz_town', days: 2 },
   { id: 'zb_yao', shenfen: 'biaoshi', tier: 2, title: '押一批川贝老参去镇江百草堂，路上有劫镖的', npc: 'jb_zhang', at: 'zj_shi', days: 3, again: 5 },
@@ -233,7 +285,7 @@ const NEWS: NewsDef[] = [
 ];
 
 const pack: ContentPack = {
-  npcs: NPCS,
+  npcs: [...NPCS, ...NPCS_EXTRA],
   foes: [JIE],
   jobs: JOBS,
   news: NEWS,
