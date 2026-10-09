@@ -262,6 +262,25 @@ describe('存档第五版：世界状态', () => {
     expect(m.w.ppl).toEqual({});
   });
 
+  it('1A 的第五版存档（还没有传闻）：传闻补成空、玩家听过的补成空，人原有的处境不丢，世界其余部分一字不差；反复读档不变', () => {
+    const old = raw('v5-1a') as { w: Record<string, unknown> & { ppl: Record<string, unknown> } };
+    expect(old.w.rumor).toBeUndefined();
+    expect('heard' in old).toBe(false);
+    const s = migrate(raw('v5-1a'));
+    expect(s.w.rumor).toEqual({});
+    expect(s.heard).toEqual([]);
+    expect(s.w.ppl).toEqual(old.w.ppl);
+    expect(s.w.ppl.chuanfu.st).toBe('hurt');
+    expect({ ...s.w, rumor: undefined }).toEqual({ ...old.w, rumor: undefined });
+    expect(marksOf('cheng', s).length).toBe(1);
+    expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
+    // 人知道的传闻不是数组的（坏了的），丢掉，处境照旧
+    const bad = raw('v5-1a') as { w: { ppl: Record<string, Record<string, unknown>> } };
+    bad.w.ppl.chuanfu.know = 'x';
+    const b = migrate(bad);
+    expect(b.w.ppl.chuanfu).toEqual(old.w.ppl.chuanfu);
+  });
+
   it('读不出来的第五版存档也原样另存，不覆盖', () => {
     mem.setItem(KEY, JSON.stringify({ ...skipToYangzhou(), v: 5, w: 1, skills: null }).slice(0, -5));
     expect(readSave().broken).toBe(true);

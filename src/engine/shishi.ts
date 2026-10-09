@@ -5,13 +5,17 @@
  * - 世界上走到哪一步，和玩家知道到哪一步，分开记：玩家人在这个地区时听得到传开的话，走进事情发生的地点看得见，
  *   向人打听问得到，自己插手当然知道。见闻簿只写玩家知道的那一步。
  * - tickShi 在每次画界面（ui/shell.ts）、静修（engine/shiguang.ts）、机器玩家每一步之后跑，可以反复跑。
+ * - 走到写了 news 的一步，生一条传闻（engine/chuanwen.ts）：在场的、牵涉的、那一带的枢纽先知道，以后人传人。
+ *   打听、盘问、说书人的打赏都在 engine/chuanwen.ts，这里只转一手旧名字。
  */
 import { S, pushFeed, type ShiState } from '../core/state';
-import { absMin, dayNo } from '../core/time';
-import { NEWS, SHI, room, shiById } from '../content';
+import { absMin } from '../core/time';
+import { SHI, room, shiById } from '../content';
 import type { ShiDef, ShiStep } from '../content/types';
 import { run, test } from './dsl';
-import { worldPick } from './shijie';
+import { ask, shiRumor, type HeardItem } from './chuanwen';
+
+export { hearsay, panwen } from './chuanwen';
 
 const DAY = 1440;
 
@@ -32,8 +36,11 @@ export function learnShi(id: string): boolean {
   return true;
 }
 
-/** 走到某一步：记下时刻，执行这一步的变化；人在这个地区就听到传开的话，人就在事发的地方就看见了 */
-function goStep(d: ShiDef, to: string, at: number, heard: string[]): void {
+/**
+ * 走到某一步：记下时刻，执行这一步的变化，生一条传闻（玩家插手推的，说的是玩家）；
+ * 人在这个地区就听到传开的话，人就在事发的地方就看见了
+ */
+function goStep(d: ShiDef, to: string, at: number, heard: HeardItem[], hand = false): void {
   const prev = shiOf(d.id);
   const st: ShiState = { at: to, since: at };
   if (prev?.seen !== undefined) st.seen = prev.seen;
@@ -42,8 +49,13 @@ function goStep(d: ShiDef, to: string, at: number, heard: string[]): void {
   (S.shi ||= {})[d.id] = st;
   const step = d.steps[to];
   run(step.do);
+  const rid = shiRumor(d, to, at, hand);
   const here = room(S.loc);
-  if (step.news && here.region === d.region) { heard.push(step.news); st.seen = to; }
+  if (step.news && here.region === d.region) {
+    heard.push({ text: step.news, ev: d.id, ph: to });
+    st.seen = to;
+    if (rid && !(S.heard ||= []).includes(rid)) S.heard.push(rid);
+  }
   if (step.where === S.loc) st.seen = to;
 }
 
@@ -51,8 +63,11 @@ function goStep(d: ShiDef, to: string, at: number, heard: string[]): void {
  * 让江湖往前走：该起头的起头，到了日子的往下走（静修了十天的，一次走好几步），了结过、写了 again 的到日子重新起头。
  * 听到的话记进见闻（传闻），也返回给静修的邸报用。
  */
-export function tickShi(): string[] {
-  const now = absMin(S), heard: string[] = [];
+export function tickShi(): string[] { return tickShiFull().map(h => h.text); }
+
+/** 同 tickShi，返回听到的每一句出自哪件事的哪一步（出关邸报核对来处用） */
+export function tickShiFull(): HeardItem[] {
+  const now = absMin(S), heard: HeardItem[] = [];
   for (const d of SHI) {
     let st = shiOf(d.id);
     if (!st) {
@@ -71,7 +86,7 @@ export function tickShi(): string[] {
     if (st.seen === undefined) {
       if (room(S.loc).region !== d.region) { st.since = now; continue; }
       const step = d.steps[st.at];
-      heard.push(step.news ?? step.now);
+      heard.push({ text: step.news ?? step.now, ev: d.id, ph: st.at });
       st.seen = st.at;
       st.since = now;
     }
@@ -82,7 +97,7 @@ export function tickShi(): string[] {
       goStep(d, nx.to, st.since + Math.round(nx.days * DAY), heard);
     }
   }
-  heard.forEach(n => pushFeed('传闻', n));
+  heard.forEach(n => pushFeed('传闻', n.text));
   return heard;
 }
 
@@ -90,11 +105,11 @@ export function tickShi(): string[] {
 export function moveShi(id: string, to: string): void {
   const d = shiById(id);
   if (!d?.steps[to]) return;
-  const heard: string[] = [];
-  goStep(d, to, absMin(S), heard);
+  const heard: HeardItem[] = [];
+  goStep(d, to, absMin(S), heard, true);
   shiOf(id)!.seen = to;
   shiOf(id)!.hand = true;
-  heard.forEach(n => pushFeed('传闻', n));
+  heard.forEach(n => pushFeed('传闻', n.text));
 }
 
 /** 走进一个地点：这里正在发生的事，看见了就知道了 */
@@ -105,50 +120,8 @@ export function seeShi(loc: string): void {
   }
 }
 
-/**
- * 江湖上的话：这一带你还不知道的事先说，再说你知道的那件后来怎样了，都没有就说一句闲话传闻（近来听过的不重复）。
- * 说书人的打赏、人人都有的打听都用它。返回那句话，没得说为空
- */
-export function hearsay(): string | null {
-  const region = room(S.loc).region;
-  const here = SHI.filter(d => d.region === region && shiOf(d.id));
-  const pickShi = here.find(d => shiOf(d.id)!.seen === undefined) ?? here.find(d => shiOf(d.id)!.seen !== shiOf(d.id)!.at);
-  if (pickShi) {
-    const step = pickShi.steps[shiOf(pickShi.id)!.at];
-    learnShi(pickShi.id);
-    pushFeed('传闻', step.news ?? step.now);
-    return step.news ?? step.now;
-  }
-  const recent = new Set(S.feed.slice(0, 12).map(f => f.x));
-  const pool = NEWS.filter(n => test(n.if) && !recent.has(n.text));
-  if (!pool.length) return null;
-  const n = worldPick(pool).text;
-  pushFeed('传闻', n);
-  return n;
-}
-
-/** 打听时开口前的样子：一圈问下来别都一个腔调 */
-const DATING_LEAD = ['压低了声音', '左右看了看', '凑近了些', '想了想', '往四下里瞟了一眼', '咂了咂嘴', '叹了口气', '把声音放得很低',
-  '朝你招招手', '先摆摆手说不该多嘴，到底没忍住', '掰着指头数了数', '吐掉嘴里的草棍'];
-
-/** 打听：说得上话的人都问得（engine/world.ts 的 verbsOf 自动加上，跟你动刀子的除外）。一个人一天只问一回 */
-export function dating(npcId: string, who: string): string {
-  const today = dayNo(S);
-  const asked = (S.asked ||= {});
-  for (const k of Object.keys(asked)) if (asked[k] !== today) delete asked[k];
-  if (asked[npcId] === today) return `${who}摆摆手：「知道的都跟你说了，改日再来吧。」`;
-  asked[npcId] = today;
-  const line = hearsay();
-  if (!line) return `${who}想了想：「这几日太平得很，没听说什么。」`;
-  return `${who}${worldPick(DATING_LEAD)}：「${line}」`;
-}
-
-/** 盘问：捕快亮出腰牌，谁都得答话（docs/lizu.md：六扇门的特权）。不像打听那样一天一回 */
-export function panwen(who: string): string {
-  const line = hearsay();
-  if (!line) return `你亮出腰牌。${who}连连作揖：「官爷，小的什么也不知道，这几日太平得很。」`;
-  return `你亮出腰牌。${who}不敢怠慢，一五一十地说了：「${line}」`;
-}
+/** 打听（旧名字，测试和旧调用照用）：问这个人知道什么，见 engine/chuanwen.ts 的 ask */
+export const dating = (npcId: string, who?: string): string => ask(npcId, { who }).text;
 
 /** 见闻簿：玩家知道的事，按「还在走」「了结的」分开；写的是玩家知道的那一步，不一定是眼下的 */
 export interface ShiRow {

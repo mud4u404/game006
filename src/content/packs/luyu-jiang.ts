@@ -154,9 +154,9 @@ const pack: ContentPack = {
   encounters: ENCOUNTERS,
   stories: STORIES,
   news: [
-    { if: { flag: 'ly_jiang_cha' }, text: '运河夜里漕帮的巡船查得紧，客船船家都说，今年的规矩钱，比往年重。' },
-    { if: { flag: 'ly_jiang_jiu' }, text: '瓜洲渡船上有个货郎落了水，叫一位会水的公子救了上来。货郎挑着担子逢人就讲。' },
-    { if: { flag: 'ly_jiang_yanye_kan' }, text: '夜里运河上常有没灯的大船悄悄过。船家都说别问，问就是鱼汛。' }
+    { if: { flag: 'ly_jiang_cha' }, text: '运河夜里漕帮的巡船查得紧，客船船家都说，今年的规矩钱，比往年重。', who: ['船夫', '脚夫', 'dong', 'xi'] },
+    { if: { flag: 'ly_jiang_jiu' }, text: '瓜洲渡船上有个货郎落了水，叫一位会水的公子救了上来。货郎挑着担子逢人就讲。', who: ['船夫', '货郎', '渔家'], about: 'you' },
+    { if: { flag: 'ly_jiang_yanye_kan' }, text: '夜里运河上常有没灯的大船悄悄过。船家都说别问，问就是鱼汛。', who: ['船夫', '渔家', '更夫'] }
   ]
 };
 export default pack;

@@ -155,14 +155,14 @@ const pack: ContentPack = {
   npcs: NPCS,
   foes: [QI],
   news: [
-    { if: { flag: 'bs_wu_ok' }, text: '蜀冈官道茶棚多了个擦铁尺的老汉，说是退役的老捕快，要帮着治一治路上的劫匪。' },
-    { if: { flag: 'bs_zheng_ok' }, text: '猎户郑石提着猎弓在蜀冈官道转悠了好几天，说是有人请他帮忙办一件事。' },
-    { if: { flag: 'bs_song_guan' }, text: '蜀冈官道的劫匪头目断刀七叫人送去了府衙究办，判了三年苦役。官道上太平了不少。' },
-    { if: { flag: 'bs_duan_dao' }, text: '蜀冈官道的劫匪头目叫人折断了刀赶走了。钱老四的茶棚重新开了张，茶钱减半。' },
-    { if: { flag: 'bs_ting' }, text: '断刀七在蜀冈官道劫道，说是漕帮断了他的生计。这话有人信，也有人不信。' },
-    { if: { flag: 'bs_wu_fought' }, text: '蜀冈官道上，退役老捕快吴三的铁尺又派上了用场——帮人劫住了劫匪的退路。' },
-    { if: { flag: 'bs_zheng_fought' }, text: '猎户郑石在蜀冈官道射出了几箭，说是帮朋友堵人。箭法准得很。' },
-    { if: { flag: 'bs_beat' }, text: '蜀冈官道的劫匪头目断刀七叫人打趴下了，断刀断成了两截。' }
+    { if: { flag: 'bs_wu_ok' }, text: '蜀冈官道茶棚多了个擦铁尺的老汉，说是退役的老捕快，要帮着治一治路上的劫匪。', who: ['脚夫', '捕快', '小二'] },
+    { if: { flag: 'bs_zheng_ok' }, text: '猎户郑石提着猎弓在蜀冈官道转悠了好几天，说是有人请他帮忙办一件事。', who: ['猎户', '脚夫', '小二'] },
+    { if: { flag: 'bs_song_guan' }, text: '蜀冈官道的劫匪头目断刀七叫人送去了府衙究办，判了三年苦役。官道上太平了不少。', who: ['捕快', '衙役', 'guan', '脚夫'], about: 'you' },
+    { if: { flag: 'bs_duan_dao' }, text: '蜀冈官道的劫匪头目叫人折断了刀赶走了。钱老四的茶棚重新开了张，茶钱减半。', who: ['脚夫', '小二', '货郎'], about: 'you' },
+    { if: { flag: 'bs_ting' }, text: '断刀七在蜀冈官道劫道，说是漕帮断了他的生计。这话有人信，也有人不信。', who: ['脚夫', '货郎', 'dong', 'xi'] },
+    { if: { flag: 'bs_wu_fought' }, text: '蜀冈官道上，退役老捕快吴三的铁尺又派上了用场——帮人劫住了劫匪的退路。', who: ['脚夫', '捕快', '小二'], about: 'you' },
+    { if: { flag: 'bs_zheng_fought' }, text: '猎户郑石在蜀冈官道射出了几箭，说是帮朋友堵人。箭法准得很。', who: ['猎户', '脚夫', '小二'], about: 'you' },
+    { if: { flag: 'bs_beat' }, text: '蜀冈官道的劫匪头目断刀七叫人打趴下了，断刀断成了两截。', who: ['脚夫', '小二', '货郎'], about: 'you' }
   ]
 };
 export default pack;

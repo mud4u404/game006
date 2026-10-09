@@ -257,3 +257,16 @@ describe('序章的默认路径（冒烟脚本和机器玩家都按「第一个�
     expect(card.choices.map(c => c.label)).toContain('在坟前再坐一会儿');
   });
 });
+
+describe('话有来处（docs/huo-shijie.md 3.4）', () => {
+  it('传闻池里每一条都标了「谁嘴里会有这句话」，行当用得规范', async () => {
+    const { NEWS } = await import('../src/content');
+    const TRADES = new Set('说书 船夫 脚夫 更夫 掌柜 小二 捕快 衙役 叫化 盐商 镖师 郎中 跑腿 和尚 道士 渔家 猎户 铁匠 军汉 书吏 赌客 相公 货郎 牙子'.split(' '));
+    const FACS = new Set(['dong', 'xi', 'guan', 'wang', 'gai', 'hei']);
+    const bad = NEWS.filter(n => !n.who?.length || n.who.length > 4 || n.who.some(w => !TRADES.has(w) && !FACS.has(w))).map(n => n.text.slice(0, 20));
+    expect(bad, '这些传闻没标 who，或行当不在名单里').toEqual([]);
+    // 外地的事（far）只给跑码头的人，who 里要有船夫、镖师、说书这类；说玩家事迹的（about）要有条件
+    for (const n of NEWS) if (n.far) expect(n.who!.some(w => ['船夫', '镖师', '说书', '脚夫'].includes(w)), n.text.slice(0, 20)).toBe(true);
+    for (const n of NEWS) if (n.about) expect(n.if, n.text.slice(0, 20)).toBeTruthy();
+  });
+});

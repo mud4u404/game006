@@ -285,20 +285,20 @@ const JOBS: JobDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'xsb_xr_done' }, text: '布庄走失的学徒小栓找到了，他师父领着人回去了。街坊说，是一个佩剑的公子帮着打听的。' },
-  { if: { flag: 'xsb_xw_done' }, text: '寡妇周氏丢的玉佩找回来了。有人说是一个江湖客从小偷手里追回来的。' },
-  { if: { flag: 'xsb_xiong_done' }, text: '命案凶手赵屠户到案了。遗孀周氏说，终于能睡个安稳觉了。' },
-  { if: { flag: 'xsb_jf_han' }, text: '蜀冈山上有个猎户帮着剿匪，箭无虚发。山下的采药人都说老韩好样的。' },
-    { if: { flag: 'xsb_jf_ercapt' }, text: '黑风寨的二当家叫人拿住了，匪徒们散伙回了家。蜀冈山道太平了。' },
-    { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。' },
-    { if: { flag: 'xsb_jf_sha' }, text: '黑风寨叫人一把火烧了。跑得慢的匪徒，烟熏死在了山洞里。' },
-    { if: { flag: 'xsb_jf_done' }, text: '蜀冈黑风寨叫人平了。山下的猎户采药人，都说是位侠客帮了大忙。' },
-    { if: { flag: 'xsb_xr_clue1' }, text: '布庄的学徒小栓失踪前，他舅舅来过一趟。掌柜的逢人便念叨这孩子。' },
-    { if: { flag: 'xsb_xiong_sent' }, text: '命案凶手赵屠户被送去了府衙。遗孀周氏说，他走的时候有担当。' },
-    { if: { flag: 'xsb_xiong_self' }, text: '赵屠户自己走去府衙自首了。街上的人都说，这个杀猪的，走的时候有骨气。' },
-    { if: { flag: 'xsb_xiong_gone' }, text: '命案凶手赵屠户叫人放走了，至今逍遥法外。周氏的眼泪已经流干了。' },
-    { if: { flag: 'jy_fei_let' }, text: '汪家货栈夜里丢了一包湖丝，飞贼没抓着，掌柜的说要换锁。' },
-    { if: { flag: 'jy_fei_shout' }, text: '汪家货栈夜里进了飞贼，有人喊跑了贼，汪老爷赏了二十文。' }
+  { if: { flag: 'xsb_xr_done' }, text: '布庄走失的学徒小栓找到了，他师父领着人回去了。街坊说，是一个佩剑的公子帮着打听的。', who: ['掌柜', '货郎', '小二'], about: 'you' },
+  { if: { flag: 'xsb_xw_done' }, text: '寡妇周氏丢的玉佩找回来了。有人说是一个江湖客从小偷手里追回来的。', who: ['货郎', '小二', '捕快'], about: 'you' },
+  { if: { flag: 'xsb_xiong_done' }, text: '命案凶手赵屠户到案了。遗孀周氏说，终于能睡个安稳觉了。', who: ['捕快', '衙役', '货郎', 'guan'] },
+  { if: { flag: 'xsb_jf_han' }, text: '蜀冈山上有个猎户帮着剿匪，箭无虚发。山下的采药人都说老韩好样的。', who: ['猎户', '郎中', '脚夫', 'hei'] },
+    { if: { flag: 'xsb_jf_ercapt' }, text: '黑风寨的二当家叫人拿住了，匪徒们散伙回了家。蜀冈山道太平了。', who: ['猎户', '脚夫', '捕快', 'hei'] },
+    { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。', who: ['捕快', '衙役', 'guan', '猎户'] },
+    { if: { flag: 'xsb_jf_sha' }, text: '黑风寨叫人一把火烧了。跑得慢的匪徒，烟熏死在了山洞里。', who: ['猎户', '脚夫', '捕快', 'hei'], about: 'you' },
+    { if: { flag: 'xsb_jf_done' }, text: '蜀冈黑风寨叫人平了。山下的猎户采药人，都说是位侠客帮了大忙。', who: ['猎户', '郎中', '脚夫', 'hei'], about: 'you' },
+    { if: { flag: 'xsb_xr_clue1' }, text: '布庄的学徒小栓失踪前，他舅舅来过一趟。掌柜的逢人便念叨这孩子。', who: ['掌柜', '货郎', '小二'] },
+    { if: { flag: 'xsb_xiong_sent' }, text: '命案凶手赵屠户被送去了府衙。遗孀周氏说，他走的时候有担当。', who: ['货郎', '衙役', 'guan', '小二'], about: 'you' },
+    { if: { flag: 'xsb_xiong_self' }, text: '赵屠户自己走去府衙自首了。街上的人都说，这个杀猪的，走的时候有骨气。', who: ['货郎', '衙役', 'guan', '小二'] },
+    { if: { flag: 'xsb_xiong_gone' }, text: '命案凶手赵屠户叫人放走了，至今逍遥法外。周氏的眼泪已经流干了。', who: ['货郎', '捕快', '小二'], about: 'you' },
+    { if: { flag: 'jy_fei_let' }, text: '汪家货栈夜里丢了一包湖丝，飞贼没抓着，掌柜的说要换锁。', who: ['wang', '更夫', '盐商', '掌柜'] },
+    { if: { flag: 'jy_fei_shout' }, text: '汪家货栈夜里进了飞贼，有人喊跑了贼，汪老爷赏了二十文。', who: ['wang', '更夫', '盐商', '小二'], about: 'you' }
 ];
 
 const pack: ContentPack = {

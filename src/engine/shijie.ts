@@ -15,6 +15,7 @@ import { FACTIONS, ROOMS, facById, npc, room } from '../content';
 import type { PersonSt, Range, RoomLife, WorldCond, WorldEffect } from '../content/types';
 import { S, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
+import { seedNews, spreadDay, type RumorInst } from './chuanwen';
 
 /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；until 是哪一日擦掉（江湖日） */
 export interface Mark { k: string; text: string; until: number }
@@ -25,11 +26,17 @@ export interface FacState {
   you: number;
 }
 export interface PlaceState { order: number; prosper: number; price: number; owner?: string; marks: Mark[] }
-/** 人的处境，只存变了的。st 到 until 那一日为止（不写 until 的，要等 free）；at 是事件打断作息：这几日在哪 */
+/** 一个人知道的一条传闻（engine/chuanwen.ts）：[传闻 id, 走样（零原样、一走了样、二面目全非）, 哪日听说, 听谁说的] */
+export type Know = [rumorId: string, lv: 0 | 1 | 2, day: number, from?: string];
+/**
+ * 人的处境，只存变了的。st 到 until 那一日为止（不写 until 的，要等 free）；at 是事件打断作息：这几日在哪；
+ * know 是他知道的传闻（处境变了、放回来了，知道的事都不丢）
+ */
 export interface PersonState {
   st?: Exclude<PersonSt, 'ok'>;
   until?: number;
   at?: { room: string; slot?: 'day' | 'night'; until: number };
+  know?: Know[];
 }
 export interface WorldState {
   /** 世界种子：开局定下（seedOf(名字, 开局的现实时刻)） */
@@ -41,6 +48,8 @@ export interface WorldState {
   fac: Record<string, FacState>;
   place: Record<string, PlaceState>;
   ppl: Record<string, PersonState>;
+  /** 传闻（engine/chuanwen.ts）：一件事的一步一条，文字不进存档，说的时候按出处现取 */
+  rumor: Record<string, RumorInst>;
 }
 
 /** 坐牢的人在哪儿 */
@@ -69,7 +78,7 @@ export function initWorld(seed: number, day: number): WorldState {
       fac[r.life.owner]?.holds.push(r.id);
     }
   }
-  return { seed: seed >>> 0, rn: 0, day, fac, place, ppl: {} };
+  return { seed: seed >>> 0, rn: 0, day, fac, place, ppl: {}, rumor: {} };
 }
 
 /**
@@ -83,6 +92,9 @@ export function fillWorld(w: WorldState, seed: number, day: number): WorldState 
   w.fac = w.fac && typeof w.fac === 'object' ? w.fac : {};
   w.place = w.place && typeof w.place === 'object' ? w.place : {};
   w.ppl = w.ppl && typeof w.ppl === 'object' ? w.ppl : {};
+  // 传闻（1B 起）：没有的补空；人知道的传闻不是数组的丢掉
+  w.rumor = w.rumor && typeof w.rumor === 'object' ? w.rumor : {};
+  for (const p of Object.values(w.ppl)) if (p && 'know' in p && !Array.isArray(p.know)) delete p.know;
   for (const [id, f] of Object.entries(fresh.fac)) {
     const cur = w.fac[id];
     if (!cur) { w.fac[id] = f; continue; }
@@ -151,16 +163,23 @@ export function dayPass(w: WorldState): void {
   for (const [id, p] of Object.entries(w.ppl)) {
     if (p.st && p.st !== 'dead' && p.until !== undefined && p.until <= w.day) { delete p.st; delete p.until; }
     if (p.at && p.at.until <= w.day) delete p.at;
-    if (!p.st && !p.at) delete w.ppl[id];
+    // 知道传闻的人留着（engine/chuanwen.ts）：伤好了，知道的事不丢
+    if (!p.st && !p.at && !p.know?.length) delete w.ppl[id];
   }
 }
 
-/** 江湖往前走：从世界算到的那一日逐日补到今天。界面每次画（ui/shell.ts）、静修（engine/shiguang.ts）都跑，可以反复跑 */
+/**
+ * 江湖往前走：从世界算到的那一日逐日补到今天。界面每次画（ui/shell.ts）、静修（engine/shiguang.ts）都跑，可以反复跑。
+ * 当前存档每补一日，传闻池里条件到了的话生出来、人和人之间传一日（engine/chuanwen.ts）
+ */
 export function tickWorld(s: GameState = S): void {
   const w = worldOf(s), today = dayNo(s);
   if (w.day >= today) return;
   if (today - w.day > TICK_CAP) w.day = today - TICK_CAP;
-  while (w.day < today) dayPass(w);
+  while (w.day < today) {
+    dayPass(w);
+    if (s === S) { seedNews(w, w.day); spreadDay(w, w.day); }
+  }
 }
 
 /* ---------- 读 ---------- */
@@ -275,7 +294,12 @@ export function applyWorld(w: WorldState, e: WorldEffect, today: number): void {
     }
     case 'mark': addMark(w, e.place, e.k, e.text, today + e.days); break;
     case 'free': {
-      delete w.ppl[e.npc];
+      // 放回来、伤好了：处境清掉，知道的传闻留着
+      const p = w.ppl[e.npc];
+      if (p) {
+        delete p.st; delete p.until; delete p.at;
+        if (!p.know?.length) delete w.ppl[e.npc];
+      }
       for (const p of Object.values(w.place)) p.marks = p.marks.filter(m => m.k !== personKey(e.npc));
       break;
     }
@@ -284,7 +308,9 @@ export function applyWorld(w: WorldState, e: WorldEffect, today: number): void {
       // 伤不写日子的，三日好；牢和走不写日子的，要等 free
       const days = e.days ?? (e.op === 'hurt' ? 3 : undefined);
       // 新的处境盖过原来的打断：伤了的人不再去守码头
+      const know = w.ppl[e.npc]?.know;
       w.ppl[e.npc] = days === undefined ? { st } : { st, until: today + days };
+      if (know?.length) w.ppl[e.npc].know = know;
       if (e.mark) addMark(w, e.mark.place, personKey(e.npc), e.mark.text, today + (days ?? 30));
       break;
     }

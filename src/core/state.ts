@@ -113,6 +113,8 @@ export interface GameState {
    * 种子开局定下（名字和开局的现实时刻），同一个种子、同样的操作，跑出同一个江湖
    */
   w: WorldState;
+  /** 玩家亲耳听过的传闻（engine/chuanwen.ts 的传闻 id）：打听、邸报不再重复说。最多留三百条，传闻清掉了跟着清 */
+  heard: string[];
   feed: FeedEntry[];
   /** 战后说书，供说书人复述 */
   story: string;
@@ -138,7 +140,7 @@ export function newGame(): GameState {
     v: 5, chapter: 0, name: '孤舟', loc: 'gz_home', year: 0, month: 3, day: 5, min: 15 * 60 + 20, weather: '阴',
     // 气血、内力的上限由「人」算出来（engine/ren.ts 的 syncBody）；功力三年：江伯教过吐纳
     hp: 1e9, hpMax: 0, mp: 150, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
-    real, w: newWorld('孤舟', real), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
+    real, w: newWorld('孤舟', real), heard: [], yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
     silver: 30, items: { qingfeng: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
     // 瓜洲的街坊看着你长大：回春堂掌柜、茶摊老汉、卖鱼阿婆、艄公、钟郎中、谭老栓（审查 A12、C34）
@@ -165,7 +167,7 @@ export function skipToYangzhou(): GameState {
   const s: GameState = {
     v: 5, chapter: 1, name: '孤舟', loc: 'hu', year: 0, month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
     hp: 1e9, hpMax: 0, mp: 1e9, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
-    real, w: newWorld('孤舟', real), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'youxia', standing: 1, since: 67 }, job: null, jobLog: {},
+    real, w: newWorld('孤舟', real), heard: [], yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'youxia', standing: 1, since: 67 }, job: null, jobLog: {},
     silver: 120, items: { qingfeng: 1, jcy: 3, fhs: 5, jade: 1, scroll: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
     flags: { skipped: true }, rel: { liu: '素不相识', ...JIEFANG }, title: '', xia: 12, eming: 0,

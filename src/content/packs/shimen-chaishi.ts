@@ -87,7 +87,7 @@ const FOES: FoeDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'smcs_zhou_bao' }, text: '汪家盐号的打手夜里去砸龙王庙的粥棚，叫一个叫化子打了回来。汪老爷气得摔了茶碗。' }
+  { if: { flag: 'smcs_zhou_bao' }, text: '汪家盐号的打手夜里去砸龙王庙的粥棚，叫一个叫化子打了回来。汪老爷气得摔了茶碗。', who: ['叫化', 'gai', '脚夫', 'wang'], about: 'you' }
 ];
 
 const pack: ContentPack = { jobs: JOBS, npcs: NPCS, foes: FOES, news: NEWS };

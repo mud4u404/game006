@@ -346,10 +346,10 @@ const JOBS: JobDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'bj_joined' }, text: '威远镖局新收了个镖师，听说是赵少镖头在望江楼斗酒斗来的。' },
-  { if: { flag: 'bj_ztq_free' }, text: '瓜洲镇外那片林子近来太平了。有人说钻天鹞回家伺候老娘去了。' },
-  { if: { flag: 'bj_ztq_guan' }, text: '钻天鹞关进了瓜洲巡检司。他那几个弟兄放出话来，要找威远镖局算账。' },
-  { if: { flag: 'yz_xiaoyuan' }, text: '东圈门里那处带枇杷树的小院，听说卖给了一位江湖上的少年。' }
+  { if: { flag: 'bj_joined' }, text: '威远镖局新收了个镖师，听说是赵少镖头在望江楼斗酒斗来的。', who: ['镖师', '小二', '掌柜'], about: 'you' },
+  { if: { flag: 'bj_ztq_free' }, text: '瓜洲镇外那片林子近来太平了。有人说钻天鹞回家伺候老娘去了。', who: ['渔家', '船夫', '脚夫'] },
+  { if: { flag: 'bj_ztq_guan' }, text: '钻天鹞关进了瓜洲巡检司。他那几个弟兄放出话来，要找威远镖局算账。', who: ['渔家', '船夫', '镖师', '捕快'] },
+  { if: { flag: 'yz_xiaoyuan' }, text: '东圈门里那处带枇杷树的小院，听说卖给了一位江湖上的少年。', who: ['牙子', '掌柜', '货郎'], about: 'you' }
 ];
 
 const pack: ContentPack = {

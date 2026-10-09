@@ -17,10 +17,15 @@ const NIGHT = { from: 21, to: 5 };
 const SHI: ShiDef[] = [
   {
     id: MATOU, name: '码头空出来以后', region: 'yz', start: { flag: 'boss' }, first: 'qi',
+    // 传闻（engine/chuanwen.ts）：事出在渡口，牵涉两舵和两舵领头的
+    place: 'dukou', subj: ['dong', 'xi', 'ss_jiaowu', 'guanshi'],
     steps: {
       qi: {
         now: '屠千山一倒，运河渡口空了出来。码头北头多了几个西舵的生面孔，抱着胳膊，什么活也不干。',
         news: '屠千山一倒，渡口那块码头成了肥肉，漕帮东西两舵都盯上了。',
+        news2: '渡口近来多了些生面孔，抱着胳膊不干活，怕是要出事。',
+        news3: '听说黑风寨又杀回来了，码头上全是他们的探子。',
+        juice: 0.45,
         next: { days: 2, to: 'duizhi' },
         // 寨主一倒，黑风寨只剩残部（存档迁移按旗标 boss 推出同样的数：core/save.ts）
         do: [{ type: 'w', op: 'power', fac: 'hei', delta: -27 }]
@@ -28,16 +33,25 @@ const SHI: ShiDef[] = [
       duizhi: {
         now: '西舵的焦五带人占了码头北头，东舵的人守着南头，两边谁也不让，脚夫们都不敢上工。',
         news: '渡口上漕帮两舵对峙，脚夫们都不敢上工了。',
+        news2: '码头上两拨人顶上了牛，为争地盘，谁也不肯让谁。',
+        news3: '漕帮要散伙了，东西两舵分家，连船都要劈成两半。',
+        juice: 0.6,
         where: 'dukou', next: { days: 3, to: 'huobing' }
       },
       huobing: {
         now: '两舵在码头上动了刀子，东舵折了三个兄弟。西舵人多，再拖两天，码头就是焦五的了。',
         news: '渡口夜里火并，见了血，东舵吃了亏。',
+        news2: '码头夜里动了刀子，抬出去好几个，也不知是哪一家的。',
+        news3: '渡口死了十几口人，运河水都红了，官府压着不让说。',
+        juice: 0.8,
         where: 'dukou', next: { days: 2, to: 'xiduo' }
       },
       xiduo: {
         now: '码头归了西舵。焦五的人守着跳板，过一回船先交二十文；夜里常有盐船悄悄靠岸。',
         news: '渡口归了西舵，过一回船要交二十文，夜里常有盐船靠岸。',
+        news2: '码头换了东家，船钱跟着涨了，夜里还有船偷偷摸摸地靠岸。',
+        news3: '西舵跟私盐贩子勾在一处，往后运河上的盐都要从他们手里过。',
+        juice: 0.85,
         where: 'dukou',
         // 码头的主人是真的：过路钱跟着变（yz-shili.ts 的 toll）。旗标照旧留给别的内容读，主人以世界为准
         do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'xi' }]
@@ -62,20 +76,41 @@ const SHI: ShiDef[] = [
   },
   {
     id: ZEI, name: '东关街夜里闹贼', region: 'yz', start: { quest: { id: 'prologue', atLeast: 3 } }, first: 'qi',
+    // 传闻（engine/chuanwen.ts）：事出在东关街，苦主是药铺掌柜；告示贴出来以后，府衙和周捕头也牵涉进来。
+    // 当事人自己的说法（self）用「我」
+    place: 'cheng', subj: ['yaopu', 'ss_aqi'],
     steps: {
       qi: {
         now: '东关街这几夜接连失窃，药铺丢了药，绸缎庄丢了一匹缎子。街坊说那贼身子轻，翻墙没有声响。',
         news: '东关街夜里闹贼，药铺掌柜骂了一早上。',
+        news2: '东关街的铺子接连遭了贼，那贼翻墙没有声响，怕是个练家子。',
+        news3: '东关街来了个飞贼，飞檐走壁，专偷大户人家。',
+        juice: 0.35,
+        self: { yaopu: '我这铺子接连几夜遭了贼，专挑治咳嗽的药拿，柜上的银钱倒一文不动。' },
         next: { days: 4, to: 'bang' }
       },
       bang: {
         now: '府衙为东关街的贼贴了告示，赏钱五百文。夜里照偷不误，偷的多半是药。',
         news: '府衙贴出告示，捉东关街的贼，赏钱五百文。',
+        news2: '府衙悬了赏捉东关街的贼，好些闲汉夜里都上街转悠，想碰碰运气。',
+        news3: '东关街那飞贼惊动了府台，听说要请外地的高手来拿他。',
+        juice: 0.5, subj: ['guan', 'fuya_zhou'],
+        self: {
+          yaopu: '告示是我求着府衙贴的，赏钱里头有我凑的一份。那贼再来，我这把老骨头也守不住。',
+          fuya_zhou: '东关街那个贼，告示是我叫人贴的。贼不大，案子倒压了我好几日。'
+        },
         next: { days: 5, to: 'zhuo' }
       },
       zhuo: {
         now: '衙役在龙王庙后头拿住了那个贼，是个十三四岁的孩子，偷药是给他娘治病。孩子挨了二十板子，他娘的病没人管。',
-        news: '东关街的贼拿住了，是个半大孩子，挨了二十板子。'
+        news: '东关街的贼拿住了，是个半大孩子，挨了二十板子。',
+        news2: '东关街的贼叫衙门拿住了，听说是个孩子，打了一顿板子放了。',
+        news3: '东关街的飞贼拿住了，供出一伙同党，牢里关了好几个。',
+        juice: 0.6, subj: ['guan', 'fuya_zhou'],
+        self: {
+          yaopu: '那孩子是我去认的赃。偷去的药，一包也没敢自己吃，全熬给他娘了。',
+          fuya_zhou: '那贼是我带人在龙王庙后头拿的，是个孩子。板子是照律打的，我也没法子。'
+        }
       },
       songguan: {
         now: '你把偷药的孩子扭送了府衙，领了五百文赏钱。他娘的病，没人管了。'
@@ -231,9 +266,9 @@ const STORIES: StoryDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'ss_jiaowu_zou' }, text: '西舵的焦五丢了码头，听说去了瓜洲，放话要找回这个场子。' },
-  { if: { flag: 'ss_jiaowu_guan' }, text: '漕帮西舵的焦五叫人押进了府衙大牢，西舵换了舵主。' },
-  { if: { flag: 'ss_zei_fang', shi: { id: ZEI, at: ['zhuo'] } }, text: '东关街那个偷药的孩子挨了板子，他娘还躺在龙王庙后头的草棚里。' }
+  { if: { flag: 'ss_jiaowu_zou' }, text: '西舵的焦五丢了码头，听说去了瓜洲，放话要找回这个场子。', who: ['船夫', '脚夫', 'dong', 'xi'] },
+  { if: { flag: 'ss_jiaowu_guan' }, text: '漕帮西舵的焦五叫人押进了府衙大牢，西舵换了舵主。', who: ['船夫', 'xi', '捕快', 'guan'] },
+  { if: { flag: 'ss_zei_fang', shi: { id: ZEI, at: ['zhuo'] } }, text: '东关街那个偷药的孩子挨了板子，他娘还躺在龙王庙后头的草棚里。', who: ['叫化', 'gai', '郎中', '货郎'] }
 ];
 
 const pack: ContentPack = { shi: SHI, npcs: NPCS, foes: FOES, stories: STORIES, news: NEWS };
