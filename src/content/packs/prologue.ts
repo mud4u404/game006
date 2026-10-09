@@ -82,10 +82,10 @@ const STORIES: StoryDef[] = [
         '话音未落，那只手便垂了下去。'
       ],
       choices: [{ label: '江伯——' }] },
-    { tag: '获得', title: '江伯的遗物',
+    // 江伯刚咽气：不挂「获得」的标签（docs/paiban.md A15，依据「金庸」）
+    { tag: '序章', title: '江伯的遗物',
       paras: ['玉佩上刻着一个「沈」字，还有半个「寒」字，断口参差，另一半不知在何处。', '油布包里是一页剑谱，墨迹被水洇开了一半，只认得出「断水」二字，和一式剑招的起手。'],
       // 开局不给绝技（负责人 10-09：「开局就有绝技比较扯」）：残页只是一页残谱，断水要自己参悟（content/packs/core.ts 的 scroll）
-      gains: ['半块玉佩', '断水残页'],
       choices: [{ label: '掩埋江伯', do: [
         { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 }
       ] }] },
@@ -96,7 +96,10 @@ const STORIES: StoryDef[] = [
         '黑衣首领逃走时，掉下了一块铜牌，上面铸着一个「厂」字。你把它和玉佩收在了一起。',
         '码头上，一条去扬州的船正要起锚。'
       ],
-      choices: [{ label: '登船 · 去扬州', next: -1, do: [
+      choices: [
+        { label: '在坟前再坐一会儿', if: { notFlag: 'p_fenqian' }, next: 2, do: [{ type: 'flag', flag: 'p_fenqian' }],
+          result: '你在坟前坐了很久。江上起了雾，又散了，来来往往的船，没有一条是江伯的。你想起他补网时总哼的那支调子，哼了两句，哼不下去了。' },
+        { label: '登船 · 去扬州', next: -1, do: [
         { type: 'item', id: 'badge', delta: 1 },
         { type: 'quest', id: 'prologue', stage: 3 }, { type: 'chapter', value: 1 }, { type: 'shenfen', id: 'youxia' },
         { type: 'move', to: 'hu' }, { type: 'time', set: 9 * 60 + 20 }, { type: 'weather', value: '微雨' },
