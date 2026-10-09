@@ -147,7 +147,7 @@ const NPCS: NpcDef[] = [
             { type: 'feed', tag: '江湖', text: '你升了华山外门。柏舟先生说，狂风快剑可以学了；紫霞神功是内门的心法，独孤九剑是撞机缘的东西。' },
             { type: 'toast', text: '华山 · 升外门弟子' }] },
         { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }], xia: 15 },
-          text: '先生点了点头：「剑走齐了，侠义行了——只差替庐里办差。去讨件差事，攒够一百的贡献，再来。」' },
+          text: '先生点了点头：「剑走齐了，侠义行了——只差替庐里办差。去讨件差事，替师门多办几件差事，再来。」' },
         { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }], gongxian: 100 },
           text: '先生叫你在院里走一趟华山剑法，走完了，问：「这一趟剑，最要紧的一剑是哪一剑？」你答不上来。先生替你答：「收回去的那一剑。你护过人——知道什么时候收剑，比知道怎么出剑金贵。」' },
         { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }] },

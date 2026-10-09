@@ -153,7 +153,7 @@ const NPCS: NpcDef[] = [
             { type: 'feed', tag: '江湖', text: '你升了武当外门。清和道长说，绵掌、神门十三剑、梯云纵，都可以学了。' },
             { type: 'toast', text: '武当 · 升外门弟子' }] },
         { if: { sect: WD, realm: { skill: 'wd_changquan', atLeast: 1 }, any: [{ realm: { skill: 'wd_taihe', atLeast: 1 } }], xia: 15 },
-          text: '道长点了点头：「拳和心法，都有三成的样子了——只差替观里办差。去讨件差事，攒够一百的贡献，再来。」' },
+          text: '道长点了点头：「拳和心法，都有三成的样子了——只差替观里办差。去讨件差事，替师门多办几件差事，再来。」' },
         { if: { sect: WD, realm: { skill: 'wd_changquan', atLeast: 1 }, any: [{ realm: { skill: 'wd_taihe', atLeast: 1 } }], gongxian: 100 },
           text: '道长叫你在院里打一趟武当长拳，打完了，问：「这一趟拳，收在哪儿？」你答不上来。道长替你答：「收在『没打出去』上。你护过人——知道什么时候不打，比知道怎么打金贵。」' },
         { if: { sect: WD, realm: { skill: 'wd_changquan', atLeast: 1 }, any: [{ realm: { skill: 'wd_taihe', atLeast: 1 } }] },

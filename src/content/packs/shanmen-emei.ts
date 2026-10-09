@@ -150,7 +150,7 @@ const NPCS: NpcDef[] = [
             { type: 'feed', tag: '江湖', text: '你升了峨眉外门。听潮师太说，临济十二庄、金顶绵掌都可以学了——再往上，是内门的机缘。' },
             { type: 'toast', text: '峨眉 · 升外门弟子' }] },
         { if: { sect: EM, realm: { skill: 'eh_jieshou', atLeast: 1 }, any: [{ realm: { skill: 'eh_qingyin', atLeast: 1 } }], xia: 15 },
-          text: '师太点了点头：「手上有三成了，侠义也行了——只差替庵里办差。去讨件差事，攒够一百的贡献，再来。」' },
+          text: '师太点了点头：「手上有三成了，侠义也行了——只差替庵里办差。去讨件差事，替师门多办几件差事，再来。」' },
         { if: { sect: EM, realm: { skill: 'eh_jieshou', atLeast: 1 }, any: [{ realm: { skill: 'eh_qingyin', atLeast: 1 } }], gongxian: 100 },
           text: '师太叫你在院里走一趟截手九式，走完了，问：「这九式，截住了几个念头？」你答不上来。师太替你答：「你护过人——护人的时候，念头不用截，它自己就让路了。」' },
         { if: { sect: EM, realm: { skill: 'eh_jieshou', atLeast: 1 }, any: [{ realm: { skill: 'eh_qingyin', atLeast: 1 } }] },
@@ -252,7 +252,7 @@ const KAO: FoeDef = {
 /* ---------- 师门差事：护送香客、供花 ---------- */
 
 const DIPI: FoeDef = {
-  id: 'smem_dipi', name: '地痞', title: '山道上讨买卖的', ini: '地', tone: 'red',
+  id: 'smem_dipi', name: '山道地痞', title: '山道上讨买卖的', ini: '地', tone: 'red',
   weapon: '木棒', ws: '棍', tag: '护香客',
   nature: '刚', reach: '短', rank: 0.7, build: 'outer', weak: 0.8, firstTell: 3,
   moves: ['拦路棒', '敲山震虎', '抱腰', '讹钱式'],

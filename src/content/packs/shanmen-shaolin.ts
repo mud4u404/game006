@@ -158,7 +158,7 @@ const NPCS: NpcDef[] = [
             { type: 'feed', tag: '江湖', text: '你升了少林外门。寂照长老说，韦陀掌、疯魔杖法、金钟罩、一苇渡江，都可以学了。' },
             { type: 'toast', text: '少林 · 升外门弟子' }] },
         { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }], xia: 15 },
-          text: '长老点了点头：「拳成了，侠义行了——只差替寺里办差。去讨件差事，攒够一百的贡献，再来。」' },
+          text: '长老点了点头：「拳成了，侠义行了——只差替寺里办差。去讨件差事，替师门多办几件差事，再来。」' },
         { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }], gongxian: 100 },
           text: '长老叫你在殿前打一趟罗汉拳，打完了，问：「这一趟拳，打的是谁？」你答不上来。长老替你答：「护人的时候，打的是拳头；救人拔刀的时候，打的是分寸。你护过人，拳也就有了分寸。」' },
         { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }] },
@@ -166,7 +166,7 @@ const NPCS: NpcDef[] = [
         { if: { sect: SMSL, xia: 15 },
           text: '长老看了看你的手：「心是有的。拳和气还浮着——罗汉拳、混元一气功，都练到略有小成，再来考校。」' },
         { if: { sect: SMSL },
-          text: '长老摇头：「外门考四样：罗汉拳、混元一气功都练到略有小成；行几件侠义的事；再替寺里办差攒够一百的贡献。缺哪样，补哪样。」' },
+          text: '长老摇头：「外门考四样：罗汉拳、混元一气功都练到略有小成；行几件侠义的事；再替寺里办差攒够功劳。缺哪样，补哪样。」' },
         { text: '长老合十：「你不是少林的人，考校什么？」' }
       ]
     }
