@@ -276,7 +276,7 @@ const FOES: FoeDef[] = [];
 
 const QUESTS: QuestDef[] = [
   { id: 'smgm_jing', name: '古墓 · 守静', stages: [
-    { title: '在谷底青石上静坐一个时辰', to: 'smgm_gu' },
+    { title: '在谷底青石上静坐一个时辰', to: 'smgm_gu', hint: '在谷底青石上坐下，一个时辰不动' },
     { title: '古墓 · 守静 · 完' }
   ] }
 ];
