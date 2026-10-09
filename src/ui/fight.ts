@@ -919,7 +919,7 @@ function showResult(): void {
   if (story === '@compose') { story = composeStory(c); S.story = story; }
   else story = fmt(story, textVars());
   const lg = c.d.log;
-  const statline = `<p class="statline">共 ${c.d.round} 合 · 见招拆招得手 ${lg.parry} 次${lg.saw ? ` · 看破虚招 ${lg.saw} 次` : ''}${lg.fooled ? ` · 上当 ${lg.fooled} 次` : ''} · 破绽 ${lg.open} 次 · 杀招 ${lg.ult} 次</p>`;
+  const statline = `<p class="statline">${c.f.rounds ? `接了 ${c.d.round} / ${c.f.rounds} 招` : `共 ${c.d.round} 合`} · 见招拆招得手 ${lg.parry} 次${lg.saw ? ` · 看破虚招 ${lg.saw} 次` : ''}${lg.fooled ? ` · 上当 ${lg.fooled} 次` : ''} · 破绽 ${lg.open} 次 · 杀招 ${lg.ult} 次</p>`;
   const fateLine = pk ? `<div class="r-sub">胜负以后 · ${pk.label}</div><p class="story">${pk.later}</p>` : '';
   const hurt = Object.entries(c.hurt ?? {}) as [keyof Wounds, number][];
   const WHAT: Record<keyof Wounds, string> = { hand: '拆招、抢攻差一截，出手轻一成', foot: '闪避差一截', inner: '硬接差一截，内力回得慢' };

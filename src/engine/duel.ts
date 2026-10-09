@@ -318,7 +318,8 @@ export class Duel {
       ev.push({ k: 'phase2' });
     }
     if (this.f.script === 'rescue' && this.ehp <= this.ehpMax * 0.6) { this.toScript('rescue', ev); return got; }
-    if (this.ehp <= this.efloor) {
+    // 考校考的是接招：约好了合数的切磋，对手打到三成也不算赢，要撑满招数才过
+    if (this.ehp <= this.efloor && !(this.f.spar && this.f.rounds)) {
       if (this.left > 0) {
         // 倒下一个：剩下的人各自可能溜走；还有人在，就补上来
         let stay = 0;
