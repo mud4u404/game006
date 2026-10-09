@@ -249,8 +249,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smhs_mo', name: '华山 · 磨剑', stages: [
-    { title: '替柏舟先生把那口剑磨亮', to: 'smhs_jianlu', who: 'smhs_yashu', hint: '请哑叔领你磨剑，或白天接柏舟先生三十招。',
-      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
+    { title: '过柏舟先生的考校', to: 'smhs_jianlu', who: 'smhs_yashu', hint: '柏舟先生说，考校有两条路：接他三十招，剑上无眼；或是让哑叔领着，去把他那口钝了的剑磨亮。',
+      need: [{ if: { noSect: true }, text: '了断别家的名分' }] },
     { title: '华山 · 磨剑 · 完' }
   ] }
 ];

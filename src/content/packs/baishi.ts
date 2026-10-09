@@ -588,11 +588,11 @@ const ITEMS: ItemDef[] = [
 const QUESTS: QuestDef[] = [
   { id: KAO_GB, name: '丐帮 · 讨一顿饭', stages: [
     // 推进在龙王庙鲍四的「复命」；目的地照旧写东关街，烧饼要先在那里讨到
-    { title: '空着手去东关街讨一顿饭，带回龙王庙', to: 'cheng', hint: '向东关街的胡婶讨个烧饼，带回龙王庙交给鲍四。',
+    { title: '空着手去东关街讨一顿饭，带回龙王庙', to: 'cheng', hint: '鲍四撂下话：去东关街讨一顿饭回来，不花自己的钱，不亮兵刃，不报名号。',
       need: [
-        { if: { item: { id: 'bs2_shaobing' } }, text: '讨到一个烧饼' },
-        { if: { notFlag: 'bs2_gb_mai' }, text: '烧饼不能是花钱买的' },
-        { if: { noSect: true }, text: '身上没有别家师门' }
+        { if: { item: { id: 'bs2_shaobing' } }, text: '讨来一顿饭食' },
+        { if: { notFlag: 'bs2_gb_mai' }, text: '饭食须是讨来、挣来的，不能花钱买' },
+        { if: { noSect: true }, text: '了断别家的名分' }
       ] },
     { title: '丐帮 · 讨一顿饭 · 完' }
   ] }

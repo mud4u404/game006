@@ -234,8 +234,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smwd_zhuang', name: '武当 · 站桩', stages: [
-    { title: '在琼花观的老琼花树下站桩', to: 'smwd_qionghua', who: 'smwd_saochen', hint: '扫尘会给你腾块地，在老琼花树下站住桩。',
-      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
+    { title: '过道长的考校', to: 'smwd_qionghua', who: 'smwd_saochen', hint: '道长说，拜他的门先过考校：接他三十招，或是在院里站桩，站住了就算过。',
+      need: [{ if: { noSect: true }, text: '了断别家的名分' }] },
     { title: '武当 · 站桩 · 完' }
   ] }
 ];
