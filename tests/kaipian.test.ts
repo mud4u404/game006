@@ -11,6 +11,7 @@ import { Duel, RANDOM, SKILLED, simulate, type Policy } from '../src/engine/duel
 import { activePrep, alliesOf, fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
 import { brace, settle, takeWounds } from '../src/engine/jiesuan';
 import { mulberry32 } from '../src/engine/rng';
+import { kpOpen, kpPick, kpPos } from '../src/engine/kaipian';
 
 setNowMs(() => 1_000_000_000_000);
 
@@ -170,5 +171,72 @@ describe('新开局：瓜洲夜雨', () => {
     const text = ['p_open', 'kp_du', 'kp_wen', 'kp_bu', 'kp_du_hou', 'kp_wen_hou', 'kp_bu_hou', 'p_skip']
       .map(id => JSON.stringify(storyById(id))).join('');
     for (const w of ['下葬', '埋了江伯', '掩埋', '江伯之墓', '坟前', '临终', '遗言', '遗物', '阴阳两隔', '咽气']) expect(text.includes(w), w).toBe(false);
+  });
+
+  it('新开局任何一屏刷新都回到新序章：断点存在存档里，接回去效果不重复，走完和不刷新一样', () => {
+    for (const path of PATHS) for (const seed of [1, 2]) {
+      setState(newGame());
+      kpOpen(S, 'p_open', 0);
+      let pos = kpPos(S);
+      let reloads = 0;
+      for (let guard = 0; guard < 200 && pos; guard++) {
+        if (pos.kind === 'fight') {
+          // 打到一半刷新：回来从头打这一场
+          const f = foeById(pos.id)!;
+          brace(f);
+          const prep = activePrep(f);
+          const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, prep), { rng: mulberry32(seed), allies: alliesOf(prep) });
+          simulate(d, RANDOM);
+          S.hp = Math.max(1, Math.round(d.hp));
+          takeWounds(f, d.log.taken, d.res ?? undefined);
+          const then = settle(f, d.res!, prep).r!.then!.find(e => e.type === 'story')!;
+          kpOpen(S, (then as { id: string }).id, 0);
+        } else {
+          const def = storyById(pos.id)!;
+          const card = def.cards[pos.i];
+          const vis = card.choices.filter(c => cond(c.if));
+          // 渡不渡选这条路；落水的人选「追」；本领的卡选第一个；其余第一个
+          let k = 0;
+          if (card.title === '渡不渡') k = path.at;
+          if (card.title === '落水的人') k = vis.findIndex(x => x.label.includes('追'));
+          const c = vis[k];
+          const out: Outcome = newOutcome();
+          if (card.input === 'name') S.name = '听雨';
+          run(c.do, out);
+          kpPick(S, pos.id, def.cards.length, out, c.next ?? pos.i + 1);
+        }
+        // 刷新：存档原样存下、原样读回
+        setState(JSON.parse(JSON.stringify(S)));
+        reloads++;
+        pos = kpPos(S);
+        if (S.chapter === 0) expect(pos, '序章没走完，断点不能丢').not.toBeNull();
+      }
+      expect(reloads).toBeGreaterThan(10);
+      expect(S.chapter).toBe(1);
+      expect(Object.keys(S.flags).filter(f => f.startsWith('kp_at:'))).toEqual([]);
+      expect(S.items.jade, '玉佩只给一件').toBe(1);
+      expect(S.items.scroll).toBe(1);
+      expect(S.flags[path.flag]).toBe(true);
+      expect(S.flags.kp_xin).toBe(true);
+    }
+  });
+
+  it('旧序章中途的存档（没有断点旗标）不受影响：kpPos 为空，接着走旧序章', () => {
+    setState(newGame());
+    S.loc = 'gz_town';
+    S.quests.prologue = 1;
+    expect(kpPos(S)).toBeNull();
+    setState(skipToYangzhou());
+    expect(kpPos(S)).toBeNull();
+  });
+
+  it('府衙「故人问」分新旧两稿：旧存档读江伯临终的话，新开局读江伯不与官府沾边', () => {
+    const old = JSON.stringify(storyById('fuya_jiangjia'));
+    const xin = JSON.stringify(storyById('fuya_jiangjia_xin'));
+    expect(old).toContain('江伯临终的话还在耳边：别信官府的人。');
+    expect(old).toContain('他走了？');
+    expect(xin).toContain('江伯向来不与官府沾边');
+    expect(xin).toContain('他不见了？');
+    expect(xin).not.toContain('临终');
   });
 });

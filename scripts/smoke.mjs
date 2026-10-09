@@ -57,6 +57,13 @@ await click('[data-act="stPick:0"]');                 // 就叫这个名字
 for (let i = 0; i < 4; i++) await click('[data-act="stPick:0"]');
 await snap('03-dubudu');
 log('渡不渡', (await p.textContent('#storyLayer h2')).trim());
+// 新序章中途刷新：「继续」要接回「渡不渡」这一屏，不能掉进旧序章
+await p.reload();
+await click('[data-act="tContinue"]');
+await p.waitForSelector('#storyLayer:not([hidden]) h2');
+const back = (await p.textContent('#storyLayer h2')).trim();
+if (back !== '渡不渡') throw new Error('刷新后没有接回新序章：' + back);
+log('刷新后接回', back);
 await click('[data-act="stPick:0"]');                 // 「渡。」
 await click('[data-act="stPick:0"]');                 // 继续（船离岸）
 await click('[data-act="stPick:0"]');                 // 把船头偏向西汊口（认得浅滩）

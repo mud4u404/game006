@@ -1,10 +1,20 @@
-import type { ContentPack, NpcDef, QuestDef, RoomDef, StoryDef } from '../types';
+import type { ContentPack, Effect, NpcDef, QuestDef, RoomDef, StoryChoice, StoryDef } from '../types';
 
 /**
  * 扬州府衙：周捕头、照壁上的榜、草上飞缉拿委托（六扇门线入口），修订版（Issue #48）。
  * 负责人 10-09「场景不许像派出所审犯人」：府衙拆成三处——照壁（榜、书办、衙役）、前堂（周捕头、秦教头、申伯）、大牢（牢头、押着的人）。
  * 照壁上只有一块榜，分三栏（负责人 10-09 定）：缉拿找前堂的周捕头；悬赏在照壁下的书办那里登记、交差；海捕见到就拿，扭送府衙领赏。
  */
+
+/** 周捕头认出当年瓜洲公堂上那个孩子（新旧开局共用，接下去的「故人问」分新旧两稿） */
+const MET_OLD_TEXT = '周捕头抬起头，忽然怔住了。他放下卷宗，快步走下堂来：「……{given}？瓜洲雨夜，公堂对质——你是当年那个孩子。那桩案子是周某断的，你的名字，周某记到今日。」他把你上下打量了一番，眼眶有些发红：「六扇门的差事不好做，你我总算又见了。」';
+const MET_OLD_DO: Effect[] = [
+  { type: 'flag', flag: 'fuya_met_old' },
+  { type: 'flag', flag: 'fuya_met_name' },
+  { type: 'flag', flag: 'fuya_trust' },
+  { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识'], note: '当年瓜洲公堂的周巡检，就是他' },
+  { type: 'feed', tag: '江湖', text: '扬州府的周捕头认出了你——当年瓜洲那位秉公断案的周巡检，如今已是六扇门的捕头。' }
+];
 
 const ROOMS: RoomDef[] = [
   {
@@ -79,16 +89,13 @@ const NPCS: NpcDef[] = [
         { text: '周捕头点点头：「草上飞的案子结了，少侠辛苦。」' }
       ],
       交谈: [
+        // 新开局（江伯生死未卜，旗标 kp_xin）接新稿，旧存档接原稿
+        { if: { flag: 'mem2_patrol', notFlag: 'fuya_met_old', any: [{ flag: 'kp_xin' }] },
+          text: MET_OLD_TEXT,
+          do: [...MET_OLD_DO, { type: 'story', id: 'fuya_jiangjia_xin' }] },
         { if: { flag: 'mem2_patrol', notFlag: 'fuya_met_old' },
-          text: '周捕头抬起头，忽然怔住了。他放下卷宗，快步走下堂来：「……{given}？瓜洲雨夜，公堂对质——你是当年那个孩子。那桩案子是周某断的，你的名字，周某记到今日。」他把你上下打量了一番，眼眶有些发红：「六扇门的差事不好做，你我总算又见了。」',
-          do: [
-            { type: 'flag', flag: 'fuya_met_old' },
-            { type: 'flag', flag: 'fuya_met_name' },
-            { type: 'flag', flag: 'fuya_trust' },
-            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识'], note: '当年瓜洲公堂的周巡检，就是他' },
-            { type: 'feed', tag: '江湖', text: '扬州府的周捕头认出了你——当年瓜洲那位秉公断案的周巡检，如今已是六扇门的捕头。' },
-            { type: 'story', id: 'fuya_jiangjia' }
-          ] },
+          text: MET_OLD_TEXT,
+          do: [...MET_OLD_DO, { type: 'story', id: 'fuya_jiangjia' }] },
         { if: { flag: 'boss', notFlag: 'fuya_met_name' },
           text: '周捕头抬起头，把你腰间的兵刃看了两眼：「渡口一剑？」他把卷宗一合：「草上飞那贼在小金山一带出没，周某两拨弟兄都扑了空。阁下是六扇门要找的人物——肯出手，赏格二两，一文不少。」',
           do: [
@@ -210,37 +217,36 @@ const QUESTS: QuestDef[] = [
   ] }
 ];
 
+/**
+ * 「故人问」分新旧两稿：旧存档（江伯已经下葬）读原稿；新开局（旗标 kp_xin，江伯生死未卜）读新稿。
+ * 两稿只差中间一句和「实话实说」里周捕头的头一句，其余共用。
+ */
+const JIANGJIA_ASK = '周捕头给你斟了碗粗茶，在自己对面坐下：「这些年，一直在水陆各道当差。」他顿了顿，「听说你从瓜洲来。瓜洲江家……江老三，你认得么？」';
+const JIANGJIA_WAIT = '堂外的更鼓敲了两下，周捕头端着茶碗，安静地等你的话。';
+const JIANGJIA_HIDE: StoryChoice = { label: '只说路过', sub: '不作声张',
+  result: '「路过？」周捕头看了你一眼，没有再问，只把茶碗搁下，「瓜洲来的年轻人，眼睛里都有一股不肯服输的劲。罢了，江湖人的来历，周某不该多问。」',
+  do: [
+    { type: 'flag', flag: 'fuya_jiang_hide' },
+    { type: 'rel', npc: 'fuya_zhou', value: '点头之交', from: ['素不相识'] }
+  ], next: -1 };
+const jiangjia = (id: string, mid: string, first: string, tail: string): StoryDef => ({ id, cards: [
+  { tag: '六扇门', title: '故人问',
+    paras: [JIANGJIA_ASK, mid, JIANGJIA_WAIT],
+    choices: [
+      { label: '实话实说', sub: '侠义 +2',
+        result: `「${first}」周捕头沉默半晌，把碗里的粗茶一饮而尽，「当年那桩案子，若不是他肯站出来作证，王家那恶婆娘还要害人。他待你如父子——${tail}」`,
+        do: [
+          { type: 'flag', flag: 'fuya_jiang_truth' },
+          { type: 'xia', delta: 2 },
+          { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识'] }
+        ], next: -1 },
+      JIANGJIA_HIDE
+    ] }
+] });
+
 const STORIES: StoryDef[] = [
-  { id: 'fuya_jiangjia', cards: [
-    { tag: '六扇门', title: '故人问',
-      paras: [
-        '周捕头给你斟了碗粗茶，在自己对面坐下：「这些年，一直在水陆各道当差。」他顿了顿，「听说你从瓜洲来。瓜洲江家……江老三，你认得么？」',
-        '江伯向来不与官府沾边，这你是知道的。',
-        '堂外的更鼓敲了两下，周捕头端着茶碗，安静地等你的话。'
-      ],
-      choices: [
-        { label: '实话实说', sub: '侠义 +2', if: { notFlag: 'kp_xin' },
-          result: '「江老三……他走了？」周捕头沉默半晌，把碗里的粗茶一饮而尽，「当年那桩案子，若不是他肯站出来作证，王家那恶婆娘还要害人。他待你如父子——往后在扬州，六扇门的门，为你开着。」',
-          do: [
-            { type: 'flag', flag: 'fuya_jiang_truth' },
-            { type: 'xia', delta: 2 },
-            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识'] }
-          ], next: -1 },
-        { label: '实话实说', sub: '侠义 +2', if: { flag: 'kp_xin' },
-          result: '「江老三……他不见了？」周捕头沉默半晌，把碗里的粗茶一饮而尽，「当年那桩案子，若不是他肯站出来作证，王家那恶婆娘还要害人。他待你如父子——人不见了，门还在。往后在扬州，六扇门的门，为你开着。」',
-          do: [
-            { type: 'flag', flag: 'fuya_jiang_truth' },
-            { type: 'xia', delta: 2 },
-            { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识'] }
-          ], next: -1 },
-        { label: '只说路过', sub: '不作声张',
-          result: '「路过？」周捕头看了你一眼，没有再问，只把茶碗搁下，「瓜洲来的年轻人，眼睛里都有一股不肯服输的劲。罢了，江湖人的来历，周某不该多问。」',
-          do: [
-            { type: 'flag', flag: 'fuya_jiang_hide' },
-            { type: 'rel', npc: 'fuya_zhou', value: '点头之交', from: ['素不相识'] }
-          ], next: -1 }
-      ] }
-  ] }
+  jiangjia('fuya_jiangjia', '江伯临终的话还在耳边：别信官府的人。', '江老三……他走了？', '往后在扬州，六扇门的门，为你开着。'),
+  jiangjia('fuya_jiangjia_xin', '江伯向来不与官府沾边，这你是知道的。', '江老三……他不见了？', '人不见了，门还在。往后在扬州，六扇门的门，为你开着。')
 ];
 
 const pack: ContentPack = {
