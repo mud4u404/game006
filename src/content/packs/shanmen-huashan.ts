@@ -149,7 +149,7 @@ const NPCS: NpcDef[] = [
     id: 'smhs_yashu', name: '哑叔', ini: '哑', tone: 'gray', brief: '在院里劈柴',
     look: '六十开外的老仆，左脸一道烧疤，说不出话。劈柴的斧头钝得卷了刃，他却劈得极匀——一把斧头用熟了，跟剑是一样的。',
     verbs: ['交谈', '观察',
-      { verb: '磨剑', if: { flag: 'smhs_asked', notFlag: 'smhs_mo', noSect: true } }],
+      { verb: '磨剑', if: { flag: 'smhs_asked', notFlag: 'smhs_mo' } }],
     actions: {
       交谈: [
         { if: { flag: 'smhs_mo' },
