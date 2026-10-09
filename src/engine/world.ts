@@ -122,6 +122,16 @@ export function pathMin(from: string, to: string): number {
   return t;
 }
 
+/**
+ * 这趟路要多久、花多少钱（地图点地名前先给玩家看，负责人 10-09：「成本和时间消耗」要看得见）：
+ * 总分钟、经过几处、沿途要付的船钱和过路钱（每上一处有船钱的地方付一回，同 payFare）。去不了返回 null
+ */
+export function tripCost(to: string): { min: number; hops: number; fee: number } | null {
+  const path = pathTo(S.loc, to);
+  if (!path.length) return null;
+  return { min: travelMin(pathMin(S.loc, to)), hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
+}
+
 /** 当前追踪的任务进度 */
 export function curQuest(): { name: string; title: string; to?: string } | null {
   const q = questById(S.track);

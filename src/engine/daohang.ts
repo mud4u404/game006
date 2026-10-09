@@ -9,11 +9,12 @@
  */
 import { S, pushFeed } from '../core/state';
 import { shichen } from '../core/time';
-import { NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
+import { JOBS, NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
 import { lackOf, test } from './dsl';
 import { npcName, pathMin, roomNpcs, roomObjs, travelMin } from './world';
+import { jobOpen } from './shenfen';
 
 /** 能做：去了就办得成；要等：只差时辰、人不在；卡住：差别的门槛；未竟：做不成了；了结：办完了 */
 export type NavState = '能做' | '要等' | '卡住' | '未竟' | '了结';
@@ -194,6 +195,13 @@ const grants = (dos: Effect[] | undefined, school: string, rank: SectRank): bool
   !!dos?.some(e => e.type === 'sect' && e.school === school && e.rank === rank);
 
 /** 师门这一行：眼下什么地位，升下一级找谁、要什么。没有师门为空 */
+/** 师门在哪：管升这一级的人眼下在的地方（地图的「回师门」、人物页师门卡的「去」用）；真传了没有下一级，为空 */
+export function sectHome(): { to: string; name: string } | null {
+  const w = sectNav()?.who;
+  const id = w ? w.now ?? roomsOf(w.id)[0] : undefined;
+  return id ? { to: id, name: room(id).name } : null;
+}
+
 export function sectNav(): SectNav | null {
   if (!S.sect) return null;
   const { school, rank } = S.sect;
@@ -209,4 +217,37 @@ export function sectNav(): SectNav | null {
     }
   }
   return { school, rank, next, needs: [], note: next === '内门' ? '内门的考校，师门还没传下话来：先攒够四百贡献，替师门出力。' : `升${next}的规矩，师门还没传下话来。` };
+}
+
+
+/** 近处有事：此刻你接得到的差事，派差事的人在哪、要走多久（江湖页「近处有事」卡，试玩：到处乱逛没有目标） */
+export interface Lead { text: string; to: string; toName: string; min: number }
+
+let giverCache: Map<string, string> | null = null;
+/** 每件差事由哪个人（或榜上的书办）发：扫人物的动作里写了「job」效果的那一个 */
+function giverOf(jobId: string): string | undefined {
+  if (!giverCache) {
+    giverCache = new Map();
+    for (const n of NPCS) for (const bs of Object.values(n.actions)) for (const b of bs ?? []) {
+      for (const e of b.do ?? []) if (e.type === 'job' && !giverCache.has(e.id)) giverCache.set(e.id, n.id);
+    }
+  }
+  return giverCache.get(jobId);
+}
+
+/** 眼下能接的差事，按路近排，最多 n 件；派差的人眼下在哪就去哪，不在的写他常在的地方 */
+export function leadsNear(n = 3): Lead[] {
+  if (S.job) return [];
+  const out: Lead[] = [];
+  for (const j of JOBS) {
+    if (!jobOpen(S, j.id)) continue;
+    const g = giverOf(j.id);
+    if (!g) continue;
+    const at = whoNav(g).now ?? roomsOf(g)[0];
+    if (!at || at === S.loc) continue;
+    const m = pathMin(S.loc, at);
+    if (!m) continue;
+    out.push({ text: j.title, to: at, toName: room(at).name, min: travelMin(m) });
+  }
+  return out.sort((a, b) => a.min - b.min).slice(0, n);
 }

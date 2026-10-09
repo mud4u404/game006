@@ -19,7 +19,7 @@ const ROOMS: RoomDef[] = [
     road: '你沿城墙根往西走，府衙的鼓楼渐渐近了……'
   },
   {
-    id: 'yz_fuya', name: '府衙前堂', area: '扬州 · 府衙', region: 'yz', t: 10, map: [18, 84], nightQuiet: true,
+    id: 'yz_fuya', name: '府衙前堂 · 六扇门', area: '扬州 · 府衙（六扇门）', region: 'yz', t: 10, map: [18, 84], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '前堂黑着，公案上的签筒、惊堂木都收了，只有廊下挂着一盏气死风灯。后头大牢里有人在喊冤，喊两声又没了动静。' },
