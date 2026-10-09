@@ -128,12 +128,13 @@ describe('客栈住店', () => {
     expect(S.silver).toBe(99);
     expect([S.day, S.min]).toEqual([day, min + 10]);
   });
-  it('住店也受铁律管：江湖跑在现实前头时，钱不收、夜不过（试玩第二轮 G04）', () => {
+  it('住店不再被铁律拦：江湖的日子走在现实前头，也照样住一宿（宪章 P7，10-09 改定）', () => {
     S.silver = 300;
     advanceDays(S, SHIGUANG.slack);
-    const [day, min] = [S.day, S.min];
-    expect(act('jc_yz_ruanniang', '住店').text).toContain('走在现实前头');
-    expect([S.silver, S.day, S.min]).toEqual([300, day, min]);
+    const day = S.day;
+    expect(act('jc_yz_ruanniang', '住店').text).not.toContain('走在现实前头');
+    expect(S.silver).toBeLessThan(300);
+    expect(S.day).not.toBe(day);
   });
   it('镇江鲍掌柜：在大市口顶过兵爷的，头一宿不要钱', () => {
     S.flags.zj_chutou = true;

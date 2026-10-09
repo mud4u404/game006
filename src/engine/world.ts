@@ -11,7 +11,7 @@ import { seeShi } from './shishi';
 import { ask, panwen } from './chuanwen';
 import { shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
-import { passBlock } from './shiguang';
+import { passWarn } from './shiguang';
 import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
 
 /** 江湖历的第几分钟（暂时走开的人什么时候回来） */
@@ -122,6 +122,16 @@ export function pathMin(from: string, to: string): number {
   return t;
 }
 
+/**
+ * 这趟路要多久、花多少钱（地图点地名前先给玩家看，负责人 10-09：「成本和时间消耗」要看得见）：
+ * 总分钟、经过几处、沿途要付的船钱和过路钱（每上一处有船钱的地方付一回，同 payFare）。去不了返回 null
+ */
+export function tripCost(to: string): { min: number; hops: number; fee: number } | null {
+  const path = pathTo(S.loc, to);
+  if (!path.length) return null;
+  return { min: travelMin(pathMin(S.loc, to)), hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
+}
+
 /** 当前追踪的任务进度 */
 export function curQuest(): { name: string; title: string; to?: string } | null {
   const q = questById(S.track);
@@ -215,13 +225,12 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
   }
   const bs = n.actions[verb as keyof typeof n.actions];
   const b = pickBranch(bs);
-  // 铁律：住店睡到天亮这类要跨过半夜的，江湖跑在现实前头时过不去（engine/shiguang.ts）
-  const block = b ? passBlock(S, b.do) : null;
-  if (block) return { text: block, out: newOutcome(), timed: true };
+  // 住店睡到天亮这类要跨过半夜的：今日有约就提一句会误了约，不拦（engine/shiguang.ts）
+  const warn = b ? passWarn(S, b.do) : null;
   if (b) {
     const short = lilianShort(bs, b);
     const out = run(b.do);
-    return { text: fmt(b.text ?? '', { ...textVars(), ...out.vars }) + (short ? `\n（${short}）` : ''), out, timed: b.do?.some(e => e.type === 'time') };
+    return { text: (warn ? `（${warn}）\n` : '') + fmt(b.text ?? '', { ...textVars(), ...out.vars }) + (short ? `\n（${short}）` : ''), out, timed: b.do?.some(e => e.type === 'time') };
   }
   const who = npcName(id);
   const out = newOutcome();

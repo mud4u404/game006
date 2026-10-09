@@ -76,7 +76,7 @@ export interface GameState {
    * 现实的钟（engine/shiguang.ts）：开局（或换算存档）时的现实时刻和那天的江湖日，上次在线的现实时刻。
    * 江湖跑不过现实：江湖的日数最多比开局以来的现实小时数多十日；下线就是静修，现实一小时算江湖一日。
    */
-  real: { start: number; startDay: number; seen: number };
+  real: { start: number; startDay: number; seen: number; /** 已经用掉的修为日（闭关、静修里真长了修为的日子），铁律只管它（宪章 P7，10-09 改） */ grown?: number };
   /** 约：和谁、在哪里、哪一日（江湖日）；失约的后果 */
   yue: Yue[];
   /** 心魔：几层（可以是小数，慢慢淡），为了什么事 */
@@ -125,7 +125,7 @@ export interface GameState {
 
 /** 跳过序章时的根基：和走完童年三忆的样子相当（常人各二十） */
 /** 开局时的现实钟：现在，和开局那天的江湖日 */
-export const realNow = (day: number): GameState['real'] => ({ start: nowMs(), startDay: day, seen: nowMs() });
+export const realNow = (day: number): GameState['real'] => ({ start: nowMs(), startDay: day, seen: nowMs(), grown: 0 });
 
 /** 开局的世界：种子由名字和开局的现实时刻算出（存档迁移用同一个算法，core/save.ts） */
 export const worldSeed = (name: string, start: number): number => seedOf(name, start);

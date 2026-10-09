@@ -371,10 +371,10 @@ function step(seen: Set<string>): void {
     advanceMin(S, h !== null ? waitMin(S, h) : rng() < 0.5 ? 120 : waitMin(S, pickOne(XIEJIAO)[0]));
   }
   else {
-    // 闭关碰到约期，那天一早就出关（engine/shiguang.ts 的 restDays；铁律跟现实时间走，机器玩家不受它管）
+    // 闭关碰到约期，那天一早就出关（engine/shiguang.ts 的 restDays；修为额度跟现实时间走，机器玩家不受它管，jingxiu 的 grow 传满 days）
     const want = cur?.shi ? 1 : 1 + Math.floor(rng() * 3), y = nextYue(S);
     const days = y ? Math.min(want, y.due - dayNo(S)) : want;
-    if (days >= 1) jingxiu(S, days, rng);
+    if (days >= 1) jingxiu(S, days, rng, days);
   }
 }
 
@@ -409,7 +409,7 @@ function play(r: Run): void {
   // 要验的是每一种插手的路走不走得通：人找不找得到、识不识得破、打不打得过
   if (r.shi && r.start === 'skip') {
     S.lilian += 20000;
-    for (let m = 0; m < 6; m++) jingxiu(S, 30, rng);
+    for (let m = 0; m < 6; m++) jingxiu(S, 30, rng, 30);
     // 练完了再给盘缠（不然住店花光了）：要花钱的插手也得有人走得到
     S.silver += 3000;
     run([{ type: 'shi', id: r.shi, to: shiById(r.shi)!.first }]);

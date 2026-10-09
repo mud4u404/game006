@@ -1,6 +1,6 @@
 import { S } from '../../core/state';
 import { REGIONS, ROOMS, room } from '../../content';
-import { questNav } from '../../engine/daohang';
+import { questNav, sectHome } from '../../engine/daohang';
 import { layoutRegion } from '../maplayout';
 
 /** 正在看的地区；不设时看所在的地区。走到别的地区时自动回到所在地区 */
@@ -46,21 +46,29 @@ export function viewDitu(): string {
     const at = shownAs(S.loc) === n.id;
     const marked = q && !at && shownAs(q) === n.id;
     const [x, y] = pct(n);
-    return `<button class="node${at ? ' here' : ''}" style="left:${x}%;top:${y}%" data-act="travel:${n.id}"${at ? ' aria-current="location"' : ''}>${marked ? '<span class="qdot"></span>' : ''}${n.name}${n.leaves.length ? `<span class="nbadge">${n.leaves.length}</span>` : ''}</button>`;
+    return `<button class="node${at ? ' here' : ''}" style="left:${x}%;top:${y}%" data-act="travelAsk:${n.id}"${at ? ' aria-current="location"' : ''}>${marked ? '<span class="qdot"></span>' : ''}${n.name}${n.leaves.length ? `<span class="nbadge">${n.leaves.length}</span>` : ''}</button>`;
   }).join('');
   // 收进街里的去处：列在地图下面，点了照样赶路
   const hubs = lay.nodes.filter(n => n.leaves.length).map(n => `<section class="mhub"><h3>${n.name}一带</h3><div class="mleaves">${n.leaves.map(id => {
     const at = S.loc === id;
-    return `<button class="mleaf${at ? ' here' : ''}" data-act="travel:${id}"${at ? ' aria-current="location"' : ''}>${q === id && !at ? '<span class="qdot"></span>' : ''}${room(id).name}</button>`;
+    return `<button class="mleaf${at ? ' here' : ''}" data-act="travelAsk:${id}"${at ? ' aria-current="location"' : ''}>${q === id && !at ? '<span class="qdot"></span>' : ''}${room(id).name}</button>`;
   }).join('')}</div></section>`).join('');
+  // 快捷：回师门、去记挂着的事、赴约（都是现成的数据，点了先看耗时再走）
+  const chips: { label: string; to: string; name: string }[] = [];
+  const home = sectHome();
+  if (home && home.to !== S.loc) chips.push({ label: '回师门', to: home.to, name: home.name });
+  if (nav && q && q !== S.loc) chips.push({ label: '记挂的事', to: q, name: room(q).name });
+  const yue = S.yue.find(y => y.at && y.at !== S.loc && ROOMS.some(r => r.id === y.at));
+  if (yue?.at) chips.push({ label: '有约', to: yue.at, name: room(yue.at).name });
+  const quick = chips.length ? `<div class="mchips" aria-label="快捷">${chips.map(c => `<button data-act="travelAsk:${c.to}"><small>${c.label}</small><b>${c.name}</b></button>`).join('')}</div>` : '';
   const tabs = regionsWithRooms();
   const info = REGIONS[region];
-  return `${tabs.length > 1 ? `<nav class="mtabs" aria-label="地区">${tabs.map(t => `<button class="${t === region ? 'on' : ''}" data-act="mapRegion:${t}" aria-pressed="${t === region}">${REGIONS[t].name}${t === here ? '<i></i>' : ''}</button>`).join('')}</nav>` : ''}
+  return `${quick}${tabs.length > 1 ? `<nav class="mtabs" aria-label="地区">${tabs.map(t => `<button class="${t === region ? 'on' : ''}" data-act="mapRegion:${t}" aria-pressed="${t === region}">${REGIONS[t].name}${t === here ? '<i></i>' : ''}</button>`).join('')}</nav>` : ''}
     <section class="map" style="height:${lay.h}px" aria-label="${info?.name || ''}地图">
       <svg class="map-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines.join('')}</svg>
       ${nodes}</section>
     ${hubs}
-    ${out.length ? `<div class="mout">${out.map(o => `<button data-act="travel:${o.to}"><small>${room(o.from).name}</small><b>往${REGIONS[room(o.to).region]?.name ?? ''} · ${room(o.to).name}</b></button>`).join('')}</div>` : ''}
-    <div class="legend"><span><i style="background:var(--accent)"></i>你在这里</span><span><i style="background:var(--info)"></i>记挂着的事</span><span>点地名即可自动赶路</span></div>
+    ${out.length ? `<div class="mout">${out.map(o => `<button data-act="travelAsk:${o.to}"><small>${room(o.from).name}</small><b>往${REGIONS[room(o.to).region]?.name ?? ''} · ${room(o.to).name}</b></button>`).join('')}</div>` : ''}
+    <div class="legend"><span><i style="background:var(--accent)"></i>你在这里</span><span><i style="background:var(--info)"></i>记挂着的事</span><span>点地名，先看要多久、花多少钱</span></div>
     ${info ? `<section class="card"><p class="muted">${info.note}</p></section>` : ''}`;
 }

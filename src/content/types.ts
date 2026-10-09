@@ -519,7 +519,11 @@ export interface FxDef {
  * realm：练到第几重境界（0 起）才会使出这一招，不写为一开始就会。
  */
 /** alts：同一招的另几种写法，战报轮着用，不连着出现同一句（同样可用 {foe} {part}） */
-export interface MoveDef { name: string; text: string; alts?: string[]; realm?: number; wound?: WoundKind }
+/** 武学的四段：生（第一、二重）、熟（三、四重）、精（五、六重）、化（七重以上）。见 content/skills.ts 的 duanOf、docs/yangban-wuxue.md */
+export type Duan = '生' | '熟' | '精' | '化';
+/** 同一招在熟、精、化三段的写法（生段就是原来的 text/alts）。没写的段往下一段退，最后退到 text/alts */
+export type LvText = { 熟?: string[]; 精?: string[]; 化?: string[] };
+export interface MoveDef { name: string; text: string; alts?: string[]; realm?: number; wound?: WoundKind; lv?: LvText }
 
 /** 武功的「绝招」：战斗中点按钮施展，可带效果。参照北大侠客行的 perform */
 export interface PerformDef {
@@ -541,6 +545,8 @@ export interface PerformDef {
   fx?: FxDef[];
   /** 蓄势：先蓄一合再出手，伤害加两成；蓄势时被点穴、缴械就落空。只有带刚猛的门派能用，只能是一击（docs/menpai.md 第五节） */
   charge?: boolean;
+  /** 熟、精、化三段的出招描写（生段就是 text）；写法同 text，句中点出招名 */
+  lv?: LvText;
 }
 
 /** 绝技槽的「杀招」：怒气满时施展，全屏题字，震撼收场 */
@@ -593,6 +599,8 @@ export interface SkillDef {
   requires?: { skill: SkillId; realm: number }[];
   /** 属性门槛，例如 { 悟性: 20 } */
   needAttr?: Partial<Record<AttrKey, number>>;
+  /** 内功硬接、轻功闪避成功时，接在对手出招后面的一句；按境界分四段，没写的段往下一段退，最后退到通用的那句 */
+  resp?: Partial<Record<Duan, string[]>>;
   /** 绝招、杀招、合璧要用哪些内功来使：不写为本门任意内功；写 '任意' 表示不挑内功（只给有高前置的奇遇武功） */
   roots?: string[];
 }

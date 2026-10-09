@@ -45,29 +45,35 @@ export const XINMO = { k: 0.2, decay: 1 / 40, zouhuoAt: 2, zouhuoP: 0.02, zouhuo
 const H = 3.6e6;
 /** 开局以来过了几个现实小时 */
 export const realHours = (s: GameState): number => Math.max(0, (nowMs() - s.real.start) / H);
-/** 铁律挡住时的话 */
-export const TIELV_TEXT = '江湖上的日子，已经走在现实前头了，这一夜过不去。先下线歇歇，回来再说。';
+/** 修为额度用完时，闭关、静修的那几日怎么说 */
+export const TIELV_TEXT = '江湖的日子走在现实前头，这几日修为没有长进，伤照样养。';
 
+/** 已经用掉的修为日：闭关、静修里真长了修为的日子 */
+export const grownOf = (s: GameState): number => s.real.grown ?? Math.max(0, dayNo(s) - s.real.startDay);
 /**
- * 铁律：现在还能往前拨几个江湖日。封顶在余裕加一次离开最多算的日子：
- * 不然离开三天回来，下线静修只算十六日，剩下的几十日点闭关全拿回来，一次离开的上限形同虚设（审查 G06）
+ * 铁律（宪章 P7，负责人 10-09 改定）：限制变强的速度，不限制玩的权利。
+ * 现在还能长几日修为（闭关、静修里消化历练、长功力的日子）；日子本身随时可以往前走，逛、打、办事、挣钱、歇脚、住店、闭关都不拦。
+ * 封顶在余裕加一次离开最多算的日子：不然离开三天回来，剩下的几十日点闭关全拿回来，一次离开的上限形同虚设（审查 G06）
  */
 export const allowance = (s: GameState): number =>
-  Math.max(0, Math.min(SHIGUANG.slack + SHIGUANG.awayCap, Math.floor(realHours(s) + SHIGUANG.slack - (dayNo(s) - s.real.startDay))));
+  Math.max(0, Math.min(SHIGUANG.slack + SHIGUANG.awayCap, Math.floor(realHours(s) + SHIGUANG.slack - grownOf(s))));
 /** 离开了几个现实小时 */
 export const awayHours = (s: GameState): number => Math.max(0, (nowMs() - s.real.seen) / H);
 
 /** 最近一个还没到期的约 */
 export const nextYue = (s: GameState): Yue | undefined => s.yue.filter(y => y.due >= dayNo(s)).sort((a, b) => a.due - b.due)[0];
 
-/** 想静修 want 日，实际能修几日：受铁律约束；碰到约期，就在约期那天一早出关 */
-export function restDays(s: GameState, want: number): { days: number; why?: 'tielv' | 'yue'; yue?: Yue } {
+/**
+ * 想静修 want 日：碰到约期，就在约期那天一早出关；其中只有修为额度之内的日子长修为（grow），
+ * 超出的日子照样过、照样养伤，只是修为不长（why 为 tielv）
+ */
+export function restDays(s: GameState, want: number): { days: number; grow: number; why?: 'tielv' | 'yue'; yue?: Yue } {
   let days = Math.max(0, Math.floor(want)), why: 'tielv' | 'yue' | undefined, yue: Yue | undefined;
-  const al = allowance(s);
-  if (al < days) { days = al; why = 'tielv'; }
   const y = nextYue(s);
   if (y && y.due - dayNo(s) < days) { days = Math.max(0, y.due - dayNo(s)); why = 'yue'; yue = y; }
-  return { days, why, yue };
+  const grow = Math.min(days, allowance(s));
+  if (grow < days && !why) why = 'tielv';
+  return { days, grow, why, yue };
 }
 
 /** 歇脚能等到的几个钟点（docs/huojianghu.md 第三节第二条：人有作息，玩家要等得到夜里、等得到天亮） */
@@ -79,21 +85,20 @@ export const waitMin = (s: Pick<GameState, 'min'>, hour: number): number => {
   return m > 0 ? m : m + 1440;
 };
 /**
- * 过得了半夜吗：过不了就说为什么。一是铁律（江湖跑在现实前头）；
- * 二是今日还有约没了结，一过半夜就是失约、生心魔（审查 G01：人就站在约定的地方，歇脚到天亮也判失约）
+ * 过了半夜会误事吗：今日还有约没了结，一过半夜就是失约（审查 G01：人就站在约定的地方，歇脚到天亮也判失约）。
+ * 只提醒，不拦（10-09 试玩：有今日差事时歇脚键全灰，玩家只能空点「观察」熬夜）。不会误事返回 null
  */
-export function nightBlock(s: GameState): string | null {
-  if (allowance(s) < 1) return TIELV_TEXT;
+export function nightWarn(s: GameState): string | null {
   const y = s.yue.find(x => x.due === dayNo(s));
-  return y ? `今日还约着${npcName(y.npc)}（${y.text}），过了半夜就是失约。先去赴了约再歇。` : null;
+  return y ? `今日还约着${npcName(y.npc)}（${y.text}），过了半夜就是失约。` : null;
 }
-/**
- * 闭关能不能开始（试玩第三轮：按钮提前灰掉并写原因，不要点了才弹窗）。一日也闭不了就说为什么：铁律，或今日有约。
- * 闭得了返回 null
- */
-export const retreatBlock = (s: GameState): string | null => (restDays(s, 1).days < 1 ? nightBlock(s) ?? TIELV_TEXT : null);
-/** 等得了吗：跨过半夜要多用一个江湖日，铁律还有余裕、今日没有未了的约才行 */
-export const canWait = (s: GameState, hour: number): boolean => s.min + waitMin(s, hour) < 1440 || !nightBlock(s);
+/** 闭关能不能开始：今日有约就先去赴约（闭关是一闭几日，碰到约期会提前出关，今日的约一日也闭不了）。闭得了返回 null */
+export const retreatBlock = (s: GameState): string | null => {
+  const w = restDays(s, 1).days < 1 ? nightWarn(s) : null;
+  return w ? `${w}先去赴了约再闭关。` : null;
+};
+/** 等到 hour 点要不要跨过半夜 */
+export const crossesNight = (s: Pick<GameState, 'min'>, hour: number): boolean => s.min + waitMin(s, hour) >= 1440;
 
 /** 这串效果一共要拨过几分钟（只看 time）。住店睡到天亮、陪人等一夜这类 */
 export function minutesOf(s: Pick<GameState, 'min'>, effects: readonly Effect[] = []): number {
@@ -106,12 +111,11 @@ export function minutesOf(s: Pick<GameState, 'min'>, effects: readonly Effect[] 
   }
   return m - s.min;
 }
-/** 过得了这一夜吗：效果要跨过半夜，就照 nightBlock 查。住店也受铁律管（试玩第二轮 G04）。过得了返回 null，过不了返回为什么 */
-export const passBlock = (s: GameState, effects?: readonly Effect[]): string | null => (s.min + minutesOf(s, effects) < 1440 ? null : nightBlock(s));
+/** 这串效果跨过半夜会误事吗（住店睡到天亮、陪人等一夜这类）：只提醒，不拦。不误事返回 null */
+export const passWarn = (s: GameState, effects?: readonly Effect[]): string | null => (s.min + minutesOf(s, effects) < 1440 ? null : nightWarn(s));
 
-/** 歇脚：在原地等到某个钟点。等不了（江湖跑不过现实）返回零，否则返回等了几分钟 */
+/** 歇脚：在原地等到某个钟点，返回等了几分钟 */
 export function waitUntil(s: GameState, hour: number): number {
-  if (!canWait(s, hour)) return 0;
   const m = waitMin(s, hour);
   advanceMin(s, m);
   return m;
@@ -119,6 +123,8 @@ export function waitUntil(s: GameState, hour: number): number {
 
 export interface RestReport {
   days: number;
+  /** 其中长了修为的日子（铁律的额度之内） */
+  grow: number;
   used: number;
   gains: [SkillId, number][];
   breaks: string[];
@@ -135,8 +141,12 @@ export interface RestReport {
   lusuDays: number;
 }
 
-/** 静修 days 日：养伤、打坐、参悟，江湖历往前走，出关时气血内力回满。返回邸报要写的东西 */
-export function jingxiu(s: GameState, days: number, rng: () => number = worldRng): RestReport {
+/**
+ * 静修 days 日：养伤、打坐、参悟，江湖历往前走，出关时气血内力回满。返回邸报要写的东西。
+ * 只有前 grow 日长修为（消化历练、长功力；铁律的额度，见 allowance），其余的日子只养伤
+ */
+export function jingxiu(s: GameState, days: number, rng: () => number = worldRng, grow: number = Math.min(days, allowance(s))): RestReport {
+  grow = Math.max(0, Math.min(days, Math.floor(grow)));
   const xm0 = s.xinmo.n;
   const xm1 = Math.max(0, xm0 - XINMO.decay * days);
   // 嚼用：住客栈的，盘缠以外的钱够住几日住几日，余下的日子露宿，睡不安稳，那几日打坐、参悟打八折；
@@ -149,15 +159,18 @@ export function jingxiu(s: GameState, days: number, rng: () => number = worldRng
   const jx = jingxiuPlan(s, days, eff);
   for (const [z, n] of Object.entries(jx.healed) as ['hand' | 'foot' | 'inner', number][]) s.wounds[z] = Math.max(0, s.wounds[z] - n);
   markLight(s);
-  s.gongli = Math.round((s.gongli + jx.gongli) * 100) / 100;
-  // 心魔重了，静修时会走火：功力掉一成
+  // 功力只在长修为的日子里长
+  const gl = grow >= days ? jx.gongli : grow > 0 ? jingxiuPlan(s, grow, eff).gongli : 0;
+  s.gongli = Math.round((s.gongli + gl) * 100) / 100;
+  // 心魔重了，静修时会走火：功力掉一成。走火是练功练岔的事，只在长修为的日子里算（其余的日子只养伤）
   let zouhuo = 0;
-  if (xm0 >= XINMO.zouhuoAt) for (let i = 0; i < days; i++) if (rng() < XINMO.zouhuoP) { s.gongli = Math.round(s.gongli * (1 - XINMO.zouhuoLoss) * 100) / 100; zouhuo++; }
+  if (xm0 >= XINMO.zouhuoAt) for (let i = 0; i < grow; i++) if (rng() < XINMO.zouhuoP) { s.gongli = Math.round(s.gongli * (1 - XINMO.zouhuoLoss) * 100) / 100; zouhuo++; }
   s.xinmo.n = Math.round(xm1 * 1000) / 1000;
   if (s.xinmo.n < 0.05) s.xinmo = { n: 0, why: '' };
   // 参悟：把历练化成功夫
-  const { used, gains } = retreatPlan(s, days, eff);
+  const { used, gains } = grow > 0 ? retreatPlan(s, grow, eff) : { used: 0, gains: [] as [SkillId, number][] };
   s.lilian -= used;
+  s.real.grown = grownOf(s) + grow;
   const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
   syncBody(s);
   const fromDay = dayNo(s);
@@ -169,7 +182,7 @@ export function jingxiu(s: GameState, days: number, rng: () => number = worldRng
   tickWorld(s);
   const db = dibao(s, fromDay, tickShiFull());
   const missed = checkYue(s);
-  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news: db.map(x => x.text), newsSrc: db.map(x => x.src), missed, lodging: zhu, cost, lusuDays };
+  return { days, grow, used, gains, breaks, healed: jx.healed, gongli: gl, zouhuo, news: db.map(x => x.text), newsSrc: db.map(x => x.src), missed, lodging: zhu, cost, lusuDays };
 }
 
 /** 这个约是榜上揭的差事（JobDef.bang），或者交给一件物件的：误了期不算失信于人 */
@@ -225,7 +238,7 @@ export function yueText(s: GameState, y: Yue): string {
   return `${when}，${npcName(y.npc)}在${room(y.at).name}等你：${y.text}`;
 }
 
-/** 下线回来：离开的现实小时，算成静修的日子（一次最多十六日，受铁律和约约束）。不够一日不算 */
+/** 下线回来：离开的现实小时，算成静修的日子（一次最多十六日；碰到约期提前出关；长修为受铁律额度管）。不够一日不算 */
 export function settleAway(s: GameState, rng: () => number = worldRng): (RestReport & { hours: number; why?: 'tielv' | 'yue'; yue?: Yue }) | null {
   // 序章里不结算：江伯病着，不是闭关的时候（原来下线回来写「在渡口小屋静修了六日……露宿了六夜」，审查 G02）
   if (s.chapter === 0) { s.real.seen = nowMs(); return null; }
@@ -235,7 +248,7 @@ export function settleAway(s: GameState, rng: () => number = worldRng): (RestRep
   const r = restDays(s, want);
   s.real.seen = nowMs();
   if (r.days < 1) return null;
-  return { ...jingxiu(s, r.days, rng), hours, why: r.why, yue: r.yue };
+  return { ...jingxiu(s, r.days, rng, r.grow), hours, why: r.why, yue: r.yue };
 }
 
 /** 武功的名字 */

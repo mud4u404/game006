@@ -317,6 +317,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         S.job = null;
         S.jobLog[j.id] = dayNo(S);
         S.yue = S.yue.filter(y => y.id !== 'job_' + j.id);
+        delete S.flags.jobWarn;
         // 师门差事给门派贡献，不给钱；身份的差事给钱
         if (j.sect) {
           const g = jobGongxian(j);
@@ -339,7 +340,11 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         pushFeed('江湖', `差事办砸了：${j?.title ?? e.id}。`);
         // 师门差事误了，扣贡献（这件差事本该给的那么多）；身份的差事误了，降地位
         if (j?.sect) addGongxian(j.sect, -jobGongxian(j));
-        else run([{ type: 'standing', delta: -1 }]);
+        else if (S.shenfen.standing <= 1 && S.shenfen.id !== 'youxia' && S.shenfen.id !== 'yumin' && !S.flags.jobWarn) {
+          // 新进的头一回误事只记一过，不辞退（负责人 10-09：丢一趟镖就被开除、还要赔钱，不讲理）；再误一回才降到零
+          S.flags.jobWarn = true;
+          pushFeed('江湖', '东家记了你一过：再误一回，就不用你了。');
+        } else run([{ type: 'standing', delta: -1 }]);
         break;
       }
       // 世界状态（engine/shijie.ts）：换主人、势力和地方的数、人的处境、地方的痕迹

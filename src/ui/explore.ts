@@ -3,17 +3,17 @@
  * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
-import { advanceDays, dateStr } from '../core/time';
+import { advanceDays, dateStr, minLabel } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
 import { room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { XIEJIAO, checkYue, jingxiu, nightBlock, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
+import { TIELV_TEXT, XIEJIAO, checkYue, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
-import { act, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
+import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
 import { run } from '../engine/dsl';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
@@ -138,11 +138,11 @@ function doAct(verb: Verb): void {
 }
 
 function retreat(want: number): void {
-  // 江湖跑不过现实；碰到约期，那天一早就出关（engine/shiguang.ts）
+  // 碰到约期，那天一早就出关；修为额度之外的日子照样过，只养伤（engine/shiguang.ts）
   const r = restDays(S, want);
   if (r.days < 1) {
-    openSheet(`<div class="r-h"><span class="tag accent">闭关</span><h2>${r.why === 'yue' ? '今日有约' : '江湖跑不过现实'}</h2></div>
-      <p class="muted">${r.why === 'yue' && r.yue ? yueText(S, r.yue) + '。先去赴约吧。' : '这几日江湖上的日子，已经走在现实前头了。下了线，现实里过一个钟头，江湖上就静修一日；回来先读出关邸报。'}</p>
+    openSheet(`<div class="r-h"><span class="tag accent">闭关</span><h2>今日有约</h2></div>
+      <p class="muted">${r.yue ? yueText(S, r.yue) + '。先去赴约吧。' : '今日还有事没了结，先去办了再闭关。'}</p>
       <button class="btn" data-act="sheetClose">知道了</button>`);
     return;
   }
@@ -153,10 +153,10 @@ function retreat(want: number): void {
   b.style.transition = `width ${reduceMotion ? 50 : 1200}ms linear`;
   b.style.width = '100%';
   window.setTimeout(() => {
-    const rep = jingxiu(S, r.days);
-    const how = rep.used ? `消化历练 ${rep.used}` : '没有历练可消化，闭门造车，进境有限';
+    const rep = jingxiu(S, r.days, undefined, r.grow);
+    const how = rep.used ? `消化历练 ${rep.used}` : rep.grow === 0 ? TIELV_TEXT.replace(/。$/, '') : '没有历练可消化，闭门造车，进境有限';
     pushFeed('出关', `闭关${label}，${how}${rep.gains[0] ? `，「${skillName(rep.gains[0][0])}」熟练 +${rep.gains[0][1]}` : ''}${rep.gongli > 0 ? `；功力深到${gongliText(S.gongli)}` : ''}。`);
-    const stop = r.why === 'yue' && r.yue ? `想闭关${cn(want)}日，可约期到了，只好提前出关：${yueText(S, r.yue)}。` : r.why === 'tielv' ? `想闭关${cn(want)}日，可江湖跑不过现实，只修了${cn(r.days)}日。` : undefined;
+    const stop = r.why === 'yue' && r.yue ? `想闭关${cn(want)}日，可约期到了，只好提前出关：${yueText(S, r.yue)}。` : r.why === 'tielv' ? (r.grow ? `闭关${label}，其中${cn(r.grow)}日修为有长进；余下的日子，${TIELV_TEXT}` : TIELV_TEXT) : undefined;
     const panel = document.querySelector('#sheetLayer .panel');
     if (panel) panel.innerHTML = chuguanHTML(rep, `闭关${label}，今日是${dateStr(S)}。`, `闭关${label}`, stop);
     save();
@@ -179,6 +179,18 @@ registerHandlers({
     render();
   },
   mapRegion: v => { setMapRegion(v); render(); },
+  // 地图点地名：先写明这趟路要多久、花多少钱，再由玩家决定走不走（地图审查第一条）
+  travelAsk: v => {
+    if (!v || v === S.loc) return;
+    const c = tripCost(v);
+    if (!c) { toast('从这里去不了那儿'); return; }
+    const short = c.fee > S.silver;
+    openSheet(`<h2>去${room(v).name}</h2>
+      <p>路上约 <b>${minLabel(c.min)}</b>，经过 ${cn(c.hops)} 处${c.fee ? `；船钱和过路钱共 <b>${cn(c.fee)} 文</b>` : '；一路不花钱'}。</p>
+      ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}
+      <div class="acts"><button class="btn" data-act="travelGo:${v}">出发</button><button class="btn ghost" data-act="sheetClose">再看看</button></div>`, true);
+  },
+  travelGo: v => { closeSheet(); travelTo(v); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
   do: v => doAct(v as Verb),
@@ -216,12 +228,19 @@ registerHandlers({
   // 见闻簿里差事的「去」：赶到交差的地方
   jgo: v => { if (!v || v === S.loc) return; closeSheet(); travelTo(v); },
   retreat: v => retreat(Number(v)),
+  // 歇过半夜会误了今日的约：先问一句，照样能歇
+  xiejiaoAsk: v => {
+    const h = Number(v), label = XIEJIAO.find(([x]) => x === h)?.[1] ?? '';
+    openSheet(`<div class="r-h"><span class="tag accent">歇脚</span><h2>歇到${label}？</h2></div>
+      <p class="muted">${nightWarn(S) ?? ''}真要歇过去，这个约就误了。</p>
+      <div class="acts"><button class="act" data-act="xiejiao:${h}">照样歇</button><button class="act" data-act="sheetClose">算了</button></div>`);
+  },
   // 歇脚：等到某个钟点（engine/shiguang.ts 的 waitUntil）
   xiejiao: v => {
     if (traveling) return;
     const h = Number(v), label = XIEJIAO.find(([x]) => x === h)?.[1] ?? '';
+    closeSheet();
     const m = waitUntil(S, h);
-    if (!m) { toast(nightBlock(S) ?? '今日不能再往后拖了'); return; }
     // 歇着也缓过一点气力：一个时辰回三分，最多回三成（审查 G22、H42：歇了十几个时辰一点不回）
     const frac = Math.min(0.3, (m / 60) * 0.03);
     S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * frac));

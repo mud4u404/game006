@@ -4,8 +4,9 @@
  */
 import { SKILLS } from '../content';
 import { FIST, JIANGHU_RULE, OUTER, SCHOOL_STYLE, STYLES, WEAPON } from '../content/skills';
-import type { FxDef, FxKind, SkillDef, SkillGrade, SkillTeach } from '../content/types';
+import type { FxKind, SkillDef, SkillGrade, SkillTeach } from '../content/types';
 import type { Kit, Move } from './combat';
+import { passivesOf } from './beidong';
 import { rootsOn } from './shicheng';
 import { passiveCost, performBudget, skillPower, ultBudget } from './wuxue';
 
@@ -99,26 +100,14 @@ export function bestBuild(school: string, st: Stage): Build {
   return best;
 }
 
-const PASSIVE_KINDS: FxKind[] = ['guard', 'haste', 'heal', 'rage'];
-
 /** 把搭配算成战斗内核的 Kit */
 export function kitOf(b: Build): Kit {
   const st = b.stage, ng = b.neigong;
   const rooted = (k: SkillDef): boolean => (ng ? rootsOn(k, ng) : k.school === JIANGHU_RULE.school);
-  const passive = { guard: 0, haste: 0, heal: 0, rage: 0 };
-  const add = (fx: FxDef): void => { if (PASSIVE_KINDS.includes(fx.kind)) passive[fx.kind as keyof typeof passive] += fx.value ?? 0; };
-  for (const fx of ng?.passive || []) add(fx);
-  const openers: FxDef[] = [];
-  let hit = 0;
-  // 合璧：两门都搭配在身上才生效；效果里的增益算被动，减益开战时施加给对手
+  // 被动与合璧：和实战共用一套算法（beidong.ts）
+  const pv = passivesOf(b, { outer: outerOf(b), weaponReady: !!b.weapon });
+  const { sum: passive, openers, hit } = pv;
   const outer = outerOf(b);
-  const worn = [ng, b.qinggong, b.fist, b.weapon, b.ult].filter((k): k is SkillDef => !!k);
-  for (const k of worn) for (const cb of k.combos || []) {
-    const pair = cb.with.startsWith('门派:') ? worn.some(x => x !== k && x.school === cb.with.slice(3)) : worn.some(x => x.id === cb.with);
-    if (!pair || !rooted(k)) continue;
-    hit += cb.bonus / 100;
-    for (const fx of cb.fx || []) (PASSIVE_KINDS.includes(fx.kind) ? add(fx) : openers.push(fx));
-  }
   const moves: Move[] = [];
   if (outer && rooted(outer)) for (const p of outer.performs || []) if ((p.realm ?? 0) <= st.realm) moves.push(toMove(outer, p));
   const mainPow = outer ? skillPower(outer, st.realm) : 0;
@@ -126,7 +115,7 @@ export function kitOf(b: Build): Kit {
   const basic: Move = { name: outer ? `${outer.name}的普通招式` : '拳脚', mp: 0, cd: 0, hits: 1, dmg: [avg * 0.8, avg * 1.2], acc: 0.85, fx: [] };
   const ult = b.ult?.ult && rooted(b.ult) ? { name: `${b.ult.name}（杀招）`, mp: 0, cd: 0, hits: 1, dmg: b.ult.ult.dmg, acc: 1, fx: b.ult.ult.fx || [], sure: true } : undefined;
   const qg = b.qinggong;
-  const dodge = 0.08 + (qg ? skillPower(qg, st.realm) / 400 : 0) + (qg?.passive || []).filter(f => f.kind === 'haste').reduce((a, f) => a + (f.value ?? 0), 0) / 100;
+  const dodge = 0.08 + (qg ? skillPower(qg, st.realm) / 400 : 0) + pv.qinggongHaste / 100;
   const pos = SCHOOL_STYLE[b.school];
   const bias: Partial<Record<FxKind, number>> = {};
   if (pos) for (const f of [...STYLES[pos.main].sig, ...STYLES[pos.sub].sig]) bias[f] = 1.15;
