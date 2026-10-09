@@ -7,12 +7,13 @@ import { S, save } from '../core/state';
 import { dateStr, shichen } from '../core/time';
 import { $, H, M, MO, buzz, cn, fmt, liang, pick, reduceMotion } from '../core/util';
 import { REALMS, foeById, itemById, jobById, room, skillById } from '../content';
-import type { AfterDef, AfterOpt, Effect, FoeDef, PrepDef, TellDef } from '../content/types';
+import type { AfterDef, AfterOpt, Effect, FoeDef, PrepDef, SkillDef, TellDef } from '../content/types';
 import { run, textVars } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
 import { Duel, JCY_MAX, ZONE_NAME, type DuelRes, type Ev, type Opt, type RespKey, type Wounds } from '../engine/duel';
 import { RESP_ACT, cheng, chengN, judgeText } from '../engine/formulas';
 import { respSkill } from '../engine/wuxue';
+import { DUAN_CLS, lvPool, respPool } from '../engine/cengji';
 import { npcName } from '../engine/world';
 import { SHENFEN, jobGongxian, jobPay } from '../engine/shenfen';
 import { brace, fateOpts, settle, takeWounds } from '../engine/jiesuan';
@@ -189,18 +190,45 @@ function bubble(type: string, html: string, dmg?: number, kind?: 'out' | 'in' | 
 /** 本场没用过的句子里挑一句 */
 const fresh = <T>(id: string, pool: readonly T[]): T => pickFresh(C!.used, id, pool);
 
+/** 被动生效时说的一句（docs/yangban-wuxue.md 第六节）；每场每种最多一次 */
+const PASSIVE_SAY = {
+  guard: '你周身的内力一震，卸去了几分力道。',
+  haste: '你身子一晃，这一下便落了空。',
+  heal: '你调匀一口气，伤处的疼略缓了些。',
+  rage: '你挨了这一下，心头火起，出手更狠了。'
+} as const;
+type PassiveKey = keyof typeof PASSIVE_SAY;
+/** 这种被动本场还没说过，且眼下确实生效（搭配给了、内力没见底）：返回那一句，同时记下 */
+function passiveSay(k: PassiveKey): string | null {
+  const c = C!;
+  const id = `ps:${k}`;
+  if (c.used.has(id) || !(c.d.passive[k] > 0) || !c.d.passiveOn()) return null;
+  c.used.add(id);
+  return PASSIVE_SAY[k];
+}
+
+/** 这门武功眼下的境界 */
+const realmOf = (sk: SkillDef | undefined): number => (sk ? S.skills[sk.id]?.r ?? 0 : 0);
+/** 取这门内功、轻功写的应对句；没写返回 null，调用处用通用的那句 */
+function respSay(k: 'block' | 'dodge'): string | null {
+  const sk = respSkill(S, k), rp = respPool(sk, realmOf(sk));
+  return rp ? fresh(`rs:${sk!.id}:${k}:${rp.duan}`, rp.pool) : null;
+}
+
 /** 出手那门外功练到了的招式里挑一招；空手又没有拳脚功夫时，随手一拳 */
-function myMove(part: string): { name: string; text: string } {
+function myMove(part: string): { name: string; text: string; cls: string } {
   const o = C!.kit.outer;
   const r = o ? S.skills[o.id]?.r ?? 0 : 0;
   // 跟绝招同名的招不当普通招式使：不然战报里刚使过「江枫渔火」，按钮上的「江枫渔火」却还灰着
   const perf = new Set((o?.performs ?? []).map(p => p.name));
   const all = (o?.moves ?? []).filter(m => (m.realm ?? 0) <= r);
   const ms = all.some(m => !perf.has(m.name)) ? all.filter(m => !perf.has(m.name)) : all;
-  if (!ms.length) return { name: '随手一拳', text: `你挥拳打向${C!.f.name}${part}。` };
+  if (!ms.length) return { name: '随手一拳', text: `你挥拳打向${C!.f.name}${part}。`, cls: '' };
   const m = fresh('mv', ms);
-  const text = m.alts?.length ? fresh(`mv:${m.name}`, [m.text, ...m.alts]) : m.text;
-  return { name: m.name, text: fmt(text, { foe: C!.f.name, part }) };
+  // 按这门武功眼下的境界段取句：写了熟、精、化的取对应段，没写的往下退，最后退到 text/alts
+  const { duan, pool } = lvPool(m.lv, r, [m.text, ...(m.alts ?? [])]);
+  const text = pool.length > 1 ? fresh(`mv:${m.name}:${duan}`, pool) : pool[0];
+  return { name: m.name, text: fmt(text, { foe: C!.f.name, part }), cls: DUAN_CLS[duan] };
 }
 
 /** 对手中招的部位记在伤势图上 */
@@ -241,18 +269,23 @@ function narrate(evs: Ev[]): void {
         if (e.who === 'me') {
           const mv = myMove(p);
           const t = `你使一招${M(mv.name)}，${mv.text}`;
-          if (e.res === 'dodge') bubble('me', t + fresh('fd', FOE_DODGE)(f));
-          else if (e.res === 'parry') bubble('me', t + fresh('fp', FOE_PARRY)(f));
-          else { bubble('me', t + fresh(gentle(f) ? 'fhs' : 'fh', gentle(f) ? FOE_HIT_SPAR : FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
+          const cls = ('me ' + mv.cls).trim();
+          if (e.res === 'dodge') bubble(cls, t + fresh('fd', FOE_DODGE)(f));
+          else if (e.res === 'parry') bubble(cls, t + fresh('fp', FOE_PARRY)(f));
+          else { bubble(cls, t + fresh(gentle(f) ? 'fhs' : 'fh', gentle(f) ? FOE_HIT_SPAR : FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
         } else {
           // 花样是自成一句的（「一脚踢翻了粥桶」「刀光一闪」），前面不拼兵器名：拼了就成「尖刀一脚踹翻了箩筐」
           let t = `${f.name}一招${MO(fresh('foeMove', f.moves))}，${fresh('foeFlourish', f.flourish)}，直取你${p}！`;
-          if (e.res === 'dodge') bubble('foe', t + fresh('md', ME_DODGE));
+          if (e.res === 'dodge') {
+            // 轻功写了闪避句的用它；没写的用通用的，被动身法头一回起效时换成那一句
+            bubble('foe', t + (respSay('dodge') ?? passiveSay('haste') ?? fresh('md', ME_DODGE)));
+          }
           else if (e.res === 'parry') bubble('foe', t + fresh('mp', ME_PARRY)(weaponWord(S)));
           else {
             if (e.charging) { cancelCharge(); t += '你正凝神运功，躲闪不及——'; }
             bubble('foe', t + fresh(gentle(f) ? 'mhs' : 'mh', gentle(f) ? ME_HIT_SPAR : ME_HIT)(p), e.dmg, 'in');
             hurtFx(e.dmg);
+            for (const k of ['guard', 'rage'] as const) { const say = e.dmg > 0 ? passiveSay(k) : null; if (say) bubble('aside', say); }
           }
         }
         break;
@@ -307,6 +340,8 @@ function tick(): void {
   if (!c || c.d.over || c.paused || c.ui || c.busy || c.openPart) return;
   act(c.d.tick());
   if (!C || C.d.over || C.busy) return;
+  // 回气：身上带着伤才说，说过一回就不再说
+  if (C.d.hp < C.d.hpMax) { const say = passiveSay('heal'); if (say) bubble('aside', say); }
   if (C.d.prompt) { startTell(); return; }
   if (C.d.waiting) return;
   if (!C.openPart && Math.random() < 0.1) bubble('aside', pick(C.f.asides));
@@ -369,7 +404,7 @@ function takeOpening(): void {
   const evs = c.d.takeOpening();
   const e = evs.find(x => x.k === 'open');
   const mv = myMove(part);
-  bubble('me crit', `你看得真切，一招${M(mv.name)}，${mv.text}`);
+  bubble(('me crit ' + mv.cls).trim(), `你看得真切，一招${M(mv.name)}，${mv.text}`);
   if (e && e.k === 'open') { bubble('foe', `${c.f.name}${pick(['闷哼一声', '怪叫一声', '脸色大变'])}，${H(part + '鲜血迸流')}。`, e.dmg, 'out'); mark(part); }
   act(evs.filter(x => x.k !== 'open'));
   next(900);
@@ -478,12 +513,14 @@ function resolveTell(choice: RespKey | null): void {
       hurtFx(e.dmg);
     } else {
       const sk = respSkill(S, e.key), act0 = RESP_ACT[e.key];
-      bubble('me', (e.instinct ? '你来不及细想，凭本能——' : '') + SAY[e.key](f, sk?.name ?? '') + `<span class="note">成算${cheng(e.p)}</span>`);
+      // 内功硬接、轻功闪避成功，且这门武功写了应对句：用它替换通用的那句
+      const rs = e.ok && !e.feint && (e.key === 'block' || e.key === 'dodge') ? respSay(e.key) : null;
+      bubble('me', (e.instinct ? '你来不及细想，凭本能——' : '') + (rs ?? SAY[e.key](f, sk?.name ?? '')) + `<span class="note">成算${cheng(e.p)}</span>`);
       if (e.feint) {
         if (e.ok) bubble('foe', `${MO(t.name)}原来是虚的！你${act0}之际看得分明，${f.name}这一晃，门户反倒露了出来——`);
         else { bubble('foe', `${MO(t.name)}原来是虚招！你${act0}扑了个空，被${f.name}顺势带了一下，${H(part)}吃了一记。`, e.dmg, 'in'); hurtFx(e.dmg); }
       } else if (e.ok) {
-        if (e.key === 'block') bubble('foe', `「当」的一声巨响，${MO(t.name)}被你硬生生接下！${f.name}反被震得连退三步。`, e.dmg, 'out');
+        if (e.key === 'block') bubble('foe', rs ? `${MO(t.name)}撞了上来，${f.name}反被震得连退三步。` : `「当」的一声巨响，${MO(t.name)}被你硬生生接下！${f.name}反被震得连退三步。`, e.dmg, 'out');
         else if (e.key === 'dodge') bubble('foe', `${MO(t.name)}落了空，${t.after}`);
         else if (e.key === 'parry') { bubble('foe', `你以巧破拙，将${MO(t.name)}化于无形，顺势还了一${ww}，正中他${H(part)}！`, e.dmg, 'out'); mark(part); }
         else { bubble('foe', `${f.name}招式未成，${H(part + '先中一' + ww)}，${MO(t.name)}硬生生憋了回去！`, e.dmg, 'out'); mark(part); }
@@ -636,7 +673,9 @@ function usePerform(i: number): void {
   if (!x || !c.d.canPerform(i)) return;
   lockFor(c, 600 + 150 * x.hits);
   const part = pick(PARTS);
-  bubble('me', fmt(x.text, { foe: c.f.name, part }));
+  // 绝招也按境界段取句：写了 lv 的取对应段，没写的往下退，最后退到 text
+  const { duan, pool } = lvPool(x.lv, c.kit.outer ? S.skills[c.kit.outer.id]?.r ?? 0 : 0, [x.text]);
+  bubble('me', fmt(pool.length > 1 ? fresh(`pf:${x.name}:${duan}`, pool) : pool[0], { foe: c.f.name, part }));
   const evs = c.d.perform(i), e = evs.find(y => y.k === 'perform');
   if (e && e.k === 'perform') {
     if (e.dmg > 0) { bubble('foe', gentle(c.f) ? `${c.f.name}回${c.f.ws}不及，${H(part)}被你点中。` : `${c.f.name}${pick(['闷哼一声', '闪避不及', '回' + c.f.ws + '不及'])}，${H(part + '受伤')}。`, e.dmg, 'out'); mark(part); }
