@@ -31,7 +31,11 @@ const VERBOSE = !!env.ZOUBIAN;
 const PREFIX = env.ZOUBIAN_PREFIX ?? '';
 
 /** 一局：从哪里开始、走几步、用哪个种子 */
-interface Run { start: 'new' | 'skip'; steps: number; seed: number; focus?: string; shi?: string }
+interface Run {
+  start: 'new' | 'skip'; steps: number; seed: number; focus?: string; shi?: string;
+  /** 盯世事的局里，玩家袖手旁观：不去找插手的人，只管自己的日子，看这件事自己走到哪一步（世事里「不管它」那条路） */
+  watch?: boolean
+}
 /** 当前这一局：补跑盯任务时更常打输（有的事要先输一场才开头，例如画舫输了，盐号的事才来） */
 let cur: Run | undefined;
 const RUNS: Run[] = Array.from({ length: 10 }, (_, i) => i + 1).flatMap(i => [
@@ -145,6 +149,22 @@ function branchKey(id: string, v: string): string {
   return `${id}|${v}|${bs ? bs.findIndex(b => test(b.if)) : -1}`;
 }
 
+/**
+ * 盯着一个还没起头的任务补跑：此刻已经起得了头的（谁的哪个动作现在就会让它起头），往那人那里走。
+ * 玩家听说过这件事、手里揣着引荐信，知道该去哪儿；不然全凭乱走撞上（华山磨剑：信拿到手，人却先拜了别家）
+ */
+function startAt(): string | undefined {
+  const id = cur?.focus;
+  if (!id || S.quests[id] !== undefined) return undefined;
+  for (const n of NPCS) for (const bs of Object.values(n.actions)) {
+    const b = pickBranch(bs);
+    if (!b?.do?.some(e => e.type === 'quest' && e.id === id)) continue;
+    const at = ROOMS.find(r => [...r.npcs, ...(r.objs ?? [])].some(x => (typeof x === 'string' ? x : x.id) === n.id) && (r.id === S.loc || pathTo(S.loc, r.id).length));
+    if (at) return at.id;
+  }
+  return undefined;
+}
+
 function actions(): Act[] {
   const list: Act[] = [];
   for (const id of [...roomNpcs(S.loc), ...roomObjs(S.loc)]) {
@@ -155,7 +175,7 @@ function actions(): Act[] {
   // 照界面：只走眼下开着的出口（序章里不开船，engine/world.ts 的 openExits）
   for (const [, to] of openExits(S.loc)) list.push({ k: 'go', to, key: `go|${S.loc}|${to}` });
   // 跟着任务横幅、约走：玩家大多这样走
-  for (const dest of [curQuest()?.to, ...S.yue.map(y => y.at)]) {
+  for (const dest of [curQuest()?.to, startAt(), ...S.yue.map(y => y.at)]) {
     if (!dest || dest === S.loc) continue;
     const p = pathTo(S.loc, dest);
     if (!p.length) err(`目的地「${dest}」从「${S.loc}」走不到`);
@@ -167,6 +187,9 @@ function actions(): Act[] {
   // 盯着一件世事：往牵扯到它的人那里走（玩家听说了一件事，会去找那几个人）
   const near = cur?.shi ? nearestWith(id => SHI_NPC.get(cur!.shi!)!.has(id)) : null;
   if (near) list.push({ k: 'go', to: near, key: `go|${S.loc}|${near}`, quest: true, push: true });
+  // 盯着一件心事：往推动它的人、递线索给东西的人那里走
+  const qn = cur?.focus ? nearestWith(id => QUEST_NPC.get(cur!.focus!)!.has(id)) : null;
+  if (qn) list.push({ k: 'go', to: qn, key: `go|${S.loc}|${qn}`, quest: true, push: true });
   // 身上有重伤：往最近的郎中那里走（玩家会去看伤）
   if (heavy() && S.silver >= 150) {
     const doc = nearestWith(id => !!npc(id)?.service?.includes('医'));
@@ -199,6 +222,27 @@ const SHI_NPC = new Map(SHI.map(d => {
     return flagsIn([gate, push.map(b => b.if)]);
   }));
   return [d.id, new Set([...direct.map(n => n.id), ...need.flatMap(setters)])];
+}));
+
+/**
+ * 每件心事能被哪些人推动：动作里直接推它的（开打、开剧情以后推它的也算），
+ * 往回多找一层：推动它的动作要先有的旗标是谁递的、要带的东西是谁给的（华山的引荐信在扬州府衙求得）。
+ * 盯着一件心事的局，往这些人那里走：玩家知道这件事，会去找这几个人，不会全靠撞
+ */
+const pushesQ = (x: unknown, id: string): boolean => !!x && JSON.stringify(x).includes(`"type":"quest","id":"${id}","stage"`);
+const itemsIn = (x: unknown): string[] => [...JSON.stringify(x ?? {}).matchAll(/"item":\{"id":"([^"]+)"/g)].map(m => m[1]);
+const givers = (item: string): string[] => NPCS.filter(n => JSON.stringify(n.actions).includes(`"type":"item","id":"${item}","delta":1`)).map(n => n.id);
+const QUEST_NPC = new Map(QUESTS.map(q => {
+  const direct = NPCS.filter(n => {
+    if (pushesQ(n.actions, q.id)) return true;
+    const ids = [...JSON.stringify(n.actions).matchAll(/"type":"(?:fight|story)","(?:foe|id)":"([^"]+)"/g)].map(m => m[1]);
+    return ids.some(x => pushesQ(foeById(x), q.id) || pushesQ(storyById(x), q.id));
+  });
+  const gates = direct.flatMap(n => Object.entries(n.actions).flatMap(([v, bs]) => {
+    const push = (bs ?? []).filter(b => pushesQ(b, q.id));
+    return push.length ? [[n.verbs.find(x => typeof x !== 'string' && x.verb === v), push.map(b => b.if)]] : [];
+  }));
+  return [q.id, new Set([...direct.map(n => n.id), ...flagsIn(gates).flatMap(setters), ...itemsIn(gates).flatMap(givers)])];
 }));
 
 /** 从这里出发，最近的一处有没点过的动作的地点，返回往那里走的第一步 */
@@ -259,10 +303,13 @@ function pusherAtHour(id: string): number | null {
 }
 
 /** 挑一件事做：没做过的优先，跟着任务走的其次；伤重了去闭关 */
-function choose(list: Act[], seen: Set<string>): Act {
+function choose(all: Act[], seen: Set<string>): Act {
+  // 袖手旁观的局：不碰能推动这件世事的人，也不特意往那里去（碰上了就是玩家自己的选择，这里只管不主动）
+  const list = cur?.watch ? all.filter(a => !(a.k === 'act' && SHI_NPC.get(cur!.shi!)!.has(a.id)) && !(a.k === 'go' && a.push)) : all;
   const w = list.map(a => {
     // 重伤闭关养不好（engine/shang.ts），找郎中、买药去；只有气血见底才闭关
-    if (a.k === 'rest') return S.hp < S.hpMax * 0.35 ? 20 : cur?.shi ? 0.02 : 0.2;
+    // 袖手旁观的局：事情要自己走上好几天（码头那件，西舵占了码头要七天），玩家多歇歇、过自己的日子
+    if (a.k === 'rest') return S.hp < S.hpMax * 0.35 ? 20 : cur?.watch ? 8 : cur?.shi ? 0.02 : 0.2;
     if (a.k === 'act' && heavy() && /^(看伤|买跌打酒|买内伤药)$/.test(a.v)) return 60;
     if (a.k === 'go' && a.cure) return 50;
     // 盯着世事、要找的人眼下不在：多半是时辰不对，歇脚等一等
@@ -385,7 +432,11 @@ function play(r: Run): void {
     for (const [id, st] of Object.entries(S.shi ?? {})) cov.shi.add(`${id}.${st.at}`);
     if (r.shi && Object.keys(shiById(r.shi)!.steps).every(k => cov.shi.has(`${r.shi}.${k}`))) break;
     // 这件事了结了，还有没走过的路：从头再起一回（另一个玩家会走另一条路）
-    if (r.shi) { const d = shiById(r.shi)!, at = S.shi?.[r.shi]?.at; if (at && isEnding(d, at)) run([{ type: 'shi', id: r.shi, to: d.first }]); }
+    // 袖手旁观的局，等到它自己走到结局就收场（这条路只有一个结局）
+    if (r.shi) {
+      const d = shiById(r.shi)!, at = S.shi?.[r.shi]?.at;
+      if (at && isEnding(d, at)) { if (r.watch) break; run([{ type: 'shi', id: r.shi, to: d.first }]); }
+    }
     // 过了约期的约不该还挂着（界面上会一直写「今日」）
     if (S.yue.some(y => y.due < dayNo(S))) err('过了约期的约还挂着');
     check(where.replace(/第 \d+ 步/, '某一步'));
@@ -401,9 +452,11 @@ describe('机器玩家走遍江湖', () => {
   // 还没走完的任务，专门盯着它再走几局
   const done = (id: string): boolean => (cov.quest.get(id) ?? -1) >= questById(id)!.stages.length - 1;
   for (const q of QUESTS) for (let k = 0; k < 24 && !done(q.id); k++) play({ start: k % 2 ? 'skip' : 'new', steps: 5000, seed: 1000 + k, focus: q.id });
-  // 还有没走到的世事的步，盯着那件事再走几局（往牵扯到它的人那里去，认真打，胜负以后挑没走过的路）
+  // 还有没走到的世事的步，盯着那件事再走几局：隔一局插手一局（往牵扯到它的人那里去，认真打，胜负以后挑没走过的路），
+  // 袖手旁观（只管自己的日子，等它自己走到结局：「不管它」那条路上的每一步）。
+  // 起头用 run 直接推到头一步，不受 tickShi「没到过这一带就停在起头」的规则管：推动的人当场就听说了，世事照常往下走
   const shiLeft = (id: string): boolean => Object.keys(shiById(id)!.steps).some(k => !cov.shi.has(`${id}.${k}`));
-  for (const d of SHI) for (let k = 0; k < 24 && shiLeft(d.id); k++) play({ start: 'skip', steps: 3000, seed: 2000 + k, shi: d.id });
+  for (const d of SHI) for (let k = 0; k < 24 && shiLeft(d.id); k++) play({ start: 'skip', steps: 3000, seed: 2000 + k, shi: d.id, watch: k % 2 === 1 });
   const ms = Date.now() - t0;
 
   // 覆盖报告
