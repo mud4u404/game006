@@ -309,10 +309,10 @@ const EYES: EyeDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'lsm_xiong_ts' }, text: '府衙大牢里那个逃兵的供词传了出来：边军百户克扣军粮，饿死了七个人。' },
-  { if: { flag: 'lsm_qian_ya' }, text: '汪家盐号追回了二十几张盐引，毕掌柜在门口放了一挂鞭炮。' },
-  { if: { flag: 'lsm_bai_ya' }, text: '济生堂的葛郎中把望江楼那个游方郎中的药丸烧了一大筐，说里头掺的是砒霜。' },
-  { if: { flag: 'lsm_xiong_ya' }, text: '镇江打铁巷的铁匠们说，那个被拿走的大个子帮工，打的铁比谁都实在。' }
+  { if: { flag: 'lsm_xiong_ts' }, text: '府衙大牢里那个逃兵的供词传了出来：边军百户克扣军粮，饿死了七个人。', who: ['衙役', '捕快', '军汉', 'guan'] },
+  { if: { flag: 'lsm_qian_ya' }, text: '汪家盐号追回了二十几张盐引，毕掌柜在门口放了一挂鞭炮。', who: ['wang', '盐商', '掌柜', '书吏'] },
+  { if: { flag: 'lsm_bai_ya' }, text: '济生堂的葛郎中把望江楼那个游方郎中的药丸烧了一大筐，说里头掺的是砒霜。', who: ['郎中', '小二', '货郎', '掌柜'] },
+  { if: { flag: 'lsm_xiong_ya' }, text: '镇江打铁巷的铁匠们说，那个被拿走的大个子帮工，打的铁比谁都实在。', who: ['铁匠', '脚夫', '货郎'] }
 ];
 
 const pack: ContentPack = { shi: SHI, npcs: NPCS, foes: FOES, eyes: EYES, news: NEWS };

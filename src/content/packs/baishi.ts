@@ -601,13 +601,13 @@ const QUESTS: QuestDef[] = [
 /* ---------- 传闻 ---------- */
 
 const NEWS: NewsDef[] = [
-  { text: '东关街巷子里的广陵武馆，交了学费就教拳，不拜师，不论门户。' },
-  { text: '运河堤下的龙王庙住着一窝叫化子，听说丐帮在扬州的分舵就在那里。' },
-  { if: { flag: 'bs2_gb_in' }, text: '丐帮扬州分舵新收了个记名弟子。龙王庙的小叫化们，这几日笑得多了。' },
-  { if: { flag: 'bs2_gb_mai_once' }, text: '东关街的胡婶说，有人想入丐帮，掏钱买了她的烧饼，叫鲍四撵了回去。' },
-  { if: { flag: 'bs2_lsm_in' }, text: '扬州府衙新添了个捕快，是秦教头亲手考校过的，没花一文钱买缺。' },
-  { if: { flag: 'bs2_jw_in' }, text: '蜀冈官道的募兵帐前，韩什长又收了个兵，听说是从瓜洲来的后生。' },
-  { if: { flag: 'bs2_wg_win' }, text: '广陵武馆的石墩逢人便说，前几日有个后生，三拳两脚把他放倒了。' }
+  { text: '东关街巷子里的广陵武馆，交了学费就教拳，不拜师，不论门户。', who: ['跑腿', '货郎', '小二'] },
+  { text: '运河堤下的龙王庙住着一窝叫化子，听说丐帮在扬州的分舵就在那里。', who: ['叫化', 'gai', '脚夫', '船夫'] },
+  { if: { flag: 'bs2_gb_in' }, text: '丐帮扬州分舵新收了个记名弟子。龙王庙的小叫化们，这几日笑得多了。', who: ['叫化', 'gai', '脚夫'], about: 'you' },
+  { if: { flag: 'bs2_gb_mai_once' }, text: '东关街的胡婶说，有人想入丐帮，掏钱买了她的烧饼，叫鲍四撵了回去。', who: ['小二', '货郎', '叫化'], about: 'you' },
+  { if: { flag: 'bs2_lsm_in' }, text: '扬州府衙新添了个捕快，是秦教头亲手考校过的，没花一文钱买缺。', who: ['捕快', '衙役', 'guan', '书吏'], about: 'you' },
+  { if: { flag: 'bs2_jw_in' }, text: '蜀冈官道的募兵帐前，韩什长又收了个兵，听说是从瓜洲来的后生。', who: ['军汉', '脚夫', '货郎'], about: 'you' },
+  { if: { flag: 'bs2_wg_win' }, text: '广陵武馆的石墩逢人便说，前几日有个后生，三拳两脚把他放倒了。', who: ['跑腿', '货郎', '小二'], about: 'you' }
 ];
 
 const pack: ContentPack = { rooms: ROOMS, npcs: NPCS, foes: FOES, items: ITEMS, quests: QUESTS, news: NEWS };

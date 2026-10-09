@@ -243,11 +243,11 @@ const pack: ContentPack = {
   stories: STORIES,
   news: [
     { if: { quest: { id: 'side_caoshangfei', atLeast: 1 } },
-      text: '听说扬州府又贴了告示，悬赏缉拿那个左手缺小指的江洋大盗，有人揭了榜。' },
+      text: '听说扬州府又贴了告示，悬赏缉拿那个左手缺小指的江洋大盗，有人揭了榜。', who: ['捕快', '衙役', 'guan', '书吏'], about: 'you' },
     { if: { flag: 'fuya_met_old' },
-      text: '府衙的周捕头近来念旧，说等一位瓜洲来的故人，等公事完了要请他喝酒。' },
+      text: '府衙的周捕头近来念旧，说等一位瓜洲来的故人，等公事完了要请他喝酒。', who: ['捕快', '衙役', 'guan'] },
     { if: { flag: 'fuya_bribed' },
-      text: '府衙的衙役最近手上宽裕了些，有人私下塞了银子给他。' }
+      text: '府衙的衙役最近手上宽裕了些，有人私下塞了银子给他。', who: ['衙役', '小二', '赌客', 'guan'] }
   ]
 };
 

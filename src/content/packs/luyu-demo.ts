@@ -217,13 +217,13 @@ const pack: ContentPack = {
   stories: STORIES,
   foes: [XIAOZEI],
   news: [
-    { if: { flag: 'ly_maishen_exposed' }, text: '东关街上卖身葬父的姐弟，叫人当街说破，从此再没在城里露过面。' },
-    { if: { flag: 'ly_maishen_kind' }, text: '盐号撵出来的老脚夫，这几日抓上了药。他逢人便说，有位少侠心善。' },
-    { if: { flag: 'ly_maishen_paid' }, text: '东关街有个姑娘卖身葬父，讨到了钱就不见了。有人说，她爹压根没死。' },
-    { if: { flag: 'ly_maishen_coin' }, text: '东关街卖身葬父的姑娘还跪着，草席边上的铜钱攒了一小堆，都是过路人三文五文放下的。' },
-    { if: { flag: 'ly_ajiu' }, text: '渡口新来个扛盐包的半大孩子，叫阿九，干活不惜力，见人就笑。' },
-    { if: { flag: 'ly_xiaozei_beat' }, text: '东关街一带的小叫化子，见了佩剑的人就躲。听说有人当街打过他们一个。' },
-    { if: { flag: 'ly_xiaozei_dead' }, text: '东关街的巷子里死了个讨饭的孩子，听说是叫一个佩剑的砍的。小叫化子们夜里都不敢出来了。' }
+    { if: { flag: 'ly_maishen_exposed' }, text: '东关街上卖身葬父的姐弟，叫人当街说破，从此再没在城里露过面。', who: ['货郎', '脚夫', '小二'], about: 'you' },
+    { if: { flag: 'ly_maishen_kind' }, text: '盐号撵出来的老脚夫，这几日抓上了药。他逢人便说，有位少侠心善。', who: ['脚夫', '郎中', '货郎'], about: 'you' },
+    { if: { flag: 'ly_maishen_paid' }, text: '东关街有个姑娘卖身葬父，讨到了钱就不见了。有人说，她爹压根没死。', who: ['货郎', '脚夫', '小二'] },
+    { if: { flag: 'ly_maishen_coin' }, text: '东关街卖身葬父的姑娘还跪着，草席边上的铜钱攒了一小堆，都是过路人三文五文放下的。', who: ['货郎', '脚夫', '小二'] },
+    { if: { flag: 'ly_ajiu' }, text: '渡口新来个扛盐包的半大孩子，叫阿九，干活不惜力，见人就笑。', who: ['脚夫', '船夫', '盐商'] },
+    { if: { flag: 'ly_xiaozei_beat' }, text: '东关街一带的小叫化子，见了佩剑的人就躲。听说有人当街打过他们一个。', who: ['叫化', 'gai', '货郎'], about: 'you' },
+    { if: { flag: 'ly_xiaozei_dead' }, text: '东关街的巷子里死了个讨饭的孩子，听说是叫一个佩剑的砍的。小叫化子们夜里都不敢出来了。', who: ['叫化', 'gai', '货郎', '更夫'], about: 'you' }
   ]
 };
 export default pack;

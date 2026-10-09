@@ -287,12 +287,12 @@ const pack: ContentPack = {
   stories: STORIES,
   foes: [JIANKE, TANGZI],
   news: [
-    { if: { flag: 'ly_yz_zhuifei_bang' }, text: '夜里六扇门拿人，有个佩剑的出手相助，一腿绊倒了飞贼。吴捕头念叨了好几天。' },
-    { if: { flag: 'ly_yz_zhuifei_fang' }, text: '夜里六扇门追贼追丢了，有人说，是有人暗中放走了那贼。吴捕头发了好大的火。' },
-    { if: { flag: 'ly_yz_zouhai_fuya' }, text: '府衙收留了个被后爹打出来的孩子，官老爷拍案说虐子有据，管定了。' },
-    { if: { flag: 'ly_yz_zouhai_qian' }, text: '渡口边有对祖孙，孩子是他娘留下的骨血，听说逃出了一个混账后爹。' },
-    { if: { flag: 'ly_yz_shusheng_friend' }, text: '布庄诬赖书生的官司传遍了读书人中间。有人见那书生逢人便说：江湖险，收傲气。' },
-    { if: { flag: 'ly_yz_jianke' }, text: '湖边使剑的船工近来逢人便说，输给了一个佩剑的年轻人，输得痛快。' }
+    { if: { flag: 'ly_yz_zhuifei_bang' }, text: '夜里六扇门拿人，有个佩剑的出手相助，一腿绊倒了飞贼。吴捕头念叨了好几天。', who: ['捕快', '衙役', '更夫', 'guan'], about: 'you' },
+    { if: { flag: 'ly_yz_zhuifei_fang' }, text: '夜里六扇门追贼追丢了，有人说，是有人暗中放走了那贼。吴捕头发了好大的火。', who: ['捕快', '衙役', '更夫', 'guan'], about: 'you' },
+    { if: { flag: 'ly_yz_zouhai_fuya' }, text: '府衙收留了个被后爹打出来的孩子，官老爷拍案说虐子有据，管定了。', who: ['衙役', '书吏', '货郎', 'guan'] },
+    { if: { flag: 'ly_yz_zouhai_qian' }, text: '渡口边有对祖孙，孩子是他娘留下的骨血，听说逃出了一个混账后爹。', who: ['船夫', '货郎', '脚夫'] },
+    { if: { flag: 'ly_yz_shusheng_friend' }, text: '布庄诬赖书生的官司传遍了读书人中间。有人见那书生逢人便说：江湖险，收傲气。', who: ['相公', '书吏', '货郎'], about: 'you' },
+    { if: { flag: 'ly_yz_jianke' }, text: '湖边使剑的船工近来逢人便说，输给了一个佩剑的年轻人，输得痛快。', who: ['船夫', '渔家', '货郎'], about: 'you' }
   ]
 };
 export default pack;

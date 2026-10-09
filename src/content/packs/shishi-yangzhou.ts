@@ -231,9 +231,9 @@ const STORIES: StoryDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'ss_jiaowu_zou' }, text: '西舵的焦五丢了码头，听说去了瓜洲，放话要找回这个场子。' },
-  { if: { flag: 'ss_jiaowu_guan' }, text: '漕帮西舵的焦五叫人押进了府衙大牢，西舵换了舵主。' },
-  { if: { flag: 'ss_zei_fang', shi: { id: ZEI, at: ['zhuo'] } }, text: '东关街那个偷药的孩子挨了板子，他娘还躺在龙王庙后头的草棚里。' }
+  { if: { flag: 'ss_jiaowu_zou' }, text: '西舵的焦五丢了码头，听说去了瓜洲，放话要找回这个场子。', who: ['船夫', '脚夫', 'dong', 'xi'] },
+  { if: { flag: 'ss_jiaowu_guan' }, text: '漕帮西舵的焦五叫人押进了府衙大牢，西舵换了舵主。', who: ['船夫', 'xi', '捕快', 'guan'] },
+  { if: { flag: 'ss_zei_fang', shi: { id: ZEI, at: ['zhuo'] } }, text: '东关街那个偷药的孩子挨了板子，他娘还躺在龙王庙后头的草棚里。', who: ['叫化', 'gai', '郎中', '货郎'] }
 ];
 
 const pack: ContentPack = { shi: SHI, npcs: NPCS, foes: FOES, stories: STORIES, news: NEWS };
