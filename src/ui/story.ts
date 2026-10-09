@@ -9,6 +9,7 @@ import { room, storyById } from '../content';
 import type { StoryDef } from '../content/types';
 import { gainTags, leanText } from './qingxiang';
 import { lackOf, newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
+import { kpOpen, kpPick, kpPos } from '../engine/kaipian';
 import { afterOutcome, hooks, registerHandlers, render, swapped, toast, tooSoon } from './shell';
 import { welcomeBack } from './chuguan';
 
@@ -19,11 +20,14 @@ let cur: Playing | null = null;
 /** 已经开着剧情时又来的剧情：排队，读完这一段再读（原来直接顶掉，旧剧情的收尾丢了，赶路停在半路） */
 const queue: [string, (() => void) | undefined, string | undefined][] = [];
 
-export function openStory(id: string, onDone?: () => void, lead?: string): void {
+/** at：从第几张卡读起（新序章读档接回断点用，engine/kaipian.ts） */
+export function openStory(id: string, onDone?: () => void, lead?: string, at = 0): void {
   if (cur) { queue.push([id, onDone, lead]); return; }
   const def = storyById(id);
   if (!def) { onDone?.(); return; }
-  cur = { def, i: 0, out: newOutcome(), onDone, lead };
+  const i = at >= 0 && at < def.cards.length ? at : 0;
+  kpOpen(S, id, i);
+  cur = { def, i, out: newOutcome(), onDone, lead };
   draw();
   $('#storyLayer')!.hidden = false;
 }
@@ -76,6 +80,8 @@ function pick(k: number): void {
   }
   run(c.do, cur.out);
   const next = c.next ?? cur.i + 1;
+  // 新序章：选完就记下一站并存档，刷新、关了再开都接回这一屏（engine/kaipian.ts）
+  if (kpPick(S, cur.def.id, cur.def.cards.length, cur.out, next)) save();
   if (c.result) { cur.result = c.result; cur.next = next; cur.picked = c.sub; draw(); return; }
   // 没有结果文字的选项：加了什么，提示条里说一句
   if (gainTags(c.sub).length) toast(gainTags(c.sub).join('　'));
@@ -194,6 +200,14 @@ registerHandlers({
     if (!saved) return;
     setState(saved);
     hideTitle();
+    // 停在新序章中途的：接回那一屏（打到一半的，从头再打这一场）
+    const at = kpPos(saved);
+    if (at) {
+      render();
+      if (at.kind === 'fight') hooks.startFight(at.id);
+      else openStory(at.id, undefined, undefined, at.i);
+      return;
+    }
     // 下线就是静修：离开的时辰算成静修的日子，先读出关邸报（ui/chuguan.ts）。要在 render 之前算：render 会存档，把「上次在线」记成现在
     if (!welcomeBack()) render();
   },
