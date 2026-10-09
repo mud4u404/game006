@@ -414,6 +414,9 @@ function play(r: Run): void {
     S.silver += 3000;
     run([{ type: 'shi', id: r.shi, to: shiById(r.shi)!.first }]);
   }
+  // 盯一件心事的局，跳过序章开局的人是「已经办过几件侠义事」的：有的心事要名声够了才肯开口
+  // （华山的引荐信，申伯那里侠义到二十五才写；这是有意的代价，不是机器玩家该靠乱走撞出来的）
+  if (r.focus && r.start === 'skip') S.xia = Math.max(S.xia, 30);
   const seen = new Set<string>();
   for (let i = 0; i < r.steps; i++) {
     // 盯着一个任务走：它开了头，横幅就一直追踪它（玩家在任务簿里切换追踪）
@@ -453,7 +456,7 @@ describe('机器玩家走遍江湖', () => {
   for (const r of RUNS) play(r);
   // 还没走完的任务，专门盯着它再走几局
   const done = (id: string): boolean => (cov.quest.get(id) ?? -1) >= questById(id)!.stages.length - 1;
-  for (const q of QUESTS) for (let k = 0; k < 24 && !done(q.id); k++) play({ start: k % 2 ? 'skip' : 'new', steps: 5000, seed: 1000 + k, focus: q.id });
+  for (const q of QUESTS) for (let k = 0; k < 24 && !done(q.id); k++) play({ start: k % 2 ? 'skip' : 'new', steps: 5000, seed: 1000 + k + (env.ZOUBIAN_SEED ? Number(env.ZOUBIAN_SEED) : 0), focus: q.id });
   // 还有没走到的世事的步，盯着那件事再走几局：隔一局插手一局（往牵扯到它的人那里去，认真打，胜负以后挑没走过的路），
   // 袖手旁观（只管自己的日子，等它自己走到结局：「不管它」那条路上的每一步）。
   // 起头用 run 直接推到头一步，不受 tickShi「没到过这一带就停在起头」的规则管：推动的人当场就听说了，世事照常往下走
