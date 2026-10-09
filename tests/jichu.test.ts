@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { S, setState, skipToYangzhou } from '../src/core/state';
 import { run, test as cond } from '../src/engine/dsl';
-import { act, verbsOf } from '../src/engine/world';
+import { act, payFare, verbsOf } from '../src/engine/world';
 import { npc } from '../src/content';
 
 beforeEach(() => setState(skipToYangzhou()));
@@ -177,5 +177,19 @@ describe('兵器铺与当铺', () => {
         }
       }
     }
+  });
+});
+
+describe('坐船要船钱（极少唾手可得）', () => {
+  it('钱够就付；不够的替船家撑篙抵账，路上多耗一个时辰；不是船不收钱', () => {
+    S.silver = 100; S.min = 8 * 60;
+    payFare('gz_kechuan');
+    expect(S.silver).toBe(80);
+    expect(S.min).toBe(8 * 60);
+    S.silver = 5;
+    payFare('gz_kechuan');
+    expect(S.silver).toBe(5);
+    expect(S.min).toBe(9 * 60);
+    expect(payFare('cheng')).toBeNull();
   });
 });

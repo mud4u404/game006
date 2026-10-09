@@ -71,6 +71,10 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         break;
       case 'prof': case 'learn': if (!skillIds.has(e.skill)) errs.push(`${w}：武功「${e.skill}」不存在`); break;
       case 'move': if (!roomIds.has(e.to)) errs.push(`${w}：地点「${e.to}」不存在`); break;
+      case 'away':
+        if (!npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
+        if (!(e.hours > 0 && e.hours <= 72)) errs.push(`${w}：hours 写一到七十二个时辰`);
+        break;
       case 'fight': if (!foeIds.has(e.foe)) errs.push(`${w}：对手「${e.foe}」不存在`); break;
       case 'story': if (!storyIds.has(e.id)) errs.push(`${w}：剧情「${e.id}」不存在`); break;
       case 'sect': if (!SCHOOL_STYLE[e.school]) errs.push(`${w}：门派「${e.school}」没有定位（见 SCHOOL_STYLE）`); break;

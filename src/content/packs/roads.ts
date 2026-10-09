@@ -11,7 +11,7 @@ import type { ContentPack, NpcDef, RoomDef } from '../types';
 const NIGHT = { hour: { from: 18, to: 6 } };
 
 const ROOMS: RoomDef[] = [
-  { id: 'gz_kechuan', name: '运河客船', area: '运河 · 扬州至瓜洲', region: 'gz', t: 60, map: [84, 56],
+  { id: 'gz_kechuan', name: '运河客船', area: '运河 · 扬州至瓜洲', region: 'gz', t: 60, map: [84, 56], fare: 20,
     desc: [
       { if: NIGHT, text: '客船在运河上缓缓走着，舱里点着一盏油灯，几个客人和衣躺着。船头的船家望着两岸黑沉沉的芦苇，不时咳嗽一声。' },
       { text: '客船在运河上不紧不慢地走，两岸芦苇连天，漕船一条接一条擦肩而过。舱里挤着行商、脚夫和几个赶考的书生。' }
@@ -19,7 +19,7 @@ const ROOMS: RoomDef[] = [
     npcs: ['gz_kc_chuanjia'],
     exits: [['北', 'dukou', '舟'], ['南', 'gz_pier', '舟']],
     road: '你上了客船，船家一篙点开，船顺着运河走了……' },
-  { id: 'gz_duchuan', name: '瓜洲渡船', area: '大江 · 瓜洲渡口', region: 'gz', t: 40, map: [30, 88],
+  { id: 'gz_duchuan', name: '瓜洲渡船', area: '大江 · 瓜洲渡口', region: 'gz', t: 40, map: [30, 88], fare: 10,
     desc: [
       { if: NIGHT, text: '渡船泊在江边，桅杆上一盏风灯晃来晃去。江面漆黑，对岸京口的灯火星星点点，近得像伸手就能够着。' },
       { text: '渡船泊在江边，船家正往船上搬缆绳。江面宽阔，对岸京口的城楼隐在雾里。「京口瓜洲一水间」，说的就是这一程。' }

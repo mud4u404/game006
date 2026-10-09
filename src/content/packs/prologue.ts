@@ -24,7 +24,7 @@ const STORIES: StoryDef[] = [
           result: '你被家丁按在地上揍了一顿，可那少爷的脑门上，也挨了你结结实实一扁担。' },
         { label: '绕到后面绊他一跤', sub: '身法 +1　悟性 +2', do: [{ type: 'attr', key: '身法', delta: 1 }, { type: 'attr', key: '悟性', delta: 2 }, { type: 'flag', flag: 'mem2_trip' }],
           result: '恶少摔了个狗啃泥，回头找人时，你早已钻进了人堆。' },
-        { label: '去叫来巡检，当面对质', sub: '根骨 +2　侠义 +5　结识周巡检', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'xia', delta: 5 }, { type: 'flag', flag: 'mem2_patrol' }],
+        { label: '去叫来巡检，当面对质', sub: '悟性 +2　侠义 +5　结识周巡检', do: [{ type: 'attr', key: '悟性', delta: 2 }, { type: 'xia', delta: 5 }, { type: 'flag', flag: 'mem2_patrol' }],
           result: '姓周的巡检秉公断了案，王家赔了阿婆一篮鱼钱。临走时，他记下了你的名字。' }
       ] },
     { tag: '十六岁', title: '剑光',
@@ -34,7 +34,7 @@ const STORIES: StoryDef[] = [
           result: '你记下了七八式，回去在床上比划了一夜。第二天江伯看你的眼神有些古怪，却什么也没说。' },
         { label: '走出去，求他教你', sub: '胆魄 +2　寒江剑法熟练 +40', do: [{ type: 'attr', key: '胆魄', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 40 }, { type: 'flag', flag: 'mem3_ask' }],
           result: '江伯沉默了很久，才道：「这剑法，本不该由我来教你。」可从那以后，每个雨夜，他都会带你到江边。' },
-        { label: '回屋彻夜难眠，跟着他的呼吸打坐', sub: '根骨 +2　寒江心法熟练 +80', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'prof', skill: 'xinfa', amount: 80 }],
+        { label: '回屋彻夜难眠，学着他平日的吐纳打坐', sub: '根骨 +2　寒江心法熟练 +80', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'prof', skill: 'xinfa', amount: 80 }],
           result: '不知过了多久，你觉得小腹里升起一缕暖意，顺着脊背缓缓流转。天亮时，你一点也不觉得困。' }
       ] },
     { tag: '名字', title: '你叫什么名字', input: 'name',

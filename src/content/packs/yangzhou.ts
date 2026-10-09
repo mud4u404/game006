@@ -3,19 +3,31 @@ import type { ContentPack, Effect, FightResult, FoeDef, NpcDef, QuestDef, RoomDe
 /** 第一回 · 扬州 */
 
 const BOSS_HERE = { quest: { id: 'main1', is: 1 }, notFlag: 'boss' };
+/** 入夜：街市、码头上的人回家了（RoomDef.nightQuiet，engine/world.ts 的 NIGHT_HOME） */
+const NIGHT_H = { from: 21, to: 5 };
 
 const ROOMS: RoomDef[] = [
-  { id: 'hu', name: '瘦西湖畔', area: '扬州 · 瘦西湖', region: 'yz', t: 0, map: [50, 50],
-    desc: '垂柳如烟，画舫在细雨中缓缓靠岸。茶棚里三个佩刀汉子压低声音说着什么；石桥那头，一个青衫书生撑伞而立，似在等人。',
+  { id: 'hu', name: '瘦西湖畔', area: '扬州 · 瘦西湖', region: 'yz', t: 0, map: [50, 50], nightQuiet: true,
+    desc: [
+      { if: { hour: NIGHT_H }, text: '湖上起了夜雾，茶棚收了，条凳倒扣在桌上。只有湖心的画舫还挂着几盏灯笼，丝竹声断断续续飘过来。石桥上空无一人。' },
+      { text: '垂柳如烟，画舫在细雨中缓缓靠岸。茶棚里三个佩刀汉子压低声音说着什么；石桥那头，一个青衫书生撑伞而立，似在等人。' }
+    ],
     npcs: ['caobang', 'liu'], objs: ['bei'],
     exits: [['北', 'daming'], ['东', 'dukou'], ['南', 'cheng'], ['西', 'jinshan']],
     road: '你折回湖畔，柳丝拂过肩头……' },
   { id: 'daming', name: '大明寺', area: '扬州 · 蜀冈', region: 'yz', t: 30, map: [50, 14],
-    desc: '古寺依冈而建，晨钟初歇，香烟缭绕。平山堂前古木参天，一位白眉老僧正不疾不徐地扫着石阶上的落花。',
+    desc: [
+      { if: { hour: NIGHT_H }, text: '古寺掩了山门，只有大殿里一盏长明灯。蜀冈上风大，古木在黑暗里沙沙地响，禅房那头传来一两声木鱼。' },
+      { text: '古寺依冈而建，晨钟初歇，香烟缭绕。平山堂前古木参天，一位白眉老僧正不疾不徐地扫着石阶上的落花。' }
+    ],
     npcs: ['liaochen', 'zhike'], exits: [['南', 'hu']],
     road: '你沿着湖堤向北，拾级登上蜀冈……' },
-  { id: 'dukou', name: '运河渡口', area: '扬州 · 东关', region: 'yz', t: 15, map: [79, 50],
+  { id: 'dukou', name: '运河渡口', area: '扬州 · 东关', region: 'yz', t: 15, map: [79, 50], nightQuiet: true,
     desc: [
+      // 夜里：脚夫、船夫都回去了，屠千山也回了船上
+      { if: { hour: NIGHT_H, ...BOSS_HERE },
+        text: '夜里的渡口只剩几点灯火。黑篷快船还泊在漕船边上，船头有人抱着刀守夜；码头上的盐包用油布盖着，屠千山回船上歇了。要截他，得等天亮他上岸。' },
+      { if: { hour: NIGHT_H }, text: '夜里的渡口只剩几点灯火，漕船一条挨一条泊着，船篷里有人打鼾。缆桩边的脚夫都散了，只有运河水拍着石阶。' },
       { if: BOSS_HERE, text: '运河上帆樯林立，三条漕船被几艘黑篷快船团团围住。一个虬髯大汉立在码头当中，手按鬼头刀，正吆喝喽啰往岸上搬盐包。' },
       // 码头空出来以后（packs/shishi-yangzhou.ts）：不管它，西舵占了码头；插手的，各有各的样子
       { if: { shi: { id: 'ss_matou', at: ['qi'] } }, text: '码头上又热闹起来，可脚夫们卸货时都不说话，三三两两地往北头瞟：那里多了几个生面孔，抱着胳膊，什么活也不干。' },
@@ -30,7 +42,7 @@ const ROOMS: RoomDef[] = [
     ],
     npcs: [{ id: 'tu', if: BOSS_HERE }, 'chuanfu', 'guanshi'], exits: [['西', 'hu']],
     road: '你穿过几条小巷，河风里带着咸腥的盐味……' },
-  { id: 'cheng', name: '东关街', area: '扬州城', region: 'yz', t: 15, map: [50, 86],
+  { id: 'cheng', name: '东关街', area: '扬州城', region: 'yz', t: 15, map: [50, 86], nightQuiet: true,
     desc: [
       // 夜里（packs/shishi-yangzhou.ts 的更夫、黑影只在夜里出来）
       { if: { hour: { from: 21, to: 5 }, shi: { id: 'ss_zei', at: ['qi', 'bang'] } },

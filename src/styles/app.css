@@ -89,6 +89,10 @@ svg{display:block}
 .mb .tr i{display:block;height:100%;border-radius:3px;background:var(--hp);transition:width .35s}
 .mb.mp .tr{background:var(--info-soft)} .mb.mp .tr i{background:var(--info)}
 .mb.rage .tr{background:var(--accent-soft)} .mb.rage .tr i{background:var(--accent)}
+.pb.low .mb.hp .tr i{animation:lowhp 1s ease-in-out infinite}
+.pb.low .mb.hp .v{color:var(--hp);font-weight:700}
+@keyframes lowhp{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.pb.low .mb.hp .tr i{animation:none}}
 .mb .v{min-width:28px;text-align:right;color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
 
 .tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:6px;font-size:11px;font-weight:700;line-height:1.6;background:var(--chip);color:var(--muted);white-space:nowrap}
@@ -200,7 +204,14 @@ svg{display:block}
 .map-lines line{stroke:var(--line);stroke-width:2;vector-effect:non-scaling-stroke}
 .node{position:absolute;transform:translate(-50%,-50%);min-height:44px;padding:0 14px;border-radius:22px;background:var(--chip);font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .node.here{background:var(--accent);color:var(--on-accent);font-weight:700}
-.node .qdot{width:8px;height:8px;border-radius:50%;background:var(--info)}
+.node .qdot,.mleaf .qdot{width:8px;height:8px;border-radius:50%;background:var(--info)}
+.node .nbadge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--card);color:var(--muted);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.node.here .nbadge{background:var(--on-accent);color:var(--accent)}
+.mhub{display:flex;flex-direction:column;gap:6px}
+.mhub h3{font-size:13px;font-weight:700;color:var(--muted);margin:0}
+.mleaves{display:flex;flex-wrap:wrap;gap:6px}
+.mleaf{min-height:40px;padding:0 12px;border-radius:20px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.mleaf.here{background:var(--accent);color:var(--on-accent);font-weight:700;box-shadow:none}
 .mtabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
 .mtabs::-webkit-scrollbar{display:none}
 .mtabs button{flex:0 0 auto;min-height:36px;padding:0 14px;border-radius:18px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
@@ -391,6 +402,8 @@ svg{display:block}
 .choice b{font-size:15px}
 .choice small{font-size:12px;color:var(--muted)}
 .choice.primary{background:var(--accent);color:var(--on-accent);box-shadow:none;align-items:center}
+.choice.locked{opacity:.55;cursor:not-allowed}
+.choice.locked small{color:var(--warn,var(--muted))}
 .namebox{display:flex;align-items:center;gap:8px;font-family:var(--f-serif);font-size:24px;font-weight:900}
 .namebox input{flex:1;min-width:0;height:52px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;font-size:22px;padding:0 14px}
 .namebox input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}

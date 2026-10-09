@@ -1,5 +1,6 @@
 import { S } from '../../core/state';
-import { REGIONS, questById, room } from '../../content';
+import { REGIONS, jobById, questById, room } from '../../content';
+import { yueText } from '../../engine/shiguang';
 import { knownShi, type ShiRow } from '../../engine/shishi';
 import { minLabel } from '../../core/time';
 import { pathMin, travelMin } from '../../engine/world';
@@ -79,7 +80,7 @@ export function questbookSheetHtml(): string {
   const shi = knownShi();
   const shiOpen = shi.filter(r => !r.ended), shiDone = shi.filter(r => r.ended);
   const head = `<div class="qb-h"><h2>见闻</h2><button class="qb-close" data-act="sheetClose" aria-label="关闭">×</button></div>`;
-  if (!active.length && !done.length && !shi.length) {
+  if (!active.length && !done.length && !shi.length && !S.job) {
     return `<div class="qb-wrap">${head}<p class="qb-empty">江湖寂寥，暂无要事。四处走走，找人打听打听。</p></div>`;
   }
   const renderRow = (r: QuestRow, group: 'active' | 'done') => {
@@ -114,12 +115,27 @@ export function questbookSheetHtml(): string {
     ? shiOpen.map(shiRow).join('')
     : '<p class="qb-empty">还没听说什么。找人打听打听，或者到处走走看看。</p>'}`;
   const activeHtml = `<h3 class="qb-sec${active.length ? '' : ' muted'}">心事 · ${active.length}</h3>${active.map(r => renderRow(r, 'active')).join('')}`;
+  // 手上的差事：限期几日，到哪儿交差（江湖页顶上也挂着「有约」）
+  const job = S.job && jobById(S.job.id);
+  const jy = job && S.yue.find(y => y.id === 'job_' + job.id);
+  const jobHere = !!job && S.loc === job.at;
+  const jobHtml = job && jy ? `<h3 class="qb-sec">差事 · 1</h3>
+      <div class="qb-row active">
+        <div class="qb-info">
+          <b>${job.title}</b>
+          <span class="qb-stage">${job.sect ? job.sect + '的差事' : '营生'}</span>
+          <p>${yueText(S, jy)}</p>
+          <small class="qb-to">误了期${job.sect ? '，扣门派贡献' : '，地位降一级'}。</small>
+        </div>
+        <div class="qb-acts"><button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${job.at}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button></div>
+      </div>` : '';
   const doneN = done.length + shiDone.length;
   const doneHtml = `<h3 class="qb-sec${doneN ? '' : ' muted'}">了结的 · ${doneN}</h3>${shiDone.map(shiRow).join('')}${done.map(r => renderRow(r, 'done')).join('')}`;
 
   return `
     <div class="qb-wrap">
       ${head}
+      ${jobHtml}
       ${shiHtml}
       ${activeHtml}
       ${doneHtml}

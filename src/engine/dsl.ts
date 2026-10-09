@@ -7,7 +7,7 @@ import { emit } from '../core/bus';
 import { advanceMin, dayNo } from '../core/time';
 import { liang } from '../core/util';
 import { itemById, jobById, questById, skillById } from '../content';
-import { SECT_RANKS } from '../content/skills';
+import { REALMS, SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
@@ -111,6 +111,45 @@ export interface Outcome {
 
 export const newOutcome = (): Outcome => ({ vars: {}, breaks: [] });
 
+/** 说得出口的条件：钱、根基、侠义、恶名、武功火候。够不着时把差什么摆出来，玩家知道还有这条路 */
+const MEASURED = new Set(['silver', 'attr', 'xia', 'eming', 'realm']);
+
+/** 一个说得出口的条件差什么；够得着返回空串 */
+function lackOne(c: Cond): string {
+  const out: string[] = [];
+  if (c.silver !== undefined && S.silver < c.silver) out.push(`要 ${c.silver} 文（身上 ${S.silver} 文）`);
+  if (c.attr && houtianOf(S)[c.attr.key] < c.attr.atLeast) out.push(`${c.attr.key}要 ${c.attr.atLeast}（你 ${houtianOf(S)[c.attr.key]}）`);
+  if (c.xia !== undefined && S.xia < c.xia) out.push(`侠义要 ${c.xia}（你 ${S.xia}）`);
+  if (c.eming !== undefined && S.eming < c.eming) out.push(`恶名要 ${c.eming}（你 ${S.eming}）`);
+  if (c.realm?.atLeast !== undefined && (S.skills[c.realm.skill]?.r ?? -1) < c.realm.atLeast)
+    out.push(`「${skillById(c.realm.skill)?.name ?? c.realm.skill}」要练到${REALMS[c.realm.atLeast] ?? ''}`);
+  return out.join('，');
+}
+
+/**
+ * 选项够不着时差什么（docs/huojianghu.md：够不着的路也让玩家看见）。
+ * 只管说得出口的条件（钱、根基、侠义、恶名、火候）；剧情上的条件（旗标、任务、世事、人情……）不成立的，返回 null，照旧藏着，不剧透。
+ * 条件成立返回 null。
+ */
+export function lackOf(c: Cond | undefined): string | null {
+  if (!c || test(c)) return null;
+  const plot: Cond = {}, measured: Cond = {};
+  for (const [k, v] of Object.entries(c)) {
+    if (v === undefined || k === 'any') continue;
+    (MEASURED.has(k) ? measured : plot)[k as keyof Cond] = v as never;
+  }
+  if (!test(plot)) return null;
+  const parts: string[] = [];
+  const own = lackOne(measured);
+  if (own) parts.push(own);
+  if (c.any && !c.any.some(x => test(x))) {
+    // 几条路走得通一条就行：都是说得出口的条件才摆出来
+    if (!c.any.every(x => Object.keys(x).every(k => MEASURED.has(k)))) return null;
+    parts.push(c.any.map(lackOne).filter(Boolean).join('；或者'));
+  }
+  return parts.join('，') || null;
+}
+
 /**
  * 被东家辞退（地位降到零、恶名太盛）：做回游侠，手上的差事作废；
  * 身份连着门派的，一并逐出门墙；身份的信物收回（engine/shenfen.ts 的 sect、badge）
@@ -186,7 +225,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
           if (SHENFEN[S.shenfen.id]?.sect === school) { pushFeed('江湖', `你离了${school}，不再是${SHENFEN[S.shenfen.id].name}。`); S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) }; S.job = null; }
         }
         break;
-      case 'attr': growAttr(S, e.key, e.delta, '江湖经历'); break;
+      case 'attr': growAttr(S, e.key, e.delta, S.chapter === 0 ? '少年往事' : '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;
       case 'gongxian': if (S.sect) addGongxian(S.sect.school, e.delta); break;
       case 'eming': {
@@ -225,6 +264,10 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       }
       // 江湖上的话：这一带你还不知道的世事先说，没有再说闲话传闻（engine/shishi.ts 的 hearsay）
       case 'news': out.vars.news = hearsay() ?? '这几日太平得很，没听说什么。'; break;
+      case 'away':
+        (S.away ||= {})[e.npc] = dayNo(S) * 1440 + S.min + e.hours * 60;
+        for (const [k, t] of Object.entries(S.away)) if (t <= dayNo(S) * 1440 + S.min) delete S.away[k];
+        break;
       case 'yue':
         S.yue = S.yue.filter(y => y.id !== e.id).concat({ id: e.id, npc: e.npc, at: e.at, due: dayNo(S) + e.inDays, text: e.text, miss: e.miss });
         pushFeed('江湖', `定了约：${e.text}`);

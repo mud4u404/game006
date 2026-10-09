@@ -121,6 +121,8 @@ export type Effect =
    * 到了那一日在那里了结它（`yueDone`）；过了那一日还没了结，就是失约：执行 miss，再生一层心魔。
    */
   | { type: 'yue'; id: string; npc: string; at: string; inDays: number; text: string; miss?: Effect[] }
+  /** 这个人暂时走开几个时辰（跳了河、跑了、回去报信）：这段时间哪儿都见不到他（engine/world.ts） */
+  | { type: 'away'; npc: string; hours: number }
   | { type: 'yueDone'; id: string }
   /** 心魔：做了违背信条的事加一层，化解了减一层（还诺、赔罪、了却） */
   | { type: 'xinmo'; delta: number; why?: string }
@@ -166,6 +168,14 @@ export interface RoomDef {
   onEnter?: Branch[];
   /** 在地图上的位置（百分比） */
   map: [number, number];
+  /**
+   * 街市、码头、衙门这类地方：入夜（亥时到寅时）没写作息的人都回家了（engine/world.ts 的 roomNpcs）。
+   * 照旧在的：开店住宿、看病的（service 有「宿」「医」），手上有约在这里等你的，人物上写了 night 的。
+   * 写了它，desc 里就要有一段夜景（带 hour 条件），CI 查。
+   */
+  nightQuiet?: true;
+  /** 客船、渡船：上船付的船钱（文）。钱不够的，替船家撑篙抵船钱，路上多耗一个时辰（engine/world.ts 的 payFare） */
+  fare?: number;
 }
 
 /** 基础服务：医馆（看伤）、客栈（住店）、兵器铺、当铺、杂货铺。tests/content.test.ts「基础设施」按它查各地齐不齐 */
@@ -185,6 +195,8 @@ export interface NpcDef {
   at?: NpcAt | NpcAt[];
   /** 条件成立时改用另一个名字，例如通报姓名之后 */
   altName?: { if: Cond; name: string };
+  /** 夜里也在（住在这儿的、守夜的）：入夜回家的地点（RoomDef.nightQuiet）不把他请走 */
+  night?: true;
   /** 头像上的单字；物品用 icon */
   ini?: string;
   icon?: 'stele' | 'go' | 'boat' | 'door';
@@ -288,6 +300,7 @@ export interface FoeDef {
   firstTell?: number;
   tag: string;
   moves: string[];
+  /** 出招时的花样，自成一句（「一脚踢翻了粥桶」「刀光一闪」）：战报写成「某某一招『招名』，花样，直取你左肩！」，前面不拼兵器名 */
   flourish: string[];
   tells: TellDef[];
   asides: string[];
