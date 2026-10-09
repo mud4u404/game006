@@ -367,7 +367,9 @@ function tellYou(r: RumorInst, text: string): void {
       if (rp <= stepRank(d, st.at) && (st.seen === undefined || stepRank(d, st.seen) < rp)) st.seen = r.ph;
     }
   }
-  pushFeed('传闻', text);
+  // 当事人说的「我」话，记进见闻簿时改回旁人的说法，不然读起来像玩家自己的话
+  const own = !isNews(r) && Object.values(shiById(r.ev)?.steps[r.ph]?.self ?? {}).includes(text);
+  pushFeed('传闻', own ? rumorText(r, 0) ?? text : text);
 }
 
 /** 关系管说多少：素不相识、有过节的只说传开了的（耸动的）；点头之交起不说机密；相谈甚欢以上全说 */
