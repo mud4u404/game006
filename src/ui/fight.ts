@@ -22,6 +22,7 @@ import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, 
 import { woundNote } from '../engine/shang';
 import { IC } from './icons';
 import { mb } from './widgets';
+import { growthHTML } from './growth';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, tooSoon } from './shell';
 
 const ROUND_MS = 1500;
@@ -889,12 +890,6 @@ function rewardChips(effects: Effect[] | undefined, hpEnd = 0): string[] {
   return chips;
 }
 
-const GROWTH = `<div class="r-sub">变强之道</div><div class="news">
-  <div><span class="tag accent">历练</span><span>输了也有收获，这一战已记进历练。闭关时，历练会化成功夫。</span></div>
-  <div><span class="tag accent">知彼</span><span>打不过的人，先去打听他的底细：常在他身边的人，往往知道他的软肋。</span></div>
-  <div><span class="tag accent">帮手</span><span>一个人打不过，就去找肯帮你的人。你在江湖上做过的事，别人都记着。</span></div>
-  <div><span class="tag accent">问道</span><span>大明寺的了尘大师见多识广，不妨去请教。</span></div></div>`;
-
 /** 结算页上的「援手」：谁来帮了、打掉对手几成 */
 function alliesHTML(c: Fight): string {
   const rows = c.prep.filter(p => p.ally).map((p, i) => {
@@ -930,7 +925,7 @@ function showResult(): void {
   save();
   openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${pk?.title ?? (r.title || '')}</h2></div>
     ${r.story === '@compose' && !pk?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${alliesHTML(c)}${hurtLine}${statline}
-    ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? GROWTH : ''}
+    ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? growthHTML() : ''}
     <button class="btn" data-act="fResult">${pk && r.button === '定他的下场' ? '了结此事' : r.button || '继续'}</button>`);
   swapped();
 }

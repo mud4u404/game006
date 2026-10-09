@@ -9,6 +9,7 @@ import { setNowMs } from '../src/core/time';
 import { run } from '../src/engine/dsl';
 import { retreatBlock } from '../src/engine/shiguang';
 import { verbPoor, verbPrice } from '../src/engine/world';
+import { growthHTML } from '../src/ui/growth';
 import { viewJianghu } from '../src/ui/views/jianghu';
 import { viewWugong } from '../src/ui/views/wugong';
 
@@ -67,5 +68,32 @@ describe('买卖按钮标价', () => {
     S.silver = 100;
     html = viewJianghu();
     expect(html).toMatch(/data-act="do:买刀"[^>]*disabled[^>]*>买刀<small>囊中不足，要四百文<\/small>/);
+  });
+});
+
+describe('变强之道：按人、按师门写', () => {
+  it('少林弟子输了：回山门问寂照长老，不再叫去找了尘', () => {
+    S.sect = { school: '少林', rank: '记名' };
+    const html = growthHTML();
+    expect(html).toContain('寂照长老');
+    expect(html).not.toContain('了尘');
+  });
+
+  it('没有师承的：没见过了尘就推荐他；见过了就换成复盘', () => {
+    delete S.sect;
+    delete S.rel.liaochen;
+    expect(growthHTML()).toContain('了尘大师');
+    S.rel.liaochen = '相识';
+    expect(growthHTML()).not.toContain('了尘');
+    expect(growthHTML()).toContain('复盘');
+  });
+
+  it('没写名字的门派：回师门问师长；带着伤的多一条养伤；文字里没有阿拉伯数字', () => {
+    S.sect = { school: '铁掌帮', rank: '记名' };
+    S.wounds = { hand: 0, foot: 1, inner: 0 };
+    const html = growthHTML();
+    expect(html).toContain('回铁掌帮，向师长请教');
+    expect(html).toContain('养伤');
+    expect(html.replace(/<[^>]+>/g, '')).not.toMatch(/\d/);
   });
 });
