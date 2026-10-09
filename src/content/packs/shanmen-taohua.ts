@@ -4,7 +4,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FoeDef, JobDef, NewsDef, NpcDef
  * 桃花岛的江南道据点（Issue #133）：瓜洲江滩上的听潮小筑，岛上来的弟子曲蘅在此看病、卜卦。
  * 规矩见 docs/menpai.md 第七节，立身之道见 docs/lizu.md 第二节（奇门遁甲、医卜星相、孤傲——岛主青眼才得真传），
  * 写法见 docs/content-guide.md「拜师」「师门差事」，示范见 baishi.ts、shimen-chaishi.ts。
- * id 一律以 smth_ 开头。序章的渡口小屋、江伯坟一个字没碰；寒江旧案的谜，一个字没提。
+ * id 一律以 smth_ 开头。序章的渡口小屋、老柳下的树根（旧存档是江伯坟）一个字没碰；寒江旧案的谜，一个字没提。
  *
  * 人物与动机：
  * - 曲蘅：岛上来的弟子，奉命下山历练医卜。他医术是真高，脾气也是真孤——给人看病分文不取，

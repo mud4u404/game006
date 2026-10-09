@@ -50,7 +50,7 @@ export interface LifeParams {
   jiyuanP: number;
   /** 每档每在线小时挣多少两银子 */
   income: number[];
-  /** 开篇剧情里的机缘：功力加几年（江伯的遗物、了尘的指点） */
+  /** 开篇剧情里的机缘：功力加几年（江伯留下的残页、了尘的指点） */
   openingGongli: number;
   /** 药：治一级伤要多少两（乘 1.5^档）；钱够三份才买 */
   medicine: number;

@@ -13,8 +13,9 @@ import type { Cond, ContentPack, NpcLife } from '../types';
  * 江伯和寒江旧案一个字不碰。
  */
 
-/** 序章走完了：江伯已经下葬 */
+/** 序章走完了（旧存档：江伯已经下葬；新开局：旗标 kp_xin，江伯生死未卜） */
 const AFTER: Cond = { quest: { id: 'prologue', atLeast: 3 } };
+const NEW: Cond = { quest: { id: 'prologue', atLeast: 3 }, flag: 'kp_xin' };
 /** 汛上的事还在争，或者一汛白过 */
 const XUN_ZHENG: Cond = { shi: { id: 'ssgz_xun', at: ['zheng', 'yuwan'] } };
 const XUN_HAO: Cond = { shi: { id: 'ssgz_xun', at: ['dagou', 'huajie', 'baoxin'] } };
@@ -28,6 +29,8 @@ const LIFE: Record<string, NpcLife> = {
     voice: {
       lead: ['把药碾的轮子转了半圈', '从柜台后头直起腰来', '拿手指捻了捻碾盘上的末子'],
       idle: [
+        { if: NEW,
+          text: '老江不来以后，柜上那一味药再没人来抓。药屉我照旧一日擦一遍，擦到那一格，手总要停一停。' },
         { if: AFTER,
           text: '老江走了以后，柜上那一味药再没人来抓。药屉我照旧一日擦一遍，擦到那一格，手总要停一停。' },
         { if: XUN_ZHENG,
