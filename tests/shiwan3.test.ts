@@ -8,7 +8,7 @@ import { S, setState, skipToYangzhou } from '../src/core/state';
 import { setNowMs } from '../src/core/time';
 import { run } from '../src/engine/dsl';
 import { retreatBlock } from '../src/engine/shiguang';
-import { verbPoor, verbPrice } from '../src/engine/world';
+import { act, verbPoor, verbPrice } from '../src/engine/world';
 import { growthHTML } from '../src/ui/growth';
 import { pickFresh } from '../src/ui/fresh';
 import { SKILLS } from '../src/content';
@@ -128,5 +128,30 @@ describe('战报选句：一场里不连着重复', () => {
         expect(a).toContain('{part}');
       }
     }
+  });
+});
+
+describe('误事不再一次就被开除', () => {
+  it('新进的镖师头一回丢镖只记一过，再丢一回才被辞退；交差之后记过清掉；赔罪不收钱', () => {
+    S.shenfen = { id: 'biaoshi', standing: 1 } as typeof S.shenfen;
+    run([{ type: 'job', id: 'bj_gz' }]);
+    run([{ type: 'jobFail', id: 'bj_gz' }]);
+    expect(S.shenfen.id).toBe('biaoshi');
+    expect(S.shenfen.standing).toBe(1);
+    expect(S.flags.jobWarn).toBe(true);
+    run([{ type: 'job', id: 'bj_gz' }]);
+    run([{ type: 'jobDone', id: 'bj_gz' }]);
+    expect(S.flags.jobWarn).toBeUndefined();
+    run([{ type: 'job', id: 'bj_zj' }]);
+    run([{ type: 'jobFail', id: 'bj_zj' }]);
+    run([{ type: 'job', id: 'bj_zj' }]);
+    run([{ type: 'jobFail', id: 'bj_zj' }]);
+    expect(S.shenfen.id).toBe('youxia');
+    S.flags.bj_joined = true;
+    S.silver = 0;
+    const r = act('bj_zhao', '赔罪');
+    expect(r.text).toContain('旧账不提');
+    expect(S.shenfen.id).toBe('biaoshi');
+    expect(S.silver).toBe(0);
   });
 });

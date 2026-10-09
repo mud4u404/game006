@@ -34,7 +34,7 @@ npm run menpai     # 门派体检：每个门派的打法合不合规
 npm run retune     # 武功数值调进品级区间（只改数，不改字）
 npm run balance    # 对战模拟：各门派两两对打的胜率矩阵
 npm run build      # 打包，产物在 dist/
-npm run smoke      # 冒烟测试：无头浏览器从标题一路玩到首领战（需要能跑浏览器的环境）
+npm run smoke      # 冒烟测试：无头浏览器从标题一路玩到首领战。**协作者不要在本机跑**：要装无头浏览器、一跑几分钟，本机环境不对就会卡住（10-09 Qoder 卡在「路遇开打」八分钟，CodeBuddy 没有浏览器，Trae 也卡过）；CI 每个 PR 都会替你跑，红了会告诉你
 npm run luandian   # 乱点测试：无头浏览器随机点四百下，不报错、不卡死、不白屏
 npm run xianguang  # 闲逛的密度：机器玩家在扬州随便逛三天，第二天起每十步碰上几件新鲜事
 ```
@@ -125,7 +125,7 @@ docs/                  设计文档
 
 ## 七、完成标准
 
-- [ ] `npm run check` 通过，`npm run build` 通过（能跑浏览器的环境，再跑一下 `npm run smoke`）
+- [ ] `npm run check` 通过，`npm run build` 通过（冒烟测试、乱点测试不用你跑，CI 代跑；提交说明里写「smoke：CI 跑」即可）
 - [ ] 新内容在游戏里点得到：新人物出现在某个地点，新地点连上了出口，新任务有触发的入口
 - [ ] 每个可点的动作都有回应：分支列表的最后一项不带 `if`
 - [ ] 文字符合 [docs/wenfeng.md](docs/wenfeng.md) 的十二条和门派声口（摘要在 [docs/content-guide.md](docs/content-guide.md) 第一节）
