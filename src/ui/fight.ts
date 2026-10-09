@@ -23,6 +23,7 @@ import { woundNote } from '../engine/shang';
 import { IC } from './icons';
 import { mb } from './widgets';
 import { growthHTML } from './growth';
+import { pickFresh } from './fresh';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, tooSoon } from './shell';
 
 const ROUND_MS = 1500;
@@ -58,6 +59,8 @@ const NOTE: Record<RespKey, string> = { block: '得手反震', dodge: '得手露
 interface PromptUI { t: TellDef; dur: number; end: number; rem?: number; untimed?: boolean }
 interface Fight {
   f: FoeDef; d: Duel; kit: FightKit;
+  /** 本场用过的战报句子（ui/fresh.ts） */
+  used: Set<string>;
   /** 生效的备战：知彼、帮手（engine/zhaoshi.ts 的 activePrep） */
   prep: PrepDef[];
   /** 帮手各自打掉了多少 */
@@ -98,7 +101,7 @@ export function startFight(fid: string, lead?: string): void {
   brace(f);
   const d = new Duel(heroSpec(S, kit, f), foeSpec(f, prep), { rng: Math.random, allies: alliesOf(prep) });
   C = {
-    f, d, kit, prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
+    f, d, kit, used: new Set(), prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
     chargeT: 0, ui: null, openPart: null, busy: false, paused: false, lock: 0, big: [], T: {}, odds,
     learn: 0.5 ** foeRepeats(S, f.id)
   };
@@ -183,6 +186,9 @@ function bubble(type: string, html: string, dmg?: number, kind?: 'out' | 'in' | 
   log.scrollTop = log.scrollHeight;
 }
 
+/** 本场没用过的句子里挑一句 */
+const fresh = <T>(id: string, pool: readonly T[]): T => pickFresh(C!.used, id, pool);
+
 /** 出手那门外功练到了的招式里挑一招；空手又没有拳脚功夫时，随手一拳 */
 function myMove(part: string): { name: string; text: string } {
   const o = C!.kit.outer;
@@ -192,8 +198,9 @@ function myMove(part: string): { name: string; text: string } {
   const all = (o?.moves ?? []).filter(m => (m.realm ?? 0) <= r);
   const ms = all.some(m => !perf.has(m.name)) ? all.filter(m => !perf.has(m.name)) : all;
   if (!ms.length) return { name: '随手一拳', text: `你挥拳打向${C!.f.name}${part}。` };
-  const m = pick(ms);
-  return { name: m.name, text: fmt(m.text, { foe: C!.f.name, part }) };
+  const m = fresh('mv', ms);
+  const text = m.alts?.length ? fresh(`mv:${m.name}`, [m.text, ...m.alts]) : m.text;
+  return { name: m.name, text: fmt(text, { foe: C!.f.name, part }) };
 }
 
 /** 对手中招的部位记在伤势图上 */
@@ -234,17 +241,17 @@ function narrate(evs: Ev[]): void {
         if (e.who === 'me') {
           const mv = myMove(p);
           const t = `你使一招${M(mv.name)}，${mv.text}`;
-          if (e.res === 'dodge') bubble('me', t + pick(FOE_DODGE)(f));
-          else if (e.res === 'parry') bubble('me', t + pick(FOE_PARRY)(f));
-          else { bubble('me', t + pick(gentle(f) ? FOE_HIT_SPAR : FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
+          if (e.res === 'dodge') bubble('me', t + fresh('fd', FOE_DODGE)(f));
+          else if (e.res === 'parry') bubble('me', t + fresh('fp', FOE_PARRY)(f));
+          else { bubble('me', t + fresh(gentle(f) ? 'fhs' : 'fh', gentle(f) ? FOE_HIT_SPAR : FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
         } else {
           // 花样是自成一句的（「一脚踢翻了粥桶」「刀光一闪」），前面不拼兵器名：拼了就成「尖刀一脚踹翻了箩筐」
-          let t = `${f.name}一招${MO(pick(f.moves))}，${pick(f.flourish)}，直取你${p}！`;
-          if (e.res === 'dodge') bubble('foe', t + pick(ME_DODGE));
-          else if (e.res === 'parry') bubble('foe', t + pick(ME_PARRY)(weaponWord(S)));
+          let t = `${f.name}一招${MO(fresh('foeMove', f.moves))}，${fresh('foeFlourish', f.flourish)}，直取你${p}！`;
+          if (e.res === 'dodge') bubble('foe', t + fresh('md', ME_DODGE));
+          else if (e.res === 'parry') bubble('foe', t + fresh('mp', ME_PARRY)(weaponWord(S)));
           else {
             if (e.charging) { cancelCharge(); t += '你正凝神运功，躲闪不及——'; }
-            bubble('foe', t + pick(gentle(f) ? ME_HIT_SPAR : ME_HIT)(p), e.dmg, 'in');
+            bubble('foe', t + fresh(gentle(f) ? 'mhs' : 'mh', gentle(f) ? ME_HIT_SPAR : ME_HIT)(p), e.dmg, 'in');
             hurtFx(e.dmg);
           }
         }
