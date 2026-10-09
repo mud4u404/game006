@@ -334,11 +334,11 @@ const FOES: FoeDef[] = [
 const QUESTS: QuestDef[] = [
   { id: 'smtz_shishi', name: '铁掌帮 · 收一份平安钱', stages: [
     // 孟娘子那里收了钱、替垫、硬逼，都推到第 1 步：回分舵复命
-    { title: '去山塘街绸缎铺收月底的平安钱', to: 'sz_shantang', who: 'smtz_mengniangzi', hint: '找山塘街的孟娘子收下钱，或替她垫上，或硬逼她交。' },
-    { title: '回分舵复命', to: 'smtz_fenzhang', who: 'smtz_leizhenshan', hint: '回山塘街西头的铁掌分舵，向雷震山复命。',
+    { title: '去山塘街绸缎铺收月底的平安钱', to: 'sz_shantang', who: 'smtz_mengniangzi', hint: '雷震山递来一张帖子：山塘街绸缎铺的孟娘子，月底的平安钱欠着，要有人去收。' },
+    { title: '回分舵复命', to: 'smtz_fenzhang', who: 'smtz_leizhenshan', hint: '钱已收在手里，该回铁掌分舵，给雷震山一个交代。',
       need: [
-        { if: { any: [{ flag: 'smtz_shou_done' }, { flag: 'smtz_dian_done' }, { flag: 'smtz_qiang_done' }] }, text: '从孟娘子那里把平安钱收到手' },
-        { if: { noSect: true }, text: '身上没有别家师门' }
+        { if: { any: [{ flag: 'smtz_shou_done' }, { flag: 'smtz_dian_done' }, { flag: 'smtz_qiang_done' }] }, text: '平安钱还没收上来' },
+        { if: { noSect: true }, text: '了断别家的名分' }
       ] },
     { title: '铁掌帮 · 收一份平安钱 · 完' }
   ] }

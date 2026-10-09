@@ -224,10 +224,10 @@ const NPCS: NpcDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'side_yanhao', name: '支线 · 汪家身契', stages: [
-    { title: '打听云娘的身契', to: 'yz_yanhao', who: 'yh_bizhang', hint: '到汪家盐号问毕掌柜，云娘的身契作价几何。' },
+    { title: '打听云娘的身契', to: 'yz_yanhao', who: 'yh_bizhang', hint: '云娘就在后院舂盐，身契锁在柜上的契匣里。盐号的毕掌柜管着柜上的事，不妨去问问他。' },
     // 推进的路有四条：账簿上的把柄找毕掌柜、二十两赎人、拿老脚夫的旧事压汪老爷、入夜撬契匣，没有共同的门槛
-    { title: '查出汪家的软处', to: 'yz_yanhao', who: 'yh_bizhang', hint: '细看柜上的账簿捏住把柄，或凑足二十两赎人。' },
-    { title: '身契有了着落', to: 'yz_yanhao', who: 'yh_yunniang', hint: '云娘白天在盐号后院舂盐，把身契亲手交给她。',
+    { title: '想法子取回云娘的身契', to: 'yz_yanhao', who: 'yh_bizhang', hint: '云娘的身契锁在契匣里，汪家断不肯白白放人。要取回来，总得想个法子。' },
+    { title: '身契有了着落', to: 'yz_yanhao', who: 'yh_yunniang', hint: '身契已在怀里。云娘还在后院舂盐，不知她盼这张纸盼了多久。',
       need: [{ if: { item: { id: 'yh_shenqi', atLeast: 1 } }, text: '身契带在身上' }] },
     { title: '身契交到云娘手里' }
   ] }

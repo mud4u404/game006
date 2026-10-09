@@ -150,9 +150,9 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'prologue', name: '序章 · 瓜洲夜雨', stages: [
-    { title: '和江伯说说话', to: 'gz_home', who: 'jiangbo', hint: '江伯靠在床头咳嗽，过去陪他说说话。' },
-    { title: '去镇上回春堂抓药', to: 'gz_town', who: 'huichun', hint: '到瓜洲镇回春堂，报老江的方子抓药。' },
-    { title: '把药带回渡口小屋', to: 'gz_home', hint: '揣着药赶回渡口小屋，江伯还在等。' },
+    { title: '去看看江伯', to: 'gz_home', who: 'jiangbo', hint: '江伯这些日子咳得厉害，人也瘦了一圈。今天天阴得很低。' },
+    { title: '去镇上回春堂抓药', to: 'gz_town', who: 'huichun', hint: '江伯要抓两副药，说回春堂的掌柜认得他。看这天色，夜里要下大雨，得快去快回。' },
+    { title: '把药带回渡口小屋', to: 'gz_home', hint: '药抓好了，天色已晚，掌柜那几句话还在耳边。得赶回渡口小屋去。' },
     { title: '序章 · 完' }
   ] }
 ];
