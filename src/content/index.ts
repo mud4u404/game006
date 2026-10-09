@@ -2,7 +2,8 @@
  * 内容总表：自动收录 src/content/packs/ 下所有内容包，并做三件合并工作：
  * 1. 出口写了回程方位的，给对面地点补上回来的出口；
  * 2. 人物写了 at 的，放进对应地点；
- * 3. 内容包写了 roomLife 的，给对应地点挂上活气（RoomDef.life，engine/shijie.ts）。
+ * 3. 内容包写了 roomLife 的，给对应地点挂上活气（RoomDef.life，engine/shijie.ts）；
+ *    写了 npcLife 的，给对应人物挂上活气（NpcDef.life，engine/chuanwen.ts）。
  * 新增内容只需要在 packs/ 下新建文件，这里不用改。
  */
 import type { ContentPack, EncounterDef, EyeDef, FactionDef, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, ShiDef, SkillDef, StoryDef } from './types';
@@ -69,6 +70,14 @@ export function mergePacks(list: ContentPack[]): Registry {
   for (const p of list) {
     for (const [id, life] of Object.entries(p.roomLife ?? {})) {
       const target = byId.get(id);
+      if (target && !target.life) target.life = life;
+    }
+  }
+  // 人的活气：给别的内容包里的人补上（人物自己写了 life 的，以人物自己的为准）
+  const npcById = new Map(reg.NPCS.map(n => [n.id, n]));
+  for (const p of list) {
+    for (const [id, life] of Object.entries(p.npcLife ?? {})) {
+      const target = npcById.get(id);
       if (target && !target.life) target.life = life;
     }
   }

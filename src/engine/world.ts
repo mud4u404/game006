@@ -7,7 +7,8 @@ import { advanceMin, dayNo, shichen } from '../core/time';
 import { attrEffects } from './gengu';
 import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
-import { dating, panwen, seeShi } from './shishi';
+import { seeShi } from './shishi';
+import { ask, panwen } from './chuanwen';
 import { shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
 import { passBlock } from './shiguang';
@@ -208,10 +209,10 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
     // 赠礼、典当：从行囊里挑一件（engine/daoju.ts）。送了人物喜欢的，关系升一级
     case '赠礼': return { text: giveGift(n, who, arg), out };
     case '典当': return { text: pawn(who, arg), out };
-    // 打听：这一带的世事和传闻（engine/shishi.ts）
-    case '打听': return { text: dating(id, who), out };
-    // 盘问：捕快亮腰牌，谁都得答话，不论今天问没问过（人犯另写「盘问」的分支，问得出破绽）
-    case '盘问': return { text: panwen(who), out };
+    // 打听：问这个人知道什么（engine/chuanwen.ts）
+    case '打听': return { text: ask(id, { who }).text, out };
+    // 盘问：捕快亮腰牌，谁都得答话，不论今天问没问过、交情深浅（人犯另写「盘问」的分支，问得出破绽）
+    case '盘问': return { text: panwen(id, who), out };
     case '请教': return { text: `${who}摇摇头：「我没什么可教你的。」`, out };
     case '切磋': return { text: `${who}连连摆手：「不敢不敢。」`, out };
     case '偷窃': return { text: `你的手刚伸出去，${who}就警觉地看了过来。你只好装作整理衣襟。`, out };

@@ -14,7 +14,8 @@ import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
 import { houtianOf } from './ren';
 import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
-import { hearsay, learnShi, moveShi } from './shishi';
+import { learnShi, moveShi } from './shishi';
+import { hearsay, inner } from './chuanwen';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
 import { markLight } from './shang';
@@ -270,8 +271,8 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
         break;
       }
-      // 江湖上的话：这一带你还不知道的世事先说，没有再说闲话传闻（engine/shishi.ts 的 hearsay）
-      case 'news': out.vars.news = hearsay() ?? '这几日太平得很，没听说什么。'; break;
+      // 江湖上的话：这一带传开的、你还不知道的、最耸动的一条（engine/chuanwen.ts 的 hearsay），不再随手抽
+      case 'news': out.vars.news = inner(hearsay() ?? '这几日太平得很，没听说什么。'); break;
       case 'away':
         (S.away ||= {})[e.npc] = dayNo(S) * 1440 + S.min + e.hours * 60;
         for (const [k, t] of Object.entries(S.away)) if (t <= dayNo(S) * 1440 + S.min) delete S.away[k];

@@ -48,6 +48,11 @@ describe('世事写得对', () => {
       ids.add(d.id);
       if (!REGIONS[d.region]) errs.push(`${w}：地区「${d.region}」不存在`);
       if (!d.steps[d.first]) errs.push(`${w}：起头的「${d.first}」这一步没写`);
+      if (d.place) {
+        const r = ROOMS.find(x => x.id === d.place);
+        if (!r) errs.push(`${w}：place 指向不存在的地点「${d.place}」`);
+        else if (r.region !== d.region) errs.push(`${w}：place「${d.place}」不在这件事的地区里`);
+      }
       // 不插手能走到的：从起头顺着 next 走
       const auto = new Set<string>();
       for (let k: string | undefined = d.first; k && d.steps[k] && !auto.has(k); k = d.steps[k].next?.to) auto.add(k);
@@ -63,6 +68,10 @@ describe('世事写得对', () => {
           else if (r.region !== d.region) errs.push(`${ws}：where「${st.where}」不在这件事的地区里`);
         }
         if (st.news && st.news.length > NEWS_MAX_LEN) errs.push(`${ws}：传开的话 ${st.news.length} 字，不超过 ${NEWS_MAX_LEN} 字`);
+        // 走了样的说法、当事人的说法（engine/chuanwen.ts）：一样不超过传闻的字数；当事人要真有其人
+        for (const t of [st.news2, st.news3, ...Object.values(st.self ?? {})]) if (t && t.length > NEWS_MAX_LEN) errs.push(`${ws}：「${t.slice(0, 12)}……」${t.length} 字，不超过 ${NEWS_MAX_LEN} 字`);
+        if ((st.news2 || st.news3) && !st.news) errs.push(`${ws}：写了走样的说法，要先写原样的 news`);
+        for (const id of Object.keys(st.self ?? {})) if (!npc(id)) errs.push(`${ws}：self 里的「${id}」不是真有的人`);
         if (!auto.has(k) && !by.has(k)) errs.push(`${ws}：走不到。不在 next 的链上，也没有哪个选择用 { type: 'shi', id: '${d.id}', to: '${k}' } 推到这一步`);
         // 自己走到的那几步，玩家得有办法知道：传开的话，或者在哪儿看得见
         if (auto.has(k) && k !== d.first && !st.news && !st.where) errs.push(`${ws}：世界自己走到这一步，要写 news（传开的话）或 where（在哪儿看得见）`);

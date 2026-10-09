@@ -5,13 +5,14 @@
  * - 静修：先养伤，再打坐长功力、参悟化历练（engine/lilian.ts）。心魔每一层，成效打八折；重了会走火。
  * - 约：人物和你定约。静修碰到约期，就在约期那天一早出关；过了约期还没了结，就是失约，生一层心魔。
  */
-import { tickShi } from './shishi';
+import { tickShiFull } from './shishi';
+import { dibao, type DibaoSrc } from './chuanwen';
 import { S, pushFeed, type GameState, type Yue, type Zhu } from '../core/state';
 import { cn } from '../core/util';
 import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
-import { NEWS, jobById, npc, room, skillById } from '../content';
+import { jobById, npc, room, skillById } from '../content';
 import type { Effect, SkillId } from '../content/types';
-import { run, test } from './dsl';
+import { run } from './dsl';
 import { gainProf } from './growth';
 import { jingxiuPlan, retreatPlan } from './lilian';
 import { healLight, markLight } from './shang';
@@ -120,6 +121,8 @@ export interface RestReport {
   gongli: number;
   zouhuo: number;
   news: string[];
+  /** 邸报每一条的来处（tests/huo.test.ts 的 K9 核对用，界面不读） */
+  newsSrc?: DibaoSrc[];
   missed: string[];
   /** 选的住处；住客栈的，钱不够那几夜露宿（lusuDays） */
   lodging: Zhu;
@@ -152,21 +155,16 @@ export function jingxiu(s: GameState, days: number, rng: () => number = worldRng
   s.lilian -= used;
   const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
   syncBody(s);
+  const fromDay = dayNo(s);
   advanceDays(s, days);
   s.min = 7 * 60 + 10;
   s.hp = s.hpMax; s.mp = s.mpMax;
-  // 静修的日子里，江湖自己往前走：世界的慢变逐日补上（engine/shijie.ts），
-  // 世事到日子的往下走（engine/shishi.ts）：这一带的事传到耳朵里的先写，再补几句闲话传闻
+  // 静修的日子里，江湖自己往前走：世界的慢变、传闻人传人逐日补上（engine/shijie.ts、engine/chuanwen.ts），
+  // 世事到日子的往下走（engine/shishi.ts）。邸报只写真事：传到耳朵里的、这一带传开的、熟人托人带的（engine/chuanwen.ts 的 dibao）
   tickWorld(s);
-  const heard = tickShi();
-  const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
-  const news: string[] = [...heard];
-  const more: string[] = [];
-  for (let i = 0; i < Math.min(3, Math.ceil(days / 5)) - heard.length && pool.length; i++) more.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
-  more.slice().reverse().forEach(n => pushFeed('传闻', n));
-  news.push(...more);
+  const db = dibao(s, fromDay, tickShiFull());
   const missed = checkYue(s);
-  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed, lodging: zhu, cost, lusuDays };
+  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news: db.map(x => x.text), newsSrc: db.map(x => x.src), missed, lodging: zhu, cost, lusuDays };
 }
 
 /** 这个约是榜上揭的差事（JobDef.bang），或者交给一件物件的：误了期不算失信于人 */

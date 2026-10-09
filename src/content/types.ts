@@ -152,7 +152,10 @@ export type Effect =
   /** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；写了 zones 只治这几处（跌打酒治手足、内伤药治内息） */
   | { type: 'cure'; levels?: number; zones?: ('hand' | 'foot' | 'inner')[] }
   | { type: 'feedReset' }
-  /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
+  /**
+   * 江湖上的话：这一带最耸动、你还不知道的一条传闻（engine/chuanwen.ts 的 hearsay），不再随机抽。
+   * 写进见闻，并可在文字里用 {news} 引用；没得说时 {news} 是一句「太平得很」
+   */
   | { type: 'news' }
   /**
    * 定约：npc 和你约好 inDays 日后在 at 见（docs/foundation.md 第三节第三条）。下线静修碰到约期会提前出关。
@@ -299,6 +302,26 @@ export interface NpcDef {
   /** 动作列表的顺序。带 if 的动作只在条件成立时出现，例如真相揭开后才有的「求情」，免得按钮先剧透 */
   verbs: (Verb | { verb: Verb; if: Cond })[];
   actions: Partial<Record<Verb, Branch[]>>;
+  /** 人的活气（engine/chuanwen.ts）：有事的人才写。别的内容包里的人，用 ContentPack.npcLife 补，不必改别人的文件 */
+  life?: NpcLife;
+}
+
+/**
+ * 人的活气（docs/huo-shijie.md 3.3）：一城挑二三十个「有事的人」写，开店的、物件、背景人不写。
+ * 传闻（engine/chuanwen.ts）按它传：同处一地的人互相说，嘴碎的说得多；帮里的人夜里互通；说书人说给满座；叫化子往分舵报。
+ */
+export interface NpcLife {
+  /** 行当：说书、叫化、船夫、更夫、捕快、掌柜、小二……打听、传话、传闻池的 who 都按它找人 */
+  trade: string;
+  /** 势力（FactionDef id）：帮里的人夜里互通，牵涉本帮的事帮内都知道 */
+  faction?: string;
+  /** 嘴碎（零到一）：多爱传话。说书一，捕头零点三 */
+  talk: number;
+  /**
+   * 声口。lead：开口前的样子，两三句，引擎接成「{名}{lead}，道：「……」」，所以 lead 里不写「道」；
+   * idle：没新鲜事时说他自己的日子，按世界状态挑第一条成立的（和分支一样，最后一条不带条件），text 只写说的话
+   */
+  voice: { lead: string[]; idle: Branch[] };
 }
 
 /**
@@ -731,13 +754,26 @@ export interface ShiDef {
   steps: Record<string, ShiStep>;
   /** 了结以后过几天重新起头（年年有的事：漕粮北上、庙会……）；不写的只有一回 */
   again?: number;
+  /** 事情出在哪一处（地点 id）：步骤没写 where 的，目击者按这里找（engine/chuanwen.ts） */
+  place?: string;
+  /** 牵涉的人、势力（人物 id 或势力 id）：当事人一开始就知道，本帮的人一开始就知道 */
+  subj?: string[];
 }
 
 export interface ShiStep {
   /** 见闻簿上的一句：这件事眼下怎样（只写玩家看得见、听得到的） */
   now: string;
-  /** 走到这一步时传开的话：人在这个地区就听得到，打听也问得到 */
+  /** 走到这一步时传开的话：人在这个地区就听得到，打听也问得到。也是这一步传闻的原样 */
   news?: string;
+  /** 传了几手走了样的说法、面目全非的说法（docs/huo-shijie.md 3.4）；不写的照用上一档 */
+  news2?: string;
+  news3?: string;
+  /** 多耸动（零到一）：越耸动传得越快、记得越久。不写：有下一步的零点五，结局零点六五 */
+  juice?: number;
+  /** 这一步额外牵涉的人、势力 */
+  subj?: string[];
+  /** 当事人自己的说法（用「我」）：人物 id → 话。问到他本人时用这一句 */
+  self?: Record<string, string>;
   /** 事情在哪儿：走进这个地点，就知道了这一步 */
   where?: string;
   /** 没人插手时，过几天自己走到哪一步（半天写 0.5）；不写的是结局 */
@@ -822,4 +858,6 @@ export interface ContentPack {
   factions?: FactionDef[];
   /** 给别的内容包里的地点补上活气：地点 id → RoomLife（合并时挂到 RoomDef.life 上） */
   roomLife?: Record<string, RoomLife>;
+  /** 给别的内容包里的人补上活气：人物 id → NpcLife（合并时挂到 NpcDef.life 上） */
+  npcLife?: Record<string, NpcLife>;
 }
