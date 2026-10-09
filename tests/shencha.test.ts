@@ -235,6 +235,8 @@ describe('剧情选项写倾向，不写数（docs/paiban.md A9、A10、H16）',
     expect(leanText('侠义 +2　恶名 −2')).toBe('侠义之举　洗些恶名');
     expect(leanText('银两 −400 文，侠义 +5')).toBe('花四百文　侠义之举');
     expect(leanText('悟性 +2　寒江剑法熟练 +80')).toBe('悟性见长');
+    // 根基五项（AttrKey）都认得，不漏一项
+    for (const k of ['体魄', '根骨', '身法', '悟性', '胆魄']) expect(leanText(`${k} +3`), k).toBe(`${k}见长`);
     expect(leanText('恶名 +3　汪家告官')).toBe('会落恶名　汪家告官');
     expect(leanText('历练 +20')).toBe('');
     expect(gainTags('侠义 +2　恶名 −2')).toEqual(['侠义 +2', '恶名 −2']);

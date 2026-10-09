@@ -5,7 +5,7 @@
  */
 import { cn } from '../core/util';
 
-const TOKEN = /(侠义|恶名|银两|历练|悟性|根骨|胆魄|身法|心性|[^\s　，,、]{1,8}熟练)\s*([+＋−-])\s*(\d+)\s*(文)?/g;
+const TOKEN = /(侠义|恶名|银两|历练|体魄|悟性|根骨|胆魄|身法|[^\s　，,、]{1,8}熟练)\s*([+＋−-])\s*(\d+)\s*(文)?/g;
 
 /** 一项数值写成倾向；不值得说的（历练、熟练、得赏钱）返回空 */
 function lean(k: string, up: boolean, n: number): string {
