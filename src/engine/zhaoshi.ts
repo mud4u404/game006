@@ -73,7 +73,7 @@ export function foeSpec(f: FoeDef, prep: PrepDef[]): FoeSpec {
   const atk = mul('atk'), big = mul('big');
   return {
     person: foePerson(f), name: f.name, tells: f.tells.map(t => t.dom), firstTell: f.firstTell,
-    spar: f.spar, script: f.script, phase2: !!f.phase2, weak: f.weak,
+    spar: f.spar, rounds: f.rounds, script: f.script, phase2: !!f.phase2, weak: f.weak,
     atkMul: atk !== 1 ? atk : undefined, bigMul: big !== 1 ? big : undefined
   };
 }

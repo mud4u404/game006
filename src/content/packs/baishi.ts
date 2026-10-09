@@ -93,9 +93,11 @@ const LSM_JOIN: Effect[] = [
 const JW_JOIN: Effect[] = [
   { type: 'sect', school: '军伍', rank: '记名' },
   { type: 'flag', flag: 'bs2_jw_in' },
+  // 安家银进了营才发（审查 C08、D07：原来募兵画个押就白拿三两）
+  { type: 'silver', delta: 300 },
   { type: 'rel', npc: 'bs2_han', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '边军的老什长，收你做了记名兵' },
   { type: 'feed', tag: '江湖', text: '你投了边军，做了韩什长手下的记名兵。军令如山：调你去哪儿就得去哪儿，逃了算逃兵。门规森严，在营里只练军中的功夫和江湖散学。' },
-  { type: 'toast', text: '投身军伍 · 记名弟子' }
+  { type: 'toast', text: '投身军伍 · 记名弟子 · 安家银三百文' }
 ];
 
 const GB: Cond['sect'] = { school: '丐帮' };
@@ -521,7 +523,7 @@ const FOES: FoeDef[] = [
   },
   {
     id: 'bs2_lsm_kao', name: '秦教头', title: '六扇门考校', ini: '秦', tone: 'blue', weapon: '铁尺', ws: '尺', tag: '考校',
-    nature: '中正', reach: '短', rank: 0.7, build: 'even', spar: true, firstTell: 3,
+    nature: '中正', reach: '短', rank: 0.7, build: 'even', spar: true, rounds: 30, firstTell: 3,
     moves: ['锁腕', '点肩井', '别肘', '扫腿'],
     flourish: ['铁尺一晃，点向你的手腕', '瘸腿一拖，人却抢到了你身侧', '反手一尺，敲在你肘弯上', '尺尖贴着你的衣襟滑过去'],
     tells: [
@@ -546,7 +548,7 @@ const FOES: FoeDef[] = [
   },
   {
     id: 'bs2_jw_kao', name: '韩什长', title: '边军考校', ini: '韩', tone: 'red', weapon: '白蜡杆', ws: '杆', tag: '考校',
-    nature: '刚', reach: '长', rank: 0.7, build: 'inner', spar: true, firstTell: 3,
+    nature: '刚', reach: '长', rank: 0.7, build: 'inner', spar: true, rounds: 30, firstTell: 3,
     moves: ['拦', '拿', '扎', '杆打一大片'],
     flourish: ['白蜡杆一抖，杆头直点你的胸口', '杆尾一挑，扫向你的脚踝', '一杆砸下来，砸得尘土飞扬', '脚下像钉了钉子，纹丝不动'],
     tells: [
@@ -578,7 +580,7 @@ const ITEMS: ItemDef[] = [
   { id: 'bs2_yaopai', name: '六扇门腰牌', kind: '信物', desc: '乌木腰牌，正面刻「扬州府」三字，背面刻一个「捕」字，挂着一截褪了色的红绳。' },
   { id: 'bs2_tiechi', name: '铁尺', kind: '装备', price: 300, desc: '一尺八寸的熟铁尺，尺身方棱，尺尖磨圆了。六扇门拿人点穴的家伙。', equip: { slot: '兵器', weapon: '奇门', reach: '短' } },
   { id: 'bs2_qiang', name: '白蜡杆枪', kind: '装备', price: 450, desc: '白蜡杆的枪身，韧而不折，枪头是边军的制式。', equip: { slot: '兵器', weapon: '枪', reach: '长' } },
-  { id: 'bs2_pudao', name: '朴刀', kind: '装备', price: 400, desc: '武馆刀枪架上的朴刀，刀身宽厚，刀口开过，磨得雪亮。', equip: { slot: '兵器', weapon: '刀', reach: '短' } }
+  { id: 'bs2_pudao', name: '朴刀', kind: '装备', price: 600, desc: '武馆刀枪架上的朴刀，刀身宽厚，刀口开过，磨得雪亮。', equip: { slot: '兵器', weapon: '刀', reach: '短' } }
 ];
 
 /* ---------- 任务：丐帮的入门考验 ---------- */

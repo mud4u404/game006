@@ -194,7 +194,7 @@ const NPCS: NpcDef[] = [
 const KAO: FoeDef = {
   id: 'smem_kao', name: '听潮师太', title: '峨眉考校', ini: '听', tone: 'jade',
   weapon: '一柄拂尘', ws: '拂尘', tag: '考校',
-  nature: '柔', reach: '长', rank: 0.5, build: 'inner', spar: true, firstTell: 3,
+  nature: '柔', reach: '长', rank: 0.5, build: 'inner', spar: true, rounds: 30, firstTell: 3,
   moves: ['拂尘扫穴', '垂丝钓月', '白云出岫', '回风拂柳'],
   flourish: ['尘丝在半空一抖，像撒开一把雪', '拂尘缠着你的兵器绕了半圈', '她退了半步，尘丝却进了一寸', '眼睛始终闭着，耳朵朝着你'],
   tells: [

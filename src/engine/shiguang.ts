@@ -34,8 +34,12 @@ export const realHours = (s: GameState): number => Math.max(0, (nowMs() - s.real
 /** 铁律挡住时的话 */
 export const TIELV_TEXT = '江湖上的日子，已经走在现实前头了，这一夜过不去。先下线歇歇，回来再说。';
 
-/** 铁律：现在还能往前拨几个江湖日 */
-export const allowance = (s: GameState): number => Math.max(0, Math.floor(realHours(s) + SHIGUANG.slack - (dayNo(s) - s.real.startDay)));
+/**
+ * 铁律：现在还能往前拨几个江湖日。封顶在余裕加一次离开最多算的日子：
+ * 不然离开三天回来，下线静修只算十六日，剩下的几十日点闭关全拿回来，一次离开的上限形同虚设（审查 G06）
+ */
+export const allowance = (s: GameState): number =>
+  Math.max(0, Math.min(SHIGUANG.slack + SHIGUANG.awayCap, Math.floor(realHours(s) + SHIGUANG.slack - (dayNo(s) - s.real.startDay))));
 /** 离开了几个现实小时 */
 export const awayHours = (s: GameState): number => Math.max(0, (nowMs() - s.real.seen) / H);
 

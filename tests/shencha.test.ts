@@ -151,3 +151,36 @@ describe('负责人 10-09 定的', () => {
     expect(S.flags.lc_tiaoxi).toBe(true);
   });
 });
+
+describe('维护者按原则定的（docs/paiban.md）', () => {
+  it('F02 金疮药一场最多两包', async () => {
+    const { Duel, JCY_MAX } = await import('../src/engine/duel');
+    const { fightKit, foeSpec, heroSpec } = await import('../src/engine/zhaoshi');
+    const { foeById } = await import('../src/content');
+    const f = foeById('xs_hezei')!;
+    const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, []), { rng: () => 0.5 });
+    for (let i = 0; i < 4; i++) { d.hp = 1; d.jcy(); }
+    expect(d.jcyN).toBe(JCY_MAX);
+    expect(JCY_MAX).toBe(2);
+  });
+  it('F05 说了「接三十招」的考校，撑满三十合就算过', async () => {
+    const { FOES } = await import('../src/content');
+    const kao = FOES.filter(f => f.rounds === 30).map(f => f.id);
+    expect(kao.length).toBeGreaterThanOrEqual(7);
+    const { Duel } = await import('../src/engine/duel');
+    const { fightKit, foeSpec, heroSpec } = await import('../src/engine/zhaoshi');
+    const f = FOES.find(x => x.rounds === 30)!;
+    let seed = 7;
+    const rng = (): number => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, []), { rng });
+    // 撑得住：每合把气血补满，只看招数
+    for (let i = 0; i < 400 && !d.over; i++) { d.hp = d.hpMax; d.tick(); if (d.prompt) d.respond(null); }
+    expect(d.res).toBe('win');
+    expect(d.round).toBeLessThanOrEqual(30);
+  });
+  it('G06 铁律的余裕封顶：离开多久，回来也只能往前拨余裕加一次离开的上限', async () => {
+    const { allowance, SHIGUANG } = await import('../src/engine/shiguang');
+    setNowMs(() => S.real.start + 500 * 3.6e6);
+    expect(allowance(S)).toBe(SHIGUANG.slack + SHIGUANG.awayCap);
+  });
+});

@@ -300,6 +300,8 @@ export interface FoeDef {
   weak?: number;
   /** 切磋：打到三成气血即止 */
   spar?: boolean;
+  /** 考校、试镖：「接得住三十招就算过」——撑满这么多合不倒，也算你赢（审查 F05：原来说三十招，规则却是把对方打到三成） */
+  rounds?: number;
   /** 剧本战：不会战死、不能逃跑认输。rescue：打到六成（或你撑不住）时由人救下；cup：你撑不住时有人出手 */
   script?: 'cup' | 'rescue';
   /** 第几合出第一次重招 */
