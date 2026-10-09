@@ -381,7 +381,7 @@ const FOES: FoeDef[] = [KAO, JIU];
 
 const QUESTS: QuestDef[] = [
   { id: 'smqz_bu', name: '全真 · 踏罡步斗', stages: [
-    { title: '跟抱朴踏稳七星步', to: 'smqz_guan' },
+    { title: '跟抱朴踏稳七星步', to: 'smqz_guan', hint: '找抱朴领踏罡步斗' },
     { title: '全真 · 踏罡步斗 · 完' }
   ] }
 ];
