@@ -10,5 +10,6 @@ export const WORK_LABELS: string[];
 export const HOLD_LABEL: string;
 export function deps(body: string | null | undefined): number[];
 export function branchIssue(name: string): number | null;
-export function pickWork<T extends GhItem>(items: T[], branches?: string[]): T | null;
+export function pickWork<T extends GhItem>(items: T[], branches?: string[], me?: string): T | null;
 export function describe(w: GhItem): string;
+export const ROUTE_PREFIX: string;
