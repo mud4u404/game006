@@ -7,6 +7,8 @@ import { S, setState, skipToYangzhou } from '../src/core/state';
 import { run, test as cond } from '../src/engine/dsl';
 import { act, payFare, verbsOf } from '../src/engine/world';
 import { npc } from '../src/content';
+import { advanceDays } from '../src/core/time';
+import { SHIGUANG } from '../src/engine/shiguang';
 
 beforeEach(() => setState(skipToYangzhou()));
 
@@ -85,16 +87,14 @@ describe('医馆看伤', () => {
     expect(act('jc_yz_langzhong', '看伤').text).toContain('没伤');
     expect(S.silver).toBe(1000);
   });
-  it('瓜洲钟郎中：老江的孩子头一回不收钱，全治；第二回照价收', () => {
+  it('瓜洲钟郎中：老江的孩子头一回不收钱，也只治一级；第二回照价收（审查 C09）', () => {
     S.wounds = { hand: 2, foot: 1, inner: 0 };
     S.silver = 500;
     act('jc_gz_zhong', '看伤');
-    expect(S.wounds).toEqual({ hand: 0, foot: 0, inner: 0 });
+    expect(S.wounds).toEqual({ hand: 1, foot: 1, inner: 0 });
     expect(S.silver).toBe(500);
-    S.wounds.foot = 1;
     act('jc_gz_zhong', '看伤');
     expect(S.silver).toBe(380);
-    expect(S.wounds.foot).toBe(0);
   });
 });
 
@@ -127,6 +127,13 @@ describe('客栈住店', () => {
     expect(act('jc_yz_ruanniang', '住店').text).toContain('少一文也不成');
     expect(S.silver).toBe(99);
     expect([S.day, S.min]).toEqual([day, min + 10]);
+  });
+  it('住店也受铁律管：江湖跑在现实前头时，钱不收、夜不过（试玩第二轮 G04）', () => {
+    S.silver = 300;
+    advanceDays(S, SHIGUANG.slack);
+    const [day, min] = [S.day, S.min];
+    expect(act('jc_yz_ruanniang', '住店').text).toContain('走在现实前头');
+    expect([S.silver, S.day, S.min]).toEqual([300, day, min]);
   });
   it('镇江鲍掌柜：在大市口顶过兵爷的，头一宿不要钱', () => {
     S.flags.zj_chutou = true;

@@ -11,13 +11,24 @@ export function buzz(pattern: number | number[]): void {
 }
 
 const CN = '零一二三四五六七八九';
-/** 0–99 的中文数字：12 → 十二，30 → 三十 */
+/** 中文数字：12 → 十二，30 → 三十，100 → 一百，105 → 一百零五，2500 → 两千五百（一万以上照写阿拉伯数字） */
 export function cn(n: number): string {
   n = Math.floor(n);
+  if (n < 0) return '负' + cn(-n);
   if (n < 10) return CN[n];
   if (n < 20) return '十' + (n % 10 ? CN[n % 10] : '');
   if (n < 100) return CN[Math.floor(n / 10)] + '十' + (n % 10 ? CN[n % 10] : '');
-  return String(n);
+  if (n >= 10000) return String(n);
+  const units: [number, string][] = [[1000, '千'], [100, '百'], [10, '十']];
+  let out = '', rest = n, zero = false;
+  for (const [u, name] of units) {
+    const d = Math.floor(rest / u);
+    rest %= u;
+    if (d) { out += (zero ? '零' : '') + (d === 2 && u >= 100 ? '两' : CN[d]) + name; zero = false; }
+    else if (out) zero = true;
+  }
+  if (rest) out += (zero ? '零' : '') + CN[rest];
+  return out;
 }
 /** 计数用的中文数字：2 写作「两」 */
 export const liang = (n: number): string => (n === 2 ? '两' : cn(n));

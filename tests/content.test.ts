@@ -236,6 +236,18 @@ describe('人物与物品', () => {
     report(errs);
   });
 
+  it('写了带条件的作息（at），地点的 npcs 里就不许再写死这个人：写死的会把条件盖掉（审查 B01：云娘同时在两处）', () => {
+    const errs: string[] = [];
+    const raw = import.meta.glob<{ default: ContentPack }>('../src/content/packs/*.ts', { eager: true });
+    const rooms = Object.values(raw).flatMap(m => m.default.rooms ?? []);
+    for (const n of NPCS) for (const at of [n.at ?? []].flat()) {
+      if (!at.if) continue;
+      const r = rooms.find(x => x.id === at.room);
+      if (r && [...r.npcs, ...(r.objs ?? [])].includes(n.id)) errs.push(`地点 ${r.id} 的 npcs 写死了 ${n.id}，可它的 at 带条件：删掉地点里的那一条`);
+    }
+    report(errs);
+  });
+
   it('没有放到任何地点的人物会被指出', () => {
     const placed = new Set(ROOMS.flatMap(r => [...r.npcs, ...(r.objs || [])].map(x => (typeof x === 'string' ? x : x.id))));
     const orphans = NPCS.filter(n => !placed.has(n.id)).map(n => n.id);
@@ -687,6 +699,34 @@ describe('后果看得见', () => {
     const unread = [...set].filter(f => !read.has(f));
     const errs = unread.filter(f => !DEBT.includes(f)).map(f => `旗标「${f}」：写了却没有任何地方读。给它接一条后续（路遇、传闻、人物的话），玩家才看得到这个选择的后果`);
     for (const f of DEBT) if (!unread.includes(f)) errs.push(`旗标「${f}」：已经有地方读了（或者不再写了），请从本测试的欠账单里删掉`);
+    report(errs);
+  });
+
+  /** 每个对手都要有一处开打，不然写了也白写（审查 D02：断云虎没处开打，走药材交不了）。欠账同上 */
+  const NO_FIGHT_DEBT = ['xsb_xunren', 'xsb_xiongfan', 'xsb_jiaofei'];
+  it('每个对手都有地方开打', () => {
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
+    const fought = new Set([...all.matchAll(/"type":"fight","foe":"([^"]+)"/g)].map(m => m[1]));
+    const idle = FOES.map(f => f.id).filter(id => !fought.has(id));
+    const errs = idle.filter(id => !NO_FIGHT_DEBT.includes(id)).map(id => `对手「${id}」：没有任何地方用 { type: 'fight' } 开打`);
+    for (const id of NO_FIGHT_DEBT) if (!idle.includes(id)) errs.push(`对手「${id}」：已经有地方开打了，请从本测试的欠账单里删掉`);
+    report(errs);
+  });
+
+  /**
+   * 反过来：条件里要的旗标，一定要有地方写。没人写的旗标，那条路永远走不到（审查 D01：书办四张榜交不了差）。
+   * 引擎、开局写的旗标列在 ENGINE；故意藏着、等补完再挂出来的，旗标名以 _pending_open 结尾。
+   */
+  const ENGINE = ['skipped'];
+  /** 欠账：书办四张榜、走官银、走布匹的亮名号和绕小路，都还没有入口（审查 B02、D01～D03），已交 zcode 补。补完从这里删掉 */
+  const NO_WRITER_DEBT = ['xsb_xr_found', 'xsb_xw_found', 'xsb_jf_ally', 'zb_tax_name', 'zb_tax_route', 'zb_yin_sent', 'zb_yin_open', 'zb_yin_refuse'];
+  it('条件里要的旗标都有地方写', () => {
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
+    const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));
+    const need = new Set([...all.matchAll(/(?<!"type":"flag",)"flag":"([^"]+)"/g)].map(m => m[1]));
+    const missing = [...need].filter(f => !set.has(f) && !ENGINE.includes(f) && !f.endsWith('_pending_open'));
+    const errs = missing.filter(f => !NO_WRITER_DEBT.includes(f)).map(f => `旗标「${f}」：条件里要它，却没有任何地方写它，这条路永远走不到`);
+    for (const f of NO_WRITER_DEBT) if (!missing.includes(f)) errs.push(`旗标「${f}」：已经有地方写了，请从本测试的欠账单里删掉`);
     report(errs);
   });
 });

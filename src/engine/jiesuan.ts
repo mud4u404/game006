@@ -60,6 +60,19 @@ export function settle(f: FoeDef, res: DuelRes, prep: PrepDef[], pick?: AfterOpt
   const extra = res === 'win' ? prep.flatMap(p => p.win ?? []) : [];
   if (pick?.do) extra.push(...pick.do);
   if (!r.silent) advanceMin(S, 15);
-  const effects = [...(r.do ?? []), ...extra];
+  const taught = firstLesson(f, res);
+  const effects = [...(r.do ?? []), ...extra].filter(e => e.type !== 'prof' || taught);
   return { r, ll, out: run(effects), effects };
+}
+
+/**
+ * 切磋结算里写的熟练（高人收剑后点拨你几句），同一个结局只给第一回：再比一场，他也没有新的可说了。
+ * 不然反复切磋就能绕开闭关和铁律刷熟练（试玩第二轮 G03）。实战里长的熟练另按 engine/lilian.ts 的 foeRepeats 递减
+ */
+function firstLesson(f: FoeDef, res: DuelRes): boolean {
+  if (!f.spar) return true;
+  const k = `taught_${f.id}_${res}`;
+  if (S.flags[k]) return false;
+  S.flags[k] = true;
+  return true;
 }

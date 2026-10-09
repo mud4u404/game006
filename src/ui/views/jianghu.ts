@@ -1,7 +1,7 @@
 import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
 import { foeById, npc, questById, room } from '../../content';
-import { curQuest, hopMin, npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
+import { curQuest, hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
@@ -9,16 +9,19 @@ import { kanren } from '../../engine/zhaoshi';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef } from '../../content/types';
 import { fmt } from '../../core/util';
-import { XIEJIAO, canWait, nextYue, yueText } from '../../engine/shiguang';
+import { XIEJIAO, canWait, nextYue, nightBlock, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
 import { test, textVars } from '../../engine/dsl';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
 
 export function viewJianghu(): string {
-  const r = room(S.loc);
   const all = roomNpcs(S.loc).concat(roomObjs(S.loc));
-  if (!S.sel || !all.includes(S.sel)) { S.sel = all[0] || null; S.reply = null; }
+  const exits = openExits(S.loc);
+  if (!S.sel || !all.includes(S.sel)) S.sel = all[0] || null;
+  // 刚说完话人就走了（世事推着他离场、跳了河、回去报信）：话留着，不然玩家只看到动态里一行小字（审查 C03）
+  const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id)
+    ? `<section class="card here-card"><div class="detail"><div class="d-h"><b>${npcName(S.reply.id)}</b><small>${npc(S.reply.id)!.obj ? '' : '说完就走了'}</small></div><div class="reply">${S.reply.text}</div></div></section>` : '';
   // 横幅只挂记挂着、还没了结的心事（docs/huojianghu.md 第三节第四条）
   const cq = curQuest();
   const q = cq && (S.quests[S.track] ?? 0) < (questById(S.track)?.stages.length ?? 0) - 1 ? cq : null;
@@ -46,20 +49,23 @@ export function viewJianghu(): string {
   ${questBar}
   ${yueBar}
   <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
-  ${all.length ? `<section class="card here">
+  ${gone}
+  ${all.length ? `<section class="card here-card">
     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
     <div class="avas">${all.map(avaBtn).join('')}</div>
     ${S.sel ? detail(S.sel) : ''}
   </section>` : ''}
-  <section class="go"><h2>去处</h2><div class="exits">${r.exits.map(([d, id]) => exitBtn(d, id, r.exits.length === 1, q?.to)).join('')}</div></section>
+  <section class="go"><h2>去处</h2><div class="exits">${exits.map(([d, id]) => exitBtn(d, id, exits.length === 1, q?.to)).join('')}</div></section>
   ${xiejiaoHTML()}`;
 }
 
 /** 歇脚：等到天亮、晌午、傍晚、入夜（人有作息，有的人、有的事只在夜里）。序章里不歇 */
 function xiejiaoHTML(): string {
   if (S.chapter === 0) return '';
+  // 有的钟点要跨过半夜才等得到：过不了夜时，灰着的按钮底下写明为什么
+  const why = XIEJIAO.some(([h]) => !canWait(S, h)) ? nightBlock(S) : null;
   return `<section class="go"><h2>歇脚</h2><div class="acts four">${XIEJIAO.map(([h, l]) =>
-    `<button class="act" data-act="xiejiao:${h}"${canWait(S, h) ? '' : ' disabled'}>到${l}</button>`).join('')}</div></section>`;
+    `<button class="act" data-act="xiejiao:${h}"${canWait(S, h) ? '' : ' disabled'}>到${l}</button>`).join('')}</div>${why ? `<p class="muted">${why}</p>` : ''}</section>`;
 }
 
 function avaBtn(id: string): string {
@@ -81,7 +87,8 @@ function detail(id: string): string {
   const vs = verbsOf(n), order = [...vs.filter(v => v === '动手' || v === '切磋'), ...vs.filter(v => v !== '动手' && v !== '切磋')];
   const fid = order.map(v => (n.actions[v] ?? []).find(b => test(b.if))?.do?.find(e => e.type === 'fight')).find(Boolean);
   const foe = fid && fid.type === 'fight' ? foeById(fid.foe) : undefined;
-  const whom = foe && foe.name !== npcName(id) ? foe.name : '他';
+  // 对手就是眼前这人时一律写「他」：不认识的「青衫书生」不能先漏出「柳寒舟」（审查 G41）
+  const whom = foe && foe.id !== id && foe.name !== npcName(id) ? foe.name : '他';
   const look = foe ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kanren(S, foe).say}</b></p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
     <div class="acts">${verbsOf(n).map(v => `<button class="act ${VERB_CLS[v] || ''}" data-act="do:${v}">${v}</button>`).join('')}</div>${reply}</div>`;

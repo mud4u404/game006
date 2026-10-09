@@ -3,7 +3,7 @@ import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { cn, cleanName, fmt, liang } from '../src/core/util';
 import { dayName, minLabel, shichen, shichenKe } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
-import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
+import { act, curQuest, enter, hopMin, openExits, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
 import type { NpcDef } from '../src/content/types';
 import { activePrep, alliesOf, fightKit, foeSpec, heroSpec, personOf } from '../src/engine/zhaoshi';
 import { Duel, RULES, odds } from '../src/engine/duel';
@@ -20,7 +20,8 @@ import { gainProf, learnSkill } from '../src/engine/growth';
 import { SKILLS } from '../src/content';
 import type { SkillDef } from '../src/content/types';
 import { cheng, huohou } from '../src/engine/formulas';
-import { FOE_WINDOW, RETREAT, fightLilian, foeLilian, gongliCeiling, jingxiuPlan, retreatPlan } from '../src/engine/lilian';
+import { FOE_WINDOW, RETREAT, fightLilian, foeLilian, foeRepeats, gongliCeiling, jingxiuPlan, retreatPlan } from '../src/engine/lilian';
+import { settle } from '../src/engine/jiesuan';
 import { FOES } from '../src/content';
 import { ENC_GAP, ENC_REPEAT_DAYS, eligible, encounterChance, markEncounter, rollEncounter } from '../src/engine/encounter';
 import { ENCOUNTERS } from '../src/content';
@@ -70,6 +71,11 @@ describe('世界', () => {
     expect(pathTo('dukou', 'gz_pier')).toEqual(['gz_kechuan', 'gz_pier']);
     expect(pathMin('dukou', 'gz_pier')).toBe(120);
     expect(pathTo('gz_pier', 'zj_xijin')).toEqual(['gz_duchuan', 'zj_xijin']);
+  });
+  it('序章里不开船：江伯在床上等药，坐船去扬州、镇江的路不通（审查 A2）', () => {
+    setState(newGame());
+    expect(openExits('gz_pier').map(x => x[1])).not.toContain('gz_kechuan');
+    expect(pathTo('gz_pier', 'zj_xijin')).toEqual([]);
   });
   it('屠千山只在接到任务后出现在渡口', () => {
     expect(roomNpcs('dukou')).not.toContain('tu');
@@ -220,6 +226,14 @@ describe('条件与效果', () => {
     expect(S.quests.prologue).toBe(2);
     expect(S.weather).toBe('大雨');
     expect(roomNpcs('gz_home')).not.toContain('jiangbo');
+  });
+  it('过了酉时再抓药，不会凭空丢一天（试玩第二轮 A3）', () => {
+    act('jiangbo', '交谈');
+    S.min = 20 * 60;
+    const day = S.day;
+    act('huichun', '抓药');
+    expect(S.day).toBe(day);
+    expect(S.quests.prologue).toBe(2);
   });
 });
 
@@ -584,6 +598,20 @@ describe('从零练武：成长从江湖上来', () => {
     S.day += FOE_WINDOW;
     expect(fightLilian(S, foe, 'win')).toBe(213);
     expect(fightLilian(S, { id: 'liu', rank: 0.3 }, 'flee')).toBe(0);
+  });
+
+  it('切磋结算里的熟练只给第一回；实战里长的熟练按七日内打过几场递减（试玩第二轮 G03）', () => {
+    const liu = FOES.find(f => f.id === 'liu')!;
+    const hj = (): string => JSON.stringify(S.skills.hanjiang);
+    const h0 = hj();
+    settle(liu, 'win', []);
+    const h1 = hj();
+    expect(h1).not.toBe(h0);
+    settle(liu, 'win', []);
+    expect(hj()).toBe(h1);
+    expect(foeRepeats(S, 'liu')).toBe(2);
+    S.day += FOE_WINDOW;
+    expect(foeRepeats(S, 'liu')).toBe(0);
   });
 
   it('一件事了结时给历练，只给一次', () => {

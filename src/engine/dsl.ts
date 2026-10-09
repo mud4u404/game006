@@ -244,6 +244,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'time':
         if (e.add) advanceMin(S, e.add);
         if (e.set !== undefined) { let d = e.set - S.min; if (d < 0) d += 1440; advanceMin(S, d); }
+        if (e.until !== undefined && e.until > S.min) advanceMin(S, e.until - S.min);
         break;
       case 'weather': S.weather = e.value; break;
       case 'heal':

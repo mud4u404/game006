@@ -92,10 +92,12 @@ const NPCS: NpcDef[] = [
             { type: 'rel', npc: 'liu', value: '知交', from: ['点头之交', '相谈甚欢'], note: '守了三日之约，他把剑招拆给你看' },
             { type: 'prof', skill: 'hanjiang', amount: 120 }, { type: 'lilian', amount: 80 },
             { type: 'feed', tag: '江湖', text: '你守了柳寒舟的三日之约。他把赢你的那几剑，一招招拆给你看。' }] },
-        { if: { flag: 'liu_saw_hanjiang' },
+        // 问剑只问一回（审查 A29）
+        { if: { flag: 'liu_saw_hanjiang', notFlag: 'liu_wenjian' },
           text: '柳寒舟收了伞，看了你许久：「兄台渡口那一剑……是跟谁学的？」不等你回答，他又笑了笑：「当我没问。改日请兄台喝酒。」',
-          do: [{ type: 'flag', flag: 'liuName' }] },
-        { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_liu' }, text: '「渡口那天，我在。」柳寒舟只说了这一句。' },
+          do: [{ type: 'flag', flag: 'liuName' }, { type: 'flag', flag: 'liu_wenjian' }] },
+        { if: { flag: 'liu_wenjian' }, text: '柳寒舟倚着伞看湖：「那顿酒还欠着。等哪天湖上的雨停了，柳某做东。」' },
+        { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_liu' }, text: '「兄台哪天去渡口，柳某哪天到。」柳寒舟只说了这一句。' },
         { if: { quest: { id: 'main1', is: 1 }, rel: { npc: 'liu', is: ['相谈甚欢', '知交'] } },
           text: '柳寒舟听你说起渡口的事，伞尖在青石上轻轻一点：「屠千山？柳某正想去看看热闹。」他抬眼看你，笑意却没到眼底：「兄台动手那天，算我一个。」',
           do: [{ type: 'flag', flag: 'tu_liu' }, { type: 'feed', tag: '主线', text: '柳寒舟说，你去渡口那天，他也去。' }, { type: 'toast', text: '柳寒舟愿去渡口掠阵' }] },
@@ -152,9 +154,14 @@ const NPCS: NpcDef[] = [
         // 渡口一剑怎么赢，不止闭门苦练一条路：知彼、帮手、练手（docs/story.md 第一回）
         { if: { quest: { id: 'main1', is: 1 }, any: [{ flag: 'tu_scar' }, { flag: 'tu_allies' }, { flag: 'tu_liu' }] },
           text: '了尘大师听你说了这几日的事，点了点头：「施主这几日没有白走。江湖上的本事，原本就不全在剑上。」他想了想，又道：「屠千山刀法刚猛，莫与他硬拼。他刀势一老，便是你出手的时候。」' },
-        { if: { quest: { id: 'main1', is: 1 }, realm: { skill: 'hanjiang', below: 2 } },
+        // 在渡口输过一场，被船夫背上山来：了尘先说这一场（审查 A19）
+        { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_bai', notFlag: 'lc_bai' },
+          text: '了尘大师替你换了药，慢慢道：「船夫背你上山时，你嘴里还念着『刀势一老』。」他把药碗搁下，「刀接不住，便别接。一个人打不过，便去找肯帮你的人。」',
+          do: [{ type: 'flag', flag: 'lc_bai' }] },
+        // 寒江剑法练到炉火纯青，单打才有五六成；融会贯通时只有四成，话不能说早了（审查 A19）
+        { if: { quest: { id: 'main1', is: 1 }, realm: { skill: 'hanjiang', below: 3 } },
           text: '了尘大师伸出两指，在你腕上轻轻一搭，摇了摇头：「施主脚下虚浮，剑上也没有火候。屠千山那口鬼头刀，一刀能劈开青石，你此刻单枪匹马去，是送命。」他拾起扫帚，慢慢道：「江湖上的本事，不全在剑上。渡口的船夫天天看他卸货，漕帮的人恨他入骨，湖边那位撑伞的书生，剑也不在你之下。看不透他，便去问看得透的人；一个人打不过，便去找肯帮你的人。」' },
-        { if: { quest: { id: 'main1', is: 1 } }, text: '了尘大师打量你几眼，点了点头：「剑上有火候了。屠千山刀法刚猛，莫与他硬拼。他刀势一老，便是你出手的时候。」' },
+        { if: { quest: { id: 'main1', is: 1 } }, text: '了尘大师打量你几眼，点了点头：「剑上有火候了，可以去试一试。屠千山刀法刚猛，莫与他硬拼。他刀势一老，便是你出手的时候。」' },
         { text: '「阿弥陀佛。施主仗义出手，漕帮兄弟会记住的。至于湖畔那块石碑……日后再说吧。」' }
       ],
       请教: [
@@ -173,7 +180,10 @@ const NPCS: NpcDef[] = [
     look: '身高八尺，虬髯如戟，鬼头刀背上九个铁环叮当作响。左臂缠着旧伤的布条。',
     verbs: ['交谈', '观察', '动手'],
     actions: {
-      交谈: [{ text: '屠千山斜眼打量你：「哪来的雏儿？滚远点，别耽误老子卸货！」' }],
+      交谈: [
+        { if: { flag: 'tu_bai' }, text: '屠千山咧开嘴笑了：「又是你？上回是船夫背你走的——这回谁背？」' },
+        { text: '屠千山斜眼打量你：「哪来的雏儿？滚远点，别耽误老子卸货！」' }
+      ],
       观察: [
         { if: { notFlag: 'tu_saw_arm' },
           text: '你在缆桩后看了半晌。他抡刀吆喝喽啰时，左臂总比右臂慢上半拍，布条底下隐隐渗着血。这伤不是新的，却一直没好利索。',
@@ -188,16 +198,17 @@ const NPCS: NpcDef[] = [
     actions: { 交谈: [
       { if: { shi: { id: 'ss_matou', at: ['duizhi', 'huobing'] } }, text: '「两舵要打起来了，客官离码头远些。」船夫把烟锅往鞋底一磕，「刀子不长眼。」' },
       { if: { shi: { id: 'ss_matou', at: ['xiduo'] } }, text: '「过一回船二十文，焦五定的。」船夫往北头啐了一口，「屠千山劫船，焦五收钱，换汤不换药。」' },
-      { if: { shi: { id: 'ss_matou', at: ['dongduo'] } }, text: '「东舵的旗子又插回来了！」船夫咧嘴直笑，「客官坐船，分文不取。」' },
+      { if: { shi: { id: 'ss_matou', at: ['dongduo'] } }, text: '「东舵的旗子又插回来了！」船夫咧嘴直笑，「客官坐船，我给您留个靠窗的铺。」' },
       { if: { shi: { id: 'ss_matou', at: ['tiaoting'] } }, text: '「白天南头，夜里北头，倒也相安无事。」船夫慢悠悠地抽着烟。' },
       { if: { shi: { id: 'ss_matou', at: ['guanfu'] } }, text: '「税棚一搭，船家倒要先养活官老爷。」船夫闷头抽烟，不再说话。' },
-      { if: { flag: 'boss' }, text: '「托您的福，码头又能开船了！客官要坐船，不收钱！」' },
-      { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_scar' }, text: '「记住了，往他左边走。」船夫闷头抽烟，不再多说。' },
-      { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_saw_arm' },
+      { if: { flag: 'boss' }, text: '「托您的福，码头又能开船了！」船夫把烟锅往船帮上磕了磕，「往后客官坐船，挑最稳的那条。」' },
+      // 自己看出了他左臂的旧伤，也还没听过来历的：先讲来历（审查 A16）
+      { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_saw_arm', notFlag: 'tu_chuanfu' },
         text: '船夫往码头当中瞟了一眼，压低声音：「你也瞧见他那条左臂了？去年腊月，他在瓜洲劫我们老帮主的船，老帮主一根分水刺扎穿了他左臂，他是跳江逃的。」他磕了磕烟锅：「那伤落了根。他那口鬼头刀，双手抡起来的时候，左边总要慢半分。」',
-        do: [{ type: 'flag', flag: 'tu_scar' }, { type: 'feed', tag: '主线', text: '船夫说：屠千山左臂有旧伤，双手抡刀时左边慢半分。' }, { type: 'toast', text: '探得屠千山的软肋' }] },
+        do: [{ type: 'flag', flag: 'tu_scar' }, { type: 'flag', flag: 'tu_chuanfu' }, { type: 'feed', tag: '主线', text: '船夫说：屠千山左臂有旧伤，双手抡刀时左边慢半分。' }, { type: 'toast', text: '探得屠千山的软肋' }] },
+      { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_scar' }, text: '「记住了，往他左边走。」船夫闷头抽烟，不再多说。' },
       { if: { quest: { id: 'main1', is: 1 } }, text: '「客官打听那姓屠的？」船夫闷头抽烟，「我一个撑船的，什么都没看见。」他的眼睛却往码头当中那人身上瞟了一下。' },
-      { text: '「客官要过江？今日不行喽，黑风寨的船霸着码头呢。」' }
+      { text: '「客官要坐船？去瓜洲的客船，二十文一位。」船夫把缆绳往桩上又绕了一道。' }
     ] } },
   { id: 'guanshi', name: '漕帮管事', altName: { if: { flag: 'tu_with_allies' }, name: '撑篙的老管事' }, ini: '漕', tone: 'blue', brief: '愁眉不展',
     look: '四十来岁，算盘别在腰后，袖口沾着盐粒。',
@@ -245,8 +256,11 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '打赏'],
     actions: {
       交谈: [
-        { if: { quest: { id: 'main1', is: 2 } }, text: '说书人醒木一拍：「列位看官！{story}」满堂喝彩，有人朝你这边张望——竟没人认出，说的正是你。',
+        { if: { quest: { id: 'main1', is: 2 }, flag: 'bei' }, text: '说书人醒木一拍：「列位看官！{story}」满堂喝彩。说到要紧处，满堂的人都朝你这边看过来。',
           do: [{ type: 'quest', id: 'main1', stage: 3 }, { type: 'feed', tag: '主线', text: '「寒江旧案」第一回完。湖畔石碑上的「沈」字，又是怎么回事？' }, { type: 'toast', text: '第一回 · 完' }] },
+        // 没看过湖畔石碑的，不提石碑（审查 A23）
+        { if: { quest: { id: 'main1', is: 2 } }, text: '说书人醒木一拍：「列位看官！{story}」满堂喝彩。说到要紧处，满堂的人都朝你这边看过来。',
+          do: [{ type: 'quest', id: 'main1', stage: 3 }, { type: 'feed', tag: '主线', text: '「寒江旧案」第一回完。江伯临终那几句话，你还没想明白。' }, { type: 'toast', text: '第一回 · 完' }] },
         { if: { flag: 'boss' }, text: '说书人冲你挤挤眼：「少侠的段子，小老儿每天要讲三场。」' },
         { text: '说书人醒木一拍：「上回说到，华山派两位长老为争掌门之位，在玉女峰上斗了三天三夜……」' }
       ],
@@ -374,7 +388,7 @@ const FOES: FoeDef[] = [
           { type: 'feed', tag: '江湖', text: '有人在运河渡口斗败了黑风寨主屠千山，江湖人称「渡口一剑」。' }] },
       lose: { tag: '首领战 · 负', title: '败走渡口', growth: true, button: '起身',
         story: '你醒来时，已躺在大明寺的禅房里。了尘大师说，是渡口的船夫冒雨把你背上了蜀冈。窗外钟声悠悠，你摸了摸胸口的伤，心里只想着一件事：以眼下的修为，那几刀究竟该怎么接？',
-        do: [{ type: 'move', to: 'daming' }, { type: 'heal', hpAtLeast: 0.4 }, { type: 'silver', delta: -30 },
+        do: [{ type: 'move', to: 'daming' }, { type: 'heal', hpAtLeast: 0.4 }, { type: 'flag', flag: 'tu_bai' },
           { type: 'feed', tag: '江湖', text: '你在渡口落败，被船夫送到了大明寺。' }] },
       flee: { tag: '首领战', title: '暂避锋芒', button: '回到湖畔',
         story: '你借着漕船脱身，绕了一大圈才回到瘦西湖畔。身后隐约还能听见屠千山的骂声。留得青山在，不怕没柴烧。',

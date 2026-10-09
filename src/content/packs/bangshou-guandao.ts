@@ -8,7 +8,7 @@ import type { ContentPack, FoeDef, NpcDef } from '../types';
 
 const NPCS: NpcDef[] = [
   {
-    id: 'bs_zhao', name: '钱老四', ini: '赵', tone: 'gray', brief: '端着茶盘',
+    id: 'bs_zhao', name: '钱老四', ini: '钱', tone: 'gray', brief: '端着茶盘',
     look: '三十来岁的汉子，围裙油亮，端茶的手稳当，眼神却总往官道两头瞟——被劫怕了。',
     at: { room: 'yz_guandao' },
     verbs: ['交谈', '观察'],

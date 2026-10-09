@@ -42,7 +42,7 @@ export function travelTo(dest: string, onArrive?: () => void): void {
   if (traveling) { toast('正在赶路……要停，点赶路条上的「停下」'); return; }
   if (dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
   const path = pathTo(S.loc, dest);
-  if (!path.length) { toast('从这里去不了那儿'); return; }
+  if (!path.length) { toast(S.chapter === 0 ? '要下大雨了，码头今儿不开船。' : '从这里去不了那儿'); return; }
   traveling = true;
   stopAsked = false;
   S.tab = 'jianghu'; S.sel = null; S.reply = null;
@@ -117,7 +117,7 @@ function doAct(verb: Verb): void {
   if (pickItemFirst(id, verb)) return;
   const { text, out, eyes } = act(id, verb);
   lateYue();
-  if (out.story || out.fight) { afterOutcome(out); return; }
+  if (out.story || out.fight) { afterOutcome(out, text || undefined); return; }
   // 根基之眼：观察时根基够了多看出的那一层，跟在描写后面（engine/yan.ts）
   const seen = eyes.map(e => eyeLine(e)).join('');
   S.reply = text || seen ? { id, text: text + seen } : null;
@@ -131,7 +131,7 @@ function retreat(want: number): void {
   const r = restDays(S, want);
   if (r.days < 1) {
     openSheet(`<div class="r-h"><span class="tag accent">闭关</span><h2>${r.why === 'yue' ? '今日有约' : '江湖跑不过现实'}</h2></div>
-      <p class="muted">${r.why === 'yue' && r.yue ? yueText(S, r.yue) + '。先去赴约吧。' : '这几日江湖上的日子，已经走在现实前头了。下了线，现实里过一个时辰，江湖上就静修一日；回来先读出关邸报。'}</p>
+      <p class="muted">${r.why === 'yue' && r.yue ? yueText(S, r.yue) + '。先去赴约吧。' : '这几日江湖上的日子，已经走在现实前头了。下了线，现实里过一个钟头，江湖上就静修一日；回来先读出关邸报。'}</p>
       <button class="btn" data-act="sheetClose">知道了</button>`);
     return;
   }

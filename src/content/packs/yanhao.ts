@@ -9,7 +9,8 @@ const ROOMS: RoomDef[] = [
   {
     id: 'yz_yanhao', name: '汪家盐号', area: '扬州城 · 东关', region: 'yz', t: 10, map: [80, 66],
     desc: '东关街东头最大的铺面，三开间门脸，匾上「汪家盐号」四个泥金大字。柜上算盘声不断，伙计扛着盐包进进出出，后院隐约有舂捣之声。',
-    npcs: ['yh_bizhang', 'yh_wanglaoye', 'yh_xinger', 'yh_menfang', 'yh_yunniang'],
+    // 云娘不写在这里：她只在被架进盐号、还没交契时才在（at 带条件，审查 B01）
+    npcs: ['yh_bizhang', 'yh_wanglaoye', 'yh_xinger', 'yh_menfang'],
     objs: ['yh_qixia', 'yh_zhangbu'],
     exits: [['西', 'cheng', '东']],
     road: '你沿东关街往东走到头，汪家盐号的金字招牌就在眼前……',

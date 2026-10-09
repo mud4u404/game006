@@ -24,9 +24,9 @@ export function registerHandlers(map: Record<string, Handler>): void { Object.as
 
 /** 战斗和剧情模块在加载时把自己挂到这里，避免模块之间循环引用 */
 export const hooks = {
-  startFight: (_foe: string): void => {},
+  startFight: (_foe: string, _lead?: string): void => {},
   /** onDone：剧情正常读完时调用（中途开打或接到别的剧情时不调用），赶路途中的路遇用它接着走 */
-  openStory: (_id: string, _onDone?: () => void): void => {}
+  openStory: (_id: string, _onDone?: () => void, _lead?: string): void => {}
 };
 
 /**
@@ -38,9 +38,13 @@ export const swapped = (): void => { swappedAt = performance.now(); };
 export const tooSoon = (ms = 350): boolean => performance.now() - swappedAt < ms;
 
 /** 统一处理一次动作产生的后果：先剧情，再开打，否则刷新画面 */
-export function afterOutcome(out: Outcome | null): void {
-  if (out?.story) hooks.openStory(out.story);
-  else if (out?.fight) hooks.startFight(out.fight);
+/**
+ * 动作的后果：开剧情、开打，或者重画。lead 是这个分支自己的那段文字：
+ * 同一个分支里既写了话又开打（开剧情）的，话放进战斗开场（剧情第一张卡最前面），不丢（审查 B04）
+ */
+export function afterOutcome(out: Outcome | null, lead?: string): void {
+  if (out?.story) hooks.openStory(out.story, undefined, lead);
+  else if (out?.fight) hooks.startFight(out.fight, lead);
   else render();
 }
 

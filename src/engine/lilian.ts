@@ -24,17 +24,20 @@ export const FOE_WINDOW = 7;
 /** 打赢一个对手的历练：不入流一百，每高一档约翻一倍（和功力的阶梯一样）；不是练家子的按比例少 */
 export const foeLilian = (f: Pick<FoeDef, 'rank' | 'weak'>): number => Math.round((100 * gongliAt(f.rank)) / gongliAt(0) * (f.weak ?? 1));
 
+/** 七天之内已经和这个人打过几场（不算这一场）。实战里长的熟练、切磋的历练都按它一次比一次少 */
+export function foeRepeats(s: GameState, id: string): number {
+  const rec = s.foeLog?.[id];
+  const gap = rec ? dayNo(s) - rec.day : Infinity;
+  return gap >= 0 && gap < FOE_WINDOW ? rec!.n : 0;
+}
+
 /**
  * 一场架打下来的历练：对手越强越多；赢了全得，输了得一半，认输三成，逃跑没有。
  * 同一个对手七天内反复打，一次比一次少：该学的已经学到了。
  */
 export function fightLilian(s: GameState, f: Pick<FoeDef, 'id' | 'rank' | 'weak'>, res: FightRes): number {
-  const day = dayNo(s);
-  const log = (s.foeLog ??= {});
-  const rec = log[f.id];
-  const gap = rec ? day - rec.day : Infinity;
-  const n = gap >= 0 && gap < FOE_WINDOW ? rec!.n : 0;
-  log[f.id] = { n: n + 1, day };
+  const n = foeRepeats(s, f.id);
+  (s.foeLog ??= {})[f.id] = { n: n + 1, day: dayNo(s) };
   const got = Math.round(foeLilian(f) * RES_SHARE[res] * 0.5 ** n);
   addLilian(s, got);
   return got;

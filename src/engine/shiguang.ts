@@ -9,7 +9,7 @@ import { tickShi } from './shishi';
 import { pushFeed, type GameState, type Yue } from '../core/state';
 import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
 import { NEWS, npc, room, skillById } from '../content';
-import type { SkillId } from '../content/types';
+import type { Effect, SkillId } from '../content/types';
 import { run, test } from './dsl';
 import { gainProf } from './growth';
 import { jingxiuPlan, retreatPlan } from './lilian';
@@ -30,6 +30,9 @@ export const XINMO = { k: 0.2, decay: 1 / 40, zouhuoAt: 2, zouhuoP: 0.02, zouhuo
 const H = 3.6e6;
 /** 开局以来过了几个现实小时 */
 export const realHours = (s: GameState): number => Math.max(0, (nowMs() - s.real.start) / H);
+/** 铁律挡住时的话 */
+export const TIELV_TEXT = '江湖上的日子，已经走在现实前头了，这一夜过不去。先下线歇歇，回来再说。';
+
 /** 铁律：现在还能往前拨几个江湖日 */
 export const allowance = (s: GameState): number => Math.max(0, Math.floor(realHours(s) + SHIGUANG.slack - (dayNo(s) - s.real.startDay)));
 /** 离开了几个现实小时 */
@@ -56,8 +59,31 @@ export const waitMin = (s: Pick<GameState, 'min'>, hour: number): number => {
   const m = hour * 60 - s.min;
   return m > 0 ? m : m + 1440;
 };
-/** 等得了吗：跨过半夜要多用一个江湖日，铁律还有余裕才行 */
-export const canWait = (s: GameState, hour: number): boolean => s.min + waitMin(s, hour) < 1440 || allowance(s) >= 1;
+/**
+ * 过得了半夜吗：过不了就说为什么。一是铁律（江湖跑在现实前头）；
+ * 二是今日还有约没了结，一过半夜就是失约、生心魔（审查 G01：人就站在约定的地方，歇脚到天亮也判失约）
+ */
+export function nightBlock(s: GameState): string | null {
+  if (allowance(s) < 1) return TIELV_TEXT;
+  const y = s.yue.find(x => x.due === dayNo(s));
+  return y ? `今日还约着${npcName(y.npc)}（${y.text}），过了半夜就是失约。先去赴了约再歇。` : null;
+}
+/** 等得了吗：跨过半夜要多用一个江湖日，铁律还有余裕、今日没有未了的约才行 */
+export const canWait = (s: GameState, hour: number): boolean => s.min + waitMin(s, hour) < 1440 || !nightBlock(s);
+
+/** 这串效果一共要拨过几分钟（只看 time）。住店睡到天亮、陪人等一夜这类 */
+export function minutesOf(s: Pick<GameState, 'min'>, effects: readonly Effect[] = []): number {
+  let m = s.min;
+  for (const e of effects) {
+    if (e.type !== 'time') continue;
+    if (e.add) m += e.add;
+    if (e.set !== undefined) { let d = e.set - (m % 1440); if (d < 0) d += 1440; m += d; }
+    if (e.until !== undefined && e.until > m % 1440) m += e.until - (m % 1440);
+  }
+  return m - s.min;
+}
+/** 过得了这一夜吗：效果要跨过半夜，就照 nightBlock 查。住店也受铁律管（试玩第二轮 G04）。过得了返回 null，过不了返回为什么 */
+export const passBlock = (s: GameState, effects?: readonly Effect[]): string | null => (s.min + minutesOf(s, effects) < 1440 ? null : nightBlock(s));
 
 /** 歇脚：在原地等到某个钟点。等不了（江湖跑不过现实）返回零，否则返回等了几分钟 */
 export function waitUntil(s: GameState, hour: number): number {
@@ -161,6 +187,8 @@ export function yueText(s: GameState, y: Yue): string {
 
 /** 下线回来：离开的现实小时，算成静修的日子（一次最多十六日，受铁律和约约束）。不够一日不算 */
 export function settleAway(s: GameState, rng: () => number = Math.random): (RestReport & { hours: number; why?: 'tielv' | 'yue'; yue?: Yue }) | null {
+  // 序章里不结算：江伯病着，不是闭关的时候（原来下线回来写「在渡口小屋静修了六日……露宿了六夜」，审查 G02）
+  if (s.chapter === 0) { s.real.seen = nowMs(); return null; }
   const hours = awayHours(s);
   const want = Math.min(SHIGUANG.awayCap, Math.floor(hours * SHIGUANG.perHour));
   if (want < 1) return null;

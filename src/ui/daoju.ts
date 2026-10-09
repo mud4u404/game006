@@ -115,7 +115,7 @@ registerHandlers({
     const it = itemById(v);
     if (!it) return;
     const r = lookItem(v);
-    if (r.out.story || r.out.fight) { closeSheet(); afterOutcome(r.out); return; }
+    if (r.out.story || r.out.fight) { closeSheet(); afterOutcome(r.out, r.text || undefined); return; }
     openSheet(itemSheet(it, r.text, r.more), true);
   },
   itemUse: v => {

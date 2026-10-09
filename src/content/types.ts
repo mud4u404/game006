@@ -106,8 +106,11 @@ export type Effect =
   | { type: 'title'; value: string }
   | { type: 'chapter'; value: number }
   | { type: 'move'; to: string }
-  /** add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天） */
-  | { type: 'time'; add?: number; set?: number }
+  /**
+   * add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天）；
+   * until：拨到当天这个钟点，已经过了就不动（不跨日）。序章抓药用它：过了酉时再抓药，不会凭空丢一天
+   */
+  | { type: 'time'; add?: number; set?: number; until?: number }
   | { type: 'weather'; value: string }
   /** hpFrac、mpFrac：按上限的几成回，例如金疮药 hpFrac: 0.3 */
   | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number; hpFrac?: number; mpFrac?: number }

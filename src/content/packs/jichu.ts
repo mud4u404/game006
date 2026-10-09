@@ -311,8 +311,9 @@ const NPCS: NpcDef[] = [
       ],
       看伤: [
         { if: { ...AFTER, wounded: true, notFlag: 'jc_gz_mianfei' },
-          text: '钟郎中按住你的伤处，一处一处捋过去，手上一推一送，骨节「咯咯」直响。你去掏钱，他把你的手推了回来：「老江的孩子，头一回不收钱。下回可得给。」',
-          do: [{ type: 'flag', flag: 'jc_gz_mianfei' }, { type: 'cure' }, { type: 'heal', hpAtLeast: 1 }, { type: 'time', add: 30 }] },
+          text: '钟郎中按住你伤得最重的那一处，手上一推一送，骨节「咯咯」直响。你去掏钱，他把你的手推了回来：「老江的孩子，头一回不收钱。下回可得给。」',
+          // 头一回不收钱，也只治一级：情分在钱上，不在一次治光（审查 C09）
+          do: [{ type: 'flag', flag: 'jc_gz_mianfei' }, { type: 'cure', levels: 1 }, { type: 'heal', hpAtLeast: 1 }, { type: 'time', add: 30 }] },
         { if: { wounded: true, silver: 120 },
           text: '钟郎中让你在小马扎上坐了，先灌你一口药酒，趁你还在咳，手上一推一送，「咯」的一声。「好了一级。还疼？再来一百二十文。」（银两 −120 文）',
           do: KANSHANG(120) },

@@ -13,7 +13,7 @@ import { advanceDays, advanceMin, dayNo, setNowMs } from '../src/core/time';
 import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, SHI, STORIES, foeById, jobById, npc, questById, room, shiById, storyById } from '../src/content';
 import { pickBranch, run, test, type Outcome } from '../src/engine/dsl';
 import type { Effect } from '../src/content/types';
-import { act, curQuest, enter, hopMin, pathTo, payFare, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
+import { act, curQuest, enter, hopMin, openExits, pathTo, payFare, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
 import { Duel, RANDOM, SKILLED, simulate, type DuelRes, type Policy } from '../src/engine/duel';
 import { activePrep, alliesOf, fightKit, foeSpec, heroSpec, kanren } from '../src/engine/zhaoshi';
@@ -151,7 +151,8 @@ function actions(): Act[] {
     if (!n) { err(`地点「${S.loc}」里的「${id}」不存在`); continue; }
     for (const v of verbsOf(n)) list.push({ k: 'act', id, v, key: branchKey(id, v) });
   }
-  for (const [, to] of room(S.loc).exits) list.push({ k: 'go', to, key: `go|${S.loc}|${to}` });
+  // 照界面：只走眼下开着的出口（序章里不开船，engine/world.ts 的 openExits）
+  for (const [, to] of openExits(S.loc)) list.push({ k: 'go', to, key: `go|${S.loc}|${to}` });
   // 跟着任务横幅、约走：玩家大多这样走
   for (const dest of [curQuest()?.to, ...S.yue.map(y => y.at)]) {
     if (!dest || dest === S.loc) continue;
@@ -215,7 +216,7 @@ function nearestWith(ok: (id: string) => boolean): string | null {
       while (prev.get(c) !== S.loc) c = prev.get(c)!;
       return c;
     }
-    for (const [, nx] of room(cur).exits) if (!prev.has(nx)) { prev.set(nx, cur); queue.push(nx); }
+    for (const [, nx] of openExits(cur)) if (!prev.has(nx)) { prev.set(nx, cur); queue.push(nx); }
   }
   return null;
 }

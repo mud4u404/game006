@@ -13,16 +13,16 @@ import { welcomeBack } from './chuguan';
 
 /* ---------- 剧情卡片 ---------- */
 
-interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void }
+interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void; lead?: string }
 let cur: Playing | null = null;
 /** 已经开着剧情时又来的剧情：排队，读完这一段再读（原来直接顶掉，旧剧情的收尾丢了，赶路停在半路） */
-const queue: [string, (() => void) | undefined][] = [];
+const queue: [string, (() => void) | undefined, string | undefined][] = [];
 
-export function openStory(id: string, onDone?: () => void): void {
-  if (cur) { queue.push([id, onDone]); return; }
+export function openStory(id: string, onDone?: () => void, lead?: string): void {
+  if (cur) { queue.push([id, onDone, lead]); return; }
   const def = storyById(id);
   if (!def) { onDone?.(); return; }
-  cur = { def, i: 0, out: newOutcome(), onDone };
+  cur = { def, i: 0, out: newOutcome(), onDone, lead };
   draw();
   $('#storyLayer')!.hidden = false;
 }
@@ -49,6 +49,7 @@ function draw(): void {
   $('#storyLayer')!.innerHTML = `<div class="story-l" role="dialog" aria-label="${card.title}">
     ${card.tag ? `<span class="tag accent">${card.tag}</span>` : ''}
     <h2>${fmt(card.title, v)}</h2>
+    ${cur.i === 0 && cur.lead ? cur.lead.split('\n').map(p => `<p class="sp">${p}</p>`).join('') : ''}
     ${card.paras.map(p => `<p class="sp">${fmt(p, v)}</p>`).join('')}
     ${card.gains ? `<div class="gains">${card.gains.map(g => `<span class="tag info">${g}</span>`).join('')}</div>` : ''}
     ${nameBox}
