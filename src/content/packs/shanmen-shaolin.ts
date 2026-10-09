@@ -114,7 +114,7 @@ const NPCS: NpcDef[] = [
           text: '「罗汉拳，一十八手，手手都是最笨的直拳拙掌。」长老一招一式拆给你看，掌出无风，「笨功夫练到不用想，就是罗汉。」你在殿前的青石板上，打了一整个下午。',
           do: [{ type: 'time', add: 120 }, { type: 'learn', skill: 'sl_luohan', prof: 60 }] },
         { if: { sect: SMSL_OUT, canLearn: 'sl_yiwei', notLearned: 'sl_yiwei' },
-          text: '长老指着寺前那一段院墙：「一苇渡江，渡的不是江，是自己的身子。先在墙头上走。走得稳了，江水自会渡你。」你在墙头上来来回回走了一个时辰，鞋底磨穿了一层。',
+          text: '长老指着寺前那一段院墙：「一苇渡江，渡的不是江，是自己的身子。先在墙头上走。走得稳了，江水自会渡你。」你在墙头上来来回回走了两个时辰，鞋底磨穿了一层。',
           do: [{ type: 'time', add: 240 }, { type: 'learn', skill: 'sl_yiwei', prof: 60 }] },
         { if: { sect: SMSL_OUT, canLearn: 'sl_jinzhong', notLearned: 'sl_jinzhong' },
           text: '长老拿起木鱼槌，在你身上从肩到背一处一处地敲：「金钟罩，不是硬挨，是把气布在皮里。槌到哪儿，气到哪儿。钟罩住了，槌就只是响。」敲完一轮，你浑身热得像刚出过一身大汗。',
