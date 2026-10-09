@@ -109,9 +109,10 @@ const NPCS: NpcDef[] = [
   {
     id: 'smth_quheng', name: '曲蘅', ini: '曲', tone: 'jade', brief: '在廊下筛药', hint: '岛上来的弟子',
     look: '三十来岁，一身洗旧的青衫，袖口全是药渍。他筛药的手腕悬得极稳，一炷香不抖。话少，看人先看眼睛——他信眼睛不会说谎。',
-    at: [{ room: 'smth_xiaozhu', if: { hour: { from: 7, to: 13 } } },
-         { room: 'gz_town', if: { hour: { from: 13, to: 19 } } },
-         { room: 'smth_xiaozhu', if: { hour: { from: 19, to: 24 } } }],
+    // 小筑被烧、他连夜下了江以后，就不在瓜洲了（审查 E25）
+    at: [{ room: 'smth_xiaozhu', if: { hour: { from: 7, to: 13 }, shi: { id: SHI, not: ['shao'] } } },
+         { room: 'gz_town', if: { hour: { from: 13, to: 19 }, shi: { id: SHI, not: ['shao'] } } },
+         { room: 'smth_xiaozhu', if: { hour: { from: 19, to: 24 }, shi: { id: SHI, not: ['shao'] } } }],
     verbs: ['交谈', '观察', '看诊', '卜卦',
       { verb: '拜师', if: { notFlag: 'smth_in' } },
       { verb: '入阵', if: { flag: 'smth_asked', notFlag: 'smth_zhen', noSect: true } },
@@ -141,24 +142,41 @@ const NPCS: NpcDef[] = [
         { text: '曲蘅筛着药，头也不抬：「看病随缘，卜卦百文。卦金我从不多的——我要的是『算得准』三个字，不是钱。」他把筛好的药倒进罐里，「至于拜师——岛主的功夫，笨人学了是糟蹋。你的心窍开没开，先走个阵我看看再说。」' }
       ],
       观察: [{ text: '他案头压着半张没画完的阵图，边角叫海风浸得发黄。他筛药筛一阵，就要看那图一眼——图上有他没画完的东西，也有他没说完的话。' }],
+      // 诊金：本门弟子随缘十文；外人八十文一级（医馆的一半）；没钱能赊一回，赊过的先还账（审查 E03、D06）
       看诊: [
-        { if: { silver: 10, wounded: true },
-          text: '曲蘅两根手指搭在你腕上，眉头一皱：「筋伤带内伤，还拖了日子。」他从药柜里取出三包药，又在你背心一按——一股柔劲顺着你背走了半圈，伤口像叫温水泡开了一样。（银两 −10 文）',
-          do: [{ type: 'silver', delta: -10 }, { type: 'cure', levels: 1 }, { type: 'heal', hp: 'full' }, { type: 'time', add: 30 }] },
+        { if: { silver: 10, wounded: true, sect: TH },
+          text: '曲蘅两根手指搭在你腕上，眉头一皱：「筋伤带内伤，还拖了日子。」他从药柜里取出三包药，又在你背心一按——一股柔劲顺着你背走了半圈，伤口像叫温水泡开了一样。「本门的，诊金随缘。」（银两 −10 文）',
+          do: [{ type: 'silver', delta: -10 }, { type: 'cure', levels: 1 }, { type: 'heal', hpAtLeast: 1 }, { type: 'time', add: 30 }] },
+        { if: { silver: 160, wounded: true, flag: 'smth_qian' },
+          text: '曲蘅搭了你的脉，开了药，收钱时连上回赊的那一份一并收了，一文不多，一文不少。（银两 −160 文）',
+          do: [{ type: 'silver', delta: -160 }, { type: 'flag', flag: 'smth_qian', value: false }, { type: 'cure', levels: 1 }, { type: 'heal', hpAtLeast: 1 }, { type: 'time', add: 30 }] },
+        { if: { wounded: true, flag: 'smth_qian' },
+          text: '曲蘅搭了搭你的脉，没开方子：「上回的账还挂着。」他不催，也不松口，「瓜洲的伤号我从来没催过账——可也没有一赊再赊的。」' },
+        { if: { silver: 80, wounded: true },
+          text: '曲蘅两根手指搭在你腕上，眉头一皱：「筋伤带内伤，还拖了日子。」他从药柜里取出三包药，又在你背心一按——一股柔劲顺着你背走了半圈，伤处松快了一层。（银两 −80 文）',
+          do: [{ type: 'silver', delta: -80 }, { type: 'cure', levels: 1 }, { type: 'heal', hpAtLeast: 1 }, { type: 'time', add: 30 }] },
         { if: { wounded: true },
-          text: '曲蘅搭了你的脉，把三包药放在你手边：「先记账。瓜洲的伤号，我从来没催过账。」他不收钱，也不看你，「下回带伤来，药照给。」',
-          do: [{ type: 'cure', levels: 1 }, { type: 'heal', hp: 'full' }, { type: 'time', add: 30 }] },
+          text: '曲蘅搭了你的脉，把三包药放在你手边：「先记账。瓜洲的伤号，我从来没催过账。」他不收钱，也不看你，「下回来，先把这一回的八十文带上。」',
+          do: [{ type: 'flag', flag: 'smth_qian' }, { type: 'cure', levels: 1 }, { type: 'heal', hpAtLeast: 1 }, { type: 'time', add: 30 }] },
         { text: '曲蘅搭了搭你的脉，把手收回去：「没伤。没伤别占郎中的凳——外头排队的那位，先看。」' }
       ],
       卜卦: [
+        // 「卦金免了」只有头一回；往后照收一百，也不再长见识（审查 E02）
+        { if: { silver: 100, notFlag: 'smth_gua' },
+          text: '你摇出一卦。曲蘅盯着卦象看了半晌，眉头动了动：「这一卦……卦金免了。」他把铜钱推回来，不再多说。你起身告辞，走到篱笆外才回过味来——他说的是「免」，不是「不准」。（银两分文未动）',
+          do: [{ type: 'flag', flag: 'smth_gua' }, { type: 'lilian', amount: 20 }] },
         { if: { silver: 100 },
-          text: '你摇出一卦。曲蘅盯着卦象看了半晌，眉头动了动：「这一卦……卦金免了。」他把铜钱推回来，不再多说。你揣着钱出门，走到半路才回过味来——他说的是「免」，不是「不准」。（银两分文未动）',
-          do: [{ type: 'lilian', amount: 20 }] },
+          text: '你又摇了一卦。曲蘅看了一眼卦象，收了一百文：「卦是一样的卦。你心里没换，卦也换不了。」（银两 −100 文）',
+          do: [{ type: 'silver', delta: -100 }] },
         { text: '曲蘅瞥了一眼你的钱袋：「卦金一百，随缘的诊金可以欠，卦金不能欠。」他把铜钱匣子推了推，「想好了再来摇。」' }
       ],
       拜师: [
         { if: { pastSect: { school: '桃花岛' } },
           text: '曲蘅抬起眼：「岛主的门墙，出去容易回来难。你自己走到哪一步，自己心里有数——什么时候走回岛上跪完了，什么时候再来。」' },
+        // 旧存档：走阿芦那条路过了阵、却没拜进门的人，这里补上
+        { if: { noSect: true, flag: 'smth_zhen' },
+          text: '曲蘅放下药筛：「阵你走过了，我说过算数。」他从案头取过一本手抄的药性赋递给你，「从今往后，你是小筑的人。」',
+          do: TH_JOIN },
         { if: { flag: 'cw_qiao' },
           text: '曲蘅把你从头到脚看了一遍，像看一味掺了假的药：「借水鬼敛财的事，江上传遍了。」他把药筛搁下，「医卜这行，骗的是人信。你骗过一回，我教你的每一卦，你都会拿去骗第二回。走吧。」' },
         { if: { eming: 12 },
@@ -179,7 +197,8 @@ const NPCS: NpcDef[] = [
           text: '你从离位进阵，脚下的方位在心里过了一遍又一遍。生门在西北——你走进去，绕了两圈，眼前忽然一亮：五块石头的影子在地上连成一线，线的那头，就是出口。曲蘅收了石阵，半晌道：「自己走出来的。好。」',
           do: [{ type: 'time', add: 90 }, { type: 'flag', flag: 'smth_zhen' }, { type: 'quest', id: 'smth_zhen', stage: 1 }, ...TH_JOIN] },
         { text: '你在阵里走得满头是汗。阿芦蹲在阵外，捡了根芦苇秆，在地上东一点西一点地画。你顺着他的点连起来一看——原来生门早就在脚底下，是你自己绕远了。曲蘅收了石阵：「他自己没走出来，可他看得懂哑芦的点。也算数。」',
-          do: [{ type: 'time', add: 180 }, { type: 'flag', flag: 'smth_zhen' }, { type: 'quest', id: 'smth_zhen', stage: 1 }] }
+          // 「也算数」就真算数：原来这条路没拜进门，之后入阵按钮没了、拜师又从头说起，卡死（审查 E01）
+          do: [{ type: 'time', add: 180 }, { type: 'flag', flag: 'smth_zhen' }, { type: 'quest', id: 'smth_zhen', stage: 1 }, ...TH_JOIN] }
       ],
       请教: [
         { if: { sect: TH, canLearn: 'tq_bichao', notLearned: 'tq_bichao' },
@@ -327,7 +346,7 @@ const FOES: FoeDef[] = [
     flourish: ['船桨抡得呼呼响', '一桨扫起半滩沙', '膀子上的肉一疙瘩一疙瘩', '嘴里的叫骂没停过'],
     tells: [
       { name: '横扫滩头', text: '胡三抡圆了船桨，拦腰横扫过来，桨风带着沙……', dom: 'li', after: '桨头砸在竹篱上，篱笆断了两根！' },
-      { name: '甩泥点', text: '他忽然弯腰抓了把湿泥甩你的眼……', dom: 'qiao', after: '你偏头让过，泥点糊在桃树上！' }
+      { name: '甩泥点', text: '他忽然弯腰抓了把湿泥甩你的眼……', dom: 'qiao', after: '泥点溅开，糊了半棵桃树！' }
     ],
     asides: ['围着的人往后退了半圈。', '六斤的鱼掉在了地上。', '阿芦挡在小筑门前，一步不让。'],
     opening: ['船桨抡过了头', '脚下踩滑了湿沙', '叫骂岔了气'],
@@ -350,7 +369,10 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'smth_zhen', name: '桃花岛 · 入门阵', stages: [
-    { title: '走出曲蘅摆的九宫阵', to: 'smth_xiaozhu' },
+    { title: '走出曲蘅摆的九宫阵', to: 'smth_xiaozhu', who: 'smth_quheng', hint: '曲蘅上午和入夜在小筑，请他摆阵走上一遭。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }],
+      // 小筑烧了，曲蘅下了江，再不回瓜洲（世事 smth_shi 的 shao 是尽头）
+      fail: { if: { shi: { id: 'smth_shi', at: ['shao'] } }, text: '听潮小筑叫人烧了，曲蘅连夜下了江，这阵再没人摆。' } },
     { title: '桃花岛 · 入门阵 · 完' }
   ] }
 ];

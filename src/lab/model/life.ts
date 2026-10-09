@@ -306,9 +306,9 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
         // 打斗受伤：每在线一小时三成机会落一级伤
         if (rng() < 0.3 * onFrac) wound = Math.min(3, wound + 1);
       }
-      // 钱够就买药治伤
+      // 钱够就买药治伤：只治重伤（二级以上）；轻伤过一日自己好（负责人 10-09，engine/shang.ts）
       const med = p.medicine * 1.5 ** t;
-      while (wound > 0 && silver >= 3 * med) { silver -= med; A(t).cost += med; wound--; }
+      while (wound >= 2 && silver >= 3 * med) { silver -= med; A(t).cost += med; wound--; }
       // 在瓶颈上：在线找机缘
       if (neck !== null) stuck += onFrac;
       if (neck !== null && rng() < (p.jiyuanP + 0.05 * stuck) * onFrac) { passed.add(neck); gain(h, `机缘破了${neck === 5.5 ? '入一流' : '入宗师'}的瓶颈`); neck = null; }
@@ -320,6 +320,8 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
     log.maxAhead = Math.max(log.maxAhead, jh - (h + 1));
     log.maxBacklog = Math.max(log.maxBacklog, pool);
     if (log.silverAt30 === undefined && silver >= 30) log.silverAt30 = h / 24;
+    // 轻伤过一日自己好
+    if (hourOfDay === 23 && wound === 1) wound = 0;
     if (hourOfDay === 23) { log.daily.push({ day: Math.floor(h / 24) + 1, R: R(), inner: realmOf(xp.inner, p.needK), gongli, tier: tierSeen, silver, jh, wound }); log.xinmoByDay.push(xinmo); }
   }
   log.netByTier = [0, 1, 2, 3, 4, 5].map(t => (acc[t] && acc[t].hours >= 24 ? ((acc[t].inc - acc[t].cost) / acc[t].hours) * 24 : NaN));
@@ -371,11 +373,9 @@ export function live(pr: Profile, p: LifeParams, days: number, seed: number): Li
     xinmo = Math.max(0, xinmo - p.xinmoDecay * d);
     const eff = 1 - p.xinmoK * (xm + xinmo) / 2;
     if (xm >= p.zouhuoAt) for (let i = 0; i < Math.round(d); i++) if (rng() < p.zouhuoP) { gongli *= 0.9; log.zouhuo++; }
-    let left = d * eff;
-    // 先养伤：一级伤养三日
-    const heal = Math.min(left, wound * 3);
-    wound = Math.max(0, wound - Math.floor(heal / 3));
-    left -= heal;
+    const left = d * eff;
+    // 养伤：闭关只养得好轻伤（一级，一日就好）；重伤要看伤、服药，闭关养不好，也不占打坐的日子（负责人 10-09）
+    if (wound === 1 && d >= 1) wound = 0;
     const dz = pr.dazuoShare === 'parallel' ? left : left * pr.dazuoShare;
     const cw = pr.dazuoShare === 'parallel' ? left : left - dz;
     // 参悟

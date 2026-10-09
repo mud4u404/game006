@@ -1,13 +1,18 @@
-import type { ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
+import type { Cond, ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
 
 /** 府衙悬赏榜（Issue #108）：游侠的营生。四张榜各是一个人的事。 */
+
+/** 还没补完、暂不挂出来的榜用它（没有地方写这个旗标） */
+const PENDING: Cond = { flag: 'xsb_pending_open' };
 
 const NPCS: NpcDef[] = [
   {
     id: 'xsb_zhuren', name: '书办', ini: '书', tone: 'blue', brief: '抄着文书',
     look: '府衙的老书办，五十来岁，一笔馆阁体写得端正。管着海捕文书的张贴和撤换，也管登记领赏。',
     at: { room: 'yz_fuya' },
-    verbs: ['交谈', '观察', { verb: '揭寻人', if: { jobOpen: 'xsb_xunren' } }, { verb: '揭寻物', if: { jobOpen: 'xsb_xunwu' } }, { verb: '揭缉凶', if: { jobOpen: 'xsb_xiong' } }, { verb: '揭剿匪', if: { jobOpen: 'xsb_jiaofei' } }, { verb: '交寻人', if: { job: 'xsb_xunren', flag: 'xsb_xr_found' } }, { verb: '交寻物', if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' } }, { verb: '交缉凶', if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat' } }, { verb: '交剿匪', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' } }],
+    // 四张榜都还交不了差（线索、对手都没有入口，审查 B02、D01、F01）：补完以前不挂出来，交 zcode 补。
+    // 补完一张，把那一张条件里的 PENDING 删掉
+    verbs: ['交谈', '观察', { verb: '揭寻人', if: { jobOpen: 'xsb_xunren', ...PENDING } }, { verb: '揭寻物', if: { jobOpen: 'xsb_xunwu', ...PENDING } }, { verb: '揭缉凶', if: { jobOpen: 'xsb_xiong', ...PENDING } }, { verb: '揭剿匪', if: { jobOpen: 'xsb_jiaofei', ...PENDING } }, { verb: '交寻人', if: { job: 'xsb_xunren', flag: 'xsb_xr_found' } }, { verb: '交寻物', if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' } }, { verb: '交缉凶', if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat' } }, { verb: '交剿匪', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' } }],
     actions: {
       交谈: [
         { if: { flag: 'xsb_xr_done' }, text: '书办翻了翻册子：「寻人的那桩，学徒找到了。他师父已经领人回去了——多亏公子帮着打听。」' },
@@ -18,7 +23,7 @@ const NPCS: NpcDef[] = [
     { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。' },
     { if: { flag: 'xsb_jf_sha' }, text: '黑风寨叫人一把火烧了。跑得慢的匪徒，烟熏死在了山洞里。' },
     { if: { flag: 'xsb_jf_done' }, text: '「剿匪的那桩，山寨也平了。」书办竖了个大拇指，「四张榜全叫你揭了——游侠里头，你算头一份。」' },
-        { text: '书办翻开底册：「四张榜都还挂着——寻人、寻物、缉凶、剿匪。一回只揭一张，手上的差事交了，再来揭下一张。领了赏来我这儿登记。」' },
+        { text: '书办翻开底册：「寻人、寻物、缉凶、剿匪，府台那边还没批下来，榜还贴不出去。」他蘸了蘸墨，「悬赏榜上的那几桩，公子先去看看。」' },
       ],
       揭寻人: [{ do: [{ type: 'job', id: 'xsb_xunren' }] }],
       揭寻物: [{ do: [{ type: 'job', id: 'xsb_xunwu' }] }],
@@ -212,7 +217,7 @@ const JIAOFEI: FoeDef = {
       story: '你按老韩说的换岗时辰摸上了山，寨墙上的匪徒果然正在换班。' },
     { if: { flag: 'xsb_jf_ally' },
       ally: { name: '猎户老韩', share: 0.25, at: [3, 8, 13],
-        say: ['老韩的箭从树梢上射下来，钉在匪徒的肩膀上。', '老韩又是一箭，这次射的是二当家的帽缨。', '老韩从岩石后头跳出来，猎刀和九环大刀磕在一起。'] },
+        say: ['老韩的箭从树梢上射下来，钉在匪徒的肩膀上。', '老韩又是一箭，这回钉进了二当家的左臂。', '老韩从岩石后头跳出来，猎刀和九环大刀磕在一起。'] },
       text: '老韩从山道旁的岩石后头闪出，猎弓满弦，一箭射向山寨的哨兵。',
       story: '老韩从岩石后头掠出，箭无虚发，替你清出了上山的路。',
       win: [{ type: 'flag', flag: 'xsb_jf_han' }] }

@@ -43,7 +43,6 @@ const NPCS: NpcDef[] = [
             { type: 'rel', npc: 'yunnian', value: '点头之交', from: ['素不相识'] },
             { type: 'flag', flag: 'huafang_started' },
             { type: 'quest', id: 'side_huafang', stage: 1 },
-            { type: 'track', id: 'side_huafang' },
             { type: 'feed', tag: '江湖', text: '画舫歌女云娘，她爹亏空了盐课银子，身契押在汪家抵债；这一期利钱八十文，汪少爷今夜就在船上讨。' }
           ] },
         { if: { notFlag: 'huafang_started' },
@@ -57,14 +56,12 @@ const NPCS: NpcDef[] = [
         { if: { quest: { id: 'side_huafang', is: 0 }, hour: { from: 5, to: 18 } },
           text: '云娘摇头苦笑：「八十文，奴家唱一夜也不过几十文。公子若肯管，入夜后再来罢——反正，他总是要来的。」',
           do: [
-            { type: 'quest', id: 'side_huafang', stage: 1 },
-            { type: 'track', id: 'side_huafang' }
+            { type: 'quest', id: 'side_huafang', stage: 1 }
           ] },
         { if: { quest: { id: 'side_huafang', is: 0 } },
           text: '云娘朝篷内努了努嘴，声音发颤：「汪少爷就在前头吃酒。公子既要管，这就……就在今夜了。」',
           do: [
-            { type: 'quest', id: 'side_huafang', stage: 1 },
-            { type: 'track', id: 'side_huafang' }
+            { type: 'quest', id: 'side_huafang', stage: 1 }
           ] },
         { if: { hour: { from: 19, to: 5 } },
           text: '云娘低声道：「那护院刀沉得很，汪少爷又带着酒。公子……万万小心。」' },
@@ -203,8 +200,9 @@ const FOES: FoeDef[] = [GUARD_FOE];
 
 const QUESTS: QuestDef[] = [
   { id: 'side_huafang', name: '奇遇 · 画舫云娘', stages: [
-    { title: '打听画舫上的事' },
-    { title: '入夜后再上画舫', to: 'huafang' },
+    { title: '打听画舫上的事', to: 'huafang', who: 'yunnian', hint: '上画舫再和云娘说几句，问明她的难处。' },
+    // 推进的路有四条：替她付利钱（云娘，白天也行）、报名号、动手、接汪家的事劝她上岸（后三条都在入夜的汪少爷身上）
+    { title: '入夜后再上画舫', to: 'huafang', who: 'wangshao', hint: '入夜汪少爷上船讨债，替她还钱或出头都行。' },
     { title: '画舫云娘 · 完' }
   ] }
 ];

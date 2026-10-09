@@ -43,6 +43,8 @@ export interface Cond {
   attr?: { key: AttrKey; atLeast: number };
   /** 今天是这个约的约期，约还没了结（engine/shiguang.ts） */
   yue?: string;
+  /** 手上挂着这个约，还没到日子（约期未到时人物说「还没到日子」，不再从头自我介绍） */
+  yueAhead?: string;
   /** 现在的营生是这个身份（engine/shenfen.ts）：youxia 游侠、biaoshi 镖师…… */
   shenfen?: string;
   /** 正在办这件差事（接下了，还没交差） */
@@ -106,13 +108,17 @@ export type Effect =
   | { type: 'title'; value: string }
   | { type: 'chapter'; value: number }
   | { type: 'move'; to: string }
-  /** add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天） */
-  | { type: 'time'; add?: number; set?: number }
+  /**
+   * add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天）；
+   * until：拨到当天这个钟点，已经过了就不动（不跨日）。序章抓药用它：过了酉时再抓药，不会凭空丢一天
+   */
+  | { type: 'time'; add?: number; set?: number; until?: number }
   | { type: 'weather'; value: string }
   /** hpFrac、mpFrac：按上限的几成回，例如金疮药 hpFrac: 0.3 */
   | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number; hpFrac?: number; mpFrac?: number }
   /** 治伤（医馆、郎中）：不写 levels 治好全部伤；写了就从最重的那处起，一共减这么多级。治完记一条见闻 */
-  | { type: 'cure'; levels?: number }
+  /** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；写了 zones 只治这几处（跌打酒治手足、内伤药治内息） */
+  | { type: 'cure'; levels?: number; zones?: ('hand' | 'foot' | 'inner')[] }
   | { type: 'feedReset' }
   /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
   | { type: 'news' }
@@ -294,6 +300,8 @@ export interface FoeDef {
   weak?: number;
   /** 切磋：打到三成气血即止 */
   spar?: boolean;
+  /** 考校、试镖：「接得住三十招就算过」——撑满这么多合不倒，也算你赢（审查 F05：原来说三十招，规则却是把对方打到三成） */
+  rounds?: number;
   /** 剧本战：不会战死、不能逃跑认输。rescue：打到六成（或你撑不住）时由人救下；cup：你撑不住时有人出手 */
   script?: 'cup' | 'rescue';
   /** 第几合出第一次重招 */
@@ -361,9 +369,10 @@ export type SectRank = '记名' | '外门' | '内门' | '真传';
  * 怎样离开师门（docs/menpai.md 第七节）：
  * 出师，做到真传、师父点头，所学全留，日后还能回来；
  * 叛门，自己叛出，门派追杀，本门武功境界封顶，再也拜不回去；
- * 逐出，犯了门规被师门除名，本门武功境界封顶，同样拜不回去，只是不追杀。
+ * 逐出，犯了门规被师门除名，本门武功境界封顶，同样拜不回去，只是不追杀；
+ * 辞别，自己好聚好散地走（负责人 10-09「合理，玩家体验感好」）：所学全留、不封顶，贡献清零，原门派不再收；一辈子只能辞别一回，再走就是叛门。
  */
-export type LeaveHow = '出师' | '叛门' | '逐出';
+export type LeaveHow = '出师' | '辞别' | '叛门' | '逐出';
 /** 离开过的一个师门 */
 export interface PastSect { school: string; how: LeaveHow }
 /** 性质相克：柔克刚、刚克阴、阴克阳、阳克柔；中正不克也不被克 */
@@ -538,10 +547,32 @@ export interface ItemDef {
   look?: Branch[];
 }
 
+/** 心事的一道门槛：条件成立就打勾，不成立见闻簿写出 text（钱、根基这类说得出差多少的，另写差多少） */
+export interface QuestGate { if: Cond; text: string }
+
+/**
+ * 心事的一步（engine/daohang.ts 的导航读它）：玩家要知道去哪、找谁、怎么做、差什么、还做不做得成。
+ * 只写推进这一步的分支里真有的条件，不另编（tests/daohang.test.ts 让机器玩家核对）。
+ */
+export interface QuestStage {
+  title: string;
+  to?: string;
+  /** 找谁：人物 id。见闻簿按作息写他眼下在不在、什么时辰在哪 */
+  who?: string;
+  /** 怎么做：一句江湖口吻的话。除了最后一步都要写 */
+  hint?: string;
+  /** 这一步的门槛 */
+  need?: QuestGate[];
+  /** 成立了，这一步就做不成了（未竟） */
+  fail?: QuestGate;
+}
+
 export interface QuestDef {
   id: string;
   name: string;
-  stages: { title: string; to?: string }[];
+  stages: QuestStage[];
+  /** 成立了，整件事就做不成了（未竟）；各步的 fail 只管那一步 */
+  fail?: QuestGate;
   /** 了结时给的历练；不写按阶段数算，每阶段 100（engine/lilian.ts） */
   lilian?: number;
 }

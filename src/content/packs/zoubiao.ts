@@ -1,10 +1,13 @@
-import type { ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
+import type { Cond, ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
 
 /**
  * 威远镖局 · 再走三趟镖（Issue #107）。
  * 三趟镖凶险各异：不是打架的税关、要打架的劫镖、托镖人有鬼的暗路。
  * 程先生管镖单，三趟都由他派；高档的镖要走过低档的才接得了。
  */
+
+/** 还没补完、暂不挂出来的差事用它（没有地方写这个旗标）：补完了把这一条从条件里删掉 */
+const PENDING: Cond = { flag: 'zb_pending_open' };
 
 const NPCS: NpcDef[] = [
   {
@@ -14,7 +17,8 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察',
       { verb: '走布匹', if: { jobOpen: 'zb_bu', shenfen: 'biaoshi' } },
       { verb: '走药材', if: { jobOpen: 'zb_yao', shenfen: 'biaoshi', flag: 'zb_bu_done' } },
-      { verb: '走官银', if: { jobOpen: 'zb_yin', shenfen: 'biaoshi', flag: 'zb_yao_done' } }],
+      // 走官银还交不了差（验箱、开箱、撂挑子三条路没有入口，审查 D02）：补完以前不挂出来，交 zcode 补
+      { verb: '走官银', if: { jobOpen: 'zb_yin', shenfen: 'biaoshi', flag: 'zb_yao_done', any: [PENDING] } }],
     actions: {
       交谈: [
         { if: { job: 'zb_bu' }, text: '程先生推了推老花镜：「布匹装好了，在院里候着。瓜洲布行的朝奉会点数——少一匹，你的工钱扣一半。」' },
@@ -27,7 +31,8 @@ const NPCS: NpcDef[] = [
       观察: [{ text: '他的老花镜用细绳绑在耳朵后面，镜片厚得像瓶底。桌上镖单按远近排成一列，最近的那张边角卷了毛边。' }],
       走布匹: [
         { text: '程先生抽出一张镖单递给你：「一车细布，送去瓜洲布行。老蔡押车。路上有个关卡，税吏姓吴，你到了自会明白。」',
-          do: [{ type: 'job', id: 'zb_bu' }] }
+          // 每趟布匹都要重新过关交税：上一趟的税票不作数（审查 D03：第二趟交不了）
+          do: [{ type: 'job', id: 'zb_bu' }, { type: 'flag', flag: 'zb_tax_paid', value: false }] }
       ],
       走药材: [
         { text: '程先生把镖单压在算盘底下：「一批川贝和老参，送去镇江百草堂。这趟走水路过江，江上不太平——老蔡跟着你。」',
@@ -68,11 +73,11 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '交镖'],
     actions: {
       交镖: [
-        { if: { flag: 'zb_tax_paid', notFlag: 'zb_bu_done' },
+        { if: { flag: 'zb_tax_paid' },
           text: '朝奉点了布匹，一匹不少。「威远镖局的货，从来不用操心。」他在镖单上按了手印，「下回还走你们家的镖。」',
           do: [
             { type: 'jobDone', id: 'zb_bu' },
-            { type: 'flag', flag: 'zb_bu_done' },
+            { type: 'flag', flag: 'zb_bu_done' }, { type: 'flag', flag: 'zb_tax_paid', value: false },
             { type: 'feed', tag: '江湖', text: '瓜洲布行点了货，一匹不少。这趟布匹的镖走完了。' }
           ] },
         { if: { flag: 'zb_tax_name', notFlag: 'zb_bu_done' },
@@ -89,7 +94,7 @@ const NPCS: NpcDef[] = [
             { type: 'flag', flag: 'zb_bu_done' },
             { type: 'feed', tag: '江湖', text: '你走小路把布匹送到了瓜洲布行，镖期擦边赶上了。' }
           ] },
-        { text: '朝奉开始点布匹。' }
+        { text: '朝奉翻了翻镖单，又抬眼看你：「关上的税票呢？没有税票，这车布我不敢收。」' }
       ],
       交谈: [
         { if: { flag: 'zb_tax_paid' },
@@ -106,9 +111,16 @@ const NPCS: NpcDef[] = [
     id: 'jb_zhang', name: '百草堂张掌柜', ini: '张', tone: 'jade', brief: '验着药材',
     look: '精瘦的老者，鼻尖灵敏，一闻就知道药材的产地和年份。验货极仔细，一根参须都不放过。',
     at: { room: 'zj_shi', if: { job: 'zb_yao' } },
-    verbs: ['交谈', '观察'],
+    // 交镖时断云虎出来截（审查 D02：原来张掌柜没有「交镖」，断云虎没处开打，这趟镖永远交不了）
+    verbs: ['交谈', '观察', '交镖'],
     actions: {
-      交谈: [{ text: '「威远镖局的药材，走的是川陕的货。」张掌柜打开一盒老参闻了闻，「嗯，正货。」' }]
+      交谈: [{ text: '「威远镖局的药材，走的是川陕的货。」张掌柜打开一盒老参闻了闻，「嗯，正货。」' }],
+      交镖: [
+        { if: { job: 'zb_yao' },
+          text: '老蔡把镖车赶到百草堂门口，张掌柜刚掀开油布，街口就有人冷笑了一声。一个提着厚背鬼头刀的汉子拨开人群走过来，刀背往肩上一搁。',
+          do: [{ type: 'fight', foe: 'zb_jie_fei' }] },
+        { text: '张掌柜摆摆手：「没有镖单，交什么镖？」' }
+      ]
     }
   },
   {
@@ -171,7 +183,7 @@ const JIE: FoeDef = {
       do: [{ type: 'jobFail', id: 'zb_yao' }] },
     win: { tag: '劫镖 · 胜', title: '药材保全', button: '继续赶路',
       story: '断云虎的鬼头刀被磕飞出去，插在路旁的泥地里。他踉跄着退了两步，靠在一棵老槐树上直喘。老蔡把镖车赶了过来。',
-      do: [{ type: 'jobDone', id: 'zb_yao' }],
+      do: [{ type: 'jobDone', id: 'zb_yao' }, { type: 'flag', flag: 'zb_yao_done' }],
       after: {
         plea: '断云虎靠在老槐树上，喘着粗气：「威远镖局……名不虚传。老子独来独往惯了，今日栽得不冤。」',
         opts: [
@@ -226,7 +238,7 @@ const pack: ContentPack = {
   jobs: JOBS,
   news: NEWS,
   items: [
-    { id: 'zb_huadiao', name: '花雕', kind: '酒食', price: 80, use: [{ type: 'heal', mpFrac: 0.1 }], desc: '陈年花雕，泥封上的红纸写着「百年陈酿」。' }
+    { id: 'zb_huadiao', name: '陈年花雕', kind: '酒食', price: 80, use: [{ type: 'heal', mpFrac: 0.1 }], desc: '陈年花雕，泥封上的红纸写着「百年陈酿」。' }
   ]
 };
 export default pack;

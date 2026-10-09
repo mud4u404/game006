@@ -42,7 +42,7 @@ const STORIES: StoryDef[] = [
       choices: [{ label: '就叫这个名字' }] },
     { tag: '序章 · 瓜洲夜雨', title: '三月初五 · 瓜洲渡',
       paras: ['你在瓜洲渡口长大，跟着江伯打鱼、撑船，偶尔替人送货过江。', '江伯这些日子咳得厉害，人也瘦了一圈。', '今天，天阴得很低。'],
-      choices: [{ label: '回到小屋', next: -1 }] }
+      choices: [{ label: '去看看江伯', next: -1 }] }
   ] },
 
   { id: 'p_night', cards: [
@@ -53,7 +53,7 @@ const STORIES: StoryDef[] = [
 
   { id: 'p_after1', cards: [
     { tag: '序章', title: '雁翎刀',
-      paras: ['黑衣人栽倒在地，再也没有起来。', '你还没喘过气，屋梁上又落下一道黑影。这人身形高大，手提一柄雁翎刀，另外两个黑衣人立刻护到他身后。', '「小崽子，」他冷冷道，「把东西交出来。」'],
+      paras: ['黑衣人栽倒在地，再也没有起来。你握剑的手在抖——这是你头一回杀人。', '你还没喘过气，屋梁上又落下一道黑影。这人身形高大，手提一柄雁翎刀，另外两个黑衣人立刻护到他身后。', '「小崽子，」他冷冷道，「把东西交出来。」'],
       choices: [{ label: '握紧长剑', do: [{ type: 'fight', foe: 'heiyi2' }], next: -1 }] }
   ] },
 
@@ -70,11 +70,10 @@ const STORIES: StoryDef[] = [
       choices: [{ label: '江伯——' }] },
     { tag: '获得', title: '江伯的遗物',
       paras: ['玉佩上刻着一个「沈」字，还有半个「寒」字，断口参差，另一半不知在何处。', '油布包里是一页剑谱，墨迹被水洇开了一半，只认得出「断水」二字，和一式剑招的起手。'],
-      gains: ['半块玉佩', '断水残页', '习得绝技「断水」· 初窥门径'],
+      // 开局不给绝技（负责人 10-09：「开局就有绝技比较扯」）：残页只是一页残谱，断水要自己参悟（content/packs/core.ts 的 scroll）
+      gains: ['半块玉佩', '断水残页'],
       choices: [{ label: '掩埋江伯', do: [
-        { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 },
-        // 江伯临终所传：不花历练，代价是江伯的命（content/skills.ts 的 LEARN_LILIAN）
-        { type: 'learn', skill: 'duanshui', realm: 0, prof: 10, lilian: 0 }
+        { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 }
       ] }] },
     { tag: '序章', title: '天明',
       paras: [
@@ -107,7 +106,7 @@ const FOES: FoeDef[] = [
       { name: '夺命三刀', text: '黑衣人压低身形，短刀反握，脚下悄无声息地绕向你左侧……', dom: 'su', after: '刀锋划破了窗纸。' }
     ],
     asides: ['雨水从破了的屋顶漏下来，滴在江伯脸上。', '窗外的雨越下越大。'],
-    opening: ['刀势一老', '脚下一滑', '收刀时露了空门'],
+    opening: ['刀势一老', '脚下一滑', '收刀时身子一沉'],
     intro: '黑衣人一言不发，短刀已到胸前！',
     tips: ['战斗会自动进行，你来决定何时出招。内力够时，点「寒江孤影」。'],
     win: '黑衣人闷哼一声，栽倒在地，再也没有起来。',
@@ -133,9 +132,9 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'prologue', name: '序章 · 瓜洲夜雨', stages: [
-    { title: '和江伯说说话', to: 'gz_home' },
-    { title: '去镇上回春堂抓药', to: 'gz_town' },
-    { title: '把药带回渡口小屋', to: 'gz_home' },
+    { title: '和江伯说说话', to: 'gz_home', who: 'jiangbo', hint: '江伯靠在床头咳嗽，过去陪他说说话。' },
+    { title: '去镇上回春堂抓药', to: 'gz_town', who: 'huichun', hint: '到瓜洲镇回春堂，报老江的方子抓药。' },
+    { title: '把药带回渡口小屋', to: 'gz_home', hint: '揣着药赶回渡口小屋，江伯还在等。' },
     { title: '序章 · 完' }
   ] }
 ];

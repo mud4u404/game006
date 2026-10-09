@@ -1,4 +1,4 @@
-import type { ContentPack, EncounterDef, FoeDef, StoryDef } from '../types';
+import type { Cond, ContentPack, EncounterDef, FoeDef, StoryDef } from '../types';
 
 /**
  * 路遇 · 扬州一带（Issue #85）：八件路上的事。
@@ -8,16 +8,19 @@ import type { ContentPack, EncounterDef, FoeDef, StoryDef } from '../types';
 
 const NIGHT = { hour: { from: 19, to: 5 } };
 
+/** 白天才有的：练剑、练拳、群架、算命、诬赖（审查 B29：子时还遇到这些） */
+const DAY: Cond = { hour: { from: 6, to: 19 } };
+
 const ENCOUNTERS: EncounterDef[] = [
-  { id: 'luyu_yz_jianke', region: ['yz'], to: ['hu'], story: 'ly_yz_jianke' },
-  { id: 'luyu_yz_tangzi', region: ['yz'], to: ['dukou'], story: 'ly_yz_tangzi' },
+  { id: 'luyu_yz_jianke', region: ['yz'], to: ['hu'], if: DAY, story: 'ly_yz_jianke' },
+  { id: 'luyu_yz_tangzi', region: ['yz'], to: ['dukou'], if: DAY, story: 'ly_yz_tangzi' },
   { id: 'luyu_yz_zhuifei', region: ['yz'], to: ['cheng'], once: true, if: NIGHT, story: 'ly_yz_zhuifei' },
-  { id: 'luyu_yz_huji', region: ['yz'], to: ['dukou'], once: true, story: 'ly_yz_huji' },
+  { id: 'luyu_yz_huji', region: ['yz'], to: ['dukou'], once: true, if: DAY, story: 'ly_yz_huji' },
   { id: 'luyu_yz_zouhai', region: ['yz'], to: ['cheng'], once: true, if: NIGHT, story: 'ly_yz_zouhai' },
   { id: 'luyu_yz_zouhai_a', region: ['yz'], to: ['dukou'], once: true, if: { flag: 'ly_yz_zouhai_fuya' }, story: 'ly_yz_zouhai_a' },
   { id: 'luyu_yz_zouhai_b', region: ['yz'], to: ['dukou'], once: true, if: { flag: 'ly_yz_zouhai_qian' }, story: 'ly_yz_zouhai_b' },
-  { id: 'luyu_yz_suanming', region: ['yz'], to: ['jinshan'], story: 'ly_yz_suanming' },
-  { id: 'luyu_yz_shusheng', region: ['yz'], to: ['cheng_tavern'], once: true, story: 'ly_yz_shusheng' }
+  { id: 'luyu_yz_suanming', region: ['yz'], to: ['jinshan'], if: DAY, story: 'ly_yz_suanming' },
+  { id: 'luyu_yz_shusheng', region: ['yz'], to: ['cheng_tavern'], once: true, if: DAY, story: 'ly_yz_shusheng' }
 ];
 
 const STORIES: StoryDef[] = [
@@ -117,9 +120,9 @@ const STORIES: StoryDef[] = [
             { type: 'feed', tag: '江湖', text: '夜里你把一个走失的孩子送到了府衙。' }
           ], next: -1 },
         { label: '蹲下来看看他的手腕', sub: '悟性', if: { attr: { key: '悟性', atLeast: 22 } }, next: 1 },
-        { label: '给他几文钱，让他自己找店',
+        { label: '给他几文钱，让他自己找店', if: { silver: 5 },
           result: '你给他几文钱。孩子攥着钱，怯生生地问了家客栈的名号，一步一挪地走了。夜风里，那点小小的背影看着叫人放心不下。',
-          do: [{ type: 'flag', flag: 'ly_yz_zouhai_alone' }], next: -1 }
+          do: [{ type: 'silver', delta: -5 }, { type: 'flag', flag: 'ly_yz_zouhai_alone' }], next: -1 }
       ] },
     { tag: '路遇', title: '腕上的指印',
       paras: [

@@ -4,8 +4,11 @@ import type { ContentPack, NpcDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'cheng_tavern', name: '望江楼', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [74, 80],
-    desc: '一楼大堂，酒旗半卷，窗外便是东关街的喧嚣。柜台上排着一溜酒坛，泥封上的红纸写着「花雕」。一个络腮胡的壮汉坐在柜台边，抱着酒坛猛灌。',
+    id: 'cheng_tavern', name: '望江楼', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [74, 80], nightQuiet: true,
+    desc: [
+      { if: { hour: { from: 21, to: 5 } }, text: '望江楼的伙计在上门板，大堂里只剩柜上一盏灯。掌柜还在对账，算盘珠子拨得有一下没一下，酒坛都封了泥。' },
+      { text: '一楼大堂，酒旗半卷，窗外便是东关街的喧嚣。柜台上排着一溜酒坛，泥封上的红纸写着「花雕」。一个络腮胡的壮汉坐在柜台边，抱着酒坛猛灌。' }
+    ],
     npcs: ['changgui', 'zhao_tieyi'],
     exits: [['街', 'cheng', '楼']],
     road: '你跨进望江楼的门，酒香混着喧闹扑面而来……'
@@ -14,7 +17,8 @@ const ROOMS: RoomDef[] = [
 
 const NPCS: NpcDef[] = [
   {
-    id: 'changgui', name: '掌柜', ini: '掌', tone: 'amber', brief: '擦着杯子',
+    // 夜里还在柜上对账（望江楼的夜景）
+    id: 'changgui', name: '掌柜', ini: '掌', tone: 'amber', brief: '擦着杯子', night: true,
     look: '五十来岁，围着油迹斑斑的白围裙，一张笑脸见牙不见眼。柜台后的酒架上摆满了酒坛，标着「花雕」「竹叶青」「女儿红」。',
     verbs: ['交谈', '观察', '购买'],
     actions: {
@@ -50,9 +54,8 @@ const NPCS: NpcDef[] = [
         { text: '赵铁衣斜眼打量你，酒气直冲过来：「找我？」他指了指脚边的空坛，「要喝便喝，婆婆妈妈作甚？」' }
       ],
       斗酒: [
-        { if: { flag: 'zhao_doujiu_lose' },
-          text: '赵铁衣按住酒坛直摆手：「打住，打住！今日便到这里，再喝要出人命了。」' },
         { if: { flag: 'biaoju_invite' }, text: '赵铁衣笑着摆手：「已经结交了，就不必再斗了吧？」' },
+        // 输过一回，酒量练上来了（体魄够了）还能再斗（审查 B14：原来输一次就永远不能再斗）
         { if: { attr: { key: '体魄', atLeast: 23 } },
           text: '赵铁衣跟你连碰三坛，你脸不变色。他放下酒坛，哈哈大笑：「好！好兄弟！」一拍酒坛：「威远镖局少镖头赵铁衣，请了！」',
           do: [
@@ -61,6 +64,8 @@ const NPCS: NpcDef[] = [
             { type: 'flag', flag: 'biaoju_invite' },
             { type: 'feed', tag: '江湖', text: '你跟赵铁衣斗酒赢了，拿到了威远镖局的邀请。' }
           ] },
+        { if: { flag: 'zhao_doujiu_lose' },
+          text: '赵铁衣按住酒坛直摆手：「打住，打住！酒量还是那个酒量，再喝要出人命了。练好了再来。」' },
         { text: '三坛下去，你眼前发黑，脑袋「咚」地磕在酒坛上……再睁眼时，赵铁衣已经又干了一坛。（银两 −10 文，过去半个时辰）',
           do: [
             { type: 'flag', flag: 'zhao_doujiu_lose' },

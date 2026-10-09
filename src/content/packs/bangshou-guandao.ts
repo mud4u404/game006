@@ -8,7 +8,7 @@ import type { ContentPack, FoeDef, NpcDef } from '../types';
 
 const NPCS: NpcDef[] = [
   {
-    id: 'bs_zhao', name: '钱老四', ini: '赵', tone: 'gray', brief: '端着茶盘',
+    id: 'bs_zhao', name: '钱老四', ini: '钱', tone: 'gray', brief: '端着茶盘',
     look: '三十来岁的汉子，围裙油亮，端茶的手稳当，眼神却总往官道两头瞟——被劫怕了。',
     at: { room: 'yz_guandao' },
     verbs: ['交谈', '观察'],
@@ -104,7 +104,7 @@ const QI: FoeDef = {
       win: [{ type: 'flag', flag: 'bs_wu_fought' }] },
     { if: { flag: 'bs_zheng_ok' },
       ally: { name: '猎户郑石', share: 0.15, at: [6, 12],
-        say: ['郑石的猎弓在暗处一响，一支箭钉在断刀七脚边的泥地里。', '郑石掷出套索，缠住了断刀七的刀刃。'] },
+        say: ['郑石的猎弓在暗处一响，一支箭擦着断刀七的大腿钉进泥里，带下一片血。', '郑石掷出套索，缠住了断刀七的刀刃。'] },
       text: '郑石从芦苇丛里闪出，猎弓已满弦。',
       story: '猎户郑石的箭钉在断刀七的脚边，断了他逃走的念头。',
       win: [{ type: 'flag', flag: 'bs_zheng_fought' }] }

@@ -17,20 +17,23 @@ import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
 import { hearsay, learnShi, moveShi } from './shishi';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
+import { markLight } from './shang';
 
 /** 三处伤，最重的先治；一样重时先内息，再手、足（和静修养伤同一个次序，engine/lilian.ts） */
 const ZONES: Zone[] = ['inner', 'hand', 'foot'];
 const isWounded = (): boolean => ZONES.some(z => S.wounds[z] > 0);
 
-/** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）。返回每处治好了几级 */
-function cureWounds(levels = Infinity): Partial<Record<Zone, number>> {
+/** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；zones 只治这几处。返回每处治好了几级 */
+function cureWounds(levels = Infinity, zones: Zone[] = ZONES): Partial<Record<Zone, number>> {
   const got: Partial<Record<Zone, number>> = {};
   for (let left = levels; left > 0; left--) {
-    const z = ZONES.slice().sort((a, b) => S.wounds[b] - S.wounds[a])[0];
+    const z = zones.slice().sort((a, b) => S.wounds[b] - S.wounds[a])[0];
     if (S.wounds[z] <= 0) break;
     S.wounds[z]--;
     got[z] = (got[z] ?? 0) + 1;
   }
+  // 治到一级的，开始算轻伤，过一日自己好（engine/shang.ts）
+  markLight(S);
   return got;
 }
 
@@ -68,6 +71,7 @@ export function test(c?: Cond): boolean {
   if (c.eming !== undefined && S.eming < c.eming) return false;
   // 约：今天是约期，约还没了结（engine/shiguang.ts）
   if (c.yue !== undefined && !S.yue.some(y => y.id === c.yue && y.due === dayNo(S))) return false;
+  if (c.yueAhead !== undefined && !S.yue.some(y => y.id === c.yueAhead && y.due > dayNo(S))) return false;
   // 身份与差事（engine/shenfen.ts）
   if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
   if (c.job !== undefined && S.job?.id !== c.job) return false;
@@ -221,6 +225,9 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
           const school = S.sect.school;
           (S.pastSects ??= []).push({ school, how: e.how });
           delete S.sect;
+          // 辞别：贡献清零；叛门：江湖上的人看你是叛徒，恶名 +3（docs/paiban.md E05）
+          if (e.how === '辞别' && S.gongxian) delete S.gongxian[school];
+          if (e.how === '叛门') S.eming += 3;
           // 身份连着这个门派的（捕快之于六扇门），离了门派，身份也就没了
           if (SHENFEN[S.shenfen.id]?.sect === school) { pushFeed('江湖', `你离了${school}，不再是${SHENFEN[S.shenfen.id].name}。`); S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) }; S.job = null; }
         }
@@ -241,15 +248,13 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'time':
         if (e.add) advanceMin(S, e.add);
         if (e.set !== undefined) { let d = e.set - S.min; if (d < 0) d += 1440; advanceMin(S, d); }
+        if (e.until !== undefined && e.until > S.min) advanceMin(S, e.until - S.min);
         break;
       case 'weather': S.weather = e.value; break;
       case 'heal':
-        if (e.hp === 'full') {
-          S.hp = S.hpMax;
-          // 好好歇一夜，最重的那一处伤缓一级
-          const z = (['inner', 'hand', 'foot'] as const).slice().sort((x, y) => S.wounds[y] - S.wounds[x])[0];
-          if (S.wounds[z] > 0) S.wounds[z]--;
-        } else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
+        // 好好歇一夜，气血回满；轻伤过一日自己好，重伤要看伤、服药（engine/shang.ts），歇一夜治不了
+        if (e.hp === 'full') S.hp = S.hpMax;
+        else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
         if (e.mp === 'full') S.mp = S.mpMax; else if (typeof e.mp === 'number') S.mp = Math.min(S.mpMax, S.mp + e.mp);
         if (e.hpAtLeast) S.hp = Math.max(S.hp, Math.round(S.hpMax * e.hpAtLeast));
         // 按上限的几成回（金疮药回三成，和战斗里服药一样）
@@ -257,7 +262,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (e.mpFrac) S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * e.mpFrac));
         break;
       case 'cure': {
-        const got = cureWounds(e.levels);
+        const got = cureWounds(e.levels, e.zones);
         const done = ZONES.filter(z => got[z]).map(z => `${ZONE_NAME[z]}伤${S.wounds[z] ? `轻了${liang(got[z]!)}级，还剩${liang(S.wounds[z])}级` : '好了'}`);
         if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
         break;

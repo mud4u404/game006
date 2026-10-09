@@ -114,22 +114,39 @@ describe('嚼用', () => {
   it('身上留一百文盘缠：钱只够住几日，就住几日，余下的露宿', () => {
     S.silver = 350;
     const r = jingxiu(S, 5, () => 0.99);
-    expect(r).toMatchObject({ lodging: 'lusu', cost: 200, lusuDays: 3 });
+    expect(r).toMatchObject({ lodging: 'inn', cost: 200, lusuDays: 3 });
     expect(S.silver).toBe(150);
     expect(jingxiu(S, 3, () => 0.99)).toMatchObject({ cost: 0, lusuDays: 3 });
     expect(S.silver).toBe(150);
   });
-  it('钱不够就露宿：不花钱，伤好得慢', () => {
-    S.wounds = { hand: 2, foot: 0, inner: 0 };
+  it('钱不够就露宿：不花钱，睡不安稳，打坐参悟打八折', () => {
+    S.lilian = 5000;
     S.silver = 50;
     const lusu = jingxiu(S, 4, () => 0.99);
-    expect(lusu).toMatchObject({ lodging: 'lusu', cost: 0 });
+    expect(lusu).toMatchObject({ lodging: 'inn', cost: 0, lusuDays: 4 });
     expect(S.silver).toBe(50);
     setState(skipToYangzhou());
-    S.wounds = { hand: 2, foot: 0, inner: 0 };
+    S.lilian = 5000;
     S.silver = 1000;
     const inn = jingxiu(S, 4, () => 0.99);
-    expect(inn.healed.hand ?? 0).toBeGreaterThan(lusu.healed.hand ?? 0);
+    expect(inn.used).toBeGreaterThan(lusu.used);
+  });
+  it('住处三选一（docs/paiban.md D05）：自己选露宿的不花钱、打八折；有师门的回师门住，不花钱也不打折', () => {
+    S.lilian = 5000; S.silver = 1000; S.zhu = 'lusu';
+    const lusu = jingxiu(S, 4, () => 0.99);
+    expect(lusu).toMatchObject({ lodging: 'lusu', cost: 0, lusuDays: 4 });
+    expect(S.silver).toBe(1000);
+    setState(skipToYangzhou());
+    S.lilian = 5000; S.silver = 1000; S.zhu = 'home';
+    // 没有师门，选了师门也算客栈
+    expect(jingxiu(S, 1, () => 0.99)).toMatchObject({ lodging: 'inn', cost: 100 });
+    setState(skipToYangzhou());
+    S.lilian = 5000; S.silver = 1000; S.zhu = 'home';
+    S.sect = { school: '少林', rank: '记名' } as typeof S.sect;
+    const home = jingxiu(S, 4, () => 0.99);
+    expect(home).toMatchObject({ lodging: 'home', cost: 0, lusuDays: 0 });
+    expect(S.silver).toBe(1000);
+    expect(home.used).toBeGreaterThan(lusu.used);
   });
 });
 

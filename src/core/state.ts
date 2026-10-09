@@ -1,4 +1,4 @@
-import type { AttrKey, Effect, FeedTag, SectRank, SkillId } from '../content/types';
+import type { AttrKey, Effect, FeedTag, LeaveHow, SectRank, SkillId } from '../content/types';
 import type { Loadout } from '../engine/wuxue';
 import { clearSaveSafely, readSave, writeSave } from './save';
 import { nowMs } from './time';
@@ -7,7 +7,10 @@ import { syncBody } from '../engine/ren';
 export interface SkillProg { r: number; p: number }
 /** 约：npc 在 at 等你，due 是哪一个江湖日（core/time.ts 的 dayNo）；miss 是失约的后果 */
 export interface Yue { id: string; npc: string; at: string; due: number; text: string; miss?: Effect[] }
-export interface ShiState { at: string; since: number; seen?: string; done?: number }
+/** 世事：走到哪一步、从何时起、玩家知道到哪一步、了结过几回、玩家插过手没有 */
+export interface ShiState { at: string; since: number; seen?: string; done?: number; hand?: true }
+/** 静修的住处 */
+export type Zhu = 'inn' | 'lusu' | 'home';
 export interface FeedEntry { t: FeedTag; x: string; n: number }
 export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
 /** 纸娃娃六个装备位在存档里的键：兵器、冠、衣、靴、佩、饰 */
@@ -55,11 +58,18 @@ export interface GameState {
   sect?: { school: string; rank: SectRank };
   /** 离开过的师门 */
   /** 离开过的师门：出师的回得去，叛门、被逐出的回不去（engine/shicheng.ts） */
-  pastSects?: { school: string; how: '出师' | '叛门' | '逐出' }[];
+  pastSects?: { school: string; how: LeaveHow }[];
   /** 功力（年）：一年一百点内力，靠静修的岁月熬（engine/ren.ts） */
   gongli: number;
-  /** 身上的伤：手、足、内息各几级（零到三）。吃了重招才落下，打完才起作用，带到下一场；静修、歇息养好 */
+  /**
+   * 身上的伤：手、足、内息各几级（零到三）。吃了重招才落下，打完才起作用，带到下一场（engine/shang.ts）。
+   * 一级是轻伤，过一日自己好；二级以上是重伤，要找郎中看伤或者服药
+   */
   wounds: { hand: number; foot: number; inner: number };
+  /** 哪几处是轻伤、从江湖历第几分钟起算（过一日自己好，engine/shang.ts 的 healLight） */
+  lightSince?: Partial<Record<'hand' | 'foot' | 'inner', number>>;
+  /** 到过的最高档次：升了档要提一句（ui/shell.ts 的 render，审查 G13） */
+  tierTop?: number;
   /**
    * 现实的钟（engine/shiguang.ts）：开局（或换算存档）时的现实时刻和那天的江湖日，上次在线的现实时刻。
    * 江湖跑不过现实：江湖的日数最多比开局以来的现实小时数多十日；下线就是静修，现实一小时算江湖一日。
@@ -71,6 +81,8 @@ export interface GameState {
   xinmo: { n: number; why: string };
   /** 营生（engine/shenfen.ts）：渔家、游侠、镖师……；本行里的地位（零被辞退，一到三）；哪一日入的行 */
   shenfen: { id: string; standing: number; since: number };
+  /** 闭关、下线静修住哪儿：客栈（一日一百文）、露宿（不花钱，打八折）、师门（有师门的，不花钱）。不写是客栈（engine/shiguang.ts 的 zhuOf） */
+  zhu?: Zhu;
   /** 手上的差事：哪一件、约期（江湖日）；办完的差事上回是哪一日办完的 */
   job: { id: string; due: number } | null;
   jobLog: Record<string, number>;
@@ -117,8 +129,8 @@ export function newGame(): GameState {
     real: realNow(65), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
     silver: 30, items: { qingfeng: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
-    // 回春堂掌柜看着你长大（开口就是「惊澜来了」）
-    flags: {}, rel: { jiangbo: '相依为命', huichun: '点头之交' }, title: '', xia: 0, eming: 0,
+    // 瓜洲的街坊看着你长大：回春堂掌柜、茶摊老汉、卖鱼阿婆、艄公、钟郎中、谭老栓（审查 A12、C34）
+    flags: {}, rel: { jiangbo: '相依为命', ...JIEFANG }, title: '', xia: 0, eming: 0,
     attr: { 体魄: 20, 根骨: 20, 身法: 20, 悟性: 20, 胆魄: 20 }, lilian: 0, encLog: {}, lastEnc: -1e9,
     // 渔家少年：江伯只教过几招防身的粗浅功夫，都还没入门（从零练起，见 docs/audit.md）
     skills: { hanjiang: { r: 0, p: 0 }, xinfa: { r: 0, p: 0 }, taxue: { r: 0, p: 0 } },
@@ -131,7 +143,11 @@ export function newGame(): GameState {
   return s;
 }
 
-/** 跳过序章，直接从扬州开始：和走完序章的样子相当（江伯故去，学了断水的起手；惊鸿剑要自己去小金山悟） */
+/** 瓜洲看着你长大的街坊：开局就是点头之交 */
+const JIEFANG: Record<string, string> = Object.fromEntries(
+  ['huichun', 'chatan', 'ayp', 'shaogong', 'jc_gz_zhong', 'jc_gz_tan'].map(id => [id, '点头之交']));
+
+/** 跳过序章，直接从扬州开始：和走完序章的样子相当（江伯故去，留下断水残页，断水要自己参悟；惊鸿剑要自己去小金山悟） */
 export function skipToYangzhou(): GameState {
   const s: GameState = {
     v: 4, chapter: 1, name: '孤舟', loc: 'hu', year: 0, month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
@@ -139,14 +155,15 @@ export function skipToYangzhou(): GameState {
     real: realNow(67), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'youxia', standing: 1, since: 67 }, job: null, jobLog: {},
     silver: 120, items: { qingfeng: 1, jcy: 3, fhs: 5, jade: 1, scroll: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
-    flags: { skipped: true }, rel: { liu: '素不相识' }, title: '', xia: 12, eming: 0,
+    flags: { skipped: true }, rel: { liu: '素不相识', ...JIEFANG }, title: '', xia: 12, eming: 0,
     // 历练：序章了结 300，加上那一夜两场被江伯救下的恶战 26 + 180（engine/lilian.ts）
     attr: { ...ATTR0 }, lilian: 506, encLog: {}, lastEnc: -1e9,
-    skills: { hanjiang: { r: 0, p: 120 }, taxue: { r: 0, p: 50 }, xinfa: { r: 0, p: 80 }, duanshui: { r: 0, p: 10 } },
-    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang', ult: 'duanshui' }, gear: { weapon: 'qingfeng' },
+    // 断水不在开局：江伯留下的残页要自己参悟（负责人 10-09）
+    skills: { hanjiang: { r: 0, p: 120 }, taxue: { r: 0, p: 50 }, xinfa: { r: 0, p: 80 } },
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'qingfeng' },
     feed: [
       { t: '江湖', x: '你在扬州城外的破庙里歇了一夜，江伯教的那几招剑法，比划来比划去，总觉得差着火候。', n: 0 },
-      { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮放出悬赏。', n: 0 }
+      { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮吃了哑巴亏。', n: 0 }
     ],
     story: '', sel: 'liu', reply: null, tab: 'jianghu'
   };

@@ -128,7 +128,7 @@ const NPCS: NpcDef[] = [
     look: '告示上盖着扬州府大印，墨迹新鲜。最底下画着一张画像——短打汉子，左手缺了小指，绰号「草上飞」。悬赏白银五十两，有线索者速报。',
     verbs: ['观察', '细看', '揭榜'],
     actions: {
-      细看: [{ text: '「缉拿江洋大盗草上飞。近来出没于小金山、茱萸湾一带，夜闯商铺三家，劫银百两。有线索者，速报府衙六扇门。悬赏白银五十两正。扬州府衙 · 朱」（获得线索一条）',
+      细看: [{ text: '「缉拿江洋大盗草上飞。近来出没于小金山、茱萸湾一带，夜闯商铺三家，劫银三百两。有线索者，速报府衙六扇门。悬赏白银五十两正。扬州府衙 · 朱」（获得线索一条）',
         do: [{ type: 'flag', flag: 'gaoshi_read' }, { type: 'feed', tag: '江湖', text: '告示缉拿江洋大盗「草上飞」，悬赏五十两白银，线索指向小金山、茱萸湾。' }] }],
       揭榜: [
         { if: { quest: { id: 'side_caoshangfei', atLeast: 1 } }, text: '告示已经揭走了。' },
@@ -149,7 +149,9 @@ const NPCS: NpcDef[] = [
             { type: 'quest', id: 'side_caoshangfei', stage: 1 },
             { type: 'feed', tag: '江湖', text: '你自荐揭下了缉拿草上飞的告示。周捕头半信半疑，撂下一句狠话：拿不回人，自己去找府台说。' }
           ] },
-        { text: '你凑近看了看，告示上的字太小，看不清写的什么。' }
+        // 没细看就揭：先把告示看清楚（审查 B12：原来回「字太小，看不清」，观察时明明读得出）
+        { text: '你伸手之前，先把告示从头到尾看了一遍：缉拿江洋大盗草上飞，悬赏白银五十两。看清了，再揭不迟。',
+          do: [{ type: 'flag', flag: 'gaoshi_read' }] }
       ]
     }
   }
@@ -157,9 +159,14 @@ const NPCS: NpcDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'side_caoshangfei', name: '六扇门 · 缉拿草上飞', stages: [
-    { title: '拿到第一条线索', to: 'jinshan' },
-    { title: '追查草上飞的行踪', to: 'zhuyuwan' },
-    { title: '押草上飞回府衙交差', to: 'yz_fuya' },
+    // 这一步在府衙揭榜才推进（周捕头或照壁上的告示），小金山的棋痴要揭了榜才开口，所以目的地写府衙
+    { title: '拿到第一条线索', to: 'yz_fuya', who: 'fuya_zhou', hint: '回府衙找周捕头揭榜，把这桩案子接下来。' },
+    { title: '追查草上飞的行踪', to: 'zhuyuwan', who: 'zy_csf', hint: '在茱萸湾问渔家、看破船，他入夜才回船上。',
+      need: [
+        { if: { flag: 'csf_clue2' }, text: '先在茱萸湾打听出他落脚的破船' },
+        { if: { hour: { from: 19, to: 5 } }, text: '入夜以后' }
+      ] },
+    { title: '押草上飞回府衙交差', to: 'yz_fuya', who: 'fuya_zhou', hint: '把草上飞带回扬州府衙，交给周捕头。' },
     { title: '缉拿草上飞 · 完' }
   ] }
 ];

@@ -33,7 +33,8 @@ const ROOMS: RoomDef[] = [
       { text: '北固山下一座三间的小院，柴门关着，院里一方磨剑石，一块旧匾上「剑庐」两个字剥了大半。院墙底下晒着药草，一个哑巴老仆在劈柴，斧头起落，眼睛却一直朝着上山的道。' }
     ],
     npcs: ['smhs_baizhou', 'smhs_yashu', 'smhs_lawei'],
-    exits: [['南', 'zj_shi', '北']],
+    // 大市口已经有一个「北」（西津渡），剑庐写东北（审查 C52、E29）
+    exits: [['西南', 'zj_shi', '东北']],
     road: '你出了大市口往北，走完江堤，北固山像一面屏风立在江边，山脚下就是剑庐的柴门……',
     onEnter: [
       { if: { notFlag: 'smhs_seen' },
@@ -215,14 +216,14 @@ const NPCS: NpcDef[] = [
 const KAO: FoeDef = {
   id: 'smhs_kao', name: '柏舟先生', title: '华山考校', ini: '柏', tone: 'purple',
   weapon: '三尺青锋', ws: '剑', tag: '考校',
-  nature: '中正', reach: '短', rank: 0.5, build: 'outer', spar: true, firstTell: 3,
+  nature: '中正', reach: '短', rank: 0.5, build: 'outer', spar: true, rounds: 30, firstTell: 3,
   moves: ['金雁横空', '苍松迎客', '截剑式', '断云势'],
   flourish: ['剑光在鞘口亮了一亮', '剑走偏锋，贴着你的兵刃滑过来', '脚步碾着磨剑石的边走', '一剑递出，半途忽然收力'],
   tells: [
     { name: '金雁横空', text: '先生的剑斜斜挑起，像一只大雁掠过天空，剑尖直取你的肩井……', dom: 'su', after: '剑到中途忽然变线，改刺你的手腕！' },
     { name: '断云势', text: '先生双手握剑，当头一剑劈落，没有半点花巧……', dom: 'li', after: '这一剑又快又直，全靠你自己的兵刃去接！' }
   ],
-  asides: ['院里的老银杏落了一片叶。', '哑叔停了斧头，站在柴门边看。', '墙外老魏的柴担，轻轻地放下了。'],
+  asides: ['院墙底下晒的药草，叫风翻了个面。', '哑叔停了斧头，站在柴门边看。', '墙外老魏的柴担，轻轻地放下了。'],
   opening: ['剑势收得太尽', '右手食指换了下握姿', '起脚时慢了半拍'],
   intro: '先生把剑抽出一尺，霜一样的光一闪即收：「华山考校，考的是收放。接老朽三十招——剑上无眼，点到为止。」',
   win: '先生收剑入鞘：「好。收得住的剑，才有资格谈快。」',
@@ -248,7 +249,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smhs_mo', name: '华山 · 磨剑', stages: [
-    { title: '替柏舟先生把那口剑磨亮', to: 'smhs_jianlu' },
+    { title: '替柏舟先生把那口剑磨亮', to: 'smhs_jianlu', who: 'smhs_yashu', hint: '请哑叔领你磨剑，或白天接柏舟先生三十招。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
     { title: '华山 · 磨剑 · 完' }
   ] }
 ];

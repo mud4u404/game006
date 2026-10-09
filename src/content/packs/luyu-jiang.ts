@@ -145,7 +145,7 @@ const STORIES: StoryDef[] = [
             { type: 'silver', delta: -5 }, { type: 'flag', flag: 'ly_jiang_tun_xiang' }
           ], next: -1 },
         { label: '笑而不信，扶栏看江',
-          result: '你扶着船栏看江豚起起伏伏，看风从江面上卷过来。大自然的事，敬它，不必怕它。', next: -1 }
+          result: '你扶着船栏看江豚起起伏伏，看风从江面上卷过来。天地的事，敬它，不必怕它。', next: -1 }
       ] }
   ] }
 ];

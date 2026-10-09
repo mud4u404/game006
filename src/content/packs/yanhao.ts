@@ -7,9 +7,13 @@ import type { ContentPack, NpcDef, QuestDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_yanhao', name: '汪家盐号', area: '扬州城 · 东关', region: 'yz', t: 10, map: [80, 66],
-    desc: '东关街东头最大的铺面，三开间门脸，匾上「汪家盐号」四个泥金大字。柜上算盘声不断，伙计扛着盐包进进出出，后院隐约有舂捣之声。',
-    npcs: ['yh_bizhang', 'yh_wanglaoye', 'yh_xinger', 'yh_menfang', 'yh_yunniang'],
+    id: 'yz_yanhao', name: '汪家盐号', area: '扬州城 · 东关', region: 'yz', t: 10, map: [80, 66], nightQuiet: true,
+    desc: [
+      { if: { hour: { from: 21, to: 5 } }, text: '盐号上了门板，泥金大字隐在黑里。门缝里透出一线灯光，后院偶尔传来几声狗叫，舂盐的声音停了。' },
+      { text: '东关街东头最大的铺面，三开间门脸，匾上「汪家盐号」四个泥金大字。柜上算盘声不断，伙计扛着盐包进进出出，后院隐约有舂捣之声。' }
+    ],
+    // 云娘不写在这里：她只在被架进盐号、还没交契时才在（at 带条件，审查 B01）
+    npcs: ['yh_bizhang', 'yh_wanglaoye', 'yh_xinger', 'yh_menfang'],
     objs: ['yh_qixia', 'yh_zhangbu'],
     exits: [['西', 'cheng', '东']],
     road: '你沿东关街往东走到头，汪家盐号的金字招牌就在眼前……',
@@ -220,9 +224,11 @@ const NPCS: NpcDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'side_yanhao', name: '支线 · 汪家身契', stages: [
-    { title: '打听云娘的身契' },
-    { title: '查出汪家的软处' },
-    { title: '身契有了着落' },
+    { title: '打听云娘的身契', to: 'yz_yanhao', who: 'yh_bizhang', hint: '到汪家盐号问毕掌柜，云娘的身契作价几何。' },
+    // 推进的路有四条：账簿上的把柄找毕掌柜、二十两赎人、拿老脚夫的旧事压汪老爷、入夜撬契匣，没有共同的门槛
+    { title: '查出汪家的软处', to: 'yz_yanhao', who: 'yh_bizhang', hint: '细看柜上的账簿捏住把柄，或凑足二十两赎人。' },
+    { title: '身契有了着落', to: 'yz_yanhao', who: 'yh_yunniang', hint: '云娘白天在盐号后院舂盐，把身契亲手交给她。',
+      need: [{ if: { item: { id: 'yh_shenqi', atLeast: 1 } }, text: '身契带在身上' }] },
     { title: '身契交到云娘手里' }
   ] }
 ];
