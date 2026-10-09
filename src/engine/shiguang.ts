@@ -17,6 +17,7 @@ import { jingxiuPlan, retreatPlan } from './lilian';
 import { healLight, markLight } from './shang';
 import { syncBody } from './ren';
 import { npcName } from './world';
+import { tickWorld, worldRng } from './shijie';
 
 /** 铁律的余裕（日）、一次离开最多算几日、现实一小时算江湖几日 */
 export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
@@ -127,7 +128,7 @@ export interface RestReport {
 }
 
 /** 静修 days 日：养伤、打坐、参悟，江湖历往前走，出关时气血内力回满。返回邸报要写的东西 */
-export function jingxiu(s: GameState, days: number, rng: () => number = Math.random): RestReport {
+export function jingxiu(s: GameState, days: number, rng: () => number = worldRng): RestReport {
   const xm0 = s.xinmo.n;
   const xm1 = Math.max(0, xm0 - XINMO.decay * days);
   // 嚼用：住客栈的，盘缠以外的钱够住几日住几日，余下的日子露宿，睡不安稳，那几日打坐、参悟打八折；
@@ -154,7 +155,9 @@ export function jingxiu(s: GameState, days: number, rng: () => number = Math.ran
   advanceDays(s, days);
   s.min = 7 * 60 + 10;
   s.hp = s.hpMax; s.mp = s.mpMax;
-  // 静修的日子里，江湖自己往前走（engine/shishi.ts）：这一带的事传到耳朵里的先写，再补几句闲话传闻
+  // 静修的日子里，江湖自己往前走：世界的慢变逐日补上（engine/shijie.ts），
+  // 世事到日子的往下走（engine/shishi.ts）：这一带的事传到耳朵里的先写，再补几句闲话传闻
+  tickWorld(s);
   const heard = tickShi();
   const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
   const news: string[] = [...heard];
@@ -220,7 +223,7 @@ export function yueText(s: GameState, y: Yue): string {
 }
 
 /** 下线回来：离开的现实小时，算成静修的日子（一次最多十六日，受铁律和约约束）。不够一日不算 */
-export function settleAway(s: GameState, rng: () => number = Math.random): (RestReport & { hours: number; why?: 'tielv' | 'yue'; yue?: Yue }) | null {
+export function settleAway(s: GameState, rng: () => number = worldRng): (RestReport & { hours: number; why?: 'tielv' | 'yue'; yue?: Yue }) | null {
   // 序章里不结算：江伯病着，不是闭关的时候（原来下线回来写「在渡口小屋静修了六日……露宿了六夜」，审查 G02）
   if (s.chapter === 0) { s.real.seen = nowMs(); return null; }
   const hours = awayHours(s);

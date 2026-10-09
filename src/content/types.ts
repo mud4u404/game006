@@ -73,8 +73,40 @@ export interface Cond {
   gongxian?: number;
   /** 世事（engine/shishi.ts）眼下在这几步之一（at）；不在这几步（not，还没起头也算不在） */
   shi?: { id: string; at?: string[]; not?: string[] };
+  /** 世界状态（engine/shijie.ts，docs/huo-shijie.md 3.2）：码头归谁、一处的治安和物价、一股势力的实力和对你的账、一个人眼下的处境 */
+  w?: WorldCond;
   any?: Cond[];
 }
+
+/** 一个数的上下限：below 是小于，atLeast 是不小于 */
+export interface Range { below?: number; atLeast?: number }
+/** 人的处境：ok 是平常，hurt 伤着、jailed 在牢里、gone 走了、dead 死了 */
+export type PersonSt = 'ok' | 'hurt' | 'jailed' | 'gone' | 'dead';
+export interface WorldCond {
+  /** 这处地方眼下归这几股势力之一（null 表示没有主人） */
+  owner?: { place: string; is: (string | null)[] };
+  order?: { place: string } & Range;
+  price?: { place: string } & Range;
+  fac?: { id: string; power?: Range; you?: Range };
+  /** 这个人眼下的处境 */
+  p?: { id: string; st: PersonSt[] };
+}
+
+/** 世界状态的效果（engine/shijie.ts）。数都不进人物的嘴，只变成人的话、地方的痕迹、价钱 */
+export type WorldEffect =
+  /** 一处地方换了主人（null 是没人占着）；船钱、过路钱跟着主人走（RoomLife.toll） */
+  | { type: 'w'; op: 'owner'; place: string; to: string | null }
+  | { type: 'w'; op: 'power' | 'wealth'; fac: string; delta: number }
+  | { type: 'w'; op: 'order' | 'prosper' | 'price'; place: string; delta: number }
+  /**
+   * 一个人负了伤、下了牢、走了（days 日后回来；不写的，jail、gone 要等 free）；free 是放回来、伤好了。
+   * mark 写的是他常待的地方底下添的那一句交代（「药铺上了一半门板」），文字由写这件事的人写，引擎不编
+   */
+  | { type: 'w'; op: 'hurt' | 'jail' | 'gone' | 'free'; npc: string; days?: number; mark?: { place: string; text: string } }
+  /** 一股势力对你的账：恩为正、怨为负 */
+  | { type: 'w'; op: 'you'; fac: string; delta: number }
+  /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；每处最多两行 */
+  | { type: 'w'; op: 'mark'; place: string; k: string; text: string; days: number };
 
 /** 效果：按顺序执行 */
 export type Effect =
@@ -145,7 +177,8 @@ export type Effect =
   /** 开打：战斗结束后由对手定义里的 results 决定后续 */
   | { type: 'fight'; foe: string }
   /** 打开一段剧情卡片 */
-  | { type: 'story'; id: string };
+  | { type: 'story'; id: string }
+  | WorldEffect;
 
 /** 分支：从上往下找第一个条件成立的分支，显示 text，执行 do */
 export interface Branch { if?: Cond; text?: string; do?: Effect[] }
@@ -180,8 +213,51 @@ export interface RoomDef {
    * 写了它，desc 里就要有一段夜景（带 hour 条件），CI 查。
    */
   nightQuiet?: true;
-  /** 客船、渡船：上船付的船钱（文）。钱不够的，替船家撑篙抵船钱，路上多耗一个时辰（engine/world.ts 的 payFare） */
+  /** 客船、渡船：上船付的船钱（文）。钱不够的，替船家撑篙抵船钱，路上多耗一个时辰（engine/world.ts 的 payFare）。写了 life.toll 的，以 toll 为准 */
   fare?: number;
+  /** 地方的活气（engine/shijie.ts）：只给有事的地方写。别的内容包的地点，用 ContentPack.roomLife 补，不必改别人的文件 */
+  life?: RoomLife;
+}
+
+/** 势力：帮会、官府、商号、寺观、绿林、门派。一城三到六股（docs/huo-shijie.md 3.2） */
+export interface FactionDef {
+  id: string;
+  name: string;
+  kind: '帮' | '官' | '商' | '寺' | '丐' | '绿林' | '门派';
+  /** 根在哪个地区 */
+  region: string;
+  /** 本来的实力、财力（零到一百）：被打下去了，会慢慢回到这里 */
+  power: number;
+  wealth: number;
+  /** 开局占着的据点（RoomDef id）；和那处 RoomLife.owner 要对得上，CI 查 */
+  holds?: string[];
+  /** 对别的势力的好恶（负一百到一百），不写为零 */
+  rel?: Record<string, number>;
+  /** 官府眼里干不干净 */
+  lawful: boolean;
+  /** 首领（NpcDef id） */
+  head: string;
+  /** 对应的门派（SCHOOLS 里的名字）：拜了这一派，就是这股势力的自己人 */
+  sect?: string;
+}
+
+/** 地方的活气：挂在 RoomDef.life 上，不另立一套地点 */
+export interface RoomLife {
+  /** 治安、繁荣的本来样子（零到一百）；物价基准一百，不写为一百 */
+  order: number;
+  prosper: number;
+  price?: number;
+  /** 据点：开局归谁（FactionDef id） */
+  owner?: string;
+  /**
+   * 过路钱按主人算，例如 { dong: 0, xi: 20, guan: 10 }；主人不在表上（或没有主人）的，不加这一笔。
+   * 加在本处自己的船钱（RoomDef.fare）之外，在人走进这一处（上船）时收，不是路过码头就收
+   */
+  toll?: Record<string, number>;
+  /** 过路钱看哪一处的主人：客船的过路钱看它起锚的码头（运河客船看运河渡口）。不写就看本处自己 */
+  tollAt?: string;
+  /** 地方的种类：码头、街市、铺子、官道、破庙、衙门、酒楼…… */
+  tags: string[];
 }
 
 /** 基础服务：医馆（看伤）、客栈（住店）、兵器铺、当铺、杂货铺。tests/content.test.ts「基础设施」按它查各地齐不齐 */
@@ -736,4 +812,8 @@ export interface ContentPack {
   jobs?: JobDef[];
   eyes?: EyeDef[];
   shi?: ShiDef[];
+  /** 势力（engine/shijie.ts） */
+  factions?: FactionDef[];
+  /** 给别的内容包里的地点补上活气：地点 id → RoomLife（合并时挂到 RoomDef.life 上） */
+  roomLife?: Record<string, RoomLife>;
 }

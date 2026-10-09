@@ -3,7 +3,7 @@
  * 报错信息会指出是哪个文件里的哪一条数据有问题。
  */
 import { describe, expect, it } from 'vitest';
-import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SHI, SKILLS, STORIES, NEWS } from '../src/content';
+import { ENCOUNTERS, EYES, FACTIONS, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SHI, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
@@ -21,6 +21,7 @@ const foeIds = new Set(FOES.map(f => f.id));
 const storyIds = new Set(STORIES.map(s => s.id));
 const quests = new Map(QUESTS.map(q => [q.id, q]));
 const jobIds = new Set(JOBS.map(j => j.id));
+const facIds = new Set(FACTIONS.map(f => f.id));
 const DEFAULT_VERBS = new Set(['观察', '赠礼', '请教', '切磋', '偷窃']);
 const PLACEHOLDERS = new Set(['given', 'name', 'story', 'news']);
 
@@ -44,6 +45,12 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
     const d = SHI.find(x => x.id === c.shi!.id);
     if (!d) errs.push(`${where}：条件里的世事「${c.shi.id}」不存在`);
     else for (const k of [...(c.shi.at ?? []), ...(c.shi.not ?? [])]) if (!d.steps[k]) errs.push(`${where}：世事「${d.id}」没有「${k}」这一步`);
+  }
+  // 世界状态（engine/shijie.ts）：地方、势力、人都要存在
+  if (c.w) {
+    for (const pl of [c.w.owner?.place, c.w.order?.place, c.w.price?.place]) if (pl !== undefined && !roomIds.has(pl)) errs.push(`${where}：条件里的地点「${pl}」不存在`);
+    for (const f of [...(c.w.owner?.is ?? []), c.w.fac?.id]) if (typeof f === 'string' && !facIds.has(f)) errs.push(`${where}：条件里的势力「${f}」不存在`);
+    if (c.w.p && !npcIds.has(c.w.p.id)) errs.push(`${where}：条件里的人物「${c.w.p.id}」不存在`);
   }
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
 }
@@ -98,6 +105,15 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         if (!jobIds.has(e.id)) errs.push(`${w}：差事「${e.id}」不存在`);
         (e.type === 'job' ? jobTaken : e.type === 'jobDone' ? jobDoneSet : new Set<string>()).add(e.id);
         break;
+      case 'w': {
+        const pl = 'place' in e ? e.place : e.op === 'hurt' || e.op === 'jail' || e.op === 'gone' ? e.mark?.place : undefined;
+        if (pl !== undefined && !roomIds.has(pl)) errs.push(`${w}：地点「${pl}」不存在`);
+        const f = 'fac' in e ? e.fac : e.op === 'owner' ? e.to : undefined;
+        if (typeof f === 'string' && !facIds.has(f)) errs.push(`${w}：势力「${f}」不存在`);
+        if ('npc' in e && !npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
+        if (e.op === 'mark' && !(e.days >= 1 && e.text)) errs.push(`${w}：痕迹要写 text 和一日以上的 days`);
+        break;
+      }
       default: break;
     }
   }
