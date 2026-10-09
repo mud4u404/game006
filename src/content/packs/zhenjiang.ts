@@ -10,7 +10,7 @@ const ROOMS: RoomDef[] = [
     id: 'zj_shi', name: '大市口', area: '镇江 · 城中', region: 'zj', t: 15, map: [50, 56], nightQuiet: true,
     desc: [
       { if: { hour: { from: 20, to: 5 } },
-        text: '大市口收了市。尤家的醋摊上了门板，说书的场子散了——听说他夜里去西津渡，说给等船的人听。驻军的兵爷回了营，街上只剩巡更的梆子声，和几盏没熄透的灯笼。' },
+        text: '大市口收了市。尤家的醋摊上了门板，说书的场子散了——听说他夜里去西津渡的待渡亭，说给等船的人听。驻军的兵爷回了营，街上只剩巡更的梆子声，和几盏没熄透的灯笼。' },
       { text: '大市口是镇江最热闹的去处，南北货堆到街沿，醋坊的酸香、面摊的热气混作一团。京口驻军的兵丁挎着刀巡街，行人见了好些都往边上让。' }
     ],
     npcs: [],
@@ -27,7 +27,7 @@ const NPCS: NpcDef[] = [
   {
     id: 'zj_shuli', name: '何税吏', ini: '税', tone: 'gray', brief: '数着渡钱',
     look: '吏员的青衫浆洗得发硬，袖口磨出了毛边。他数钱不用眼看，手指头蘸着唾沫一张张捻，比算盘还快。',
-    at: { room: 'zj_xijin' },
+    at: { room: 'zj_daiting' },
     // 交谈只说话，不推世事；请府台定官价要另点「请他行文」，还要三十文规费（审查 C01）
     verbs: ['交谈', '观察', { verb: '请他行文', if: { shi: { id: 'sszj_du', at: ['qi', 'dazhi', 'zhangjia'] } } }],
     actions: {
@@ -52,8 +52,8 @@ const NPCS: NpcDef[] = [
   },
   {
     id: 'zj_xusao', name: '许嫂', ini: '面', tone: 'amber', brief: '煮着锅盖面',
-    look: '面摊支在渡口背风处，一口大锅上漂着只小锅盖，面香混着醋香，半条街都闻得见。',
-    at: { room: 'zj_xijin' },
+    look: '面摊支在待渡亭背风处，一口大锅上漂着只小锅盖，面香混着醋香，半条街都闻得见。',
+    at: { room: 'zj_daiting' },
     verbs: ['交谈', '观察', '购买'],
     actions: {
       交谈: [
@@ -144,7 +144,7 @@ const NPCS: NpcDef[] = [
     id: 'zj_shushu', name: '说书先生', ini: '书', tone: 'purple', brief: '拍着醒木',
     look: '长衫旧而整洁，醒木一拍满座皆惊。说到关子处，扇子一收，满堂的茶客伸长了脖子。',
     at: [{ room: 'zj_shi', if: { hour: { from: 9, to: 17 } } },
-         { room: 'zj_xijin', if: { hour: { from: 19, to: 23 } } }],
+         { room: 'zj_daiting', if: { hour: { from: 19, to: 23 } } }],
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
@@ -159,13 +159,13 @@ const pack: ContentPack = {
   npcs: NPCS,
   news: [
     { if: { flag: 'zj_chutou' },
-      text: '大市口有个年轻人替醋坊出头，顶撞了京口驻军的兵爷。围观的都说痛快，也有人替他捏一把汗。' },
+      text: '大市口有个年轻人替醋坊出头，顶撞了京口驻军的兵爷。围观的都说痛快，也有人替他捏一把汗。', who: ['货郎', '小二', '军汉', '掌柜'], about: 'you' },
     { if: { flag: 'zj_bangqiang' },
-      text: '京口驻军的兵爷在大市口白得一坛老醋，听说还有个闲人在旁边帮着敲边鼓。' },
+      text: '京口驻军的兵爷在大市口白得一坛老醋，听说还有个闲人在旁边帮着敲边鼓。', who: ['货郎', '小二', '掌柜'], about: 'you' },
     { if: { flag: 'zj_taokuang' },
-      text: '大市口的醋坊受了兵气，多亏一位公子掏钱解围。尤家的老醋，往后怕是要给这位公子留着一坛。' },
+      text: '大市口的醋坊受了兵气，多亏一位公子掏钱解围。尤家的老醋，往后怕是要给这位公子留着一坛。', who: ['掌柜', '货郎', '小二'], about: 'you' },
     { if: { flag: 'zj_garrison_grudge' },
-      text: '京口驻军的兵爷在大市口丢了脸面，这几日寻人问一个佩剑年轻人的名字，说要给他「长长记性」。' }
+      text: '京口驻军的兵爷在大市口丢了脸面，这几日寻人问一个佩剑年轻人的名字，说要给他「长长记性」。', who: ['军汉', '小二', '货郎'], about: 'you' }
   ]
 };
 

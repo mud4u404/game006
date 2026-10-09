@@ -17,6 +17,7 @@ import { viewDitu } from './views/ditu';
 import { checkYue } from '../engine/shiguang';
 import { tierNow } from '../engine/ren';
 import { tickShi } from '../engine/shishi';
+import { tickWorld } from '../engine/shijie';
 import { dropFailedTrack } from '../engine/daohang';
 import { isPreview } from '../core/preview';
 
@@ -186,7 +187,8 @@ export function render(): void {
   // 过了约期还没赴的约，算失约（engine/shiguang.ts）：失约的后果、心魔，都记进见闻
   missedToast(checkYue(S));
   tierUp();
-  // 江湖自己往前走（engine/shishi.ts）：该起头的起头，到日子的往下走
+  // 江湖自己往前走：世界的慢变逐日补到今天（engine/shijie.ts）；世事该起头的起头，到日子的往下走（engine/shishi.ts）
+  tickWorld();
   tickShi();
   // 记挂着的心事做不成了：放下横幅，动态里记一笔（engine/daohang.ts）
   dropFailedTrack();

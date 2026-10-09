@@ -5,11 +5,22 @@ import type { ContentPack, NpcDef, QuestDef, RoomDef, StoryDef } from '../types'
 const ROOMS: RoomDef[] = [
   {
     id: 'daming_cangjing', name: '藏经阁', area: '大明寺 · 藏经阁', region: 'yz', t: 15, map: [68, 12],
-    desc: '古木参天处，一座重檐阁楼隐在竹影里。阁内一排经柜，最里那扇柜门敞着，几格空了。守阁的老僧立在柜旁，一个书贩围着柜子打转，角落里有个小沙弥在扫地。香炉里的灰拨得很乱，阁后泥地上踩了几脚。',
+    // 第 45 条：结案以后不再照着「三人各忙各的」写，也不枚举已经走了的人
+    desc: [
+      { if: { flag: 'cangjing_juan' },
+        text: '古木参天处，一座重檐阁楼隐在竹影里。最里那扇柜门合上了，铜锁扣得严实。柜格最里侧多了一卷经，蓝布包着，边上压着一枚铜镇纸。' },
+      { if: { flag: 'cangjing_report' },
+        text: '古木参天处，一座重檐阁楼隐在竹影里。最里那扇柜门合上了，几格还空着。角落里的扫帚靠在墙上，把上缠的布条散了半截。' },
+      { if: { flag: 'cangjing_solved' },
+        text: '古木参天处，一座重檐阁楼隐在竹影里。最里那扇柜门合着，香炉换过新灰，阁里只剩扫地的沙沙声。' },
+      { text: '古木参天处，一座重檐阁楼隐在竹影里。阁内一排经柜，最里那扇柜门敞着，几格空了。守阁的老僧立在柜旁，一个书贩围着柜子打转，角落里有个小沙弥在扫地。香炉里的灰拨得很乱，阁后泥地上踩了几脚。' }
+    ],
     npcs: [
       'cangjing_fakong',
       { id: 'cangjing_mingxin', if: { notFlag: 'cangjing_report' } },
-      { id: 'cangjing_zhangs', if: { notFlag: 'cangjing_wrong_zhangs' } }
+      // 第 46 条：张四在「经卷下落」那张卡片里拿了经卷拱手去了（无论赎与不赎），结案后不该还站在阁里；
+      // 指认错了老僧（wrong_fakong）那一条线上他没走，还在
+      { id: 'cangjing_zhangs', if: { notFlag: 'cangjing_wrong_zhangs', any: [{ notFlag: 'cangjing_solved' }, { flag: 'cangjing_wrong_fakong' }] } }
     ],
     objs: ['cangjing_gui', 'cangjing_xianglu', 'cangjing_jiaoyin'],
     exits: [['前', 'daming', '后']],
@@ -21,6 +32,8 @@ const ROOMS: RoomDef[] = [
           { type: 'flag', flag: 'cangjing_seen' },
           { type: 'quest', id: 'side_cangjing', stage: 0 }
         ] },
+      { if: { flag: 'cangjing_report' }, text: '案子结了，藏经阁里清静得很，连扫地声也没有了。' },
+      { if: { flag: 'cangjing_solved' }, text: '案子结了。阁里安静下来，只剩扫地的沙沙声。' },
       { text: '藏经阁里还是那幅模样，三人各忙各的。' }
     ]
   }
@@ -192,11 +205,11 @@ const NPCS: NpcDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'side_cangjing', name: '奇遇 · 藏经阁失窃', stages: [
-    { title: '听说藏经阁失窃', to: 'daming_cangjing', hint: '在阁里细看经柜、香炉，再看看阁后的泥地。' },
+    { title: '藏经阁失窃', to: 'daming_cangjing', hint: '善本经卷丢了：经柜敞着，香炉里的灰拨得乱，阁后泥地上也踩了几脚。总得看个明白。' },
     // 指认谁都能了结这件事，认对了才走到下一步；不写找谁，免得替玩家把人点出来
-    { title: '细看阁里的线索，指认偷经的人', to: 'daming_cangjing', hint: '把几条线索串起来，认准了是谁再当面指认。' },
+    { title: '细看阁里的线索，指认偷经的人', to: 'daming_cangjing', hint: '守阁的老僧、书贩、扫地的小沙弥，三个人都说不清。线索没拼拢之前，不好冤枉了谁。' },
     // 处置在剧情卡片里定；卡片中途断了，再对明心指认一回就接得上
-    { title: '替偷经的人定下去处', to: 'daming_cangjing', who: 'cangjing_mingxin', hint: '明心认了，替他拿个主意：求情、送官或出药钱。' },
+    { title: '替偷经的人定下去处', to: 'daming_cangjing', who: 'cangjing_mingxin', hint: '明心哭着认了，法空立在一旁，一句话也没有。这孩子往后怎样，总得有个了断。' },
     { title: '藏经阁失窃 · 完' }
   ] }
 ];
@@ -269,15 +282,15 @@ const pack: ContentPack = {
   stories: STORIES,
   news: [
     { if: { flag: 'cangjing_mercy' },
-      text: '大明寺藏经阁丢了经卷，听说是个小沙弥糊涂，多亏一位过路人说情，庙里罚他抄经了事。' },
+      text: '大明寺藏经阁丢了经卷，听说是个小沙弥糊涂，多亏一位过路人说情，庙里罚他抄经了事。', who: ['和尚', '货郎', '小二'], about: 'you' },
     { if: { flag: 'cangjing_report' },
-      text: '大明寺报了官，偷经卷的小沙弥叫差人带走了；那二百文酬金，落在一位过路人手里。' },
+      text: '大明寺报了官，偷经卷的小沙弥叫差人带走了；那二百文酬金，落在一位过路人手里。', who: ['和尚', '衙役', '货郎'], about: 'you' },
     { if: { flag: 'cangjing_med' },
-      text: '大明寺小沙弥偷经卷给娘抓药，有位过路人替他垫了药钱；李家村他娘的疟疾，听说见好了。' },
+      text: '大明寺小沙弥偷经卷给娘抓药，有位过路人替他垫了药钱；李家村他娘的疟疾，听说见好了。', who: ['和尚', '郎中', '货郎'], about: 'you' },
     { if: { flag: 'cangjing_wrong_fakong' },
-      text: '藏经阁失窃案结了：法空师父自认监守自盗，禁足面壁。经卷怎么出去的，庙里讳莫如深。' },
+      text: '藏经阁失窃案结了：法空师父自认监守自盗，禁足面壁。经卷怎么出去的，庙里讳莫如深。', who: ['和尚', '说书', '小二'] },
     { if: { flag: 'cangjing_wrong_zhangs' },
-      text: '有个书贩在大明寺叫人冤枉偷经，当场拿出渡口收据自证，拂袖而去；经卷的案子，不了了之。' }
+      text: '有个书贩在大明寺叫人冤枉偷经，当场拿出渡口收据自证，拂袖而去；经卷的案子，不了了之。', who: ['和尚', '书吏', '相公'], about: 'you' }
   ]
 };
 

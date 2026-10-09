@@ -14,10 +14,12 @@ import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
 import { houtianOf } from './ren';
 import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
-import { hearsay, learnShi, moveShi } from './shishi';
+import { learnShi, moveShi } from './shishi';
+import { hearsay, inner } from './chuanwen';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
 import { markLight } from './shang';
+import { runWorld, testWorld } from './shijie';
 
 /** 三处伤，最重的先治；一样重时先内息，再手、足（和静修养伤同一个次序，engine/lilian.ts） */
 const ZONES: Zone[] = ['inner', 'hand', 'foot'];
@@ -83,6 +85,8 @@ export function test(c?: Cond): boolean {
     if (c.shi.at && !(at !== undefined && c.shi.at.includes(at))) return false;
     if (c.shi.not && at !== undefined && c.shi.not.includes(at)) return false;
   }
+  // 世界状态（engine/shijie.ts）：码头归谁、治安、物价、势力、人的处境
+  if (c.w && !testWorld(c.w)) return false;
   if (c.hour) {
     const h = Math.floor(S.min / 60);
     const { from, to } = c.hour;
@@ -267,8 +271,8 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
         break;
       }
-      // 江湖上的话：这一带你还不知道的世事先说，没有再说闲话传闻（engine/shishi.ts 的 hearsay）
-      case 'news': out.vars.news = hearsay() ?? '这几日太平得很，没听说什么。'; break;
+      // 江湖上的话：这一带传开的、你还不知道的、最耸动的一条（engine/chuanwen.ts 的 hearsay），不再随手抽
+      case 'news': out.vars.news = inner(hearsay() ?? '这几日太平得很，没听说什么。'); break;
       case 'away':
         (S.away ||= {})[e.npc] = dayNo(S) * 1440 + S.min + e.hours * 60;
         for (const [k, t] of Object.entries(S.away)) if (t <= dayNo(S) * 1440 + S.min) delete S.away[k];
@@ -313,6 +317,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         S.job = null;
         S.jobLog[j.id] = dayNo(S);
         S.yue = S.yue.filter(y => y.id !== 'job_' + j.id);
+        delete S.flags.jobWarn;
         // 师门差事给门派贡献，不给钱；身份的差事给钱
         if (j.sect) {
           const g = jobGongxian(j);
@@ -335,9 +340,15 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         pushFeed('江湖', `差事办砸了：${j?.title ?? e.id}。`);
         // 师门差事误了，扣贡献（这件差事本该给的那么多）；身份的差事误了，降地位
         if (j?.sect) addGongxian(j.sect, -jobGongxian(j));
-        else run([{ type: 'standing', delta: -1 }]);
+        else if (S.shenfen.standing <= 1 && S.shenfen.id !== 'youxia' && S.shenfen.id !== 'yumin' && !S.flags.jobWarn) {
+          // 新进的头一回误事只记一过，不辞退（负责人 10-09：丢一趟镖就被开除、还要赔钱，不讲理）；再误一回才降到零
+          S.flags.jobWarn = true;
+          pushFeed('江湖', '东家记了你一过：再误一回，就不用你了。');
+        } else run([{ type: 'standing', delta: -1 }]);
         break;
       }
+      // 世界状态（engine/shijie.ts）：换主人、势力和地方的数、人的处境、地方的痕迹
+      case 'w': runWorld(e); break;
       case 'fight': out.fight = e.foe; break;
       case 'story': out.story = e.id; break;
     }

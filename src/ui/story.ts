@@ -7,13 +7,14 @@ import { dateStr } from '../core/time';
 import { $, cleanName, fmt } from '../core/util';
 import { room, storyById } from '../content';
 import type { StoryDef } from '../content/types';
+import { gainTags, leanText } from './qingxiang';
 import { lackOf, newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
 import { afterOutcome, hooks, registerHandlers, render, swapped, toast, tooSoon } from './shell';
 import { welcomeBack } from './chuguan';
 
 /* ---------- 剧情卡片 ---------- */
 
-interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void; lead?: string }
+interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void; lead?: string; picked?: string }
 let cur: Playing | null = null;
 /** 已经开着剧情时又来的剧情：排队，读完这一段再读（原来直接顶掉，旧剧情的收尾丢了，赶路停在半路） */
 const queue: [string, (() => void) | undefined, string | undefined][] = [];
@@ -40,7 +41,9 @@ function draw(): void {
   const choices = cur.result !== undefined
     ? `<button class="choice primary" data-act="stNext"><b>继续</b></button>`
     : card.choices.map((c, k) => {
-      if (test(c.if)) return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${c.sub ? `<small>${c.sub}</small>` : ''}</button>`;
+      // 选之前只写倾向，不写数（ui/qingxiang.ts）
+      const sub = c.sub ? leanText(c.sub) : '';
+      if (test(c.if)) return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
       // 够不着的路也摆出来、写明差什么（钱、根基、侠义……）；剧情上的条件不成立的照旧藏着
       const lack = lackOf(c.if);
       return lack ? `<button class="choice locked" data-act="stLocked:${k}" aria-disabled="true"><b>${c.label}</b><small>${lack}</small></button>` : '';
@@ -53,7 +56,7 @@ function draw(): void {
     ${card.paras.map(p => `<p class="sp">${fmt(p, v)}</p>`).join('')}
     ${card.gains ? `<div class="gains">${card.gains.map(g => `<span class="tag info">${g}</span>`).join('')}</div>` : ''}
     ${nameBox}
-    ${cur.result !== undefined ? `<div class="sres">${fmt(cur.result, v)}</div>` : ''}
+    ${cur.result !== undefined ? `<div class="sres">${fmt(cur.result, v)}</div>${gainTags(cur.picked).length ? `<div class="gains">${gainTags(cur.picked).map(g => `<span class="tag info">${g}</span>`).join('')}</div>` : ''}` : ''}
     <div class="choices">${choices}</div>
   </div>`;
   // 新的一张从头读；选完出了结果，把结果和「继续」滚进眼前（原来一律滚回顶部，「继续」常落在屏幕外）
@@ -73,7 +76,9 @@ function pick(k: number): void {
   }
   run(c.do, cur.out);
   const next = c.next ?? cur.i + 1;
-  if (c.result) { cur.result = c.result; cur.next = next; draw(); return; }
+  if (c.result) { cur.result = c.result; cur.next = next; cur.picked = c.sub; draw(); return; }
+  // 没有结果文字的选项：加了什么，提示条里说一句
+  if (gainTags(c.sub).length) toast(gainTags(c.sub).join('　'));
   advance(next);
 }
 
@@ -92,6 +97,7 @@ function advance(next: number): void {
   cur.i = next;
   cur.result = undefined;
   cur.next = undefined;
+  cur.picked = undefined;
   draw();
 }
 
@@ -147,6 +153,7 @@ export function showTitle(allowContinue = true): void {
   L.innerHTML = `<div class="title"><div class="rain">${rain}</div>
     <div class="t-word">江湖夜雨</div>
     <p class="t-verse">桃李春风一杯酒　江湖夜雨十年灯</p>
+    <p class="t-desc">一部金庸风格的文字武侠。你是瓜洲渡口的渔家少年，从零练起；江湖自己在转，去哪儿、管不管闲事，由你。</p>
     ${warn}<div class="t-btns" id="tBtns"></div></div>`;
   L.hidden = false;
   titleButtons(saved);
@@ -165,8 +172,8 @@ function titleButtons(saved: GameState | null, confirm?: 'new' | 'skip'): void {
     ? `<button class="t-btn" data-act="tContinue">继续<small>${chapterLabel(saved)} · ${dateStr(saved)}</small></button>
        <button class="t-btn ghost" data-act="tNew:new">新的江湖</button>
        <button class="t-link" data-act="tNew:skip">跳过序章，直接去扬州</button>${titleAccountHTML()}`
-    : `<button class="t-btn" data-act="tGo:new">新的江湖</button>
-       <button class="t-link" data-act="tGo:skip">跳过序章，直接去扬州</button>${titleAccountHTML()}`;
+    // 头一回打开不给「跳过序章」：序章是负责人定的一段完整剧情，没玩过的人该从这里进（docs/paiban.md A8）
+    : `<button class="t-btn" data-act="tGo:new">新的江湖</button>${titleAccountHTML()}`;
 }
 
 function hideTitle(): void {
@@ -195,8 +202,10 @@ registerHandlers({
   tGo: v => {
     hideTitle();
     if (v === 'skip') {
+      // 跳过也要取名、看一张前情（p_skip），看完题字「第一回 · 扬州」
       setState(skipToYangzhou());
-      playChapter('第一回', '扬州', render);
+      render();
+      openStory('p_skip');
     } else {
       setState(newGame());
       render();

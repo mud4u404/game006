@@ -11,7 +11,7 @@ import type { ContentPack, FoeDef, JobDef, NewsDef, NpcDef } from '../types';
 const JOBS: JobDef[] = [
   { id: 'smcs_gb_xin', sect: '丐帮', tier: 1, title: '替分舵往瓜洲送一封信', npc: 'smcs_gz_laohua', at: 'gz_town', days: 3, again: 3 },
   { id: 'smcs_gb_zhou', sect: '丐帮', tier: 1, k: 1.5, title: '夜里护着龙王庙的粥棚', npc: 'bs2_bao', at: 'bs2_longwang', days: 2, again: 4 },
-  { id: 'smcs_jw_xun', sect: '军伍', tier: 1, title: '夜里在官道上巡营', npc: 'bs2_han', at: 'yz_guandao', days: 2, again: 2 },
+  { id: 'smcs_jw_xun', sect: '军伍', tier: 1, title: '夜里在官道上巡营', npc: 'bs2_han', at: 'yz_mubing', days: 2, again: 2 },
   { id: 'smcs_jw_liang', sect: '军伍', tier: 1, k: 1.5, title: '押一车军粮去瓜洲码头', npc: 'smcs_liangguan', at: 'gz_pier', days: 3, again: 4 }
 ];
 
@@ -43,8 +43,8 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '交令'],
     actions: {
       交谈: [{ text: '哨兵搓着手：「巡营的？韩什长说今夜有人来查哨。」他压低声音，「刚才有个影子从官道那头过去，我喊了一声，他就跑了。」' }],
-      交令: [{ text: '你沿着官道巡了一个时辰，回到驿亭，和哨兵对了口令，在他的木牌上划了一道。天快亮时，韩什长披着衣裳出来，看了看木牌，点点头，没说话。',
-        do: [{ type: 'time', add: 60 }, { type: 'jobDone', id: 'smcs_jw_xun' }] }]
+      交令: [{ text: '你沿着官道巡了两个时辰，回到驿亭，和哨兵对了口令，在他的木牌上划了一道。韩什长披着衣裳出来，看了看木牌，点点头，没说话。',
+        do: [{ type: 'time', add: 120 }, { type: 'jobDone', id: 'smcs_jw_xun' }] }]
     } },
   { id: 'smcs_liangguan', name: '粮官', ini: '粮', tone: 'amber', brief: '在码头上点粮袋',
     look: '一个胖胖的书吏，穿着官服，袖子里揣着一本账，点一袋粮划一道。',
@@ -87,7 +87,7 @@ const FOES: FoeDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'smcs_zhou_bao' }, text: '汪家盐号的打手夜里去砸龙王庙的粥棚，叫一个叫化子打了回来。汪老爷气得摔了茶碗。' }
+  { if: { flag: 'smcs_zhou_bao' }, text: '汪家盐号的打手夜里去砸龙王庙的粥棚，叫一个叫化子打了回来。汪老爷气得摔了茶碗。', who: ['叫化', 'gai', '脚夫', 'wang'], about: 'you' }
 ];
 
 const pack: ContentPack = { jobs: JOBS, npcs: NPCS, foes: FOES, news: NEWS };

@@ -97,8 +97,12 @@ describe('差事', () => {
     expect(S.shenfen).toMatchObject({ id: 'biaoshi', standing: 1 });
     expect(S.xinmo.n).toBeGreaterThan(0);
   });
-  it('丢了镖、地位又只剩新进：被辞退', () => {
+  it('新进头一回丢镖只记一过；再丢一回、地位又只剩新进：被辞退（负责人 10-09：一次就开除不讲理）', () => {
     run([{ type: 'shenfen', id: 'biaoshi' }, { type: 'job', id: 'bj_gz' }, { type: 'jobFail', id: 'bj_gz' }]);
+    expect(S.shenfen.id).toBe('biaoshi');
+    expect(S.flags.jobWarn).toBe(true);
+    expect(S.job).toBeNull();
+    run([{ type: 'job', id: 'bj_gz' }, { type: 'jobFail', id: 'bj_gz' }]);
     expect(S.shenfen.id).toBe('youxia');
     expect(S.job).toBeNull();
   });

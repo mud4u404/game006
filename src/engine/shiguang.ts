@@ -5,18 +5,20 @@
  * - 静修：先养伤，再打坐长功力、参悟化历练（engine/lilian.ts）。心魔每一层，成效打八折；重了会走火。
  * - 约：人物和你定约。静修碰到约期，就在约期那天一早出关；过了约期还没了结，就是失约，生一层心魔。
  */
-import { tickShi } from './shishi';
+import { tickShiFull } from './shishi';
+import { dibao, type DibaoSrc } from './chuanwen';
 import { S, pushFeed, type GameState, type Yue, type Zhu } from '../core/state';
 import { cn } from '../core/util';
 import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
-import { NEWS, npc, room, skillById } from '../content';
+import { jobById, npc, room, skillById } from '../content';
 import type { Effect, SkillId } from '../content/types';
-import { run, test } from './dsl';
+import { run } from './dsl';
 import { gainProf } from './growth';
 import { jingxiuPlan, retreatPlan } from './lilian';
 import { healLight, markLight } from './shang';
 import { syncBody } from './ren';
 import { npcName } from './world';
+import { tickWorld, worldRng } from './shijie';
 
 /** 铁律的余裕（日）、一次离开最多算几日、现实一小时算江湖几日 */
 export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
@@ -85,6 +87,11 @@ export function nightBlock(s: GameState): string | null {
   const y = s.yue.find(x => x.due === dayNo(s));
   return y ? `今日还约着${npcName(y.npc)}（${y.text}），过了半夜就是失约。先去赴了约再歇。` : null;
 }
+/**
+ * 闭关能不能开始（试玩第三轮：按钮提前灰掉并写原因，不要点了才弹窗）。一日也闭不了就说为什么：铁律，或今日有约。
+ * 闭得了返回 null
+ */
+export const retreatBlock = (s: GameState): string | null => (restDays(s, 1).days < 1 ? nightBlock(s) ?? TIELV_TEXT : null);
 /** 等得了吗：跨过半夜要多用一个江湖日，铁律还有余裕、今日没有未了的约才行 */
 export const canWait = (s: GameState, hour: number): boolean => s.min + waitMin(s, hour) < 1440 || !nightBlock(s);
 
@@ -119,6 +126,8 @@ export interface RestReport {
   gongli: number;
   zouhuo: number;
   news: string[];
+  /** 邸报每一条的来处（tests/huo.test.ts 的 K9 核对用，界面不读） */
+  newsSrc?: DibaoSrc[];
   missed: string[];
   /** 选的住处；住客栈的，钱不够那几夜露宿（lusuDays） */
   lodging: Zhu;
@@ -127,7 +136,7 @@ export interface RestReport {
 }
 
 /** 静修 days 日：养伤、打坐、参悟，江湖历往前走，出关时气血内力回满。返回邸报要写的东西 */
-export function jingxiu(s: GameState, days: number, rng: () => number = Math.random): RestReport {
+export function jingxiu(s: GameState, days: number, rng: () => number = worldRng): RestReport {
   const xm0 = s.xinmo.n;
   const xm1 = Math.max(0, xm0 - XINMO.decay * days);
   // 嚼用：住客栈的，盘缠以外的钱够住几日住几日，余下的日子露宿，睡不安稳，那几日打坐、参悟打八折；
@@ -151,20 +160,20 @@ export function jingxiu(s: GameState, days: number, rng: () => number = Math.ran
   s.lilian -= used;
   const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
   syncBody(s);
+  const fromDay = dayNo(s);
   advanceDays(s, days);
   s.min = 7 * 60 + 10;
   s.hp = s.hpMax; s.mp = s.mpMax;
-  // 静修的日子里，江湖自己往前走（engine/shishi.ts）：这一带的事传到耳朵里的先写，再补几句闲话传闻
-  const heard = tickShi();
-  const pool = NEWS.filter(n => test(n.if)).map(n => n.text);
-  const news: string[] = [...heard];
-  const more: string[] = [];
-  for (let i = 0; i < Math.min(3, Math.ceil(days / 5)) - heard.length && pool.length; i++) more.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
-  more.slice().reverse().forEach(n => pushFeed('传闻', n));
-  news.push(...more);
+  // 静修的日子里，江湖自己往前走：世界的慢变、传闻人传人逐日补上（engine/shijie.ts、engine/chuanwen.ts），
+  // 世事到日子的往下走（engine/shishi.ts）。邸报只写真事：传到耳朵里的、这一带传开的、熟人托人带的（engine/chuanwen.ts 的 dibao）
+  tickWorld(s);
+  const db = dibao(s, fromDay, tickShiFull());
   const missed = checkYue(s);
-  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed, lodging: zhu, cost, lusuDays };
+  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news: db.map(x => x.text), newsSrc: db.map(x => x.src), missed, lodging: zhu, cost, lusuDays };
 }
+
+/** 这个约是榜上揭的差事（JobDef.bang），或者交给一件物件的：误了期不算失信于人 */
+const bangYue = (y: Yue): boolean => y.id.startsWith('job_') && (!!jobById(y.id.slice(4))?.bang || !!npc(y.npc)?.obj);
 
 /** 过了约期还没了结的约：失约。执行失约的后果，生一层心魔。返回失约的说明 */
 export function checkYue(s: GameState): string[] {
@@ -175,8 +184,8 @@ export function checkYue(s: GameState): string[] {
     s.yue = s.yue.filter(x => x !== y);
     const who = npcName(y.npc);
     if (y.miss) run(y.miss);
-    // 差事交给一块木榜的（悬赏榜），误了期是营生上的事，不是失信于人：不生心魔（审查 G18：对木榜心中有愧）
-    if (!(y.id.startsWith('job_') && npc(y.npc)?.obj)) addXinmo(s, 1, `失约于${who}`);
+    // 榜上揭的差事（JobDef.bang，府衙照壁的悬赏），误了期是营生上的事，不是失信于人：不生心魔（审查 G18：对木榜心中有愧）
+    if (!bangYue(y)) addXinmo(s, 1, `失约于${who}`);
     const line = `你没有赴${who}的约（${y.text}）。`;
     pushFeed('江湖', line);
     out.push(line);
@@ -217,7 +226,7 @@ export function yueText(s: GameState, y: Yue): string {
 }
 
 /** 下线回来：离开的现实小时，算成静修的日子（一次最多十六日，受铁律和约约束）。不够一日不算 */
-export function settleAway(s: GameState, rng: () => number = Math.random): (RestReport & { hours: number; why?: 'tielv' | 'yue'; yue?: Yue }) | null {
+export function settleAway(s: GameState, rng: () => number = worldRng): (RestReport & { hours: number; why?: 'tielv' | 'yue'; yue?: Yue }) | null {
   // 序章里不结算：江伯病着，不是闭关的时候（原来下线回来写「在渡口小屋静修了六日……露宿了六夜」，审查 G02）
   if (s.chapter === 0) { s.real.seen = nowMs(); return null; }
   const hours = awayHours(s);

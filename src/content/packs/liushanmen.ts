@@ -23,7 +23,7 @@ function wanted(id: string, name: string, start: Cond, text: { zaitao: [string, 
   return {
     id, name, region: 'yz', start, first: 'zaitao',
     steps: {
-      zaitao: { now: text.zaitao[0], news: text.zaitao[1], where: 'yz_fuya', next: { days: days[0], to: 'zuoan' } },
+      zaitao: { now: text.zaitao[0], news: text.zaitao[1], where: 'yz_zhaobi', next: { days: days[0], to: 'zuoan' } },
       zuoan: { now: text.zuoan[0], news: text.zuoan[1], next: { days: days[1], to: 'taozou' } },
       taozou: { now: text.taozou[0], news: text.taozou[1] },
       luowang: { now: text.luowang },
@@ -261,7 +261,7 @@ const NPCS: NpcDef[] = [
   },
   /* ---------- 府衙大牢：捕快押来的人犯，提审得出下一个人犯的下落 ---------- */
   {
-    id: 'lsm_laotou', name: '牢头', ini: '牢', tone: 'gray', brief: '晃着一串钥匙', night: true, at: { room: 'yz_fuya' },
+    id: 'lsm_laotou', name: '牢头', ini: '牢', tone: 'gray', brief: '晃着一串钥匙', night: true, at: { room: 'yz_fuya_lao' },
     look: '矮胖，一脸油汗，腰上的钥匙有二三十把，走起路来叮当乱响。大牢里的事，没有他不知道的。',
     verbs: ['交谈', '观察', { verb: '提审', if: { sect: LSM } }],
     actions: {
@@ -309,10 +309,10 @@ const EYES: EyeDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'lsm_xiong_ts' }, text: '府衙大牢里那个逃兵的供词传了出来：边军百户克扣军粮，饿死了七个人。' },
-  { if: { flag: 'lsm_qian_ya' }, text: '汪家盐号追回了二十几张盐引，毕掌柜在门口放了一挂鞭炮。' },
-  { if: { flag: 'lsm_bai_ya' }, text: '济生堂的葛郎中把望江楼那个游方郎中的药丸烧了一大筐，说里头掺的是砒霜。' },
-  { if: { flag: 'lsm_xiong_ya' }, text: '镇江打铁巷的铁匠们说，那个被拿走的大个子帮工，打的铁比谁都实在。' }
+  { if: { flag: 'lsm_xiong_ts' }, text: '府衙大牢里那个逃兵的供词传了出来：边军百户克扣军粮，饿死了七个人。', who: ['衙役', '捕快', '军汉', 'guan'] },
+  { if: { flag: 'lsm_qian_ya' }, text: '汪家盐号追回了二十几张盐引，毕掌柜在门口放了一挂鞭炮。', who: ['wang', '盐商', '掌柜', '书吏'] },
+  { if: { flag: 'lsm_bai_ya' }, text: '济生堂的葛郎中把望江楼那个游方郎中的药丸烧了一大筐，说里头掺的是砒霜。', who: ['郎中', '小二', '货郎', '掌柜'] },
+  { if: { flag: 'lsm_xiong_ya' }, text: '镇江打铁巷的铁匠们说，那个被拿走的大个子帮工，打的铁比谁都实在。', who: ['铁匠', '脚夫', '货郎'] }
 ];
 
 const pack: ContentPack = { shi: SHI, npcs: NPCS, foes: FOES, eyes: EYES, news: NEWS };

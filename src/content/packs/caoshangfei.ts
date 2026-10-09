@@ -87,7 +87,7 @@ const NPCS: NpcDef[] = [
   },
   {
     id: 'zy_zhangfang', name: '牢里的账房', ini: '账', tone: 'gray', brief: '扒着牢门喊冤', night: true,
-    at: { room: 'yz_fuya', if: { quest: { id: Q, atLeast: 1 }, notFlag: 'csf_zhangfang_free' } },
+    at: { room: 'yz_fuya_lao', if: { quest: { id: Q, atLeast: 1 }, notFlag: 'csf_zhangfang_free' } },
     look: '五十来岁，瘦得颧骨突出，长衫皱成一团，袖口还沾着墨迹。他扒着后院牢门的木栅，嗓子已经喊哑了。',
     verbs: ['交谈', '观察'],
     actions: {
@@ -159,9 +159,9 @@ const FOES: FoeDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'csf_caught' }, text: '府衙拿住了草上飞。刘家账房出狱那天，在府衙门口磕了三个头。茱萸湾的渔家，几天没人出船。' },
-  { if: { flag: 'csf_surrender' }, text: '听说草上飞是自己走进府衙的。周捕头递了文书，说他劫的银子大半济了茱萸湾的灾民。' },
-  { if: { flag: 'csf_freed' }, text: '刘家的账房先生还关在府衙大牢里。有人说，草上飞早出了扬州地界。' }
+  { if: { flag: 'csf_zhangfang_free', notFlag: 'csf_surrender' }, text: '府衙拿住了草上飞。刘家账房出狱那天，在府衙门口磕了三个头。茱萸湾的渔家，几天没人出船。', who: ['捕快', '衙役', 'guan', '渔家'] },
+  { if: { flag: 'csf_surrender' }, text: '听说草上飞是自己走进府衙的。周捕头递了文书，说他劫的银子大半济了茱萸湾的灾民。', who: ['捕快', '衙役', 'guan', '说书'] },
+  { if: { flag: 'csf_freed' }, text: '刘家的账房先生还关在府衙大牢里。有人说，草上飞早出了扬州地界。', who: ['衙役', '捕快', '渔家', '书吏'] }
 ];
 
 const pack: ContentPack = { rooms: ROOMS, npcs: NPCS, foes: FOES, news: NEWS };
