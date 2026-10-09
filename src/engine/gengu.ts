@@ -45,7 +45,7 @@ export function growAttr(s: GameState, k: AttrKey, n: number, why: string): void
   s.attr[k] = clamp(s.attr[k] + n, 1, ATTR_MAX);
   if (s.attr[k] === before) return;
   syncBody(s);
-  if (n > 0) pushFeed('突破', `根基长进：${k}加${cn(s.attr[k] - before)}（${why}）。`);
+  if (n > 0) pushFeed('收获', `根基长进：${k}加${cn(s.attr[k] - before)}（${why}）。`);
 }
 
 const sign = (x: number): string => (x >= 0 ? '+' : '−') + Math.abs(Math.round(x));

@@ -17,60 +17,107 @@ const NIGHT = { from: 21, to: 5 };
 const SHI: ShiDef[] = [
   {
     id: MATOU, name: '码头空出来以后', region: 'yz', start: { flag: 'boss' }, first: 'qi',
+    // 传闻（engine/chuanwen.ts）：事出在渡口，牵涉两舵和两舵领头的
+    place: 'dukou', subj: ['dong', 'xi', 'ss_jiaowu', 'guanshi'],
     steps: {
       qi: {
         now: '屠千山一倒，运河渡口空了出来。码头北头多了几个西舵的生面孔，抱着胳膊，什么活也不干。',
         news: '屠千山一倒，渡口那块码头成了肥肉，漕帮东西两舵都盯上了。',
-        next: { days: 2, to: 'duizhi' }
+        news2: '渡口近来多了些生面孔，抱着胳膊不干活，怕是要出事。',
+        news3: '听说黑风寨又杀回来了，码头上全是他们的探子。',
+        juice: 0.45,
+        next: { days: 2, to: 'duizhi' },
+        // 寨主一倒，黑风寨只剩残部（存档迁移按旗标 boss 推出同样的数：core/save.ts）
+        do: [{ type: 'w', op: 'power', fac: 'hei', delta: -27 }]
       },
       duizhi: {
         now: '西舵的焦五带人占了码头北头，东舵的人守着南头，两边谁也不让，脚夫们都不敢上工。',
         news: '渡口上漕帮两舵对峙，脚夫们都不敢上工了。',
+        news2: '码头上两拨人顶上了牛，为争地盘，谁也不肯让谁。',
+        news3: '漕帮要散伙了，东西两舵分家，连船都要劈成两半。',
+        juice: 0.6,
         where: 'dukou', next: { days: 3, to: 'huobing' }
       },
       huobing: {
         now: '两舵在码头上动了刀子，东舵折了三个兄弟。西舵人多，再拖两天，码头就是焦五的了。',
         news: '渡口夜里火并，见了血，东舵吃了亏。',
+        news2: '码头夜里动了刀子，抬出去好几个，也不知是哪一家的。',
+        news3: '渡口死了十几口人，运河水都红了，官府压着不让说。',
+        juice: 0.8,
         where: 'dukou', next: { days: 2, to: 'xiduo' }
       },
       xiduo: {
         now: '码头归了西舵。焦五的人守着跳板，过一回船先交二十文；夜里常有盐船悄悄靠岸。',
         news: '渡口归了西舵，过一回船要交二十文，夜里常有盐船靠岸。',
-        where: 'dukou'
+        news2: '码头换了东家，船钱跟着涨了，夜里还有船偷偷摸摸地靠岸。',
+        news3: '西舵跟私盐贩子勾在一处，往后运河上的盐都要从他们手里过。',
+        juice: 0.85,
+        where: 'dukou',
+        // 码头的主人是真的：过路钱跟着变（yz-shili.ts 的 toll）。旗标照旧留给别的内容读，主人以世界为准
+        do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'xi' }]
       },
       dongduo: {
         now: '你打跑了焦五，东舵守住了码头。东舵的兄弟都记着你。',
-        news: '渡口那位少侠又出手了，焦五叫他打得丢了码头。'
+        news: '渡口那位少侠又出手了，焦五叫他打得丢了码头。',
+        do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'dong' }]
       },
       tiaoting: {
         now: '你把两舵领头的叫到一处，码头一分为二：白天归东舵，夜里归西舵，没再见血。',
-        news: '漕帮两舵不打了，听说是一位少侠从中说和，码头一家一半。'
+        news: '漕帮两舵不打了，听说是一位少侠从中说和，码头一家一半。',
+        do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'dong' },
+          { type: 'w', op: 'mark', place: 'dukou', k: '主人', days: 360, text: '缆桩顶上的旗子一日换两回：日头底下挂东舵的，掌了灯换成西舵的。' }]
       },
       guanfu: {
         now: '你报了官。府衙封了码头，搭起税棚，两舵谁也没占着，过船的钱倒先交给了官府。',
-        news: '府衙封了渡口，搭了税棚，漕帮两舵都没占着便宜。'
+        news: '府衙封了渡口，搭了税棚，漕帮两舵都没占着便宜。',
+        do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'guan' }]
       }
     }
   },
   {
     id: ZEI, name: '东关街夜里闹贼', region: 'yz', start: { quest: { id: 'prologue', atLeast: 3 } }, first: 'qi',
+    // 传闻（engine/chuanwen.ts）：事出在东关街，苦主是药铺掌柜；告示贴出来以后，府衙和周捕头也牵涉进来。
+    // 当事人自己的说法（self）用「我」
+    place: 'cheng', subj: ['yaopu', 'ss_aqi'],
     steps: {
       qi: {
         now: '东关街这几夜接连失窃，药铺丢了药，绸缎庄丢了一匹缎子。街坊说那贼身子轻，翻墙没有声响。',
         news: '东关街夜里闹贼，药铺掌柜骂了一早上。',
+        news2: '东关街的铺子接连遭了贼，那贼翻墙没有声响，怕是个练家子。',
+        news3: '东关街来了个飞贼，飞檐走壁，专偷大户人家。',
+        juice: 0.35,
+        self: { yaopu: '我这铺子接连几夜遭了贼，专挑治咳嗽的药拿，柜上的银钱倒一文不动。' },
         next: { days: 4, to: 'bang' }
       },
       bang: {
         now: '府衙为东关街的贼贴了告示，赏钱五百文。夜里照偷不误，偷的多半是药。',
         news: '府衙贴出告示，捉东关街的贼，赏钱五百文。',
+        news2: '府衙悬了赏捉东关街的贼，好些闲汉夜里都上街转悠，想碰碰运气。',
+        news3: '东关街那飞贼惊动了府台，听说要请外地的高手来拿他。',
+        juice: 0.5, subj: ['guan', 'fuya_zhou'],
+        self: {
+          yaopu: '告示是我求着府衙贴的，赏钱里头有我凑的一份。那贼再来，我这把老骨头也守不住。',
+          fuya_zhou: '东关街那个贼，告示是我叫人贴的。贼不大，案子倒压了我好几日。'
+        },
         next: { days: 5, to: 'zhuo' }
       },
       zhuo: {
         now: '衙役在龙王庙后头拿住了那个贼，是个十三四岁的孩子，偷药是给他娘治病。孩子挨了二十板子，他娘的病没人管。',
-        news: '东关街的贼拿住了，是个半大孩子，挨了二十板子。'
+        news: '东关街的贼拿住了，是个半大孩子，挨了二十板子。',
+        news2: '东关街的贼叫衙门拿住了，听说是个孩子，打了一顿板子放了。',
+        news3: '东关街的飞贼拿住了，供出一伙同党，牢里关了好几个。',
+        juice: 0.6, subj: ['guan', 'fuya_zhou', 'ss_gengfu'],
+        self: {
+          yaopu: '那孩子是我去认的赃。偷去的药，一包也没敢自己吃，全熬给他娘了。',
+          fuya_zhou: '那贼是我带人在龙王庙后头拿的，是个孩子。板子是照律打的，我也没法子。',
+          ss_gengfu: '那孩子叫衙役按在长凳上打，我也在。打完，是人抬回草棚去的。'
+        },
+        // 挨了二十板子，阿七在草棚里趴几日：东圈门白天没有他，东关街上留一句街坊的话
+        do: [{ type: 'w', op: 'hurt', npc: 'ss_aqi', days: 5, mark: { place: 'cheng', text: '街坊说，衙门前堂打板子那一阵，隔着两条街都听得见。' } }]
       },
       songguan: {
-        now: '你把偷药的孩子扭送了府衙，领了五百文赏钱。他娘的病，没人管了。'
+        now: '你把偷药的孩子扭送了府衙，领了五百文赏钱。他娘的病，没人管了。',
+        do: [{ type: 'w', op: 'hurt', npc: 'ss_aqi', days: 5, mark: { place: 'cheng', text: '街坊说，衙门前堂打板子那一阵，隔着两条街都听得见。' } }]
       },
       huanle: {
         now: '你替阿七赔了药钱和缎子钱，他娘的病有了着落。阿七说，往后扬州城里的事，他替你打听。'
@@ -129,15 +176,27 @@ const NPCS: NpcDef[] = [
     verbs: ['观察', '跟上去'],
     actions: { 跟上去: [{ do: [{ type: 'story', id: 'ss_zei_gen' }] }] } },
 
-  /* ---------- 阿七：替他赔了钱以后，白天在街上跑腿 ---------- */
-  { id: 'ss_aqi', name: '阿七', ini: '七', tone: 'amber', brief: '在街上跑腿',
-    look: '十三四岁，瘦得像根竹竿，眼睛却亮。屁股上的板子伤还没好利索，走路一瘸一拐的，跑起来倒比谁都快。',
-    at: { room: 'cheng', if: { hour: { from: 7, to: 19 }, shi: { id: ZEI, at: ['huanle'] } } },
+  /* ---------- 阿七：白天在东圈门巷口跑腿；挨了板子的那几日在草棚里，东圈门白天没有他 ---------- */
+  { id: 'ss_aqi', name: '阿七', ini: '七', tone: 'amber', brief: '在巷口跑腿',
+    look: '十三四岁，瘦得像根竹竿，眼睛却亮，跑起来比谁都快。',
+    at: { room: 'yz_dongquan', if: { hour: { from: 7, to: 19 }, shi: { id: ZEI, at: ['huanle', 'zhuo', 'songguan'] } } },
     verbs: ['交谈', '观察', '打听'],
     actions: {
-      交谈: [{ text: '「恩公！」阿七一溜烟跑过来，「我娘吃了三副药，能下地了。您要打听什么，只管问我。」' }],
-      打听: [{ text: '阿七扳着指头，把扬州城里这几日的事一五一十说给你听：码头上谁跟谁不对付，府衙又贴了什么告示，哪家夜里来了生客。',
-        do: [{ type: 'shi', id: MATOU }, { type: 'shi', id: ZEI }, { type: 'news' }] }]
+      交谈: [
+        { if: { shi: { id: ZEI, at: ['huanle'] } },
+          text: '「恩公！」阿七一溜烟跑过来，「我娘吃了三副药，能下地了。您要打听什么，只管问我。」' },
+        { if: { shi: { id: ZEI, at: ['zhuo'] } },
+          text: '阿七蹲在青石后头，见你来，把脸往膝盖里埋了埋：「我娘的药，断了好几日了。」他拿指头抠着石缝，再不说话。' },
+        { text: '阿七背对着你，脸朝墙根，肩膀一耸一耸的。过了半晌，他闷声说：「是你送我进去的。」' }
+      ],
+      观察: [
+        { if: { shi: { id: ZEI, at: ['huanle'] } }, text: '他跑过石板路，脚底板拍得啪啪响，一步也没往回看。' },
+        { text: '他坐下的时候，先拿手往青石上垫了垫，才敢挨着。' }
+      ],
+      打听: [{ if: { shi: { id: ZEI, at: ['huanle'] } },
+        text: '阿七扳着指头，把扬州城里这几日的事一五一十说给你听：码头上谁跟谁不对付，府衙又贴了什么告示，哪家夜里来了生客。',
+        do: [{ type: 'shi', id: MATOU }, { type: 'shi', id: ZEI }, { type: 'news' }] },
+        { text: '阿七摇了摇头，一个字也不肯说。' }]
     } }
 ];
 
@@ -204,12 +263,13 @@ const STORIES: StoryDef[] = [
               { type: 'feed', tag: '江湖', text: '你把东关街偷药的孩子扭送了府衙，领了五百文赏钱。' }],
             result: '孩子没有跑，只回头看了他娘一眼。你押着他穿过半座扬州城，周捕头验过赃物，点了五百文给你。身后的堂上，板子一下一下地落。', next: -1 },
           { label: '替他赔了药钱和缎子钱', sub: '银两 −400 文，侠义 +5', if: { silver: 400 },
-            do: [{ type: 'shi', id: ZEI, to: 'huanle' }, { type: 'silver', delta: -400 }, { type: 'xia', delta: 5 },
+            // 「第二天一早」去赔钱：时辰跟着走到早上
+            do: [{ type: 'shi', id: ZEI, to: 'huanle' }, { type: 'silver', delta: -400 }, { type: 'xia', delta: 5 }, { type: 'time', set: 9 * 60 },
               { type: 'rel', npc: 'ss_aqi', value: '相谈甚欢', note: '你替他赔了药钱，他娘的病有了着落' },
               { type: 'feed', tag: '江湖', text: '你替偷药的孩子阿七赔了药钱和缎子钱。阿七说，往后扬州城里的事，他替你打听。' }],
             result: '孩子吓得跪在地上。你把他扶起来，问了名字，叫阿七。第二天一早，你领着他去药铺和绸缎庄赔了钱，又请济生堂的郎中去草棚看了他娘。阿七一路上没说话，临走时冲你磕了个头：「恩公，往后扬州城里的事，我替你打听。」', next: -1 },
           { label: '领他去药铺和绸缎庄赔罪', sub: '侠义够了，掌柜们肯卖你一个面子', if: { xia: 20 },
-            do: [{ type: 'shi', id: ZEI, to: 'huanle' }, { type: 'xia', delta: 3 },
+            do: [{ type: 'shi', id: ZEI, to: 'huanle' }, { type: 'xia', delta: 3 }, { type: 'time', set: 9 * 60 },
               { type: 'rel', npc: 'ss_aqi', value: '相谈甚欢', note: '你领他去赔罪，掌柜们看你的面子没有报官' },
               { type: 'feed', tag: '江湖', text: '你领着偷药的孩子阿七去药铺和绸缎庄赔罪，掌柜们看你的面子，没有报官。' }],
             result: '第二天一早，你领着孩子去了药铺。掌柜认得你，叹了口气，把那几包药钱一笔勾了；绸缎庄的东家收回了缎子，也没再追究。孩子叫阿七，临走时冲你磕了个头：「恩公，往后扬州城里的事，我替你打听。」', next: -1 },
@@ -222,9 +282,9 @@ const STORIES: StoryDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'ss_jiaowu_zou' }, text: '西舵的焦五丢了码头，听说去了瓜洲，放话要找回这个场子。' },
-  { if: { flag: 'ss_jiaowu_guan' }, text: '漕帮西舵的焦五叫人押进了府衙大牢，西舵换了舵主。' },
-  { if: { flag: 'ss_zei_fang', shi: { id: ZEI, at: ['zhuo'] } }, text: '东关街那个偷药的孩子挨了板子，他娘还躺在龙王庙后头的草棚里。' }
+  { if: { flag: 'ss_jiaowu_zou' }, text: '西舵的焦五丢了码头，听说去了瓜洲，放话要找回这个场子。', who: ['船夫', '脚夫', 'dong', 'xi'] },
+  { if: { flag: 'ss_jiaowu_guan' }, text: '漕帮西舵的焦五叫人押进了府衙大牢，西舵换了舵主。', who: ['船夫', 'xi', '捕快', 'guan'] },
+  { if: { flag: 'ss_zei_fang', shi: { id: ZEI, at: ['zhuo'] } }, text: '东关街那个偷药的孩子挨了板子，他娘还躺在龙王庙后头的草棚里。', who: ['叫化', 'gai', '郎中', '货郎'] }
 ];
 
 const pack: ContentPack = { shi: SHI, npcs: NPCS, foes: FOES, stories: STORIES, news: NEWS };

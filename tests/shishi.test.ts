@@ -6,7 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { S, setState, skipToYangzhou } from '../src/core/state';
-import { advanceDays, setNowMs } from '../src/core/time';
+import { advanceDays, advanceMin, setNowMs } from '../src/core/time';
 import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NEWS, NPCS, QUESTS, REGIONS, ROOMS, SHI, STORIES, npc, shiById } from '../src/content';
 import type { Cond } from '../src/content/types';
 import { run, test as cond } from '../src/engine/dsl';
@@ -48,6 +48,11 @@ describe('世事写得对', () => {
       ids.add(d.id);
       if (!REGIONS[d.region]) errs.push(`${w}：地区「${d.region}」不存在`);
       if (!d.steps[d.first]) errs.push(`${w}：起头的「${d.first}」这一步没写`);
+      if (d.place) {
+        const r = ROOMS.find(x => x.id === d.place);
+        if (!r) errs.push(`${w}：place 指向不存在的地点「${d.place}」`);
+        else if (r.region !== d.region) errs.push(`${w}：place「${d.place}」不在这件事的地区里`);
+      }
       // 不插手能走到的：从起头顺着 next 走
       const auto = new Set<string>();
       for (let k: string | undefined = d.first; k && d.steps[k] && !auto.has(k); k = d.steps[k].next?.to) auto.add(k);
@@ -63,6 +68,10 @@ describe('世事写得对', () => {
           else if (r.region !== d.region) errs.push(`${ws}：where「${st.where}」不在这件事的地区里`);
         }
         if (st.news && st.news.length > NEWS_MAX_LEN) errs.push(`${ws}：传开的话 ${st.news.length} 字，不超过 ${NEWS_MAX_LEN} 字`);
+        // 走了样的说法、当事人的说法（engine/chuanwen.ts）：一样不超过传闻的字数；当事人要真有其人
+        for (const t of [st.news2, st.news3, ...Object.values(st.self ?? {})]) if (t && t.length > NEWS_MAX_LEN) errs.push(`${ws}：「${t.slice(0, 12)}……」${t.length} 字，不超过 ${NEWS_MAX_LEN} 字`);
+        if ((st.news2 || st.news3) && !st.news) errs.push(`${ws}：写了走样的说法，要先写原样的 news`);
+        for (const id of Object.keys(st.self ?? {})) if (!npc(id)) errs.push(`${ws}：self 里的「${id}」不是真有的人`);
         if (!auto.has(k) && !by.has(k)) errs.push(`${ws}：走不到。不在 next 的链上，也没有哪个选择用 { type: 'shi', id: '${d.id}', to: '${k}' } 推到这一步`);
         // 自己走到的那几步，玩家得有办法知道：传开的话，或者在哪儿看得见
         if (auto.has(k) && k !== d.first && !st.news && !st.where) errs.push(`${ws}：世界自己走到这一步，要写 news（传开的话）或 where（在哪儿看得见）`);
@@ -100,6 +109,35 @@ describe('作息不挡路', () => {
     }
     report(errs);
   });
+  it('入夜回家的地点（RoomDef.nightQuiet）：要有夜景；住店看病的、有约在这儿等的照旧在，其余回家', () => {
+    const errs = ROOMS.filter(r => r.nightQuiet && !(Array.isArray(r.desc) && r.desc.some(b => timed(b.if))))
+      .map(r => `${r.id}（${r.name}）写了 nightQuiet，desc 里要有一段带 hour 条件的夜景：人都回家了，场景不能还写着人来人往`);
+    report(errs);
+    setState(skipToYangzhou());
+    S.min = 10 * 60;
+    expect(roomNpcs('cheng')).toContain('bs2_hu');
+    expect(roomNpcs('yz_fuya')).toContain('fuya_zhou');
+    S.min = 23 * 60;
+    expect(roomNpcs('cheng')).not.toContain('bs2_hu');
+    expect(roomNpcs('cheng')).toContain('ss_gengfu');
+    expect(roomNpcs('yz_fuya')).not.toContain('fuya_zhou');
+    expect(roomNpcs('yz_zhaobi')).toContain('fuya_yayi');
+    // 有约在这儿等你的，夜里也等着
+    run([{ type: 'yue', id: 'test_zhou', npc: 'fuya_zhou', at: 'yz_fuya', inDays: 1, text: '回话' }]);
+    expect(roomNpcs('yz_fuya')).toContain('fuya_zhou');
+  });
+
+  it('暂时走开的人（away），时辰到了才回来', () => {
+    setState(skipToYangzhou());
+    S.min = 22 * 60;
+    run([{ type: 'job', id: 'xs_hezei' }]);
+    expect(roomNpcs('dukou')).toContain('xs_hezei');
+    run([{ type: 'away', npc: 'xs_hezei', hours: 12 }]);
+    expect(roomNpcs('dukou')).not.toContain('xs_hezei');
+    advanceMin(S, 23 * 60);
+    expect(roomNpcs('dukou')).toContain('xs_hezei');
+  });
+
   it('说书人白天在东关街，晚上在望江楼，夜深了不在外头', () => {
     setState(skipToYangzhou());
     S.min = 10 * 60;
@@ -168,12 +206,26 @@ describe('世事的引擎', () => {
     expect(S.feed[0].x).toContain('闹贼');
   });
 
-  it('走进事发的地方就看见了', () => {
+  it('没到过这一带的事停在起头，不白白错过；到了就听说，从那时起才往下走', () => {
     S.flags.boss = true;
     S.loc = 'gz_town'; tickShi();
+    advanceDays(S, 20); tickShi();
+    expect(S.shi?.ss_matou?.at).toBe('qi');
+    expect(S.shi?.ss_matou?.seen).toBeUndefined();
+    S.loc = 'cheng'; tickShi();
+    expect(S.shi?.ss_matou?.seen).toBe('qi');
     advanceDays(S, 2); tickShi();
     expect(S.shi?.ss_matou?.at).toBe('duizhi');
-    expect(S.shi?.ss_matou?.seen).toBeUndefined();
+  });
+
+  it('走进事发的地方就看见了', () => {
+    S.flags.boss = true;
+    S.loc = 'cheng'; tickShi();
+    // 听说了就往下走，人走开了也照走，只是听不到后来的话
+    S.loc = 'gz_town';
+    advanceDays(S, 2); tickShi();
+    expect(S.shi?.ss_matou?.at).toBe('duizhi');
+    expect(S.shi?.ss_matou?.seen).toBe('qi');
     S.loc = 'dukou'; enter('dukou');
     expect(S.shi?.ss_matou?.seen).toBe('duizhi');
     expect(roomNpcs('dukou')).toContain('ss_jiaowu');
@@ -220,7 +272,7 @@ describe('世事的引擎', () => {
     run([{ type: 'shi', id: 'ss_zei', to: 'huanle' }]);
     expect(roomNpcs('cheng')).not.toContain('ss_heiying');
     S.min = 10 * 60;
-    expect(roomNpcs('cheng')).toContain('ss_aqi');
+    expect(roomNpcs('yz_dongquan')).toContain('ss_aqi');
     S.flags.boss = true; tickShi();
     S.shi!.ss_matou.seen = undefined;
     act('ss_aqi', '打听');

@@ -24,17 +24,20 @@ export const FOE_WINDOW = 7;
 /** 打赢一个对手的历练：不入流一百，每高一档约翻一倍（和功力的阶梯一样）；不是练家子的按比例少 */
 export const foeLilian = (f: Pick<FoeDef, 'rank' | 'weak'>): number => Math.round((100 * gongliAt(f.rank)) / gongliAt(0) * (f.weak ?? 1));
 
+/** 七天之内已经和这个人打过几场（不算这一场）。实战里长的熟练、切磋的历练都按它一次比一次少 */
+export function foeRepeats(s: GameState, id: string): number {
+  const rec = s.foeLog?.[id];
+  const gap = rec ? dayNo(s) - rec.day : Infinity;
+  return gap >= 0 && gap < FOE_WINDOW ? rec!.n : 0;
+}
+
 /**
  * 一场架打下来的历练：对手越强越多；赢了全得，输了得一半，认输三成，逃跑没有。
  * 同一个对手七天内反复打，一次比一次少：该学的已经学到了。
  */
 export function fightLilian(s: GameState, f: Pick<FoeDef, 'id' | 'rank' | 'weak'>, res: FightRes): number {
-  const day = dayNo(s);
-  const log = (s.foeLog ??= {});
-  const rec = log[f.id];
-  const gap = rec ? day - rec.day : Infinity;
-  const n = gap >= 0 && gap < FOE_WINDOW ? rec!.n : 0;
-  log[f.id] = { n: n + 1, day };
+  const n = foeRepeats(s, f.id);
+  (s.foeLog ??= {})[f.id] = { n: n + 1, day: dayNo(s) };
   const got = Math.round(foeLilian(f) * RES_SHARE[res] * 0.5 ** n);
   addLilian(s, got);
   return got;
@@ -48,7 +51,8 @@ export function questDone(s: GameState, q: QuestDef): number {
   const n = questLilian(q);
   addLilian(s, n);
   pushFeed('江湖', `「${q.name}」了结，历练 +${n}。`);
-  emit('toast', `历练 +${n}`);
+  // 序章了结在江伯坟前，紧接着题字「第一回」：不弹「历练 +」，动态里记着就够（docs/paiban.md A15）
+  if (q.id !== 'prologue') emit('toast', `历练 +${n}`);
   return n;
 }
 
@@ -78,11 +82,11 @@ export function retreatPlan(s: Pick<GameState, 'lilian' | 'loadout' | 'skills' |
 
 /**
  * 静修的另外两样（docs/foundation.md 第三节第九条，数由 src/lab/model/life.ts 验过）：
- * - 养伤：一级伤养三日，先养伤，剩下的日子才打坐；
+ * - 养伤：只养得好轻伤（一级，过一日自己好）；重伤闭关也养不好，要找郎中看伤或者服药（负责人 10-09，engine/shang.ts）；
  * - 打坐长功力：一日长 0.04 ×（0.7 + 0.06 × 内功重数）年，根骨每高常人一点快一分；
  *   功力有天花板，由内功的重数定（内功练不上去，功力也熬不深）。
  */
-export const DAZUO = { rate: 0.04, ceilK: 2.5, healDays: 3 };
+export const DAZUO = { rate: 0.04, ceilK: 2.5 };
 
 /** 内功第 R 重时功力的天花板（年） */
 export function gongliCeiling(s: GameState): number {
@@ -93,16 +97,11 @@ export function gongliCeiling(s: GameState): number {
 export interface JingxiuPlan { healed: Partial<Record<'hand' | 'foot' | 'inner', number>>; gongli: number; dazuoDays: number }
 
 /** 算出静修 days 日养好的伤、长的功力，不改存档 */
-export function jingxiuPlan(s: GameState, days: number, eff = 1, healDays = DAZUO.healDays): JingxiuPlan {
-  const w = { ...s.wounds };
+export function jingxiuPlan(s: GameState, days: number, eff = 1): JingxiuPlan {
+  // 轻伤一日就好；重伤闭关养不好（engine/shang.ts），不占打坐的日子
   const healed: JingxiuPlan['healed'] = {};
-  let left = days;
-  // 先养伤：每三日养好一级，先养最重的一处
-  while (left >= healDays) {
-    const z = (['inner', 'hand', 'foot'] as const).slice().sort((a, b) => w[b] - w[a])[0];
-    if (w[z] <= 0) break;
-    w[z]--; healed[z] = (healed[z] ?? 0) + 1; left -= healDays;
-  }
+  if (days >= 1) for (const z of ['inner', 'hand', 'foot'] as const) if (s.wounds[z] === 1) healed[z] = 1;
+  const left = days;
   const R = (s.skills[s.loadout.neigong ?? '']?.r ?? 0) + 1;
   const per = DAZUO.rate * (0.7 + 0.06 * R) * (1 + 0.01 * (s.attr.根骨 - 20));
   const cap = gongliCeiling(s);

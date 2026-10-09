@@ -8,7 +8,8 @@ import { activeOuter, fits, respSkill, slotSkill, weaponReady } from '../../engi
 import { gongliText, tierNow } from '../../engine/ren';
 import { canPerform, realmCap } from '../../engine/shicheng';
 import { RETREAT, gongliCeiling } from '../../engine/lilian';
-import { allowance } from '../../engine/shiguang';
+import { LODGING, ZHU_NAME, allowance, zhuOf } from '../../engine/shiguang';
+import type { Zhu } from '../../core/state';
 
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
 
@@ -17,20 +18,40 @@ export function viewWugong(): string {
   const learned = SKILLS.filter(k => S.skills[k.id]);
   return `
   ${loadoutCard()}
-  <section class="card here"><div class="sec-h"><h2>闭关修炼</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
+  <section class="card here-card"><div class="sec-h"><h2>闭关修炼</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
     <p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多消化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练，闭门造车，进境有限。</p>
-    <p class="muted">闭关也养伤、长功力：先养伤，一级伤三日；剩下的日子打坐，闭关一月功力深近一年，内功越深越快，也熬得越深（现在${gongliText(S.gongli)}，内功这一重最多熬到${gongliText(gongliCeiling(S))}）。</p>
+    <p class="muted">闭关也打坐长功力：闭关一月功力深近一年，内功越深越快，也熬得越深（现在${gongliText(S.gongli)}，内功这一重最多熬到${gongliText(gongliCeiling(S))}）。轻伤过一日自己好；重伤闭关养不好，要找郎中、服药。</p>
+    ${zhuPick()}
     ${S.chapter === 0
       ? '<p class="muted">江伯还病着，眼下不是闭关的时候。</p>'
       : `<p class="muted">江湖跑不过现实：${allowance(S) >= 1 ? `现在最多还能闭关${cn(allowance(S))}日` : '这几日江湖上的日子已经走在现实前头，先下线歇歇'}。下线就是静修，现实一个钟头算江湖一日，回来先读出关邸报。</p>
         <div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${allowance(S) < 1 ? ' disabled' : ''}>${l}</button>`).join('')}</div>`}
   </section>
-  <section class="card here"><div class="sec-h"><h2>见招拆招</h2></div>
-    <p class="muted">对手出重招时，你能用的应对来自你搭配的武功：内功硬接，轻功闪避，出手的那门外功拆招、抢攻。成算取决于你的火候与对手这一招的强弱，境界越高，成算越高；武功的性质还有相生相克。</p></section>
-  <section class="card here"><div class="sec-h"><h2>品级</h2></div>
+  <section class="card here-card"><div class="sec-h"><h2>见招拆招</h2></div>
+    <p class="muted">对手出重招时，你能用的应对来自你搭配的武功：内功硬接，轻功闪避，出手的那门外功拆招、抢攻。成算取决于你的造诣与对手这一招的强弱，境界越高，成算越高；武功的性质还有相生相克。</p>
+    <ul class="muted resp-help">
+      <li><b>硬接</b>：比内力，稳；得手把他震退。最怕虚招，一掌落空。</li>
+      <li><b>闪避</b>：比身法；得手他招式用老，露出空门。</li>
+      <li><b>拆招</b>：比招数巧拙，不怕虚招；得手顺势还他一记。</li>
+      <li><b>抢攻</b>：比谁先找到空隙，最险；得手重创，失手正撞上他这一招。</li>
+    </ul></section>
+  <section class="card here-card"><div class="sec-h"><h2>品级</h2></div>
     <div class="grades">${GRADES.map(([g, c]) => `<span class="tag g-${c}">${g}</span>`).join('')}</div>
     <p class="muted">品级是武功的先天资质，境界是你的苦功。低品武功练到极致，一样能技惊四座。</p></section>
   ${learned.map(skillCard).join('')}`;
+}
+
+/** 住处三选一（engine/shiguang.ts 的 zhuOf）：闭关、下线静修都按它 */
+function zhuPick(): string {
+  const cur = zhuOf(S);
+  const opts: [Zhu, string, boolean][] = [['inn', '客栈', true], ['lusu', '露宿', true], ['home', '师门', !!S.sect]];
+  const say: Record<Zhu, string> = {
+    inn: `一日${LODGING.inn}文，钱不够的那几夜露宿`,
+    lusu: '不花钱，睡不安稳，打坐参悟打八折',
+    home: S.sect ? `回${S.sect.school}住，不花钱` : ''
+  };
+  return `<p class="muted">住处：${ZHU_NAME[cur]}，${say[cur]}。${S.sect ? '' : '拜了师才能回师门住。'}下线静修也住这儿。</p>
+    <div class="acts zhu">${opts.map(([k, l, ok]) => `<button class="act${cur === k ? ' on' : ''}" data-act="zhu:${k}"${ok ? '' : ' disabled'} aria-pressed="${cur === k}">${l}</button>`).join('')}</div>`;
 }
 
 /* ---------- 搭配：五个位置，点一个位置换武功（docs/zhuangbei.md 第二节） ---------- */
@@ -52,7 +73,7 @@ function loadoutCard(): string {
       : `<small class="muted">${SLOT_ROLE[slot]}</small>`;
     return `<button class="row slotrow" data-act="slotPick:${slot}"><span class="sl">${SLOT_NAME[slot]}</span><span class="sv"><b>${def ? def.name : '空'}</b>${note}</span><span class="chev">换</span></button>`;
   }).join('');
-  return `<section class="card here"><div class="sec-h"><h2>搭配</h2><span class="count">${tierNow(S).name} · 功力${gongliText(S.gongli)}</span></div>
+  return `<section class="card here-card"><div class="sec-h"><h2>搭配</h2><span class="count">${tierNow(S).name} · 功力${gongliText(S.gongli)}</span></div>
     <div class="rows">${rows}</div>
     <p class="muted">${hand}。战斗中不能换。</p></section>`;
 }
@@ -75,7 +96,7 @@ export function slotSheet(slot: Slot): string {
     return `<div class="row"><span>${k.name}<small class="muted">${k.grade} · ${schoolName(k)} · ${REALMS[S.skills[k.id]!.r]} · ${preview(slot, k.id) || '—'}${warn}</small></span>${on ? '<span class="tag accent">在用</span>' : `<button class="act" data-act="slotSet:${slot}:${k.id}">换上</button>`}</div>`;
   }).join('');
   return `<div class="r-h"><span class="tag accent">搭配</span><h2>${SLOT_NAME[slot]}</h2></div>
-    <p class="muted">${SLOT_ROLE[slot]}。下面的数是换上以后的火候，越高成算越高。</p>
+    <p class="muted">${SLOT_ROLE[slot]}。下面的数是换上以后的造诣，越高成算越高。</p>
     <div class="rows">${rows || '<p class="muted">还没有学会能放进这里的武功。</p>'}</div>
     <div class="btnrow">${cur ? `<button class="btn ghost" data-act="slotSet:${slot}:">卸下</button>` : ''}<button class="btn ghost" data-act="sheetClose">关闭</button></div>`;
 }
@@ -100,13 +121,13 @@ function skillCard(k: SkillDef): string {
   const slot = (Object.keys(SLOT_NAME) as Slot[]).find(x => S.loadout[x] === k.id);
   const resps = RESP.filter(r => respSkill(S, r.k)?.id === k.id);
   return `<section class="card sk-card">
-    <div class="sk-h"><b>${k.name}</b><span class="tag g-${GRADE_CLS[k.grade]}">${k.grade}</span><span class="tag">${kind(k)}</span>${slot ? `<span class="tag accent">${SLOT_NAME[slot]}</span>` : ''}</div>
-    <div class="realm"><span>第${cn(s.r + 1)}重 · ${REALMS[s.r]}</span><small>${stuck ? '瓶颈 · 内功根基不够' : s.r >= REALMS.length - 1 ? '已到顶' : `${liang(Math.min(9, Math.floor((s.p / need) * 10)))}成火候 · 熟练 ${s.p} / ${need}`}</small></div>
+    <div class="sk-h"><b>${k.name}</b><span class="tag g-${GRADE_CLS[k.grade]}">${k.grade}</span>${slot && SLOT_NAME[slot] === kind(k) ? '' : `<span class="tag">${kind(k)}</span>`}${slot ? `<span class="tag accent">${SLOT_NAME[slot]}</span>` : ''}</div>
+    <div class="realm"><span>第${cn(s.r + 1)}重 · ${REALMS[s.r]}</span><small>${stuck ? '瓶颈 · 内功根基不够' : s.r >= REALMS.length - 1 ? '已到顶' : `${Math.floor((s.p / need) * 10) ? liang(Math.min(9, Math.floor((s.p / need) * 10))) + '成火候' : '初学'} · 熟练 ${s.p} / ${need}`}</small></div>
     <div class="tr2"><i style="width:${pct}%"></i></div>
     <p class="sk-d">${k.desc}</p>
     ${k.moves ? `<div class="moves">${k.moves.map(m => `<span class="tag"${(m.realm ?? 0) > s.r ? ' style="opacity:.4"' : ''}>${m.name}</span>`).join('')}</div>` : ''}
     <p class="muted">${useText(k, s.r)}</p>
     ${(k.performs?.length || k.ult) && !canPerform(S, k) ? '<p class="muted">没有本门内功打底，绝招、杀招使不出来，只剩普通招式。</p>' : ''}
-    ${resps.map(r => `<div class="d-h"><span class="tag accent">见招拆招 · ${r.act}</span><small>当前火候 ${huohou(S, r.k)}</small></div>`).join('')}
+    ${resps.map(r => `<div class="d-h"><span class="tag accent">见招拆招 · ${r.act}</span><small>造诣 ${huohou(S, r.k)}</small></div>`).join('')}
   </section>`;
 }

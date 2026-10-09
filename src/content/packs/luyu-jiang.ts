@@ -94,12 +94,12 @@ const STORIES: StoryDef[] = [
           do: [
             { type: 'flag', flag: 'ly_jiang_jiu' }, { type: 'xia', delta: 3 },
             { type: 'lilian', amount: 40 },
-            { type: 'feed', tag: '江湖', text: '渡船上有人落水，一位公子跳进江里把人救了上来。' }
+            { type: 'feed', tag: '江湖', text: '渡船上有个货郎落水，你跳进江里把他拖了回来。' }
           ], next: -1 },
         { label: '把长篙递过去', sub: '水急，硬救不如智救',
           result: '你抄起长篙探出去，喊他抓稳。货郎扑腾了几下抓住篙头，众人合力把他拖了上来，趴在船板上吐水，捡回一条命。',
           do: [{ type: 'xia', delta: 1 },
-            { type: 'feed', tag: '江湖', text: '渡船上有人落水，船上一位客人用长篙把人救了回来。' }], next: -1 },
+            { type: 'feed', tag: '江湖', text: '渡船上有个货郎落水，你递过长篙把他拉了回来。' }], next: -1 },
         { label: '帮着喊人',
           result: '你朝着两岸大喊救命。好在下游有渔船闻声赶来，把人捞了上去。货郎一家千恩万谢地去了。', next: -1 }
       ] }
@@ -145,7 +145,7 @@ const STORIES: StoryDef[] = [
             { type: 'silver', delta: -5 }, { type: 'flag', flag: 'ly_jiang_tun_xiang' }
           ], next: -1 },
         { label: '笑而不信，扶栏看江',
-          result: '你扶着船栏看江豚起起伏伏，看风从江面上卷过来。大自然的事，敬它，不必怕它。', next: -1 }
+          result: '你扶着船栏看江豚起起伏伏，看风从江面上卷过来。天地的事，敬它，不必怕它。', next: -1 }
       ] }
   ] }
 ];
@@ -154,9 +154,9 @@ const pack: ContentPack = {
   encounters: ENCOUNTERS,
   stories: STORIES,
   news: [
-    { if: { flag: 'ly_jiang_cha' }, text: '运河夜里漕帮的巡船查得紧，客船船家都说，今年的规矩钱，比往年重。' },
-    { if: { flag: 'ly_jiang_jiu' }, text: '瓜洲渡船上有个货郎落了水，叫一位会水的公子救了上来。货郎挑着担子逢人就讲。' },
-    { if: { flag: 'ly_jiang_yanye_kan' }, text: '夜里运河上常有没灯的大船悄悄过。船家都说别问，问就是鱼汛。' }
+    { if: { flag: 'ly_jiang_cha' }, text: '运河夜里漕帮的巡船查得紧，客船船家都说，今年的规矩钱，比往年重。', who: ['船夫', '脚夫', 'dong', 'xi'] },
+    { if: { flag: 'ly_jiang_jiu' }, text: '瓜洲渡船上有个货郎落了水，叫一位会水的公子救了上来。货郎挑着担子逢人就讲。', who: ['船夫', '货郎', '渔家'], about: 'you' },
+    { if: { flag: 'ly_jiang_yanye_kan' }, text: '夜里运河上常有没灯的大船悄悄过。船家都说别问，问就是鱼汛。', who: ['船夫', '渔家', '更夫'] }
   ]
 };
 export default pack;

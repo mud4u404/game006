@@ -43,6 +43,8 @@ export interface Cond {
   attr?: { key: AttrKey; atLeast: number };
   /** 今天是这个约的约期，约还没了结（engine/shiguang.ts） */
   yue?: string;
+  /** 手上挂着这个约，还没到日子（约期未到时人物说「还没到日子」，不再从头自我介绍） */
+  yueAhead?: string;
   /** 现在的营生是这个身份（engine/shenfen.ts）：youxia 游侠、biaoshi 镖师…… */
   shenfen?: string;
   /** 正在办这件差事（接下了，还没交差） */
@@ -71,8 +73,40 @@ export interface Cond {
   gongxian?: number;
   /** 世事（engine/shishi.ts）眼下在这几步之一（at）；不在这几步（not，还没起头也算不在） */
   shi?: { id: string; at?: string[]; not?: string[] };
+  /** 世界状态（engine/shijie.ts，docs/huo-shijie.md 3.2）：码头归谁、一处的治安和物价、一股势力的实力和对你的账、一个人眼下的处境 */
+  w?: WorldCond;
   any?: Cond[];
 }
+
+/** 一个数的上下限：below 是小于，atLeast 是不小于 */
+export interface Range { below?: number; atLeast?: number }
+/** 人的处境：ok 是平常，hurt 伤着、jailed 在牢里、gone 走了、dead 死了 */
+export type PersonSt = 'ok' | 'hurt' | 'jailed' | 'gone' | 'dead';
+export interface WorldCond {
+  /** 这处地方眼下归这几股势力之一（null 表示没有主人） */
+  owner?: { place: string; is: (string | null)[] };
+  order?: { place: string } & Range;
+  price?: { place: string } & Range;
+  fac?: { id: string; power?: Range; you?: Range };
+  /** 这个人眼下的处境 */
+  p?: { id: string; st: PersonSt[] };
+}
+
+/** 世界状态的效果（engine/shijie.ts）。数都不进人物的嘴，只变成人的话、地方的痕迹、价钱 */
+export type WorldEffect =
+  /** 一处地方换了主人（null 是没人占着）；船钱、过路钱跟着主人走（RoomLife.toll） */
+  | { type: 'w'; op: 'owner'; place: string; to: string | null }
+  | { type: 'w'; op: 'power' | 'wealth'; fac: string; delta: number }
+  | { type: 'w'; op: 'order' | 'prosper' | 'price'; place: string; delta: number }
+  /**
+   * 一个人负了伤、下了牢、走了（days 日后回来；不写的，jail、gone 要等 free）；free 是放回来、伤好了。
+   * mark 写的是他常待的地方底下添的那一句交代（「药铺上了一半门板」），文字由写这件事的人写，引擎不编
+   */
+  | { type: 'w'; op: 'hurt' | 'jail' | 'gone' | 'free'; npc: string; days?: number; mark?: { place: string; text: string } }
+  /** 一股势力对你的账：恩为正、怨为负 */
+  | { type: 'w'; op: 'you'; fac: string; delta: number }
+  /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；每处最多两行 */
+  | { type: 'w'; op: 'mark'; place: string; k: string; text: string; days: number };
 
 /** 效果：按顺序执行 */
 export type Effect =
@@ -106,21 +140,30 @@ export type Effect =
   | { type: 'title'; value: string }
   | { type: 'chapter'; value: number }
   | { type: 'move'; to: string }
-  /** add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天） */
-  | { type: 'time'; add?: number; set?: number }
+  /**
+   * add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天）；
+   * until：拨到当天这个钟点，已经过了就不动（不跨日）。序章抓药用它：过了酉时再抓药，不会凭空丢一天
+   */
+  | { type: 'time'; add?: number; set?: number; until?: number }
   | { type: 'weather'; value: string }
   /** hpFrac、mpFrac：按上限的几成回，例如金疮药 hpFrac: 0.3 */
   | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number; hpFrac?: number; mpFrac?: number }
   /** 治伤（医馆、郎中）：不写 levels 治好全部伤；写了就从最重的那处起，一共减这么多级。治完记一条见闻 */
-  | { type: 'cure'; levels?: number }
+  /** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；写了 zones 只治这几处（跌打酒治手足、内伤药治内息） */
+  | { type: 'cure'; levels?: number; zones?: ('hand' | 'foot' | 'inner')[] }
   | { type: 'feedReset' }
-  /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
+  /**
+   * 江湖上的话：这一带最耸动、你还不知道的一条传闻（engine/chuanwen.ts 的 hearsay），不再随机抽。
+   * 写进见闻，并可在文字里用 {news} 引用；没得说时 {news} 是一句「太平得很」
+   */
   | { type: 'news' }
   /**
    * 定约：npc 和你约好 inDays 日后在 at 见（docs/foundation.md 第三节第三条）。下线静修碰到约期会提前出关。
    * 到了那一日在那里了结它（`yueDone`）；过了那一日还没了结，就是失约：执行 miss，再生一层心魔。
    */
   | { type: 'yue'; id: string; npc: string; at: string; inDays: number; text: string; miss?: Effect[] }
+  /** 这个人暂时走开几个时辰（跳了河、跑了、回去报信）：这段时间哪儿都见不到他（engine/world.ts） */
+  | { type: 'away'; npc: string; hours: number }
   | { type: 'yueDone'; id: string }
   /** 心魔：做了违背信条的事加一层，化解了减一层（还诺、赔罪、了却） */
   | { type: 'xinmo'; delta: number; why?: string }
@@ -137,7 +180,8 @@ export type Effect =
   /** 开打：战斗结束后由对手定义里的 results 决定后续 */
   | { type: 'fight'; foe: string }
   /** 打开一段剧情卡片 */
-  | { type: 'story'; id: string };
+  | { type: 'story'; id: string }
+  | WorldEffect;
 
 /** 分支：从上往下找第一个条件成立的分支，显示 text，执行 do */
 export interface Branch { if?: Cond; text?: string; do?: Effect[] }
@@ -166,6 +210,57 @@ export interface RoomDef {
   onEnter?: Branch[];
   /** 在地图上的位置（百分比） */
   map: [number, number];
+  /**
+   * 街市、码头、衙门这类地方：入夜（亥时到寅时）没写作息的人都回家了（engine/world.ts 的 roomNpcs）。
+   * 照旧在的：开店住宿、看病的（service 有「宿」「医」），手上有约在这里等你的，人物上写了 night 的。
+   * 写了它，desc 里就要有一段夜景（带 hour 条件），CI 查。
+   */
+  nightQuiet?: true;
+  /** 客船、渡船：上船付的船钱（文）。钱不够的，替船家撑篙抵船钱，路上多耗一个时辰（engine/world.ts 的 payFare）。写了 life.toll 的，以 toll 为准 */
+  fare?: number;
+  /** 地方的活气（engine/shijie.ts）：只给有事的地方写。别的内容包的地点，用 ContentPack.roomLife 补，不必改别人的文件 */
+  life?: RoomLife;
+}
+
+/** 势力：帮会、官府、商号、寺观、绿林、门派。一城三到六股（docs/huo-shijie.md 3.2） */
+export interface FactionDef {
+  id: string;
+  name: string;
+  kind: '帮' | '官' | '商' | '寺' | '丐' | '绿林' | '门派';
+  /** 根在哪个地区 */
+  region: string;
+  /** 本来的实力、财力（零到一百）：被打下去了，会慢慢回到这里 */
+  power: number;
+  wealth: number;
+  /** 开局占着的据点（RoomDef id）；和那处 RoomLife.owner 要对得上，CI 查 */
+  holds?: string[];
+  /** 对别的势力的好恶（负一百到一百），不写为零 */
+  rel?: Record<string, number>;
+  /** 官府眼里干不干净 */
+  lawful: boolean;
+  /** 首领（NpcDef id） */
+  head: string;
+  /** 对应的门派（SCHOOLS 里的名字）：拜了这一派，就是这股势力的自己人 */
+  sect?: string;
+}
+
+/** 地方的活气：挂在 RoomDef.life 上，不另立一套地点 */
+export interface RoomLife {
+  /** 治安、繁荣的本来样子（零到一百）；物价基准一百，不写为一百 */
+  order: number;
+  prosper: number;
+  price?: number;
+  /** 据点：开局归谁（FactionDef id） */
+  owner?: string;
+  /**
+   * 过路钱按主人算，例如 { dong: 0, xi: 20, guan: 10 }；主人不在表上（或没有主人）的，不加这一笔。
+   * 加在本处自己的船钱（RoomDef.fare）之外，在人走进这一处（上船）时收，不是路过码头就收
+   */
+  toll?: Record<string, number>;
+  /** 过路钱看哪一处的主人：客船的过路钱看它起锚的码头（运河客船看运河渡口）。不写就看本处自己 */
+  tollAt?: string;
+  /** 地方的种类：码头、街市、铺子、官道、破庙、衙门、酒楼…… */
+  tags: string[];
 }
 
 /** 基础服务：医馆（看伤）、客栈（住店）、兵器铺、当铺、杂货铺。tests/content.test.ts「基础设施」按它查各地齐不齐 */
@@ -185,6 +280,8 @@ export interface NpcDef {
   at?: NpcAt | NpcAt[];
   /** 条件成立时改用另一个名字，例如通报姓名之后 */
   altName?: { if: Cond; name: string };
+  /** 夜里也在（住在这儿的、守夜的）：入夜回家的地点（RoomDef.nightQuiet）不把他请走 */
+  night?: true;
   /** 头像上的单字；物品用 icon */
   ini?: string;
   icon?: 'stele' | 'go' | 'boat' | 'door';
@@ -205,6 +302,26 @@ export interface NpcDef {
   /** 动作列表的顺序。带 if 的动作只在条件成立时出现，例如真相揭开后才有的「求情」，免得按钮先剧透 */
   verbs: (Verb | { verb: Verb; if: Cond })[];
   actions: Partial<Record<Verb, Branch[]>>;
+  /** 人的活气（engine/chuanwen.ts）：有事的人才写。别的内容包里的人，用 ContentPack.npcLife 补，不必改别人的文件 */
+  life?: NpcLife;
+}
+
+/**
+ * 人的活气（docs/huo-shijie.md 3.3）：一城挑二三十个「有事的人」写，开店的、物件、背景人不写。
+ * 传闻（engine/chuanwen.ts）按它传：同处一地的人互相说，嘴碎的说得多；帮里的人夜里互通；说书人说给满座；叫化子往分舵报。
+ */
+export interface NpcLife {
+  /** 行当：说书、叫化、船夫、更夫、捕快、掌柜、小二……打听、传话、传闻池的 who 都按它找人 */
+  trade: string;
+  /** 势力（FactionDef id）：帮里的人夜里互通，牵涉本帮的事帮内都知道 */
+  faction?: string;
+  /** 嘴碎（零到一）：多爱传话。说书一，捕头零点三 */
+  talk: number;
+  /**
+   * 声口。lead：开口前的样子，两三句，引擎接成「{名}{lead}，道：「……」」，所以 lead 里不写「道」；
+   * idle：没新鲜事时说他自己的日子，按世界状态挑第一条成立的（和分支一样，最后一条不带条件），text 只写说的话
+   */
+  voice: { lead: string[]; idle: Branch[] };
 }
 
 /**
@@ -282,12 +399,15 @@ export interface FoeDef {
   weak?: number;
   /** 切磋：打到三成气血即止 */
   spar?: boolean;
+  /** 考校、试镖：「接得住三十招就算过」——撑满这么多合不倒，也算你赢（审查 F05：原来说三十招，规则却是把对方打到三成） */
+  rounds?: number;
   /** 剧本战：不会战死、不能逃跑认输。rescue：打到六成（或你撑不住）时由人救下；cup：你撑不住时有人出手 */
   script?: 'cup' | 'rescue';
   /** 第几合出第一次重招 */
   firstTell?: number;
   tag: string;
   moves: string[];
+  /** 出招时的花样，自成一句（「一脚踢翻了粥桶」「刀光一闪」）：战报写成「某某一招『招名』，花样，直取你左肩！」，前面不拼兵器名 */
   flourish: string[];
   tells: TellDef[];
   asides: string[];
@@ -348,9 +468,10 @@ export type SectRank = '记名' | '外门' | '内门' | '真传';
  * 怎样离开师门（docs/menpai.md 第七节）：
  * 出师，做到真传、师父点头，所学全留，日后还能回来；
  * 叛门，自己叛出，门派追杀，本门武功境界封顶，再也拜不回去；
- * 逐出，犯了门规被师门除名，本门武功境界封顶，同样拜不回去，只是不追杀。
+ * 逐出，犯了门规被师门除名，本门武功境界封顶，同样拜不回去，只是不追杀；
+ * 辞别，自己好聚好散地走（负责人 10-09「合理，玩家体验感好」）：所学全留、不封顶，贡献清零，原门派不再收；一辈子只能辞别一回，再走就是叛门。
  */
-export type LeaveHow = '出师' | '叛门' | '逐出';
+export type LeaveHow = '出师' | '辞别' | '叛门' | '逐出';
 /** 离开过的一个师门 */
 export interface PastSect { school: string; how: LeaveHow }
 /** 性质相克：柔克刚、刚克阴、阴克阳、阳克柔；中正不克也不被克 */
@@ -423,7 +544,7 @@ export interface PerformDef {
 
 /** 绝技槽的「杀招」：怒气满时施展，全屏题字，震撼收场 */
 export interface UltDef {
-  /** 题字时显示的小字，例如「寒江剑法 · 绝招」 */
+  /** 题字时显示的小字，例如「寒江剑法 · 杀招」（一律写「· 杀招」，docs/wenfeng.md） */
   title: string;
   /** 演出文字，可用 {foe} {part} */
   text: string;
@@ -525,10 +646,32 @@ export interface ItemDef {
   look?: Branch[];
 }
 
+/** 心事的一道门槛：条件成立就打勾，不成立见闻簿写出 text（钱、根基这类说得出差多少的，另写差多少） */
+export interface QuestGate { if: Cond; text: string }
+
+/**
+ * 心事的一步（engine/daohang.ts 的导航读它）：玩家要知道去哪、找谁、怎么做、差什么、还做不做得成。
+ * 只写推进这一步的分支里真有的条件，不另编（tests/daohang.test.ts 让机器玩家核对）。
+ */
+export interface QuestStage {
+  title: string;
+  to?: string;
+  /** 找谁：人物 id。见闻簿按作息写他眼下在不在、什么时辰在哪 */
+  who?: string;
+  /** 怎么做：一句江湖口吻的话。除了最后一步都要写 */
+  hint?: string;
+  /** 这一步的门槛 */
+  need?: QuestGate[];
+  /** 成立了，这一步就做不成了（未竟） */
+  fail?: QuestGate;
+}
+
 export interface QuestDef {
   id: string;
   name: string;
-  stages: { title: string; to?: string }[];
+  stages: QuestStage[];
+  /** 成立了，整件事就做不成了（未竟）；各步的 fail 只管那一步 */
+  fail?: QuestGate;
   /** 了结时给的历练；不写按阶段数算，每阶段 100（engine/lilian.ts） */
   lilian?: number;
 }
@@ -563,7 +706,13 @@ export interface StoryDef {
   endChapter?: { small: string; big: string };
 }
 
-export interface NewsDef { if?: Cond; text: string }
+/**
+ * 江湖传闻池（NEWS）。话要有来处（docs/huo-shijie.md 3.4）：
+ * - who：谁嘴里会有这句话——行当（说书、船夫、脚夫、更夫、掌柜、捕快、叫化、盐商、镖师、郎中、跑腿、和尚、道士、渔家……）或势力 id（dong、xi、guan、wang、gai、hei……）。不写 = 谁都不知道，不进池（CI 查）
+ * - far：外地的事，只从跑码头的（船夫、镖师、外乡人）嘴里出来，本地人不知道
+ * - about：说的是玩家自己的事迹（写了旗标条件、说「少年」「少侠」的），只在玩家做过之后、由目击者说起
+ */
+export interface NewsDef { if?: Cond; text: string; who?: string[]; far?: true; about?: 'you' }
 
 /** 地区；order 是地图上地区标签的先后，小的在前 */
 export interface RegionDef { name: string; note: string; order?: number }
@@ -605,13 +754,26 @@ export interface ShiDef {
   steps: Record<string, ShiStep>;
   /** 了结以后过几天重新起头（年年有的事：漕粮北上、庙会……）；不写的只有一回 */
   again?: number;
+  /** 事情出在哪一处（地点 id）：步骤没写 where 的，目击者按这里找（engine/chuanwen.ts） */
+  place?: string;
+  /** 牵涉的人、势力（人物 id 或势力 id）：当事人一开始就知道，本帮的人一开始就知道 */
+  subj?: string[];
 }
 
 export interface ShiStep {
   /** 见闻簿上的一句：这件事眼下怎样（只写玩家看得见、听得到的） */
   now: string;
-  /** 走到这一步时传开的话：人在这个地区就听得到，打听也问得到 */
+  /** 走到这一步时传开的话：人在这个地区就听得到，打听也问得到。也是这一步传闻的原样 */
   news?: string;
+  /** 传了几手走了样的说法、面目全非的说法（docs/huo-shijie.md 3.4）；不写的照用上一档 */
+  news2?: string;
+  news3?: string;
+  /** 多耸动（零到一）：越耸动传得越快、记得越久。不写：有下一步的零点五，结局零点六五 */
+  juice?: number;
+  /** 这一步额外牵涉的人、势力 */
+  subj?: string[];
+  /** 当事人自己的说法（用「我」）：人物 id → 话。问到他本人时用这一句 */
+  self?: Record<string, string>;
   /** 事情在哪儿：走进这个地点，就知道了这一步 */
   where?: string;
   /** 没人插手时，过几天自己走到哪一步（半天写 0.5）；不写的是结局 */
@@ -651,6 +813,11 @@ export interface JobDef {
   again?: number;
   /** 报酬的倍数（难办的差事多给些），不写为一 */
   k?: number;
+  /**
+   * 榜上揭的差事（府衙照壁的悬赏）：在登记的书办那里揭、那里交差。
+   * 误了期是营生上的事，不是失信于人：这一张白揭了，过几日才能再揭，不生心魔（审查 G18）
+   */
+  bang?: true;
 }
 
 /**
@@ -687,4 +854,10 @@ export interface ContentPack {
   jobs?: JobDef[];
   eyes?: EyeDef[];
   shi?: ShiDef[];
+  /** 势力（engine/shijie.ts） */
+  factions?: FactionDef[];
+  /** 给别的内容包里的地点补上活气：地点 id → RoomLife（合并时挂到 RoomDef.life 上） */
+  roomLife?: Record<string, RoomLife>;
+  /** 给别的内容包里的人补上活气：人物 id → NpcLife（合并时挂到 NpcDef.life 上） */
+  npcLife?: Record<string, NpcLife>;
 }

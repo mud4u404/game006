@@ -35,7 +35,9 @@ await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
 await p.goto(url);
 await p.evaluate(() => localStorage.clear());
 await p.reload();
-const click = async sel => { await p.waitForSelector(sel, { timeout: 8000 }); await p.click(sel); };
+// 刚换上来的剧情卡、应对、胜负以后、结算，头三百多毫秒不收点击（ui/shell.ts 的 tooSoon，防连点误选）：像人一样看一眼再点
+const FRESH = /data-act="(st|fReact|fFate|fResult)/;
+const click = async sel => { await p.waitForSelector(sel, { timeout: 8000 }); if (FRESH.test(sel)) await p.waitForTimeout(400); await p.click(sel); };
 const snap = async name => { if (shots) await p.screenshot({ path: `${shots}/${name}.png` }); };
 const log = (...a) => console.log('·', ...a);
 
@@ -69,7 +71,8 @@ async function fight(tag, pickBest = true) {
     if (!(await p.$('#fightLayer:not([hidden])'))) return 'closed';
     if (await p.$('#sheetLayer:not([hidden]) [data-act="fResult"]')) return 'result';
     if (await p.$('#fsheet.alert')) {
-      await p.waitForTimeout(150);
+      // 应对按钮刚换上来，头三百多毫秒不收点击（防连点误选）：像人一样看一眼再点
+      await p.waitForTimeout(400);
       // 每个应对按钮都要露在屏幕里、点得到（不能靠自动滚动去找）
       const hidden = await p.$$eval('.ropt', els => els.filter(e => {
         const r = e.getBoundingClientRect(), cy = r.top + r.height / 2;
@@ -77,7 +80,8 @@ async function fight(tag, pickBest = true) {
         return !(top && (top === e || e.contains(top)));
       }).map(e => e.textContent.trim().slice(0, 8)));
       if (hidden.length) throw new Error('见招拆招的应对按钮在屏幕外或被挡住：' + hidden.join('、'));
-      const opts = await p.$$eval('.ropt', els => els.map(e => ({ act: e.dataset.act, dis: e.disabled, o: e.querySelector('.ro').textContent })));
+      const opts = await p.$$eval('#rOpts .ropt', els => els.map(e => ({ act: e.dataset.act, dis: e.disabled, o: e.querySelector('.ro')?.textContent ?? '' })));
+      if (!opts.length) continue;
       const live = opts.filter(o => !o.dis);
       const order = '一两三四五六七八九';
       const choice = pickBest ? live.sort((a, c) => order.indexOf(c.o[2]) - order.indexOf(a.o[2]))[0] : live[0];
@@ -111,7 +115,10 @@ async function settle() {
 // 按任务横幅赶路；路上开了打、停在半路的，再点一次接着走
 async function goQuest(dest) {
   for (let k = 0; k < 5; k++) {
-    await click('[data-act="quest"]');
+    // 上一段路尾巴上弹出的路遇（随机，出在脚本走开的那一刻）会盖住横幅：先处理掉；点不动就再处理一遍
+    await settle();
+    try { await p.waitForSelector('[data-act="quest"]', { timeout: 8000 }); await p.click('[data-act="quest"]', { timeout: 4000 }); }
+    catch { await settle(); continue; }
     await settle();
     if ((await p.textContent('#appbar h1')).includes(dest)) return;
   }
@@ -150,6 +157,8 @@ log('了尘：', (await p.textContent('.reply')).slice(0, 24));
 await goQuest('运河渡口');
 await click('[data-act="sel:tu"]');
 await click('[data-act="do:动手"]');
+await p.waitForTimeout(500);
+await click('[data-act="do:动手"]');                  // 动手要再点一下才算
 log('屠千山', await fight(null));
 log('结算：', (await p.textContent('#sheetLayer .r-h')).trim());
 await snap('09-result');

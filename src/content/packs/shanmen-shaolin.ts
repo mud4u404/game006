@@ -228,7 +228,7 @@ const NPCS: NpcDef[] = [
 const KAO: FoeDef = {
   id: 'smsl_kao', name: '寂照长老', title: '少林考校', ini: '寂', tone: 'blue',
   weapon: '一双肉掌', ws: '拳', tag: '考校',
-  nature: '中正', reach: '短', rank: 0.6, build: 'inner', spar: true, firstTell: 3,
+  nature: '中正', reach: '短', rank: 0.6, build: 'inner', spar: true, rounds: 30, firstTell: 3,
   moves: ['黑虎掏心', '白猿献果', '罗汉撞钟', '横担铁门闩'],
   flourish: ['掌出无风，收掌有度', '脚下踏着桩步，纹丝不乱', '一掌拍来，掌缘带着衣袂的响', '半个身子始终朝着殿门'],
   tells: [
@@ -308,7 +308,8 @@ const JOBS: JobDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'smsl_shui', name: '少林 · 挑水上山', stages: [
-    { title: '替老葛把山下的水挑上灶房', to: 'smsl_jinshan' },
+    { title: '过寂照长老的考校', to: 'smsl_jinshan', who: 'smsl_laoge', hint: '寂照长老说，拜师先过考校：接他三十招，或是替老葛把山下的水挑上灶房，他一样收。',
+      need: [{ if: { noSect: true }, text: '了断别家的名分' }] },
     { title: '少林 · 挑水上山 · 完' }
   ] }
 ];
@@ -328,13 +329,13 @@ const EYES: EyeDef[] = [
 /* ---------- 传闻 ---------- */
 
 const NEWS: NewsDef[] = [
-  { text: '金山寺来了位挂单的少林长老，说是云游，一住半年，要在江南收几个俗家弟子。' },
+  { text: '金山寺来了位挂单的少林长老，说是云游，一住半年，要在江南收几个俗家弟子。', who: ['和尚', '货郎', '渔家'] },
   { if: { flag: 'smsl_ju' },
-    text: '有人想拜金山寺长老的门，叫长老挡了驾——听说手上有冤孽的，他一概不收。' },
+    text: '有人想拜金山寺长老的门，叫长老挡了驾——听说手上有冤孽的，他一概不收。', who: ['和尚', '货郎', '说书'], about: 'you' },
   { if: { flag: 'smsl_in' },
-    text: '金山寺的少林长老收了个俗家弟子。带兵刃上山的，知客僧的脸色头一回收平了。' },
+    text: '金山寺的少林长老收了个俗家弟子。带兵刃上山的，知客僧的脸色头一回收平了。', who: ['和尚', '货郎', '小二'], about: 'you' },
   { if: { flag: 'smsl_wai' },
-    text: '金山寺那位俗家弟子升了外门，韦陀掌、金钟罩都摸得着了。香客们都说，寺里要出人物。' }
+    text: '金山寺那位俗家弟子升了外门，韦陀掌、金钟罩都摸得着了。香客们都说，寺里要出人物。', who: ['和尚', '货郎', '小二'], about: 'you' }
 ];
 
 const pack: ContentPack = {

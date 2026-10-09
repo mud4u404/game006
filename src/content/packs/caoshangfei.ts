@@ -23,8 +23,11 @@ const HUNTING: Cond = { quest: { id: Q, is: 1 } };
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'zhuyuwan', name: '茱萸湾', area: '扬州 · 运河', region: 'yz', t: 20, map: [90, 26],
-    desc: '运河在这里拐了个大弯，岸边一片芦苇荡，十几户渔家的矮屋挤在堤下，墙上还留着齐腰高的水痕。网晾在竹竿上，滴着水。芦苇深处歪着一条破船，船篷塌了半边。',
+    id: 'zhuyuwan', name: '茱萸湾', area: '扬州 · 运河', region: 'yz', t: 20, map: [90, 26], nightQuiet: true,
+    desc: [
+      { if: { hour: { from: 21, to: 5 } }, text: '夜里的茱萸湾只剩芦苇沙沙地响。渔家的矮屋都熄了灯，晾网的竹竿在夜色里排成一列，像一排瘦长的人影。' },
+      { text: '运河在这里拐了个大弯，岸边一片芦苇荡，十几户渔家的矮屋挤在堤下，墙上还留着齐腰高的水痕。网晾在竹竿上，滴着水。芦苇深处歪着一条破船，船篷塌了半边。' }
+    ],
     npcs: ['zy_yuweng', { id: 'zy_csf', if: { ...HUNTING, flag: 'csf_clue2', hour: NIGHT } }],
     objs: ['zy_poshuan'],
     exits: [['西南', 'dukou', '东北']],
@@ -83,8 +86,8 @@ const NPCS: NpcDef[] = [
     }
   },
   {
-    id: 'zy_zhangfang', name: '牢里的账房', ini: '账', tone: 'gray', brief: '扒着牢门喊冤',
-    at: { room: 'yz_fuya', if: { quest: { id: Q, atLeast: 1 }, notFlag: 'csf_zhangfang_free' } },
+    id: 'zy_zhangfang', name: '牢里的账房', ini: '账', tone: 'gray', brief: '扒着牢门喊冤', night: true,
+    at: { room: 'yz_fuya_lao', if: { quest: { id: Q, atLeast: 1 }, notFlag: 'csf_zhangfang_free' } },
     look: '五十来岁，瘦得颧骨突出，长衫皱成一团，袖口还沾着墨迹。他扒着后院牢门的木栅，嗓子已经喊哑了。',
     verbs: ['交谈', '观察'],
     actions: {
@@ -140,7 +143,7 @@ const FOES: FoeDef[] = [
       { name: '断指一击', text: '草上飞忽然欺近，缺了小指的左手化掌为刀……', dom: 'li', after: '掌风扫过，船舷上的油灯应声而灭。' }
     ],
     asides: ['芦苇荡里惊起一群水鸟。', '远处渔家的窗户亮了一亮，又熄了。', '破船吱呀作响，船底渗进水来。'],
-    opening: ['飞爪收得慢了', '落脚处船板一滑', '换气时露了空门', '回身稍迟'],
+    opening: ['飞爪收得慢了', '落脚处船板一滑', '换气时胸口一滞', '回身稍迟'],
     intro: '草上飞抄起飞爪，身子往后一仰，人已站上了船篷：「想拿我？先追得上再说。」',
     win: '你一剑挑飞了他的飞爪，剑尖抵住他的咽喉。草上飞喘着粗气，慢慢松开了拳头。',
     lose: '你一脚踏空，栽进冰冷的河水里。等你爬上船，只听见芦苇荡里一声唿哨，越去越远。',
@@ -156,9 +159,9 @@ const FOES: FoeDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'csf_caught' }, text: '府衙拿住了草上飞。刘家账房出狱那天，在府衙门口磕了三个头。茱萸湾的渔家，几天没人出船。' },
-  { if: { flag: 'csf_surrender' }, text: '听说草上飞是自己走进府衙的。周捕头递了文书，说他劫的银子大半济了茱萸湾的灾民。' },
-  { if: { flag: 'csf_freed' }, text: '刘家的账房先生还关在府衙大牢里。有人说，草上飞早出了扬州地界。' }
+  { if: { flag: 'csf_caught' }, text: '府衙拿住了草上飞。刘家账房出狱那天，在府衙门口磕了三个头。茱萸湾的渔家，几天没人出船。', who: ['捕快', '衙役', 'guan', '渔家'] },
+  { if: { flag: 'csf_surrender' }, text: '听说草上飞是自己走进府衙的。周捕头递了文书，说他劫的银子大半济了茱萸湾的灾民。', who: ['捕快', '衙役', 'guan', '说书'] },
+  { if: { flag: 'csf_freed' }, text: '刘家的账房先生还关在府衙大牢里。有人说，草上飞早出了扬州地界。', who: ['衙役', '捕快', '渔家', '书吏'] }
 ];
 
 const pack: ContentPack = { rooms: ROOMS, npcs: NPCS, foes: FOES, news: NEWS };

@@ -39,8 +39,12 @@ import type { Cond, ContentPack, Effect, FightResult, FoeDef, ItemDef, NewsDef, 
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'bs2_wuguan', name: '广陵武馆', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [38, 94],
-    desc: '东关街拐进一条窄巷，黑漆门上挂着块旧匾「以武会友」，匾角叫虫蛀了。院里立着两排木桩，石锁、沙袋摆了一地，一个大个子正对着木桩一拳一拳地砸，木屑乱飞。',
+    id: 'bs2_wuguan', name: '广陵武馆', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [38, 94], nightQuiet: true,
+    desc: [
+      { if: { hour: { from: 21, to: 5 } },
+        text: '武馆的院门虚掩着，馆主早回家了。院里的木桩、石锁黑黢黢地立着，只有廊下一盏油灯，石墩就着灯光给自己手上的裂口抹药油。' },
+      { text: '东关街拐进一条窄巷，黑漆门上挂着块旧匾「以武会友」，匾角叫虫蛀了。院里立着两排木桩，石锁、沙袋摆了一地，一个大个子正对着木桩一拳一拳地砸，木屑乱飞。' }
+    ],
     npcs: ['bs2_lu', 'bs2_shidun'], objs: ['bs2_wg_jia'],
     exits: [['街', 'cheng', '馆']],
     road: '你从东关街拐进窄巷，老远就听见院里砰砰的砸桩声……'
@@ -89,9 +93,11 @@ const LSM_JOIN: Effect[] = [
 const JW_JOIN: Effect[] = [
   { type: 'sect', school: '军伍', rank: '记名' },
   { type: 'flag', flag: 'bs2_jw_in' },
+  // 安家银进了营才发（审查 C08、D07：原来募兵画个押就白拿三两）
+  { type: 'silver', delta: 300 },
   { type: 'rel', npc: 'bs2_han', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '边军的老什长，收你做了记名兵' },
   { type: 'feed', tag: '江湖', text: '你投了边军，做了韩什长手下的记名兵。军令如山：调你去哪儿就得去哪儿，逃了算逃兵。门规森严，在营里只练军中的功夫和江湖散学。' },
-  { type: 'toast', text: '投身军伍 · 记名弟子' }
+  { type: 'toast', text: '投身军伍 · 记名弟子 · 安家银三百文' }
 ];
 
 const GB: Cond['sect'] = { school: '丐帮' };
@@ -154,7 +160,7 @@ const NPCS: NpcDef[] = [
     }
   },
   {
-    id: 'bs2_shidun', name: '石墩', ini: '石', tone: 'gray', brief: '对着木桩砸拳',
+    id: 'bs2_shidun', name: '石墩', ini: '石', tone: 'gray', brief: '对着木桩砸拳', night: true,
     look: '二十出头，膀大腰圆，一张圆脸晒得黑红。拳头上缠着布条，布条渗着血丝，他也不在意。',
     verbs: ['交谈', '观察', '切磋'],
     actions: {
@@ -375,7 +381,7 @@ const NPCS: NpcDef[] = [
           text: '秦教头看了你一眼：「周捕头提过你，说扬州城里行侠仗义的后生，你算一个。」他抽出铁尺，「行侠是一回事，拿人是另一回事。接我三十招。」',
           do: [{ type: 'fight', foe: 'bs2_lsm_kao' }] },
         { if: { noSect: true },
-          text: '秦教头摇摇头：「六扇门不是募兵处，不收毛遂自荐的。」他朝正堂努努嘴，「周捕头手上压着案子。替他办成一件，叫他举荐你，再来说话。」' },
+          text: '秦教头摇摇头：「六扇门不是募兵处，不收毛遂自荐的。」他朝公案那边努努嘴，「周捕头手上压着案子。替他办成一件，叫他举荐你，再来说话。」' },
         { text: '秦教头瞥了你一眼：「你身上挂着别家的名分。六扇门的人，只有一个主子。」' }
       ],
       请教: [
@@ -399,7 +405,7 @@ const NPCS: NpcDef[] = [
 
   /* ---------- 军伍：冯校尉的名册上画了押，韩什长考校 ---------- */
   {
-    id: 'bs2_han', name: '韩什长', ini: '韩', tone: 'red', brief: '在帐前操练新兵', at: { room: 'yz_guandao' },
+    id: 'bs2_han', name: '韩什长', ini: '韩', tone: 'red', brief: '在帐前操练新兵', at: { room: 'yz_mubing' },
     look: '四十来岁，半边脸上一大块烧伤的疤，一只耳朵没了。站着像一杆枪，脚边立着一根去了枪头的白蜡杆。',
     verbs: ['交谈', '观察',
       { verb: '投军', if: { notFlag: 'bs2_jw_in' } },
@@ -517,14 +523,14 @@ const FOES: FoeDef[] = [
   },
   {
     id: 'bs2_lsm_kao', name: '秦教头', title: '六扇门考校', ini: '秦', tone: 'blue', weapon: '铁尺', ws: '尺', tag: '考校',
-    nature: '中正', reach: '短', rank: 0.7, build: 'even', spar: true, firstTell: 3,
+    nature: '中正', reach: '短', rank: 0.7, build: 'even', spar: true, rounds: 30, firstTell: 3,
     moves: ['锁腕', '点肩井', '别肘', '扫腿'],
     flourish: ['铁尺一晃，点向你的手腕', '瘸腿一拖，人却抢到了你身侧', '反手一尺，敲在你肘弯上', '尺尖贴着你的衣襟滑过去'],
     tells: [
       { name: '画押点', text: '秦教头铁尺虚晃，尺尖在你胸前连点四下，看不出哪一下是实的……', dom: 'qiao', after: '最后一下实实在在点向你的膻中！' },
       { name: '锁喉扣腕', text: '秦教头忽然欺身贴近，一只手已经搭上了你的手腕……', dom: 'su', after: '另一只手直取你的咽喉，要把你按倒在地。' }
     ],
-    asides: ['衙役们拄着水火棍看热闹，有人押了二十文，赌你撑不过十招。', '周捕头从正堂探出头来看了一眼，又缩了回去。', '廊下的鸽子扑棱棱飞了起来。'],
+    asides: ['照壁那头的衙役听见动静，拄着水火棍探头进来看热闹，有人押了二十文，赌你撑不过十招。', '周捕头从正堂探出头来看了一眼，又缩了回去。', '廊下的鸽子扑棱棱飞了起来。'],
     opening: ['瘸腿落地时慢了半拍', '铁尺点了个空', '扣腕扣了个空'],
     intro: '秦教头把铁尺横在胸前：「六扇门拿人，讲究一个『拿』字。接得住我三十招，就算你过了。」',
     win: '秦教头收尺后退，揉了揉手腕：「好。拿人的手，稳。」',
@@ -542,14 +548,14 @@ const FOES: FoeDef[] = [
   },
   {
     id: 'bs2_jw_kao', name: '韩什长', title: '边军考校', ini: '韩', tone: 'red', weapon: '白蜡杆', ws: '杆', tag: '考校',
-    nature: '刚', reach: '长', rank: 0.7, build: 'inner', spar: true, firstTell: 3,
+    nature: '刚', reach: '长', rank: 0.7, build: 'inner', spar: true, rounds: 30, firstTell: 3,
     moves: ['拦', '拿', '扎', '杆打一大片'],
     flourish: ['白蜡杆一抖，杆头直点你的胸口', '杆尾一挑，扫向你的脚踝', '一杆砸下来，砸得尘土飞扬', '脚下像钉了钉子，纹丝不动'],
     tells: [
       { name: '中平扎', text: '韩什长沉肩坠肘，白蜡杆端得纹丝不动，杆头对准了你的心口……', dom: 'su', after: '杆头一抖，直扎过来，快得只看见一道白影。' },
       { name: '横扫千军', text: '韩什长双手握住杆尾，腰身一拧……', dom: 'li', after: '白蜡杆抡圆了横扫过来，带着呜呜的风声。' }
     ],
-    asides: ['帐前站桩的新兵都扭过头来看，叫韩什长一瞪，又转了回去。', '冯校尉放下名册，远远地看着。', '孙婆婆的茶壶在炭上咕嘟咕嘟地响。'],
+    asides: ['帐前站桩的新兵都扭过头来看，叫韩什长一瞪，又转了回去。', '冯校尉放下名册，远远地看着。', '帐后拴着的马打了个响鼻，刨了刨蹄子。'],
     opening: ['一杆扎空，杆头往下一沉', '换手时慢了一拍', '扫得太猛，收不回来'],
     intro: '韩什长把白蜡杆往地上一顿：「边军不比武，只打仗。挨得住我三十杆，就算你过了。」',
     win: '韩什长收杆后退，抹了把脸上的汗：「行。这身骨头，九边冻不坏。」',
@@ -574,14 +580,20 @@ const ITEMS: ItemDef[] = [
   { id: 'bs2_yaopai', name: '六扇门腰牌', kind: '信物', desc: '乌木腰牌，正面刻「扬州府」三字，背面刻一个「捕」字，挂着一截褪了色的红绳。' },
   { id: 'bs2_tiechi', name: '铁尺', kind: '装备', price: 300, desc: '一尺八寸的熟铁尺，尺身方棱，尺尖磨圆了。六扇门拿人点穴的家伙。', equip: { slot: '兵器', weapon: '奇门', reach: '短' } },
   { id: 'bs2_qiang', name: '白蜡杆枪', kind: '装备', price: 450, desc: '白蜡杆的枪身，韧而不折，枪头是边军的制式。', equip: { slot: '兵器', weapon: '枪', reach: '长' } },
-  { id: 'bs2_pudao', name: '朴刀', kind: '装备', price: 400, desc: '武馆刀枪架上的朴刀，刀身宽厚，刀口开过，磨得雪亮。', equip: { slot: '兵器', weapon: '刀', reach: '短' } }
+  { id: 'bs2_pudao', name: '朴刀', kind: '装备', price: 600, desc: '武馆刀枪架上的朴刀，刀身宽厚，刀口开过，磨得雪亮。', equip: { slot: '兵器', weapon: '刀', reach: '短' } }
 ];
 
 /* ---------- 任务：丐帮的入门考验 ---------- */
 
 const QUESTS: QuestDef[] = [
   { id: KAO_GB, name: '丐帮 · 讨一顿饭', stages: [
-    { title: '空着手去东关街讨一顿饭，带回龙王庙', to: 'cheng' },
+    // 推进在龙王庙鲍四的「复命」；目的地照旧写东关街，烧饼要先在那里讨到
+    { title: '空着手去东关街讨一顿饭，带回龙王庙', to: 'cheng', hint: '鲍四撂下话：去东关街讨一顿饭回来，不花自己的钱，不亮兵刃，不报名号。',
+      need: [
+        { if: { item: { id: 'bs2_shaobing' } }, text: '讨来一顿饭食' },
+        { if: { notFlag: 'bs2_gb_mai' }, text: '饭食须是讨来、挣来的，不能花钱买' },
+        { if: { noSect: true }, text: '了断别家的名分' }
+      ] },
     { title: '丐帮 · 讨一顿饭 · 完' }
   ] }
 ];
@@ -589,13 +601,13 @@ const QUESTS: QuestDef[] = [
 /* ---------- 传闻 ---------- */
 
 const NEWS: NewsDef[] = [
-  { text: '东关街巷子里的广陵武馆，交了学费就教拳，不拜师，不论门户。' },
-  { text: '运河堤下的龙王庙住着一窝叫化子，听说丐帮在扬州的分舵就在那里。' },
-  { if: { flag: 'bs2_gb_in' }, text: '丐帮扬州分舵新收了个记名弟子。龙王庙的小叫化们，这几日笑得多了。' },
-  { if: { flag: 'bs2_gb_mai_once' }, text: '东关街的胡婶说，有人想入丐帮，掏钱买了她的烧饼，叫鲍四撵了回去。' },
-  { if: { flag: 'bs2_lsm_in' }, text: '扬州府衙新添了个捕快，是秦教头亲手考校过的，没花一文钱买缺。' },
-  { if: { flag: 'bs2_jw_in' }, text: '蜀冈官道的募兵帐前，韩什长又收了个兵，听说是从瓜洲来的后生。' },
-  { if: { flag: 'bs2_wg_win' }, text: '广陵武馆的石墩逢人便说，前几日有个后生，三拳两脚把他放倒了。' }
+  { text: '东关街巷子里的广陵武馆，交了学费就教拳，不拜师，不论门户。', who: ['跑腿', '货郎', '小二'] },
+  { text: '运河堤下的龙王庙住着一窝叫化子，听说丐帮在扬州的分舵就在那里。', who: ['叫化', 'gai', '脚夫', '船夫'] },
+  { if: { flag: 'bs2_gb_in' }, text: '丐帮扬州分舵新收了个记名弟子。龙王庙的小叫化们，这几日笑得多了。', who: ['叫化', 'gai', '脚夫'], about: 'you' },
+  { if: { flag: 'bs2_gb_mai_once' }, text: '东关街的胡婶说，有人想入丐帮，掏钱买了她的烧饼，叫鲍四撵了回去。', who: ['小二', '货郎', '叫化'], about: 'you' },
+  { if: { flag: 'bs2_lsm_in' }, text: '扬州府衙新添了个捕快，是秦教头亲手考校过的，没花一文钱买缺。', who: ['捕快', '衙役', 'guan', '书吏'], about: 'you' },
+  { if: { flag: 'bs2_jw_in' }, text: '蜀冈官道的募兵帐前，韩什长又收了个兵，听说是从瓜洲来的后生。', who: ['军汉', '脚夫', '货郎'], about: 'you' },
+  { if: { flag: 'bs2_wg_win' }, text: '广陵武馆的石墩逢人便说，前几日有个后生，三拳两脚把他放倒了。', who: ['跑腿', '货郎', '小二'], about: 'you' }
 ];
 
 const pack: ContentPack = { rooms: ROOMS, npcs: NPCS, foes: FOES, items: ITEMS, quests: QUESTS, news: NEWS };

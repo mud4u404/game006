@@ -3,7 +3,7 @@ import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { cn, cleanName, fmt, liang } from '../src/core/util';
 import { dayName, minLabel, shichen, shichenKe } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
-import { act, curQuest, enter, hopMin, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
+import { act, curQuest, enter, hopMin, openExits, pathMin, pathTo, roomNpcs, roomObjs, verbsOf } from '../src/engine/world';
 import type { NpcDef } from '../src/content/types';
 import { activePrep, alliesOf, fightKit, foeSpec, heroSpec, personOf } from '../src/engine/zhaoshi';
 import { Duel, RULES, odds } from '../src/engine/duel';
@@ -20,7 +20,8 @@ import { gainProf, learnSkill } from '../src/engine/growth';
 import { SKILLS } from '../src/content';
 import type { SkillDef } from '../src/content/types';
 import { cheng, huohou } from '../src/engine/formulas';
-import { FOE_WINDOW, RETREAT, fightLilian, foeLilian, gongliCeiling, jingxiuPlan, retreatPlan } from '../src/engine/lilian';
+import { FOE_WINDOW, RETREAT, fightLilian, foeLilian, foeRepeats, gongliCeiling, jingxiuPlan, retreatPlan } from '../src/engine/lilian';
+import { settle } from '../src/engine/jiesuan';
 import { FOES } from '../src/content';
 import { ENC_GAP, ENC_REPEAT_DAYS, eligible, encounterChance, markEncounter, rollEncounter } from '../src/engine/encounter';
 import { ENCOUNTERS } from '../src/content';
@@ -70,6 +71,11 @@ describe('世界', () => {
     expect(pathTo('dukou', 'gz_pier')).toEqual(['gz_kechuan', 'gz_pier']);
     expect(pathMin('dukou', 'gz_pier')).toBe(120);
     expect(pathTo('gz_pier', 'zj_xijin')).toEqual(['gz_duchuan', 'zj_xijin']);
+  });
+  it('序章里不开船：江伯在床上等药，坐船去扬州、镇江的路不通（审查 A2）', () => {
+    setState(newGame());
+    expect(openExits('gz_pier').map(x => x[1])).not.toContain('gz_kechuan');
+    expect(pathTo('gz_pier', 'zj_xijin')).toEqual([]);
   });
   it('屠千山只在接到任务后出现在渡口', () => {
     expect(roomNpcs('dukou')).not.toContain('tu');
@@ -163,6 +169,28 @@ describe('条件与效果', () => {
     act('fuya_zhou', '交谈');
     expect(S.quests.side_caoshangfei).toBe(1);
   });
+  it('照壁上一块榜（负责人 10-09）：看缉拿再进前堂找周捕头揭；悬赏找书办揭、找书办交差；榜上不揭榜', () => {
+    expect(roomObjs('yz_zhaobi')).toEqual(['fuya_gaoshi']);
+    expect(verbsOf(npcDef('fuya_gaoshi')!)).toEqual(['观察', '看缉拿', '看悬赏', '看海捕']);
+    // 生人：没看榜，周捕头不信；看过榜就能自荐
+    expect(act('fuya_zhou', '揭榜').text).toContain('先看清楚');
+    expect(act('fuya_gaoshi', '看缉拿').text).toContain('前堂见周捕头');
+    act('fuya_zhou', '揭榜');
+    expect(S.quests.side_caoshangfei).toBe(1);
+    expect(act('fuya_gaoshi', '看缉拿').text).toContain('已叫人揭了');
+    // 悬赏：书办是唯一的登记人，揭、交都在照壁下（游侠的营生）
+    S.shenfen = { id: 'youxia', standing: 1, since: 0 };
+    expect(act('fuya_gaoshi', '看悬赏').text).toContain('书办');
+    expect(verbsOf(npcDef('xsb_zhuren')!)).toContain('揭河贼');
+    act('xsb_zhuren', '揭河贼');
+    expect(S.yue.find(y => y.id === 'job_xs_hezei')).toMatchObject({ npc: 'xsb_zhuren', at: 'yz_zhaobi' });
+    expect(verbsOf(npcDef('xsb_zhuren')!)).not.toContain('交河贼');
+    S.flags.xs_hezei_caught = true;
+    const silver = S.silver;
+    act('xsb_zhuren', '交河贼');
+    expect(S.job).toBeNull();
+    expect(S.silver).toBeGreaterThan(silver);
+  });
   it('观察：先是外貌，再接上随条件变化的细节', () => {
     const t = act('fuya_zhou', '观察').text;
     expect(t).toContain('络腮胡');
@@ -220,6 +248,14 @@ describe('条件与效果', () => {
     expect(S.quests.prologue).toBe(2);
     expect(S.weather).toBe('大雨');
     expect(roomNpcs('gz_home')).not.toContain('jiangbo');
+  });
+  it('过了酉时再抓药，不会凭空丢一天（试玩第二轮 A3）', () => {
+    act('jiangbo', '交谈');
+    S.min = 20 * 60;
+    const day = S.day;
+    act('huichun', '抓药');
+    expect(S.day).toBe(day);
+    expect(S.quests.prologue).toBe(2);
   });
 });
 
@@ -314,7 +350,8 @@ describe('师承与前置', () => {
     expect(learnSkill('duanshui')).toEqual([]);
     expect(S.skills.duanshui).toBeUndefined();
     expect(S.feed[0].x).toContain('根基未到');
-    S.skills.hanjiang = { r: 0, p: 0 };
+    // 断水的前置是寒江剑法略有小成（负责人 10-09：开局不给绝技，要自己参悟）
+    S.skills.hanjiang = { r: 1, p: 0 };
     // 学艺有代价：断水是绝品，要拿六百历练去换（content/skills.ts 的 LEARN_LILIAN）
     S.lilian = 599;
     expect(cond({ canLearn: 'duanshui' })).toBe(false);
@@ -328,6 +365,7 @@ describe('师承与前置', () => {
 
   it('剧情、奇遇里写明了代价的，不花历练', () => {
     delete S.skills.duanshui;
+    S.skills.hanjiang!.r = 1;
     S.lilian = 0;
     run([{ type: 'learn', skill: 'duanshui', lilian: 0 }]);
     expect(S.skills.duanshui).toBeDefined();
@@ -425,13 +463,13 @@ describe('缉拿草上飞走得完', () => {
     night();
     run(FOES.find(f => f.id === 'zy_csf')!.results.win.do!);
     expect(S.quests.side_caoshangfei).toBe(2);
-    expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
+    expect(roomNpcs('yz_fuya_lao')).toContain('zy_zhangfang');
     expect(verbsOf(NPCS_BY.zhou())).toContain('交差');
     const silver = S.silver;
     act('fuya_zhou', '交差');
     expect(S.quests.side_caoshangfei).toBe(3);
     expect(S.silver).toBe(silver + 2000);
-    expect(roomNpcs('yz_fuya')).not.toContain('zy_zhangfang');
+    expect(roomNpcs('yz_fuya_lao')).not.toContain('zy_zhangfang');
     expect(act('zy_yuweng', '交谈').text).toContain('官爷的事');
   });
 
@@ -460,7 +498,7 @@ describe('缉拿草上飞走得完', () => {
     act('zy_csf', '放他走');
     expect(S.quests.side_caoshangfei).toBe(3);
     expect(act('fuya_zhou', '交差').text).toContain('他就出不来');
-    expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
+    expect(roomNpcs('yz_fuya_lao')).toContain('zy_zhangfang');
     expect(act('zy_zhangfang', '交谈').text).toContain('三天又三天');
   });
 });
@@ -538,7 +576,7 @@ describe('人情', () => {
 describe('从零练武：成长从江湖上来', () => {
   beforeEach(() => setState(skipToYangzhou()));
 
-  it('开局不入流：寒江三门都在初窥门径；出手轻重随境界，初窥门径打八成，大乘一倍六', () => {
+  it('开局不入流：寒江三门都在初窥门径；出手轻重随境界，初窥门径打八成，天人合一一倍六', () => {
     const g = newGame();
     expect(Object.values(g.skills).every(x => x!.r === 0 && x!.p === 0)).toBe(true);
     const lo = dmgMul(personOf(S));
@@ -562,11 +600,11 @@ describe('从零练武：成长从江湖上来', () => {
     expect(S.hpMax).toBe(hp2);
   });
 
-  it('静修：先养伤（一级三日），再打坐长功力；功力有天花板，内功练不上去就熬不深', () => {
+  it('静修：只养得好轻伤（重伤要看伤、服药），日子都拿来打坐长功力；功力有天花板，内功练不上去就熬不深', () => {
     S.wounds = { hand: 1, foot: 0, inner: 2 };
     const p = jingxiuPlan(S, 7);
-    expect(p.healed).toEqual({ inner: 2 });
-    expect(p.dazuoDays).toBe(1);
+    expect(p.healed).toEqual({ hand: 1 });
+    expect(p.dazuoDays).toBe(7);
     const q = jingxiuPlan({ ...S, wounds: { hand: 0, foot: 0, inner: 0 } }, 30);
     expect(q.gongli).toBeGreaterThan(0.8);
     expect(q.gongli).toBeLessThan(1);
@@ -586,6 +624,20 @@ describe('从零练武：成长从江湖上来', () => {
     S.day += FOE_WINDOW;
     expect(fightLilian(S, foe, 'win')).toBe(213);
     expect(fightLilian(S, { id: 'liu', rank: 0.3 }, 'flee')).toBe(0);
+  });
+
+  it('切磋结算里的熟练只给第一回；实战里长的熟练按七日内打过几场递减（试玩第二轮 G03）', () => {
+    const liu = FOES.find(f => f.id === 'liu')!;
+    const hj = (): string => JSON.stringify(S.skills.hanjiang);
+    const h0 = hj();
+    settle(liu, 'win', []);
+    const h1 = hj();
+    expect(h1).not.toBe(h0);
+    settle(liu, 'win', []);
+    expect(hj()).toBe(h1);
+    expect(foeRepeats(S, 'liu')).toBe(2);
+    S.day += FOE_WINDOW;
+    expect(foeRepeats(S, 'liu')).toBe(0);
   });
 
   it('一件事了结时给历练，只给一次', () => {
@@ -778,6 +830,10 @@ describe('武功上身：实战里的招式由搭配来', () => {
   });
 
   it('杀招来自绝技位；没有本门内功打底，绝招、杀招都使不出来', () => {
+    // 开局没有断水（要对着残页自己参悟），这里先当已经参出来了
+    expect(fightKit(S).ult).toBeUndefined();
+    S.skills.duanshui = { r: 0, p: 0 };
+    S.loadout.ult = 'duanshui';
     expect(fightKit(S).ult?.def.id).toBe('duanshui');
     S.skills.jh_tuna = { r: 0, p: 0 };
     S.loadout.neigong = 'jh_tuna';

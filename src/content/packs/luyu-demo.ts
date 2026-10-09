@@ -13,8 +13,9 @@ import type { ContentPack, EncounterDef, FoeDef, StoryDef } from '../types';
 const NIGHT = { hour: { from: 18, to: 6 } };
 
 const ENCOUNTERS: EncounterDef[] = [
-  { id: 'luyu_maishen', region: ['yz'], to: ['cheng', 'dukou'], once: true, story: 'ly_maishen' },
-  { id: 'luyu_xiaozei', region: ['yz'], to: ['cheng', 'cheng_tavern', 'yz_fuya', 'hu'], once: true, story: 'ly_xiaozei' },
+  // 卖身葬父、小毛贼都在白天；小毛贼不在府衙门口拦人（审查 B29）
+  { id: 'luyu_maishen', region: ['yz'], to: ['cheng', 'dukou'], once: true, if: { hour: { from: 6, to: 19 } }, story: 'ly_maishen' },
+  { id: 'luyu_xiaozei', region: ['yz'], to: ['cheng', 'cheng_tavern', 'hu'], once: true, if: { hour: { from: 6, to: 19 } }, story: 'ly_xiaozei' },
   // 那个孩子，过些日子在渡口又遇上了：你当初怎么待他，他现在就是什么样子
   { id: 'luyu_xiaozei_fed', region: ['yz'], to: ['dukou'], once: true, if: { flag: 'ly_xiaozei_fed' }, story: 'ly_xiaozei_fed' },
   { id: 'luyu_xiaozei_beat', region: ['yz'], to: ['dukou'], once: true, if: { flag: 'ly_xiaozei_beat' }, story: 'ly_xiaozei_beat' },
@@ -34,6 +35,10 @@ const STORIES: StoryDef[] = [
           result: '姑娘磕了个头，把铜钱揣进怀里。她抬头看你的那一眼，有点慌。',
           do: [{ type: 'silver', delta: -50 }, { type: 'xia', delta: 2 }, { type: 'flag', flag: 'ly_maishen_paid' }], next: -1 },
         { label: '仔细看看那张草席', sub: '悟性', if: { attr: { key: '悟性', atLeast: 23 } }, next: 1 },
+        // 身上没几个钱的人，也能像路人那样放下几文（不算没帮她）
+        { label: '摸出几文钱，放在草席边上', sub: '银两 −5', if: { silver: 5 },
+          result: '你摸出五文钱，弯腰放在草席边上。姑娘低着头，小声道了句谢。几文钱葬不了人，可总比扭头走开强。',
+          do: [{ type: 'silver', delta: -5 }, { type: 'flag', flag: 'ly_maishen_coin' }], next: -1 },
         { label: '走开',
           result: '你走出老远，回头看了一眼。姑娘还跪在那里，雨水顺着木牌往下淌。',
           do: [{ type: 'flag', flag: 'ly_maishen_walk' }], next: -1 }
@@ -166,7 +171,7 @@ const XIAOZEI: FoeDef = {
   flourish: ['闭着眼睛抡过来', '棍子抡得呼呼响，脚下却直打晃', '咬着牙捅过来'],
   tells: [
     { name: '拼命一棍', text: '孩子双手攥紧木棍，憋红了脸，像是要把全身的力气都砸下来……', dom: 'li', after: '木棍砸在墙上，断成了两截！' },
-    { name: '扑上来抱腿', text: '孩子忽然扔了棍子，弓着身子朝你腿上扑过来……', dom: 'su', after: '他扑了个空，摔在泥里。' }
+    { name: '扑上来抱腿', text: '孩子忽然扔了棍子，弓着身子朝你腿上扑过来……', dom: 'su', after: '他自己收不住脚，踉跄了两步。' }
   ],
   asides: ['巷口有人探头看了一眼，又缩了回去。', '孩子的草鞋带子断了。'],
   opening: ['抡空了棍子', '脚下打滑', '喘得直不起腰'],
@@ -212,12 +217,13 @@ const pack: ContentPack = {
   stories: STORIES,
   foes: [XIAOZEI],
   news: [
-    { if: { flag: 'ly_maishen_exposed' }, text: '东关街上卖身葬父的姐弟，叫人当街说破，从此再没在城里露过面。' },
-    { if: { flag: 'ly_maishen_kind' }, text: '盐号撵出来的老脚夫，这几日抓上了药。他逢人便说，有位少侠心善。' },
-    { if: { flag: 'ly_maishen_paid' }, text: '东关街有个姑娘卖身葬父，讨到了钱就不见了。有人说，她爹压根没死。' },
-    { if: { flag: 'ly_ajiu' }, text: '渡口新来个扛盐包的半大孩子，叫阿九，干活不惜力，见人就笑。' },
-    { if: { flag: 'ly_xiaozei_beat' }, text: '东关街一带的小叫化子，见了佩剑的人就躲。听说有人当街打过他们一个。' },
-    { if: { flag: 'ly_xiaozei_dead' }, text: '东关街的巷子里死了个讨饭的孩子，听说是叫一个佩剑的砍的。小叫化子们夜里都不敢出来了。' }
+    { if: { flag: 'ly_maishen_exposed' }, text: '东关街上卖身葬父的姐弟，叫人当街说破，从此再没在城里露过面。', who: ['货郎', '脚夫', '小二'], about: 'you' },
+    { if: { flag: 'ly_maishen_kind' }, text: '盐号撵出来的老脚夫，这几日抓上了药。他逢人便说，有位少侠心善。', who: ['脚夫', '郎中', '货郎'], about: 'you' },
+    { if: { flag: 'ly_maishen_paid' }, text: '东关街有个姑娘卖身葬父，讨到了钱就不见了。有人说，她爹压根没死。', who: ['货郎', '脚夫', '小二'] },
+    { if: { flag: 'ly_maishen_coin' }, text: '东关街卖身葬父的姑娘还跪着，草席边上的铜钱攒了一小堆，都是过路人三文五文放下的。', who: ['货郎', '脚夫', '小二'] },
+    { if: { flag: 'ly_ajiu' }, text: '渡口新来个扛盐包的半大孩子，叫阿九，干活不惜力，见人就笑。', who: ['脚夫', '船夫', '盐商'] },
+    { if: { flag: 'ly_xiaozei_beat' }, text: '东关街一带的小叫化子，见了佩剑的人就躲。听说有人当街打过他们一个。', who: ['叫化', 'gai', '货郎'], about: 'you' },
+    { if: { flag: 'ly_xiaozei_dead' }, text: '东关街的巷子里死了个讨饭的孩子，听说是叫一个佩剑的砍的。小叫化子们夜里都不敢出来了。', who: ['叫化', 'gai', '货郎', '更夫'], about: 'you' }
   ]
 };
 export default pack;

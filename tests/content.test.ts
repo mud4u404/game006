@@ -3,7 +3,7 @@
  * 报错信息会指出是哪个文件里的哪一条数据有问题。
  */
 import { describe, expect, it } from 'vitest';
-import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SHI, SKILLS, STORIES, NEWS } from '../src/content';
+import { ENCOUNTERS, EYES, FACTIONS, FOES, ITEMS, JOBS, NPCS, QUESTS, REGIONS, ROOMS, SHI, SKILLS, STORIES, NEWS } from '../src/content';
 import type { Branch, Cond, Effect, FxDef } from '../src/content/types';
 import type { ContentPack } from '../src/content/types';
 import { FORBIDDEN_NAMES } from './forbidden-names';
@@ -21,6 +21,7 @@ const foeIds = new Set(FOES.map(f => f.id));
 const storyIds = new Set(STORIES.map(s => s.id));
 const quests = new Map(QUESTS.map(q => [q.id, q]));
 const jobIds = new Set(JOBS.map(j => j.id));
+const facIds = new Set(FACTIONS.map(f => f.id));
 const DEFAULT_VERBS = new Set(['观察', '赠礼', '请教', '切磋', '偷窃']);
 const PLACEHOLDERS = new Set(['given', 'name', 'story', 'news']);
 
@@ -44,6 +45,12 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
     const d = SHI.find(x => x.id === c.shi!.id);
     if (!d) errs.push(`${where}：条件里的世事「${c.shi.id}」不存在`);
     else for (const k of [...(c.shi.at ?? []), ...(c.shi.not ?? [])]) if (!d.steps[k]) errs.push(`${where}：世事「${d.id}」没有「${k}」这一步`);
+  }
+  // 世界状态（engine/shijie.ts）：地方、势力、人都要存在
+  if (c.w) {
+    for (const pl of [c.w.owner?.place, c.w.order?.place, c.w.price?.place]) if (pl !== undefined && !roomIds.has(pl)) errs.push(`${where}：条件里的地点「${pl}」不存在`);
+    for (const f of [...(c.w.owner?.is ?? []), c.w.fac?.id]) if (typeof f === 'string' && !facIds.has(f)) errs.push(`${where}：条件里的势力「${f}」不存在`);
+    if (c.w.p && !npcIds.has(c.w.p.id)) errs.push(`${where}：条件里的人物「${c.w.p.id}」不存在`);
   }
   c.any?.forEach((x, i) => checkCond(x, `${where} any[${i}]`, errs));
 }
@@ -71,6 +78,10 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         break;
       case 'prof': case 'learn': if (!skillIds.has(e.skill)) errs.push(`${w}：武功「${e.skill}」不存在`); break;
       case 'move': if (!roomIds.has(e.to)) errs.push(`${w}：地点「${e.to}」不存在`); break;
+      case 'away':
+        if (!npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
+        if (!(e.hours > 0 && e.hours <= 72)) errs.push(`${w}：hours 写一到七十二个时辰`);
+        break;
       case 'fight': if (!foeIds.has(e.foe)) errs.push(`${w}：对手「${e.foe}」不存在`); break;
       case 'story': if (!storyIds.has(e.id)) errs.push(`${w}：剧情「${e.id}」不存在`); break;
       case 'sect': if (!SCHOOL_STYLE[e.school]) errs.push(`${w}：门派「${e.school}」没有定位（见 SCHOOL_STYLE）`); break;
@@ -94,6 +105,15 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         if (!jobIds.has(e.id)) errs.push(`${w}：差事「${e.id}」不存在`);
         (e.type === 'job' ? jobTaken : e.type === 'jobDone' ? jobDoneSet : new Set<string>()).add(e.id);
         break;
+      case 'w': {
+        const pl = 'place' in e ? e.place : e.op === 'hurt' || e.op === 'jail' || e.op === 'gone' ? e.mark?.place : undefined;
+        if (pl !== undefined && !roomIds.has(pl)) errs.push(`${w}：地点「${pl}」不存在`);
+        const f = 'fac' in e ? e.fac : e.op === 'owner' ? e.to : undefined;
+        if (typeof f === 'string' && !facIds.has(f)) errs.push(`${w}：势力「${f}」不存在`);
+        if ('npc' in e && !npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
+        if (e.op === 'mark' && !(e.days >= 1 && e.text)) errs.push(`${w}：痕迹要写 text 和一日以上的 days`);
+        break;
+      }
       default: break;
     }
   }
@@ -206,6 +226,120 @@ describe('地点', () => {
   });
 });
 
+/**
+ * 负责人 10-09：「场景很拥挤，到了一个场景里面齐刷刷站了一堆人，像派出所审犯人一样」——场景不许像派出所审犯人。
+ * 一处同时最多五人（物件不算）。挤了就往外拆出去处（照壁、茶棚、鱼市口……），或者让人错开作息。
+ *
+ * 算法：穷举。把这一处所有人物条件里出现的「原子」——旗标、任务进度、章节、手上的差事、世事走到哪一步——
+ * 逐一枚举取值（手上的差事同一时刻只有一件，世事同一时刻只在一步，所以互斥的人不会被算到一起）；
+ * 别的条件（钱、根基、侠义、门派……）各当一个可真可假的开关。每种取值、每个时辰，
+ * 照 engine/world.ts 的 present() 算在场的人：同一人写了几处作息只算一次；入夜回家的地点（nightQuiet）
+ * 亥时到寅时没写时辰的人回家，住店看病的、写了 night 的照旧在。取最大值。
+ * 不算的：有约在这儿等你的（夜里多留一个人，白天他本来就在）、暂时走开的（只会少）。
+ */
+const CROWD_MAX = 5;
+/** 豁免：超过五人又确属合理的地方，写明理由；不许空着理由，不再超的要删掉 */
+const CROWD_OK: Record<string, string> = {};
+type CrowdEntry = { id: string; if?: Cond };
+const CROWD_SPECIAL = new Set(['flag', 'notFlag', 'quest', 'chapter', 'job', 'shi', 'hour', 'any']);
+function crowdAtoms(c: Cond | undefined, dom: Map<string, Set<unknown>>): void {
+  if (!c) return;
+  const add = (k: string, ...v: unknown[]): void => { if (!dom.has(k)) dom.set(k, new Set()); v.forEach(x => dom.get(k)!.add(x)); };
+  if (c.flag) add('flag:' + c.flag, true, false);
+  if (c.notFlag) add('flag:' + c.notFlag, true, false);
+  if (c.quest) {
+    const q = c.quest;
+    add('quest:' + q.id, -1);
+    for (const n of [q.is, q.atLeast, q.below]) if (n !== undefined) add('quest:' + q.id, n - 1, n, n + 1);
+  }
+  if (c.chapter !== undefined) add('chapter', c.chapter, c.chapter + 1, -1);
+  if (c.job !== undefined) add('job', null, c.job);
+  if (c.shi) add('shi:' + c.shi.id, undefined, ...(c.shi.at ?? []), ...(c.shi.not ?? []), '__other');
+  for (const [k, v] of Object.entries(c)) if (!CROWD_SPECIAL.has(k)) add(`g:${k}${JSON.stringify(v)}`, true, false);
+  c.any?.forEach(x => crowdAtoms(x, dom));
+}
+function crowdTest(c: Cond | undefined, a: Map<string, unknown>, h: number): boolean {
+  if (!c) return true;
+  if (c.flag && !a.get('flag:' + c.flag)) return false;
+  if (c.notFlag && a.get('flag:' + c.notFlag)) return false;
+  if (c.quest) {
+    const v = (a.get('quest:' + c.quest.id) as number) ?? -1;
+    if (c.quest.is !== undefined && v !== c.quest.is) return false;
+    if (c.quest.atLeast !== undefined && v < c.quest.atLeast) return false;
+    if (c.quest.below !== undefined && v >= c.quest.below) return false;
+  }
+  if (c.chapter !== undefined && a.get('chapter') !== c.chapter) return false;
+  if (c.job !== undefined && a.get('job') !== c.job) return false;
+  if (c.shi) {
+    const at = a.get('shi:' + c.shi.id) as string | undefined;
+    if (c.shi.at && !(at !== undefined && c.shi.at.includes(at))) return false;
+    if (c.shi.not && at !== undefined && c.shi.not.includes(at)) return false;
+  }
+  for (const [k, v] of Object.entries(c)) if (!CROWD_SPECIAL.has(k) && !a.get(`g:${k}${JSON.stringify(v)}`)) return false;
+  if (c.hour) {
+    const { from, to } = c.hour;
+    if (!(from <= to ? h >= from && h < to : h >= from || h < to)) return false;
+  }
+  if (c.any && !c.any.some(x => crowdTest(x, a, h))) return false;
+  return true;
+}
+const crowdTimed = (c?: Cond): boolean => !!c && (!!c.hour || !!c.any?.some(crowdTimed));
+const crowdStays = (id: string): boolean => {
+  const n = NPCS.find(x => x.id === id);
+  return !n || !!n.night || !!n.service?.some(x => x === '宿' || x === '医');
+};
+/** 这一处最挤的时候：几个人、什么时辰、是谁 */
+function crowdOf(r: (typeof ROOMS)[number]): { n: number; h: number; ids: string[] } {
+  const list: CrowdEntry[] = r.npcs.map(x => (typeof x === 'string' ? { id: x } : x)).filter(x => !NPCS.find(n => n.id === x.id)?.obj);
+  const dom = new Map<string, Set<unknown>>();
+  list.forEach(e => crowdAtoms(e.if, dom));
+  const keys = [...dom.keys()], vals = keys.map(k => [...dom.get(k)!]);
+  const total = vals.reduce((p, v) => p * v.length, 1);
+  if (total > 2_000_000) throw new Error(`地点 ${r.id}：人物条件的组合有 ${total} 种，穷举不过来，拆一拆这一处`);
+  const idx = keys.map(() => 0);
+  let best = { n: 0, h: 0, ids: [] as string[] };
+  for (let t = 0; t < total; t++) {
+    const a = new Map(keys.map((k, i) => [k, vals[i][idx[i]]]));
+    for (let h = 0; h < 24; h++) {
+      const quiet = !!r.nightQuiet && (h >= 21 || h < 5);
+      const ids = [...new Set(list.filter(x => crowdTest(x.if, a, h) && (!quiet || crowdTimed(x.if) || crowdStays(x.id))).map(x => x.id))];
+      if (ids.length > best.n) best = { n: ids.length, h, ids };
+    }
+    for (let i = 0; i < idx.length; i++) { if (++idx[i] < vals[i].length) break; idx[i] = 0; }
+  }
+  return best;
+}
+
+describe('场景不挤', () => {
+  it(`一处同时最多 ${CROWD_MAX} 人（物件不算）：场景不许像派出所审犯人（负责人 10-09）`, () => {
+    const errs: string[] = [];
+    for (const r of ROOMS) {
+      const c = crowdOf(r);
+      const names = c.ids.map(id => NPCS.find(n => n.id === id)?.name ?? id).join('、');
+      if (c.n > CROWD_MAX && !CROWD_OK[r.id]) errs.push(`${r.id}（${r.name}）：${c.h} 时最多 ${c.n} 人——${names}。往外拆出一处去处，或者让人错开作息`);
+      if (r.id in CROWD_OK && !CROWD_OK[r.id].trim()) errs.push(`${r.id}：豁免要写明理由`);
+      if (r.id in CROWD_OK && c.n <= CROWD_MAX) errs.push(`${r.id}：已经不超过 ${CROWD_MAX} 人了，从豁免表里删掉`);
+    }
+    for (const id of Object.keys(CROWD_OK)) if (!ROOMS.some(r => r.id === id)) errs.push(`豁免表里的地点「${id}」不存在`);
+    report(errs);
+  });
+
+  it('穷举算得对：同一时刻只有一件差事、世事只在一步；入夜回家的地点没写时辰的人走了', () => {
+    const fake = (npcs: CrowdEntry[], nightQuiet?: true): ReturnType<typeof crowdOf> =>
+      crowdOf({ id: 't', name: 't', area: '', region: 'yz', t: 5, desc: '', map: [50, 50], exits: [], npcs: npcs as never, nightQuiet });
+    // 两件差事的人不会同时在
+    expect(fake([{ id: 'yaopu' }, { id: 'xiaoer', if: { job: 'xs_hezei' } }, { id: 'bs2_hu', if: { job: 'bj_gz' } }]).n).toBe(2);
+    // 同一件世事的两步不会同时在；两件世事可以
+    expect(fake([{ id: 'yaopu', if: { shi: { id: 'ss_zei', at: ['qi'] } } }, { id: 'xiaoer', if: { shi: { id: 'ss_zei', at: ['bang'] } } }]).n).toBe(1);
+    expect(fake([{ id: 'yaopu', if: { shi: { id: 'ss_zei', at: ['qi'] } } }, { id: 'xiaoer', if: { shi: { id: 'ss_matou', at: ['qi'] } } }]).n).toBe(2);
+    // 作息错开的不会同时在；同一人写两处只算一次
+    expect(fake([{ id: 'yaopu', if: { hour: { from: 5, to: 9 } } }, { id: 'xiaoer', if: { hour: { from: 9, to: 12 } } }, { id: 'xiaoer', if: { hour: { from: 13, to: 14 } } }]).n).toBe(1);
+    // 入夜回家：夜里只剩写了时辰的人，最挤的是白天
+    const q = fake([{ id: 'yaopu' }, { id: 'xiaoer' }, { id: 'ss_gengfu', if: { hour: { from: 21, to: 5 } } }], true);
+    expect(q.n).toBe(2);
+  });
+});
+
 describe('人物与物品', () => {
   it('字段齐全，动作都有回应', () => {
     const errs: string[] = [];
@@ -228,6 +362,18 @@ describe('人物与物品', () => {
         checkBranches(bs, `${w} 的「${v}」`, errs, true);
       }
       checkCond(n.altName?.if, `${w} 的 altName`, errs);
+    }
+    report(errs);
+  });
+
+  it('写了带条件的作息（at），地点的 npcs 里就不许再写死这个人：写死的会把条件盖掉（审查 B01：云娘同时在两处）', () => {
+    const errs: string[] = [];
+    const raw = import.meta.glob<{ default: ContentPack }>('../src/content/packs/*.ts', { eager: true });
+    const rooms = Object.values(raw).flatMap(m => m.default.rooms ?? []);
+    for (const n of NPCS) for (const at of [n.at ?? []].flat()) {
+      if (!at.if) continue;
+      const r = rooms.find(x => x.id === at.room);
+      if (r && [...r.npcs, ...(r.objs ?? [])].includes(n.id)) errs.push(`地点 ${r.id} 的 npcs 写死了 ${n.id}，可它的 at 带条件：删掉地点里的那一条`);
     }
     report(errs);
   });
@@ -683,6 +829,55 @@ describe('后果看得见', () => {
     const unread = [...set].filter(f => !read.has(f));
     const errs = unread.filter(f => !DEBT.includes(f)).map(f => `旗标「${f}」：写了却没有任何地方读。给它接一条后续（路遇、传闻、人物的话），玩家才看得到这个选择的后果`);
     for (const f of DEBT) if (!unread.includes(f)) errs.push(`旗标「${f}」：已经有地方读了（或者不再写了），请从本测试的欠账单里删掉`);
+    report(errs);
+  });
+
+  it('重招的后续（after）中不中都说得通：闪开时接「落了空」，挨打时接「正中你某处」，不许写成落空或打中（审查 F11）', () => {
+    const bad = FOES.flatMap(f => (f.tells ?? []).filter(t => /避过|让过|扑了个空|扫空|落了空|躲过|闪开|正中/.test(t.after ?? '')).map(t => `${f.id}「${t.name}」：${t.after}`));
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('破绽只写失误，不写「空门」，也不带主语：引擎会在前面接名字、后面接「某处空门大开」（审查 F35、E36）', () => {
+    const bad = FOES.flatMap(f => (f.opening ?? []).filter(o => o.includes('空门') || o.startsWith(f.name) || /^[^，]{1,6}们/.test(o)).map(o => `${f.id}：「${o}」`));
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('交谈只说话，不推世事：插手要用专门的动作、要有代价（审查 C01、C02：跟何税吏说句话，渡船的事就了结了）', () => {
+    const bad = NPCS.flatMap(n => (n.actions['交谈'] ?? []).filter(b => b.do?.some(e => e.type === 'shi' && e.to)).map(() => n.id));
+    expect(bad, `这些人物的「交谈」会推世事：${bad.join('、')}。把推世事的那一步挪到一个专门的动作上（例：何税吏的「请他行文」）`).toEqual([]);
+  });
+
+  it('只有序章、主线会自己挂上横幅：支线记不记挂由玩家定（docs/huojianghu.md 第四节，审查 B07）', () => {
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
+    const bad = [...all.matchAll(/"type":"track","id":"([^"]+)"/g)].map(m => m[1]).filter(id => id !== 'prologue' && !id.startsWith('main'));
+    expect(bad, `这些支线被内容自己挂上了横幅：${bad.join('、')}。删掉 { type: 'track' }`).toEqual([]);
+  });
+
+  /** 每个对手都要有一处开打，不然写了也白写（审查 D02：断云虎没处开打，走药材交不了）。欠账同上 */
+  const NO_FIGHT_DEBT = ['xsb_xunren', 'xsb_xiongfan', 'xsb_jiaofei'];
+  it('每个对手都有地方开打', () => {
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
+    const fought = new Set([...all.matchAll(/"type":"fight","foe":"([^"]+)"/g)].map(m => m[1]));
+    const idle = FOES.map(f => f.id).filter(id => !fought.has(id));
+    const errs = idle.filter(id => !NO_FIGHT_DEBT.includes(id)).map(id => `对手「${id}」：没有任何地方用 { type: 'fight' } 开打`);
+    for (const id of NO_FIGHT_DEBT) if (!idle.includes(id)) errs.push(`对手「${id}」：已经有地方开打了，请从本测试的欠账单里删掉`);
+    report(errs);
+  });
+
+  /**
+   * 反过来：条件里要的旗标，一定要有地方写。没人写的旗标，那条路永远走不到（审查 D01：书办四张榜交不了差）。
+   * 引擎、开局写的旗标列在 ENGINE；故意藏着、等补完再挂出来的，旗标名以 _pending_open 结尾。
+   */
+  const ENGINE = ['skipped'];
+  /** 欠账：书办四张榜、走官银、走布匹的亮名号和绕小路，都还没有入口（审查 B02、D01～D03），已交 zcode 补。补完从这里删掉 */
+  const NO_WRITER_DEBT = ['xsb_xr_found', 'xsb_xw_found', 'xsb_jf_ally', 'zb_tax_name', 'zb_tax_route', 'zb_yin_sent', 'zb_yin_open', 'zb_yin_refuse'];
+  it('条件里要的旗标都有地方写', () => {
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
+    const set = new Set([...all.matchAll(/"type":"flag","flag":"([^"]+)"/g)].map(m => m[1]));
+    const need = new Set([...all.matchAll(/(?<!"type":"flag",)"flag":"([^"]+)"/g)].map(m => m[1]));
+    const missing = [...need].filter(f => !set.has(f) && !ENGINE.includes(f) && !f.endsWith('_pending_open'));
+    const errs = missing.filter(f => !NO_WRITER_DEBT.includes(f)).map(f => `旗标「${f}」：条件里要它，却没有任何地方写它，这条路永远走不到`);
+    for (const f of NO_WRITER_DEBT) if (!missing.includes(f)) errs.push(`旗标「${f}」：已经有地方写了，请从本测试的欠账单里删掉`);
     report(errs);
   });
 });

@@ -23,7 +23,7 @@ function wanted(id: string, name: string, start: Cond, text: { zaitao: [string, 
   return {
     id, name, region: 'yz', start, first: 'zaitao',
     steps: {
-      zaitao: { now: text.zaitao[0], news: text.zaitao[1], where: 'yz_fuya', next: { days: days[0], to: 'zuoan' } },
+      zaitao: { now: text.zaitao[0], news: text.zaitao[1], where: 'yz_zhaobi', next: { days: days[0], to: 'zuoan' } },
       zuoan: { now: text.zuoan[0], news: text.zuoan[1], next: { days: days[1], to: 'taozou' } },
       taozou: { now: text.taozou[0], news: text.taozou[1] },
       luowang: { now: text.luowang },
@@ -69,19 +69,25 @@ const SHI: ShiDef[] = [
   }, [8, 6])
 ];
 
-/* ---------- 帮手：捕快办差叫得来官兵（只在扬州府地界）、保镖 ---------- */
+/*
+ * ---------- 帮手：捕快办差叫得来官兵（只在扬州府地界）、保镖 ----------
+ * 帮手不白来（负责人 10-08「有条件有代价」，docs/lizu.md 第一节「叫帮手要付代价」）：
+ * 官兵拿住了人要分赏钱，老鲁要酒钱，打赢了从你钱袋里出
+ */
 const GUANBING: PrepDef = {
   if: { sect: LSM },
-  text: '你亮出腰牌，喝了一声。两个巡街的官兵提着水火棍赶过来，一左一右堵住了去路。',
+  text: '你亮出腰牌，喝了一声。两个巡街的官兵提着水火棍赶过来，一左一右堵住了去路。领头的冲你挤挤眼：「拿住了，赏钱分兄弟们一份。」',
+  win: [{ type: 'silver', delta: -100 }, { type: 'feed', tag: '江湖', text: '两个帮忙的官兵分走了一百文赏钱。' }],
   ally: { name: '官兵', share: 0.15, at: [2, 6, 10],
     say: ['两个官兵的水火棍一齐扫向对手的腿弯，对手跳起来躲，落地时慢了半拍。',
-      '官兵抖开铁链往前一套，没套住，倒逼得对手往你这边退了一步。',
-      '一个官兵挨了一下，捂着肩膀退开，另一个照旧把棍子横在路口。'] },
+      '官兵抖开铁链往前一套，链头抽在对手肩上，逼得他往你这边退了一步。',
+      '一个官兵的水火棍捅在对手腰眼上，另一个照旧把棍子横在路口。'] },
   story: '两个官兵一左一右堵住了路口。'
 };
 const BAOBIAO: PrepDef = {
   if: { sect: LSM },
-  text: '秦教头派给你的保镖老鲁不知从哪儿冒了出来，抱着一口朴刀站在你身后：「人交给我，你看着他的手。」',
+  text: '秦教头派给你的保镖老鲁不知从哪儿冒了出来，抱着一口朴刀站在你身后：「人交给我，你看着他的手。完了事，酒钱你出。」',
+  win: [{ type: 'silver', delta: -150 }, { type: 'feed', tag: '江湖', text: '你请老鲁喝了一顿酒，花了一百五十文。' }],
   ally: { name: '老鲁', share: 0.25, at: [3, 8, 13],
     say: ['老鲁的朴刀一横，硬接了对手一招，刀背震得嗡嗡响，他脚下一步没退。',
       '老鲁一刀劈在对手身前三寸的地上，青石崩开，对手的脚步顿时乱了。',
@@ -255,7 +261,7 @@ const NPCS: NpcDef[] = [
   },
   /* ---------- 府衙大牢：捕快押来的人犯，提审得出下一个人犯的下落 ---------- */
   {
-    id: 'lsm_laotou', name: '牢头', ini: '牢', tone: 'gray', brief: '晃着一串钥匙', at: { room: 'yz_fuya' },
+    id: 'lsm_laotou', name: '牢头', ini: '牢', tone: 'gray', brief: '晃着一串钥匙', night: true, at: { room: 'yz_fuya_lao' },
     look: '矮胖，一脸油汗，腰上的钥匙有二三十把，走起路来叮当乱响。大牢里的事，没有他不知道的。',
     verbs: ['交谈', '观察', { verb: '提审', if: { sect: LSM } }],
     actions: {
@@ -303,10 +309,10 @@ const EYES: EyeDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'lsm_xiong_ts' }, text: '府衙大牢里那个逃兵的供词传了出来：边军百户克扣军粮，饿死了七个人。' },
-  { if: { flag: 'lsm_qian_ya' }, text: '汪家盐号追回了二十几张盐引，毕掌柜在门口放了一挂鞭炮。' },
-  { if: { flag: 'lsm_bai_ya' }, text: '济生堂的葛郎中把望江楼那个游方郎中的药丸烧了一大筐，说里头掺的是砒霜。' },
-  { if: { flag: 'lsm_xiong_ya' }, text: '镇江打铁巷的铁匠们说，那个被拿走的大个子帮工，打的铁比谁都实在。' }
+  { if: { flag: 'lsm_xiong_ts' }, text: '府衙大牢里那个逃兵的供词传了出来：边军百户克扣军粮，饿死了七个人。', who: ['衙役', '捕快', '军汉', 'guan'] },
+  { if: { flag: 'lsm_qian_ya' }, text: '汪家盐号追回了二十几张盐引，毕掌柜在门口放了一挂鞭炮。', who: ['wang', '盐商', '掌柜', '书吏'] },
+  { if: { flag: 'lsm_bai_ya' }, text: '济生堂的葛郎中把望江楼那个游方郎中的药丸烧了一大筐，说里头掺的是砒霜。', who: ['郎中', '小二', '货郎', '掌柜'] },
+  { if: { flag: 'lsm_xiong_ya' }, text: '镇江打铁巷的铁匠们说，那个被拿走的大个子帮工，打的铁比谁都实在。', who: ['铁匠', '脚夫', '货郎'] }
 ];
 
 const pack: ContentPack = { shi: SHI, npcs: NPCS, foes: FOES, eyes: EYES, news: NEWS };

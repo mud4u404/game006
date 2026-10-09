@@ -11,7 +11,7 @@ import type { ContentPack, FoeDef, JobDef, NewsDef, NpcDef } from '../types';
 const JOBS: JobDef[] = [
   { id: 'smcs_gb_xin', sect: '丐帮', tier: 1, title: '替分舵往瓜洲送一封信', npc: 'smcs_gz_laohua', at: 'gz_town', days: 3, again: 3 },
   { id: 'smcs_gb_zhou', sect: '丐帮', tier: 1, k: 1.5, title: '夜里护着龙王庙的粥棚', npc: 'bs2_bao', at: 'bs2_longwang', days: 2, again: 4 },
-  { id: 'smcs_jw_xun', sect: '军伍', tier: 1, title: '夜里在官道上巡营', npc: 'bs2_han', at: 'yz_guandao', days: 2, again: 2 },
+  { id: 'smcs_jw_xun', sect: '军伍', tier: 1, title: '夜里在官道上巡营', npc: 'bs2_han', at: 'yz_mubing', days: 2, again: 2 },
   { id: 'smcs_jw_liang', sect: '军伍', tier: 1, k: 1.5, title: '押一车军粮去瓜洲码头', npc: 'smcs_liangguan', at: 'gz_pier', days: 3, again: 4 }
 ];
 
@@ -68,7 +68,7 @@ const FOES: FoeDef[] = [
       { name: '扫堂棍', text: '领头的身子一矮，棍子贴着地面往后一撤……', dom: 'su', after: '一棍扫向你的脚踝。' }
     ],
     asides: ['小叫化们缩在龙王爷的泥胎后头。', '鲍四拄着竹杖站在庙门口，没动。', '粥锅翻在地上，冒着热气。'],
-    opening: ['一棍砸空，棍头戳进了地里', '打手们挤成一团，互相碍着', '领头的回头看了一眼同伴'],
+    opening: ['一棍砸空，棍头戳进了地里', '一伙人挤成一团，互相碍着', '领头的回头看了一眼同伴'],
     intro: '领头的打手把棍子往肩上一扛：「一个叫化子，还想护粥棚？」',
     win: '你夺下领头的棍子，一棍扫倒两个。剩下的那个拖着同伴就跑，盐号的木牌掉了一地。',
     lose: '一棍子砸在你背上，你扑倒在粥锅边。打手们把粥棚拆了个干净，扬长而去。',
@@ -87,7 +87,7 @@ const FOES: FoeDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'smcs_zhou_bao' }, text: '汪家盐号的打手夜里去砸龙王庙的粥棚，叫一个叫化子打了回来。汪老爷气得摔了茶碗。' }
+  { if: { flag: 'smcs_zhou_bao' }, text: '汪家盐号的打手夜里去砸龙王庙的粥棚，叫一个叫化子打了回来。汪老爷气得摔了茶碗。', who: ['叫化', 'gai', '脚夫', 'wang'], about: 'you' }
 ];
 
 const pack: ContentPack = { jobs: JOBS, npcs: NPCS, foes: FOES, news: NEWS };

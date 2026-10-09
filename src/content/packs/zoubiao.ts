@@ -1,10 +1,13 @@
-import type { ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
+import type { Cond, ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
 
 /**
  * 威远镖局 · 再走三趟镖（Issue #107）。
  * 三趟镖凶险各异：不是打架的税关、要打架的劫镖、托镖人有鬼的暗路。
  * 程先生管镖单，三趟都由他派；高档的镖要走过低档的才接得了。
  */
+
+/** 还没补完、暂不挂出来的差事用它（没有地方写这个旗标）：补完了把这一条从条件里删掉 */
+const PENDING: Cond = { flag: 'zb_pending_open' };
 
 const NPCS: NpcDef[] = [
   {
@@ -14,7 +17,8 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察',
       { verb: '走布匹', if: { jobOpen: 'zb_bu', shenfen: 'biaoshi' } },
       { verb: '走药材', if: { jobOpen: 'zb_yao', shenfen: 'biaoshi', flag: 'zb_bu_done' } },
-      { verb: '走官银', if: { jobOpen: 'zb_yin', shenfen: 'biaoshi', flag: 'zb_yao_done' } }],
+      // 走官银还交不了差（验箱、开箱、撂挑子三条路没有入口，审查 D02）：补完以前不挂出来，交 zcode 补
+      { verb: '走官银', if: { jobOpen: 'zb_yin', shenfen: 'biaoshi', flag: 'zb_yao_done', any: [PENDING] } }],
     actions: {
       交谈: [
         { if: { job: 'zb_bu' }, text: '程先生推了推老花镜：「布匹装好了，在院里候着。瓜洲布行的朝奉会点数——少一匹，你的工钱扣一半。」' },
@@ -27,7 +31,8 @@ const NPCS: NpcDef[] = [
       观察: [{ text: '他的老花镜用细绳绑在耳朵后面，镜片厚得像瓶底。桌上镖单按远近排成一列，最近的那张边角卷了毛边。' }],
       走布匹: [
         { text: '程先生抽出一张镖单递给你：「一车细布，送去瓜洲布行。老蔡押车。路上有个关卡，税吏姓吴，你到了自会明白。」',
-          do: [{ type: 'job', id: 'zb_bu' }] }
+          // 每趟布匹都要重新过关交税：上一趟的税票不作数（审查 D03：第二趟交不了）
+          do: [{ type: 'job', id: 'zb_bu' }, { type: 'flag', flag: 'zb_tax_paid', value: false }] }
       ],
       走药材: [
         { text: '程先生把镖单压在算盘底下：「一批川贝和老参，送去镇江百草堂。这趟走水路过江，江上不太平——老蔡跟着你。」',
@@ -68,11 +73,11 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '交镖'],
     actions: {
       交镖: [
-        { if: { flag: 'zb_tax_paid', notFlag: 'zb_bu_done' },
+        { if: { flag: 'zb_tax_paid' },
           text: '朝奉点了布匹，一匹不少。「威远镖局的货，从来不用操心。」他在镖单上按了手印，「下回还走你们家的镖。」',
           do: [
             { type: 'jobDone', id: 'zb_bu' },
-            { type: 'flag', flag: 'zb_bu_done' },
+            { type: 'flag', flag: 'zb_bu_done' }, { type: 'flag', flag: 'zb_tax_paid', value: false },
             { type: 'feed', tag: '江湖', text: '瓜洲布行点了货，一匹不少。这趟布匹的镖走完了。' }
           ] },
         { if: { flag: 'zb_tax_name', notFlag: 'zb_bu_done' },
@@ -89,7 +94,7 @@ const NPCS: NpcDef[] = [
             { type: 'flag', flag: 'zb_bu_done' },
             { type: 'feed', tag: '江湖', text: '你走小路把布匹送到了瓜洲布行，镖期擦边赶上了。' }
           ] },
-        { text: '朝奉开始点布匹。' }
+        { text: '朝奉翻了翻镖单，又抬眼看你：「关上的税票呢？没有税票，这车布我不敢收。」' }
       ],
       交谈: [
         { if: { flag: 'zb_tax_paid' },
@@ -106,9 +111,16 @@ const NPCS: NpcDef[] = [
     id: 'jb_zhang', name: '百草堂张掌柜', ini: '张', tone: 'jade', brief: '验着药材',
     look: '精瘦的老者，鼻尖灵敏，一闻就知道药材的产地和年份。验货极仔细，一根参须都不放过。',
     at: { room: 'zj_shi', if: { job: 'zb_yao' } },
-    verbs: ['交谈', '观察'],
+    // 交镖时断云虎出来截（审查 D02：原来张掌柜没有「交镖」，断云虎没处开打，这趟镖永远交不了）
+    verbs: ['交谈', '观察', '交镖'],
     actions: {
-      交谈: [{ text: '「威远镖局的药材，走的是川陕的货。」张掌柜打开一盒老参闻了闻，「嗯，正货。」' }]
+      交谈: [{ text: '「威远镖局的药材，走的是川陕的货。」张掌柜打开一盒老参闻了闻，「嗯，正货。」' }],
+      交镖: [
+        { if: { job: 'zb_yao' },
+          text: '老蔡把镖车赶到百草堂门口，张掌柜刚掀开油布，街口就有人冷笑了一声。一个提着厚背鬼头刀的汉子拨开人群走过来，刀背往肩上一搁。',
+          do: [{ type: 'fight', foe: 'zb_jie_fei' }] },
+        { text: '张掌柜摆摆手：「没有镖单，交什么镖？」' }
+      ]
     }
   },
   {
@@ -171,7 +183,7 @@ const JIE: FoeDef = {
       do: [{ type: 'jobFail', id: 'zb_yao' }] },
     win: { tag: '劫镖 · 胜', title: '药材保全', button: '继续赶路',
       story: '断云虎的鬼头刀被磕飞出去，插在路旁的泥地里。他踉跄着退了两步，靠在一棵老槐树上直喘。老蔡把镖车赶了过来。',
-      do: [{ type: 'jobDone', id: 'zb_yao' }],
+      do: [{ type: 'jobDone', id: 'zb_yao' }, { type: 'flag', flag: 'zb_yao_done' }],
       after: {
         plea: '断云虎靠在老槐树上，喘着粗气：「威远镖局……名不虚传。老子独来独往惯了，今日栽得不冤。」',
         opts: [
@@ -188,12 +200,12 @@ const JIE: FoeDef = {
             ],
             later: '断云虎被判了两年苦役。镇江道上的行商都松了口气。' },
           { label: '问他为什么劫镖', sub: '听他说',
-            say: '你蹲在他面前。断云虎沉默了半晌：「漕帮垄断了运河，断了咱们的生计。我不劫道，兄弟们吃什么？」',
+            say: '你蹲在他面前。断云虎沉默了半晌：「三年前威远的镖师在这条道上打死了我兄弟，官府只说他该死。我不劫镖，拿什么给他立碑？」',
             do: [
               { type: 'flag', flag: 'zb_jie_wen' }, { type: 'lilian', amount: 30 },
-              { type: 'feed', tag: '江湖', text: '断云虎说，是漕帮垄断运河断了他的生计。' }
+              { type: 'feed', tag: '江湖', text: '断云虎说，三年前威远的镖师打死了他的兄弟。' }
             ],
-            later: '断云虎的话你记在了心里——漕帮垄断河道，断的不止一个人的路。' }
+            later: '断云虎的话你记在了心里——威远镖局这些年走过的道，不全是干净的。' }
         ]
       } }
   }
@@ -206,18 +218,18 @@ const JOBS: JobDef[] = [
 ];
 
 const NEWS: NewsDef[] = [
-  { if: { flag: 'zb_tax_paid' }, text: '蜀冈官道的关卡税吏吴开，近来收打点钱收得更加理直气壮了。' },
-  { if: { flag: 'zb_tax_name' }, text: '有人亮了威远镖局的名号过关卡，税吏吴开破例放了行——赵老镖头的面子，比三十文值钱。' },
-  { if: { flag: 'zb_tax_route' }, text: '有镖车走了蜀冈西麓的小路，绕过了关卡，多跑了半个时辰但省了三十文。' },
-  { if: { flag: 'zb_yao_done' }, text: '镇江百草堂新进了一批川贝老参，掌柜的说威远镖局这趟走得好，断云虎都拦不住。' },
-  { if: { flag: 'zb_yao_lost' }, text: '威远镖局一批药材在镇江道上叫人截了。断云虎的名字，在漕运线上响了一分。' },
-  { if: { flag: 'zb_jie_fang' }, text: '镇江道上再没见过断云虎——听说他去投了一支漕运护卫队，刀法正用在了正道上。' },
-  { if: { flag: 'zb_jie_guan' }, text: '劫镖的断云虎被送去了府衙，判了两年苦役。镇江道上的行商都松了口气。' },
-  { if: { flag: 'zb_jie_wen' }, text: '断云虎说漕帮垄断了运河断了生计。这话有人信，也有人说他是给自己的刀找借口。' },
-  { if: { flag: 'zb_yin_sent' }, text: '镇江银号收到了三百两官银，银号的朝奉说，押镖的年轻人办事稳妥。' },
-  { if: { flag: 'zb_yin_open' }, text: '威远镖局的镖车在半路叫人打开过——里头夹带的私货，据说不少。' },
-  { if: { flag: 'zb_yin_refuse' }, text: '威远镖局有一趟官银的镖，镖师半路撂挑子不走了。程先生的账本上，第一次写了「亏」。' },
-  { if: { flag: 'zb_jie_gone' }, text: '镇江道上劫镖的断云虎叫人送去了府衙。江湖人说，这号独狼，关不了太久。' }
+  { if: { flag: 'zb_tax_paid' }, text: '蜀冈官道的关卡税吏吴开，近来收打点钱收得更加理直气壮了。', who: ['脚夫', '镖师', '货郎', '书吏'] },
+  { if: { flag: 'zb_tax_name' }, text: '有人亮了威远镖局的名号过关卡，税吏吴开破例放了行——赵老镖头的面子，比三十文值钱。', who: ['镖师', '脚夫', '掌柜'], about: 'you' },
+  { if: { flag: 'zb_tax_route' }, text: '有镖车走了蜀冈西麓的小路，绕过了关卡，多跑了半个时辰但省了三十文。', who: ['镖师', '脚夫', '货郎'], about: 'you' },
+  { if: { flag: 'zb_yao_done' }, text: '镇江百草堂新进了一批川贝老参，掌柜的说威远镖局这趟走得好，断云虎都拦不住。', who: ['掌柜', '郎中', '镖师'] },
+  { if: { flag: 'zb_yao_lost' }, text: '威远镖局一批药材在镇江道上叫人截了。断云虎的名字，在漕运线上响了一分。', who: ['镖师', '掌柜', '脚夫', 'dong'] },
+  { if: { flag: 'zb_jie_fang' }, text: '镇江道上再没见过断云虎——听说他去投了一支漕运护卫队，刀法正用在了正道上。', who: ['船夫', '脚夫', '镖师', 'dong'] },
+  { if: { flag: 'zb_jie_guan' }, text: '劫镖的断云虎被送去了府衙，判了两年苦役。镇江道上的行商都松了口气。', who: ['镖师', '捕快', '衙役', 'guan'] },
+  { if: { flag: 'zb_jie_wen' }, text: '断云虎说威远的镖师打死过他的兄弟。这话有人信，也有人说他是给自己的刀找借口。', who: ['船夫', '脚夫', '镖师', 'dong'] },
+  { if: { flag: 'zb_yin_sent' }, text: '镇江银号收到了三百两官银，银号的朝奉说，押镖的年轻人办事稳妥。', who: ['掌柜', '镖师', '书吏'], about: 'you' },
+  { if: { flag: 'zb_yin_open' }, text: '威远镖局的镖车在半路叫人打开过——里头夹带的私货，据说不少。', who: ['镖师', '脚夫', '掌柜'], about: 'you' },
+  { if: { flag: 'zb_yin_refuse' }, text: '威远镖局有一趟官银的镖，镖师半路撂挑子不走了。程先生的账本上，第一次写了「亏」。', who: ['镖师', '掌柜', '小二'] },
+  { if: { flag: 'zb_jie_gone' }, text: '镇江道上劫镖的断云虎叫人送去了府衙。江湖人说，这号独狼，关不了太久。', who: ['镖师', '船夫', '捕快'], about: 'you' }
 ];
 
 const pack: ContentPack = {
@@ -226,7 +238,7 @@ const pack: ContentPack = {
   jobs: JOBS,
   news: NEWS,
   items: [
-    { id: 'zb_huadiao', name: '花雕', kind: '酒食', price: 80, use: [{ type: 'heal', mpFrac: 0.1 }], desc: '陈年花雕，泥封上的红纸写着「百年陈酿」。' }
+    { id: 'zb_huadiao', name: '陈年花雕', kind: '酒食', price: 80, use: [{ type: 'heal', mpFrac: 0.1 }], desc: '陈年花雕，泥封上的红纸写着「百年陈酿」。' }
   ]
 };
 export default pack;
