@@ -200,9 +200,9 @@ const FOES: FoeDef[] = [GUARD_FOE];
 
 const QUESTS: QuestDef[] = [
   { id: 'side_huafang', name: '奇遇 · 画舫云娘', stages: [
-    { title: '打听画舫上的事', to: 'huafang', who: 'yunnian', hint: '上画舫再和云娘说几句，问明她的难处。' },
+    { title: '画舫歌女云娘的难处', to: 'huafang', who: 'yunnian', hint: '云娘的难处听明白了：八十文利钱，汪少爷入夜便来收。这闲事管不管，总得给她一句话。' },
     // 推进的路有四条：替她付利钱（云娘，白天也行）、报名号、动手、接汪家的事劝她上岸（后三条都在入夜的汪少爷身上）
-    { title: '入夜后再上画舫', to: 'huafang', who: 'wangshao', hint: '入夜汪少爷上船讨债，替她还钱或出头都行。' },
+    { title: '汪少爷上船讨债', to: 'huafang', who: 'wangshao', hint: '八十文利钱，汪少爷入夜便来收。云娘那副神情，叫人放心不下。' },
     { title: '画舫云娘 · 完' }
   ] }
 ];

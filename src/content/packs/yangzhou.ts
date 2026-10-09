@@ -447,10 +447,10 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'main1', name: '第一回 · 扬州', stages: [
-    { title: '寻访大明寺了尘大师', to: 'daming', who: 'liaochen', hint: '上蜀冈大明寺，寻那扫地的白眉老僧了尘。' },
+    { title: '寻访大明寺了尘大师', to: 'daming', who: 'liaochen', hint: '江伯咽气前只交代了一句：去扬州，大明寺，找了尘。玉佩和残谱，都在怀里。' },
     // 屠千山入夜回船上歇（运河渡口 nightQuiet），导航按作息算，不写进门槛
-    { title: '前往运河渡口，截住黑风寨主', to: 'dukou', who: 'tu', hint: '屠千山白天在渡口卸盐，掂量好斤两再上前动手。' },
-    { title: '去东关街听听江湖怎么说', to: 'cheng', who: 'shuoshu', hint: '说书人白天在东关街、晚上在望江楼，去听他一段书。' },
+    { title: '前往运河渡口，截住黑风寨主', to: 'dukou', who: 'tu', hint: '了尘大师说，黑风寨主屠千山霸着运河渡口，那三船盐是漕帮兄弟半年的血汗。要去截他，先掂掂自己的斤两。' },
+    { title: '去东关街听听江湖怎么说', to: 'cheng', who: 'shuoshu', hint: '渡口这一仗，想必已经传开了。东关街角的说书人嘴快，去听听江湖上怎么说。' },
     { title: '寒江旧案 · 第一回完' }
   ] }
 ];
