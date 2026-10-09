@@ -297,13 +297,16 @@ export function runWorld(e: WorldEffect, s: GameState = S): void { applyWorld(wo
 /** 势力的名字（找不到的照写 id） */
 export const facName = (id: string): string => facById(id)?.name ?? id;
 
-/** 一处地方此刻要交的过路钱、船钱：有 life.toll 的按主人查表（主人不在表上的不收）；没有的照 RoomDef.fare */
-export function tollOf(to: string, s: GameState = S): { fee: number; owner?: string } | null {
+/**
+ * 一处地方此刻要交的钱：本处自己的船钱（RoomDef.fare），加上码头主人收的过路钱（life.toll，主人看 life.tollAt 那一处）。
+ * 过路钱只在上船这一处收：人走进渡口、街市不收。没有船钱也没有过路钱的返回空
+ * （owner 只在真有过路钱要交时写，界面用它说「某某的人守着」）
+ */
+export function tollOf(to: string, s: GameState = S): { fee: number; owner?: string; base: number; extra: number } | null {
   const r = room(to);
-  if (r.life?.toll) {
-    const owner = ownerOf(to, s);
-    const fee = owner ? r.life.toll[owner] : undefined;
-    return fee ? { fee, owner } : null;
-  }
-  return r.fare ? { fee: r.fare } : null;
+  const base = r.fare ?? 0;
+  const owner = r.life?.toll ? ownerOf(r.life.tollAt ?? to, s) : undefined;
+  const extra = owner ? r.life!.toll![owner] ?? 0 : 0;
+  if (!base && !extra) return null;
+  return { fee: base + extra, owner: extra ? owner : undefined, base, extra };
 }

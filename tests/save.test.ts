@@ -221,8 +221,8 @@ describe('存档第五版：世界状态', () => {
     expect(s.shi?.ss_matou.at).toBe('xiduo');
     setState(s);
     s.silver = 100;
-    payFare('dukou');
-    expect(s.silver).toBe(80);
+    payFare('gz_kechuan');
+    expect(s.silver).toBe(60);
     expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
   });
 

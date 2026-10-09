@@ -6,7 +6,7 @@ import type { ContentPack, FactionDef, RoomLife } from '../types';
  * 数都不进人物的嘴，玩家只从人的话、地方的痕迹、价钱里感到。
  *
  * 运河渡口：开局归东舵（漕帮管事守着，屠千山在码头上劫船、卸盐，码头还是东舵的）。
- * 「码头空出来以后」的结局换主人（shishi-yangzhou.ts）：西舵收二十文，和「过一回船先交二十文」对上；东舵五文；府衙的税棚十文。
+ * 「码头空出来以后」的结局换主人（shishi-yangzhou.ts）：过路钱收在上船的运河客船，西舵加二十文，和「过一回船先交二十文」对上；东舵不加；府衙的税棚加十文。
  */
 
 const FACTIONS: FactionDef[] = [
@@ -27,10 +27,12 @@ const FACTIONS: FactionDef[] = [
     rel: { guan: -80, dong: -60 }, lawful: false, head: 'tu' }
 ];
 
-/** 扬州十处有事的地方 */
+/** 扬州十处有事的地方，加上从码头起锚的运河客船 */
 const LIFE: Record<string, RoomLife> = {
   cheng: { order: 65, prosper: 70, tags: ['街市'] },
-  dukou: { order: 50, prosper: 60, owner: 'dong', toll: { dong: 5, xi: 20, guan: 10 }, tags: ['码头'] },
+  dukou: { order: 50, prosper: 60, owner: 'dong', tags: ['码头'] },
+  // 客船起锚在运河渡口：码头归谁，过路钱就收谁的，加在二十文船钱之外。东舵管事的不加；西舵「过一回船先交二十文」；府衙的税棚十文
+  gz_kechuan: { order: 50, prosper: 50, tollAt: 'dukou', toll: { dong: 0, xi: 20, guan: 10 }, tags: ['船'] },
   cheng_tavern: { order: 65, prosper: 65, tags: ['酒楼'] },
   yz_fuya: { order: 85, prosper: 40, owner: 'guan', tags: ['衙门'] },
   yz_zhaobi: { order: 75, prosper: 45, owner: 'guan', tags: ['衙门', '告示'] },

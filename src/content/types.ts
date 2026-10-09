@@ -249,8 +249,13 @@ export interface RoomLife {
   price?: number;
   /** 据点：开局归谁（FactionDef id） */
   owner?: string;
-  /** 过路钱、船钱按主人算，例如 { dong: 5, xi: 20, guan: 10 }；主人不在表上（或没有主人）的，不收钱 */
+  /**
+   * 过路钱按主人算，例如 { dong: 0, xi: 20, guan: 10 }；主人不在表上（或没有主人）的，不加这一笔。
+   * 加在本处自己的船钱（RoomDef.fare）之外，在人走进这一处（上船）时收，不是路过码头就收
+   */
   toll?: Record<string, number>;
+  /** 过路钱看哪一处的主人：客船的过路钱看它起锚的码头（运河客船看运河渡口）。不写就看本处自己 */
+  tollAt?: string;
   /** 地方的种类：码头、街市、铺子、官道、破庙、衙门、酒楼…… */
   tags: string[];
 }

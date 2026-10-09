@@ -76,8 +76,8 @@ export function payFare(to: string): string | null {
   const r = room(to), fee = t.fee, enough = S.silver >= fee;
   const msg = t.owner
     ? enough
-      ? `${facName(t.owner)}的人守着${r.name}，交了过路钱 ${fee} 文。`
-      : `身上不够过路钱（${fee} 文），你替${facName(t.owner)}的人扛了一趟货抵了，多耗了一个时辰。`
+      ? `上了${r.name}，付了船钱 ${t.base} 文；${facName(t.owner)}的人守着码头，另交了过路钱 ${t.extra} 文。`
+      : `身上不够船钱和过路钱（共 ${fee} 文），你替${facName(t.owner)}的人扛了一趟货抵了，多耗了一个时辰。`
     : enough
       ? `上了${r.name}，付了船钱 ${fee} 文。`
       : `身上不够船钱（${fee} 文），你替船家撑了一路篙，抵了船钱，路上多耗了一个时辰。`;

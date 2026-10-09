@@ -66,32 +66,35 @@ describe('随机归种子：同一个种子、同样的操作，世界一字不�
 });
 
 describe('码头的主人是真的', () => {
-  it('西舵占了码头收二十文，东舵五文，府衙十文；钱不够的扛一趟货抵了，多耗一个时辰', () => {
+  it('过路钱收在上船那一处：东舵不加，西舵加二十，府衙加十；走进渡口本身不收钱；钱不够的扛一趟货抵了，多耗一个时辰', () => {
     S.silver = 100;
     expect(ownerOf('dukou')).toBe('dong');
-    payFare('dukou');
-    expect(S.silver).toBe(95);
-    runWorld({ type: 'w', op: 'owner', place: 'dukou', to: 'xi' });
-    payFare('dukou');
-    expect(S.silver).toBe(75);
-    expect(S.feed[0].x).toContain('漕帮西舵');
-    runWorld({ type: 'w', op: 'owner', place: 'dukou', to: 'guan' });
-    payFare('dukou');
-    expect(S.silver).toBe(65);
-    // 没人占着的码头不收钱
-    runWorld({ type: 'w', op: 'owner', place: 'dukou', to: null });
+    // 路过渡口不收钱（老玩家：每回走进码头都被收，不对）
     expect(payFare('dukou')).toBeNull();
-    expect(S.silver).toBe(65);
+    expect(payFare('cheng')).toBeNull();
+    expect(S.silver).toBe(100);
+    payFare('gz_kechuan');
+    expect(S.silver).toBe(80);
     runWorld({ type: 'w', op: 'owner', place: 'dukou', to: 'xi' });
-    S.silver = 10;
-    const m = S.min;
-    payFare('dukou');
+    payFare('gz_kechuan');
+    expect(S.silver).toBe(40);
+    expect(S.feed[0].x).toContain('漕帮西舵');
+    expect(S.feed[0].x).toContain('过路钱 20 文');
+    runWorld({ type: 'w', op: 'owner', place: 'dukou', to: 'guan' });
+    payFare('gz_kechuan');
     expect(S.silver).toBe(10);
-    expect(S.min).toBe(m + 60);
-    // 没有 life 的照旧按 fare
+    // 没人占着的码头：只收二十文船钱，不加过路钱
+    runWorld({ type: 'w', op: 'owner', place: 'dukou', to: null });
     S.silver = 100;
     payFare('gz_kechuan');
     expect(S.silver).toBe(80);
+    runWorld({ type: 'w', op: 'owner', place: 'dukou', to: 'xi' });
+    S.silver = 30;
+    const m = S.min;
+    payFare('gz_kechuan');
+    expect(S.silver).toBe(30);
+    expect(S.min).toBe(m + 60);
+    // 没有船钱的地方不收
     expect(payFare('cheng')).toBeNull();
   });
 
@@ -107,8 +110,8 @@ describe('码头的主人是真的', () => {
     expect(test({ w: { owner: { place: 'dukou', is: ['xi'] } } })).toBe(true);
     expect(test({ shi: { id: 'ss_matou', at: ['xiduo'] } })).toBe(true);
     S.silver = 100;
-    payFare('dukou');
-    expect(S.silver).toBe(80);
+    payFare('gz_kechuan');
+    expect(S.silver).toBe(60);
     moveShi('ss_matou', 'tiaoting');
     expect(ownerOf('dukou')).toBe('dong');
     expect(marksOf('dukou').length).toBe(1);
@@ -285,7 +288,9 @@ describe('内容：势力和地方的活气', () => {
     for (const [file, mod] of Object.entries(PACKS)) for (const id of Object.keys(mod.default.roomLife ?? {})) if (!roomIds.has(id)) errs.push(`${file}：roomLife 里的地点「${id}」不存在`);
     expect(errs, '\n' + errs.join('\n')).toEqual([]);
     expect(ROOMS.filter(r => r.region === 'yz' && r.life).length).toBe(10);
-    expect(room('dukou').life?.toll).toEqual({ dong: 5, xi: 20, guan: 10 });
+    expect(room('dukou').life?.toll).toBeUndefined();
+    expect(room('gz_kechuan').life?.tollAt).toBe('dukou');
+    expect(room('gz_kechuan').life?.toll).toEqual({ dong: 0, xi: 20, guan: 10 });
   });
 });
 
