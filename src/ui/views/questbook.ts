@@ -1,11 +1,13 @@
 import { S } from '../../core/state';
-import { REGIONS, jobById, npc, questById, room } from '../../content';
+import { REGIONS, ROOMS, jobById, npc, questById, room } from '../../content';
 import type { JobDef } from '../../content/types';
 import { yueText } from '../../engine/shiguang';
 import { knownShi, type ShiRow } from '../../engine/shishi';
-import { minLabel } from '../../core/time';
+import { minLabel, shichen } from '../../core/time';
 import { cn } from '../../core/util';
 import { questNav, sectNav, whoNav, type NavState, type QuestNav } from '../../engine/daohang';
+import { test } from '../../engine/dsl';
+import { roomNpcs, roomObjs } from '../../engine/world';
 import { IC } from '../icons';
 import { closeSheet, openSheet, render } from '../shell';
 
@@ -121,6 +123,51 @@ function questRow(n: QuestNav, trackId: string): string {
       </div>`;
 }
 
+/** 照 whoNav 连起在场的时辰；每个时辰两小时都试，免得漏掉子时前半段（舅舅只待到午夜） */
+function xianWhen(id: string, to: string): string | null {
+  const keep = S.min, on: boolean[] = [];
+  const present = (): boolean => roomNpcs(to).includes(id) || roomObjs(to).includes(id);
+  try {
+    for (let k = 0; k < 12; k++) {
+      S.min = (k * 120 + 1380) % 1440;
+      const first = present();
+      S.min = k * 120;
+      on.push(present() || first);
+    }
+  } finally { S.min = keep; }
+  if (on.every(Boolean)) return '整日';
+  if (!on.some(Boolean)) return null;
+  const start = (on.indexOf(false) + 1) % 12, runs: [number, number][] = [];
+  for (let i = 0; i < 12; i++) {
+    const k = (start + i) % 12;
+    if (!on[k]) continue;
+    const last = runs[runs.length - 1];
+    if (last && (last[1] + 1) % 12 === k) last[1] = k; else runs.push([k, k]);
+  }
+  const name = (k: number): string => shichen(k * 120);
+  return runs.map(([a, b]) => a === b ? name(a) : `${name(a)}到${name(b)}`).join('、');
+}
+
+/** 差事路上要找的人：只写已经知道的线头，不露出后面的去处。地点和时辰照人物作息推 */
+function jobXianHtml(job: JobDef): string {
+  return (job.xian ?? []).filter(x => test(x.if)).map(x => {
+    const who = whoNav(x.npc, x.at);
+    const to = x.at ?? who.now ?? ROOMS.find(r => [...r.npcs, ...(r.objs ?? [])]
+      .some(n => (typeof n === 'string' ? n : n.id) === x.npc))?.id;
+    if (!to) return '';
+    const here = S.loc === to;
+    const when = xianWhen(x.npc, to);
+    const memo = who.now === to
+      ? `${who.name}${when ?? '眼下'}在${room(to).name}，去找他问问。`
+      : when ? `${who.name}${when}在${room(to).name}，等到那时再去找他。`
+        : `眼下不见${who.name}的人影，到${room(to).name}再打听打听。`;
+    return `<div class="qb-row qb-xian">
+        <div class="qb-info"><p>${x.text}</p><small class="qb-memo">${memo}</small></div>
+        <div class="qb-acts"><button class="qb-go${here ? ' dim' : ''}" data-act="jgo:${to}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button></div>
+      </div>`;
+  }).join('');
+}
+
 /**
  * 见闻弹层 HTML。纯 UI：读 S，产出字符串，不直接渲染。
  * 差事；心事：主线和别的私事，每件写清走到哪、卡在哪、做不做得成（engine/daohang.ts），自己选一件记挂，江湖页顶上才挂它；
@@ -162,7 +209,7 @@ export function questbookSheetHtml(): string {
           <small class="qb-to">误了期，${missText(job)}。</small>
         </div>
         <div class="qb-acts"><button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${job.at}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button></div>
-      </div>` : '';
+      </div>${jobXianHtml(job)}` : '';
   const failHtml = failed.length ? `<h3 class="qb-sec">未竟 · ${failed.length}</h3>${failed.map(n => questRow(n, trackId)).join('')}` : '';
   const doneN = finished.length + shiDone.length;
   const doneHtml = `<h3 class="qb-sec${doneN ? '' : ' muted'}">了结的 · ${doneN}</h3>${shiDone.map(shiRow).join('')}${finished.map(n => questRow(n, trackId)).join('')}`;
