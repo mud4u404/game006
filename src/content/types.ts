@@ -518,7 +518,8 @@ export interface FxDef {
  * 一招：招名加一句描写。描写可用 {foe}（对手名字）和 {part}（部位）。
  * realm：练到第几重境界（0 起）才会使出这一招，不写为一开始就会。
  */
-export interface MoveDef { name: string; text: string; realm?: number; wound?: WoundKind }
+/** alts：同一招的另几种写法，战报轮着用，不连着出现同一句（同样可用 {foe} {part}） */
+export interface MoveDef { name: string; text: string; alts?: string[]; realm?: number; wound?: WoundKind }
 
 /** 武功的「绝招」：战斗中点按钮施展，可带效果。参照北大侠客行的 perform */
 export interface PerformDef {

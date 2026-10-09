@@ -10,6 +10,8 @@ import { run } from '../src/engine/dsl';
 import { retreatBlock } from '../src/engine/shiguang';
 import { verbPoor, verbPrice } from '../src/engine/world';
 import { growthHTML } from '../src/ui/growth';
+import { pickFresh } from '../src/ui/fresh';
+import { SKILLS } from '../src/content';
 import { viewJianghu } from '../src/ui/views/jianghu';
 import { viewWugong } from '../src/ui/views/wugong';
 
@@ -95,5 +97,36 @@ describe('变强之道：按人、按师门写', () => {
     expect(html).toContain('回铁掌帮，向师长请教');
     expect(html).toContain('养伤');
     expect(html.replace(/<[^>]+>/g, '')).not.toMatch(/\d/);
+  });
+});
+
+describe('战报选句：一场里不连着重复', () => {
+  it('池子够大时，抽满一轮没有重复；抽完了再来一轮也不报错', () => {
+    const used = new Set<string>();
+    const pool = ['甲', '乙', '丙', '丁', '戊', '己'];
+    const round1 = pool.map(() => pickFresh(used, 'x', pool));
+    expect(new Set(round1).size).toBe(pool.length);
+    const round2 = pool.map(() => pickFresh(used, 'x', pool));
+    expect(new Set(round2).size).toBe(pool.length);
+  });
+
+  it('不同的池子互不干扰；只有一句的池子也抽得出来', () => {
+    const used = new Set<string>();
+    expect(pickFresh(used, 'a', ['唯一'])).toBe('唯一');
+    expect(pickFresh(used, 'a', ['唯一'])).toBe('唯一');
+    expect(pickFresh(used, 'b', ['乙', '丙'])).toMatch(/乙|丙/);
+  });
+
+  it('寒江剑法、惊鸿剑每一式都有变体，变体与原文不同，且都带 {foe}{part}', () => {
+    const moves = SKILLS.filter(k => /寒江|惊鸿/.test(k.name)).flatMap(k => k.moves ?? []);
+    const withAlts = moves.filter(m => m.alts?.length);
+    expect(withAlts.length).toBeGreaterThanOrEqual(12);
+    for (const m of withAlts) {
+      for (const a of m.alts!) {
+        expect(a).not.toBe(m.text);
+        expect(a).toContain('{foe}');
+        expect(a).toContain('{part}');
+      }
+    }
   });
 });
