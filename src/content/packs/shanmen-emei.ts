@@ -278,6 +278,16 @@ const DIPI: FoeDef = {
 
 const NPCS_EXTRA: NpcDef[] = [
   {
+    id: 'smem_dipi_ren', name: '拦路的地痞', ini: '地', tone: 'red', brief: '在山道上拦香客',
+    look: '歪戴帽子的瘦高条，木棒横在山道中央，见了香客就伸 手要「香火钱」。',
+    at: { room: 'smem_guanyin', if: { job: 'smem_job_xiang' } },
+    verbs: ['交谈', '动手'],
+    actions: {
+      交谈: [{ text: '地痞把棒一横：「上山的留下香火钱——佛祖也要吃饭！」' }],
+      动手: [{ do: [{ type: 'fight', foe: 'smem_dipi' }] }]
+    }
+  },
+  {
     id: 'smem_xiangke', name: '进香的香客', count: 3, ini: '香', tone: 'blue', brief: '结伴上山',
     look: '三个进香的妇人，包袱里带着香烛，走一段歇一段。',
     at: { room: 'smem_guanyin', if: { job: 'smem_job_xiang' } },
