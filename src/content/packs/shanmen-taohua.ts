@@ -236,7 +236,7 @@ const NPCS: NpcDef[] = [
           do: [{ type: 'job', id: 'smth_job_yao' }] },
         { if: { jobOpen: 'smth_job_fang' },
           text: '曲蘅把改好的方子折好封上：「去回春堂照方配一副，带回来。药方这种东西，多一个人对过，就多救一个人。」',
-          do: [{ type: 'job', id: 'smth_job_fang' }] },
+          do: [{ type: 'flag', flag: 'smth_fang_ready', value: false }, { type: 'job', id: 'smth_job_fang' }] },
         { text: '曲蘅摆摆手：「这几日小筑没有差事。」他顿了顿，补了一句，「——去看病的不算差事，那是本分。」' }
       ],
       考校: [
@@ -310,10 +310,28 @@ const NPCS: NpcDef[] = [
         { if: { job: 'smth_job_yao' },
           text: '六斤接过药包，一路小跑进了屋。半晌，他娘的咳嗽声从里屋传出来——咳得轻了。六斤跑出来朝你鞠了个躬：「先生还问了脉案……他说，方子要改。」',
           do: [{ type: 'time', add: 20 }, { type: 'jobDone', id: 'smth_job_yao' }] },
+        { if: { job: 'smth_job_fang', flag: 'smth_fang_ready' },
+          text: '六斤接过封好的药包，对着方子逐味看过，又用细绳扎好，道：「回春堂掌柜对过了，我拿回去给娘煎。」他把药小心地揣进怀里，朝你作了一揖。',
+          do: [{ type: 'time', add: 30 }, { type: 'flag', flag: 'smth_fang_ready', value: false }, { type: 'jobDone', id: 'smth_job_fang' }] },
         { if: { job: 'smth_job_fang' },
-          text: '六斤把配好的药接过去，一样一样对着方子看：「回春堂掌柜还多抓了一回陈皮……他说两家的方子对过，吃得更稳。」他把药小心地抱进屋，出来时朝你又是鞠躬又是笑。',
-          do: [{ type: 'time', add: 30 }, { type: 'jobDone', id: 'smth_job_fang' }] },
+          text: '六斤看着你手里的方子，道：「药还没配呢。回春堂就在老街上，把方子交到药案上，掌柜才好抓药。」' },
         { text: '六斤眨眨眼：「交什么差？先生这几日没有差事派呀。」' }
+      ]
+    }
+  },
+  {
+    id: 'smth_yaoan', name: '回春堂药案', obj: true, icon: 'stele', brief: '药秤搁在方子旁', night: true,
+    at: { room: 'gz_town', if: { job: 'smth_job_fang' } },
+    look: '回春堂柜台旁摆着药秤，秤盘擦得干净。掌柜将曲蘅的方子压在案上，旁边摊着几张包药的纸。',
+    verbs: ['观察', '配药'],
+    actions: {
+      配药: [
+        { if: { job: 'smth_job_fang', flag: 'smth_fang_ready' },
+          text: '掌柜指着你带在身上的药包，道：「这副已配齐了，送去给六斤，莫把两副混在一处。」' },
+        { if: { job: 'smth_job_fang' },
+          text: '你把方子铺在药案上。回春堂掌柜逐味称过，将药裹好，在纸上写下六斤他娘的名字，道：「曲先生将药钱记在小筑账上了。这副照方煎，别和先前的混了。」你收好药包，方子也一并带上。',
+          do: [{ type: 'time', add: 30 }, { type: 'flag', flag: 'smth_fang_ready' }] },
+        { text: '药案上摆着药秤，掌柜收起包药纸，道：「配药得有方子。」' }
       ]
     }
   },
