@@ -8,7 +8,7 @@ import { S, setState, skipToYangzhou } from '../src/core/state';
 import { setNowMs } from '../src/core/time';
 import { run } from '../src/engine/dsl';
 import { retreatBlock } from '../src/engine/shiguang';
-import { verbPrice } from '../src/engine/world';
+import { verbPoor, verbPrice } from '../src/engine/world';
 import { viewJianghu } from '../src/ui/views/jianghu';
 import { viewWugong } from '../src/ui/views/wugong';
 
@@ -45,6 +45,16 @@ describe('买卖按钮标价', () => {
   it('钱不够也看得见价钱（走到的是「没钱」的回话，价钱不能因此藏起来）', () => {
     S.silver = 0;
     expect(verbPrice('jc_yz_tiejiang', '买刀')).toBe(400);
+  });
+
+  it('钱不够但还能赊账治伤的（曲蘅看诊）：按钮不灰；纯回绝的（铁匠买刀）才算买不起', () => {
+    S.silver = 5;
+    S.wounds = { hand: 1, foot: 0, inner: 0 };
+    expect(verbPrice('smth_quheng', '看诊')).toBe(80);
+    expect(verbPoor('smth_quheng', '看诊')).toBe(false);
+    expect(verbPoor('jc_yz_tiejiang', '买刀')).toBe(true);
+    S.silver = 1000;
+    expect(verbPoor('jc_yz_tiejiang', '买刀')).toBe(false);
   });
 
   it('按钮上写着价钱；钱不够的灰着并写明差在哪', () => {

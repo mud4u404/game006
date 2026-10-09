@@ -168,7 +168,6 @@ const DEFAULT_MIN = 10;
 /** 天色转换时记一句见闻 */
 const DUSK: Record<string, string> = { 酉时: '日头偏西，天色向晚。', 戌时: '天黑了，街上点起了灯。', 子时: '夜深了，四下里静悄悄的。', 卯时: '天蒙蒙亮了。' };
 
-/** 对人物、物件做一个动作：执行分支，再按动作花掉时间。arg 是赠礼、典当时挑的那件道具 */
 /**
  * 这个动作要花多少钱（买卖、住店、看伤、打赏……）：按钮上写出价钱，玩家点之前就知道（试玩第三轮：买卖按钮标价）。
  * 看的是「不算银两条件」时会走到的那个分支：钱不够时走到的是「没钱」的回话，不能因此就把价钱藏起来。没有扣钱返回 null
@@ -181,6 +180,15 @@ export function verbPrice(id: string, verb: Verb): number | null {
   return price > 0 ? price : null;
 }
 
+/** 钱不够时真正走到的分支只是一句回绝（没有扣钱以外的实效）才算「买不起」；赊账、记账这类还能办事的分支，按钮不灰 */
+export function verbPoor(id: string, verb: Verb): boolean {
+  if (verbPrice(id, verb) === null) return false;
+  const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
+  const real = bs?.find(x => test(x.if ?? {}));
+  return !real || !(real.do ?? []).some(e => e.type !== 'time');
+}
+
+/** 对人物、物件做一个动作：执行分支，再按动作花掉时间。arg 是赠礼、典当时挑的那件道具 */
 export function act(id: string, verb: Verb, arg?: string): { text: string; out: Outcome; eyes: EyeDef[] } {
   const r = doAct(id, verb, arg);
   if (!r.timed && !r.out.fight && !r.out.story && npc(id)) {

@@ -1,7 +1,7 @@
 import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
-import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbPrice, verbsOf } from '../../engine/world';
+import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbPoor, verbPrice, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
@@ -101,7 +101,7 @@ function detail(id: string): string {
 /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
 const verbBtn = (id: string) => (v: Verb): string => {
   const price = verbPrice(id, v);
-  const poor = price !== null && S.silver < price;
+  const poor = price !== null && S.silver < price && verbPoor(id, v);
   return `<button class="act ${VERB_CLS[v] || ''}${price !== null ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${price !== null ? `<small>${poor ? '囊中不足，要' : ''}${cn(price)}文</small>` : ''}</button>`;
 };
 
