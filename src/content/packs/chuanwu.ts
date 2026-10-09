@@ -108,13 +108,13 @@ const NPCS: NpcDef[] = [
       ],
       勒索: [
         { if: { flag: 'cw_zhenxiang', notFlag: 'cw_done' },
-          text: '「月月一文，保你无事。」水里的人沉默着，摸出一把铜钱举过头顶。你收了钱。湖边往来的船家从此都知道，虹桥底下有一位收「香火」的。',
+          text: '你伸出手道：「留下一文，今夜的事便不声张。」水里的人沉默着，摸出一枚湿铜钱放在你掌心。你攥住铜钱，转身上岸。',
           do: [
             { type: 'flag', flag: 'cw_qiao' }, { type: 'flag', flag: 'cw_done' },
-            { type: 'eming', delta: 5 },
-            { type: 'feed', tag: '江湖', text: '虹桥下有人月月收着「水鬼」的香火钱，湖边人都骂缺德。' }
+            { type: 'eming', delta: 5 }, { type: 'silver', delta: 1 },
+            { type: 'feed', tag: '江湖', text: '你从虹桥下的穷盐丁手里勒索了一文钱，湖边的船家也听说了。' }
           ] },
-        { text: '「月月的份儿，公子忘了么？」' }
+        { text: '莫六缩在水里道：「那一文已经给过了。」' }
       ]
     }
   },
@@ -204,11 +204,11 @@ const GUARD: FoeDef = {
             do: [{ type: 'xia', delta: 3 }, { type: 'flag', flag: 'cw_fang' }, { type: 'flag', flag: 'cw_done' },
               { type: 'feed', tag: '江湖', text: '你放过了虹桥下的「水鬼」。湖里的事，你知道，他知道。' }],
             later: '湖上的事，往后也许他肯告诉你一两句。' },
-          { label: '月月收他的香火钱', sub: '恶名 +5', if: { notFlag: 'cw_done' },
-            say: '「月月一份，保你无事。」他沉默着，摸出一把湿漉漉的铜钱举过头顶。你收了钱。',
-            do: [{ type: 'flag', flag: 'cw_qiao' }, { type: 'flag', flag: 'cw_done' }, { type: 'eming', delta: 5 },
-              { type: 'feed', tag: '江湖', text: '虹桥下有人月月收着「水鬼」的香火钱，湖边人都骂缺德。' }],
-            later: '湖边往来的船家，从此都知道虹桥底下有一位收香火的。' },
+          { label: '勒索一文钱', sub: '银两 +1 文 · 恶名 +5', if: { notFlag: 'cw_done' },
+            say: '你伸出手道：「拿一文来，今夜便放你走。」莫六摸出一枚铜钱递过来，你接了，挥手叫他退下。',
+            do: [{ type: 'flag', flag: 'cw_qiao' }, { type: 'flag', flag: 'cw_done' }, { type: 'eming', delta: 5 }, { type: 'silver', delta: 1 },
+              { type: 'feed', tag: '江湖', text: '你从虹桥下的穷盐丁手里勒索了一文钱，湖边的船家也听说了。' }],
+            later: '莫六没敢吭声，撑着鱼叉爬回了船上。湖边的船家远远看着。' },
           { label: '下杀手', sub: '恶名 +3', if: { notFlag: 'cw_done' },
             say: '你一剑结果了他。湖面上冒了几个水泡，又静了下来。',
             title: '虹桥下的一条人命',
@@ -244,7 +244,7 @@ const pack: ContentPack = {
     { if: { flag: 'cw_sha' },
       text: '虹桥边的渔家说，那扮水鬼的盐丁叫人杀了。他家里还有老娘和两个孩子，天天在桥头等他回来。', who: ['渔家', '船夫', '脚夫'], about: 'you' },
     { if: { flag: 'cw_qiao' },
-      text: '瘦西湖边有位夜里的「土地公」，月月往虹桥船坞收一笔香火钱，风雨无阻。', who: ['渔家', '船夫', '更夫'] }
+      text: '虹桥下那穷盐丁叫人勒索了一文钱。过路的船家看见了，背地里骂那人缺德。', who: ['渔家', '船夫', '更夫'] }
   ]
 };
 
