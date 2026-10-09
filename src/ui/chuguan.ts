@@ -9,7 +9,7 @@ import { room } from '../content';
 import { ZONE_NAME } from '../engine/duel';
 import { gongliText } from '../engine/ren';
 import { gongliCeiling } from '../engine/lilian';
-import { nextYue, settleAway, skillName, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
+import { TIELV_TEXT, nextYue, settleAway, skillName, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
 import { inFight } from './fight';
 import { openSheet, render } from './shell';
 
@@ -65,7 +65,7 @@ export function welcomeBack(): boolean {
   const rep = settleAway(S);
   if (!rep) { save(); return false; }
   // 约的内容下面「有约」那一行会写，这里不再重复（审查 G27）
-  const stop = rep.why === 'yue' && rep.yue ? '约期到了，今日一早出关。' : rep.why === 'tielv' ? '江湖跑不过现实：这几日江湖上的日子已经走在前头，只修了这些。' : undefined;
+  const stop = rep.why === 'yue' && rep.yue ? '约期到了，今日一早出关。' : rep.why === 'tielv' ? (rep.grow ? `其中${liang(rep.grow)}日修为有长进；余下的日子，${TIELV_TEXT}` : TIELV_TEXT) : undefined;
   pushFeed('出关', `静修${liang(rep.days)}日${rep.used ? `，消化历练 ${rep.used}` : ''}${rep.gongli > 0 ? `，功力深到${gongliText(S.gongli)}` : ''}。`);
   save();
   render();

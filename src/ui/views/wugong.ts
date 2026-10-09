@@ -26,7 +26,8 @@ export function viewWugong(): string {
       ? '<p class="muted">江伯还病着，眼下不是闭关的时候。</p>'
       : (() => {
         const block = retreatBlock(S);
-        return `<p class="muted">${block ?? `江湖跑不过现实：现在最多还能闭关${cn(allowance(S))}日。下线就是静修，现实一个钟头算江湖一日，回来先读出关邸报。`}</p>
+        const al = allowance(S);
+        return `<p class="muted">${block ?? `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。下线就是静修，回来先读出关邸报。`}</p>
         <div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
       })()}
   </section>

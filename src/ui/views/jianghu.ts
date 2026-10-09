@@ -10,7 +10,7 @@ import { kanren } from '../../engine/zhaoshi';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef, Verb } from '../../content/types';
 import { cn, fmt } from '../../core/util';
-import { XIEJIAO, canWait, nextYue, nightBlock, yueText } from '../../engine/shiguang';
+import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
 import { test, textVars } from '../../engine/dsl';
 
@@ -75,10 +75,11 @@ function leadsCard(): string {
 /** 歇脚：等到天亮、晌午、傍晚、入夜（人有作息，有的人、有的事只在夜里）。序章里不歇 */
 function xiejiaoHTML(): string {
   if (S.chapter === 0) return '';
-  // 有的钟点要跨过半夜才等得到：过不了夜时，灰着的按钮底下写明为什么
-  const why = XIEJIAO.some(([h]) => !canWait(S, h)) ? nightBlock(S) : null;
+  // 跨过半夜会误了今日的约：按钮照样能点，先问一句（10-09 试玩：原来全灰，玩家只能空点熬夜）
+  const warn = nightWarn(S);
+  const late = (h: number): boolean => !!warn && crossesNight(S, h);
   return `<section class="go"><h2>歇脚</h2><div class="acts four">${XIEJIAO.map(([h, l]) =>
-    `<button class="act" data-act="xiejiao:${h}"${canWait(S, h) ? '' : ' disabled'}>到${h * 60 <= S.min ? '明日' : ''}${l}</button>`).join('')}</div>${why ? `<p class="muted">${why}</p>` : ''}</section>`;
+    `<button class="act" data-act="${late(h) ? 'xiejiaoAsk' : 'xiejiao'}:${h}">到${h * 60 <= S.min ? '明日' : ''}${l}</button>`).join('')}</div>${XIEJIAO.some(([h]) => late(h)) ? `<p class="muted">${warn}歇过半夜就误了。</p>` : ''}</section>`;
 }
 
 function avaBtn(id: string): string {

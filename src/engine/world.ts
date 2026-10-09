@@ -11,7 +11,7 @@ import { seeShi } from './shishi';
 import { ask, panwen } from './chuanwen';
 import { shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
-import { passBlock } from './shiguang';
+import { passWarn } from './shiguang';
 import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
 
 /** 江湖历的第几分钟（暂时走开的人什么时候回来） */
@@ -225,13 +225,12 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
   }
   const bs = n.actions[verb as keyof typeof n.actions];
   const b = pickBranch(bs);
-  // 铁律：住店睡到天亮这类要跨过半夜的，江湖跑在现实前头时过不去（engine/shiguang.ts）
-  const block = b ? passBlock(S, b.do) : null;
-  if (block) return { text: block, out: newOutcome(), timed: true };
+  // 住店睡到天亮这类要跨过半夜的：今日有约就提一句会误了约，不拦（engine/shiguang.ts）
+  const warn = b ? passWarn(S, b.do) : null;
   if (b) {
     const short = lilianShort(bs, b);
     const out = run(b.do);
-    return { text: fmt(b.text ?? '', { ...textVars(), ...out.vars }) + (short ? `\n（${short}）` : ''), out, timed: b.do?.some(e => e.type === 'time') };
+    return { text: (warn ? `（${warn}）\n` : '') + fmt(b.text ?? '', { ...textVars(), ...out.vars }) + (short ? `\n（${short}）` : ''), out, timed: b.do?.some(e => e.type === 'time') };
   }
   const who = npcName(id);
   const out = newOutcome();
