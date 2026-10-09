@@ -21,7 +21,8 @@
     "model": "MODEL=1 vitest run tests/model.test.ts --silent=false",
     "zoubian": "ZOUBIAN=1 vitest run tests/zoubian.test.ts --silent=false",
     "xianguang": "XIANGUANG=1 vitest run tests/xianguang.test.ts --disableConsoleIntercept",
-    "chaming": "node scripts/chaming.mjs"
+    "chaming": "node scripts/chaming.mjs",
+    "kongque": "KONGQUE=1 vitest run tests/kongque.test.ts --silent=false"
   },
   "devDependencies": {
     "playwright": "1.56.1",
