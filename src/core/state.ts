@@ -65,6 +65,8 @@ export interface GameState {
   wounds: { hand: number; foot: number; inner: number };
   /** 哪几处是轻伤、从江湖历第几分钟起算（过一日自己好，engine/shang.ts 的 healLight） */
   lightSince?: Partial<Record<'hand' | 'foot' | 'inner', number>>;
+  /** 到过的最高档次：升了档要提一句（ui/shell.ts 的 render，审查 G13） */
+  tierTop?: number;
   /**
    * 现实的钟（engine/shiguang.ts）：开局（或换算存档）时的现实时刻和那天的江湖日，上次在线的现实时刻。
    * 江湖跑不过现实：江湖的日数最多比开局以来的现实小时数多十日；下线就是静修，现实一小时算江湖一日。

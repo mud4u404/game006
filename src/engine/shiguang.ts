@@ -6,7 +6,8 @@
  * - 约：人物和你定约。静修碰到约期，就在约期那天一早出关；过了约期还没了结，就是失约，生一层心魔。
  */
 import { tickShi } from './shishi';
-import { pushFeed, type GameState, type Yue } from '../core/state';
+import { S, pushFeed, type GameState, type Yue } from '../core/state';
+import { cn } from '../core/util';
 import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
 import { NEWS, npc, room, skillById } from '../content';
 import type { Effect, SkillId } from '../content/types';
@@ -156,12 +157,24 @@ export function checkYue(s: GameState): string[] {
     s.yue = s.yue.filter(x => x !== y);
     const who = npcName(y.npc);
     if (y.miss) run(y.miss);
-    addXinmo(s, 1, `失约于${who}`);
+    // 差事交给一块木榜的（悬赏榜），误了期是营生上的事，不是失信于人：不生心魔（审查 G18：对木榜心中有愧）
+    if (!(y.id.startsWith('job_') && npc(y.npc)?.obj)) addXinmo(s, 1, `失约于${who}`);
     const line = `你没有赴${who}的约（${y.text}）。`;
     pushFeed('江湖', line);
     out.push(line);
   }
   return out;
+}
+
+/**
+ * 心魔的一句说明（人物页、出关邸报）：静修受多大影响、会不会走火、怎么淡。
+ * 审查 G17、G19、G26：原来写「还诺、赔罪才化得开」，可内容里没有一处化得开；走火事先不提；淡到很小时写「静修打十折」
+ */
+export function xinmoLine(s: GameState = S): string {
+  const z = Math.round((1 - XINMO.k * s.xinmo.n) * 10);
+  const eff = z >= 10 ? '静修几乎不受影响' : `静修打${cn(z)}折`;
+  const fire = s.xinmo.n >= XINMO.zouhuoAt ? '心魔已重，静修时有走火之虞，一走火就掉功力' : `到了${cn(XINMO.zouhuoAt)}层，静修会走火`;
+  return `心中有愧（${s.xinmo.why}），${eff}；${fire}。它会随日子慢慢淡。`;
 }
 
 /** 心魔加减：加的时候记下为了什么 */

@@ -65,7 +65,7 @@ function xiejiaoHTML(): string {
   // 有的钟点要跨过半夜才等得到：过不了夜时，灰着的按钮底下写明为什么
   const why = XIEJIAO.some(([h]) => !canWait(S, h)) ? nightBlock(S) : null;
   return `<section class="go"><h2>歇脚</h2><div class="acts four">${XIEJIAO.map(([h, l]) =>
-    `<button class="act" data-act="xiejiao:${h}"${canWait(S, h) ? '' : ' disabled'}>到${l}</button>`).join('')}</div>${why ? `<p class="muted">${why}</p>` : ''}</section>`;
+    `<button class="act" data-act="xiejiao:${h}"${canWait(S, h) ? '' : ' disabled'}>到${h * 60 <= S.min ? '明日' : ''}${l}</button>`).join('')}</div>${why ? `<p class="muted">${why}</p>` : ''}</section>`;
 }
 
 function avaBtn(id: string): string {

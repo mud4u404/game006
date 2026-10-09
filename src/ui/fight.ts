@@ -67,6 +67,8 @@ interface Fight {
   hurt?: Partial<Wounds>;
   /** 气血见底提醒过了 */
   lowWarned?: boolean;
+  /** 「会使虚招」提醒过了 */
+  feintWarned?: boolean;
   /** 开打前掂的斤两（赢面）：打赢了按它给落的伤封顶（engine/shang.ts） */
   odds?: number;
   /** 实战长熟练的折扣：七天之内反复打同一个人，一次比一次少（engine/lilian.ts 的 foeRepeats） */
@@ -355,7 +357,10 @@ function startTell(): void {
   buzz(30);
   $('#rTell')!.textContent = t.text;
   // 虚实：这一招是不是虚招，玩家看不出；按钮上的成算已经并进了「它可能是虚招」
-  $('#rJudge')!.textContent = judgeText(pr.pw, c.d.hh, c.f.ws) + (c.d.feintR > 0 ? `${c.f.name}会使虚招，全力硬接最怕落空。` : '');
+  // 虚招的提醒：虚招两成以上的对手才说，一场只说一回（审查 F40：句句都说）
+  const warnFeint = c.d.feintR >= 0.2 && !c.feintWarned;
+  if (warnFeint) c.feintWarned = true;
+  $('#rJudge')!.textContent = judgeText(pr.pw, c.d.hh, c.f.ws) + (warnFeint ? `${c.f.name}会使虚招，全力硬接最怕落空。` : '');
   $('#rOpts')!.innerHTML = pr.opts.map(o => optHTML(o)).join('');
   const qg = S.skills[S.loadout.qinggong ?? '']?.r ?? 0;
   const dur = Math.round((5000 + qg * 300) * (c.d.phase === 2 ? 0.85 : 1));
@@ -871,7 +876,7 @@ const GROWTH = `<div class="r-sub">变强之道</div><div class="news">
 function alliesHTML(c: Fight): string {
   const rows = c.prep.filter(p => p.ally).map((p, i) => {
     const n = Math.round((c.allyDealt[i] / c.d.ehpMax) * 10);
-    return `<div><span class="tag accent">${p.ally!.name}</span><span>${c.allyDealt[i] > 0 ? `出手${cn(c.d.allyHits[i])}次，替你打掉他${n >= 1 ? liang(n) + '成' : '一些'}气血。` : '来了，还没来得及出手。'}</span></div>`;
+    return `<div><span class="tag accent">${p.ally!.name}</span><span>${c.allyDealt[i] > 0 ? `出手${liang(c.d.allyHits[i])}次，替你打掉他${n >= 1 ? liang(n) + '成' : '一些'}气血。` : '来了，还没来得及出手。'}</span></div>`;
   });
   return rows.length ? `<div class="r-sub">援手</div><div class="news">${rows.join('')}</div>` : '';
 }

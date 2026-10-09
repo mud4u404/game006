@@ -104,7 +104,7 @@ const QI: FoeDef = {
       win: [{ type: 'flag', flag: 'bs_wu_fought' }] },
     { if: { flag: 'bs_zheng_ok' },
       ally: { name: '猎户郑石', share: 0.15, at: [6, 12],
-        say: ['郑石的猎弓在暗处一响，一支箭钉在断刀七脚边的泥地里。', '郑石掷出套索，缠住了断刀七的刀刃。'] },
+        say: ['郑石的猎弓在暗处一响，一支箭擦着断刀七的大腿钉进泥里，带下一片血。', '郑石掷出套索，缠住了断刀七的刀刃。'] },
       text: '郑石从芦苇丛里闪出，猎弓已满弦。',
       story: '猎户郑石的箭钉在断刀七的脚边，断了他逃走的念头。',
       win: [{ type: 'flag', flag: 'bs_zheng_fought' }] }

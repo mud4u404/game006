@@ -1,5 +1,6 @@
 import { S } from '../../core/state';
-import { REGIONS, jobById, questById, room } from '../../content';
+import { REGIONS, jobById, npc, questById, room } from '../../content';
+import type { JobDef } from '../../content/types';
 import { yueText } from '../../engine/shiguang';
 import { knownShi, type ShiRow } from '../../engine/shishi';
 import { minLabel } from '../../core/time';
@@ -125,7 +126,7 @@ export function questbookSheetHtml(): string {
           <b>${job.title}</b>
           <span class="qb-stage">${job.sect ? job.sect + '的差事' : '营生'}</span>
           <p>${yueText(S, jy)}</p>
-          <small class="qb-to">误了期${job.sect ? '，扣门派贡献' : '，地位降一级'}。</small>
+          <small class="qb-to">误了期，${missText(job)}。</small>
         </div>
         <div class="qb-acts"><button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${job.at}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button></div>
       </div>` : '';
@@ -151,4 +152,12 @@ export function trackQuest(id: string): void {
   S.track = S.track === id ? '' : id;
   closeSheet();
   render();
+}
+
+/** 差事误了期会怎样：照实写（审查 D12：游侠的差事卡写「地位降一级」，实际降不了） */
+function missText(job: JobDef): string {
+  if (job.sect) return '扣门派贡献';
+  const free = S.shenfen.id === 'youxia' || S.shenfen.id === 'yumin';
+  if (!free) return '地位降一级，降到底就被辞退';
+  return npc(job.npc)?.obj ? '这一张就白揭了，过几日才能再揭' : '失信于人，心里落一层心魔';
 }

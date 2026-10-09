@@ -46,12 +46,15 @@ const NPCS: NpcDef[] = [
         { text: '「小僧是山下李家村的，家里只剩娘一个人……」他忽然收了声，「小僧什么都没说。施主请罢。」' }
       ],
       指认: [
-        { if: { notFlag: 'cangjing_solved' },
+        // 一条线索都没看就指认，三个人里猜中一个就全得：至少要看过一条（审查 B21）
+        { if: { notFlag: 'cangjing_solved', any: [{ flag: 'clue_gui' }, { flag: 'clue_xianglu' }, { flag: 'clue_jiaoyin' }] },
           text: '你盯着扫地的小沙弥：「明心，经卷是你拿的？」扫帚「啪」地倒在地上，他「哇」的一声哭了出来。',
           do: [
             { type: 'quest', id: 'side_cangjing', stage: 2 },
             { type: 'story', id: 'cangjing_verdict' }
           ] },
+        { if: { notFlag: 'cangjing_solved' },
+          text: '你盯着扫地的小沙弥：「明心，经卷是你拿的？」他攥着扫帚，眼泪在眼眶里打转，一个字也不认。法空从廊下走过来，把他挡在身后：「施主，空口无凭。」' },
         { text: '案子已经了结。明心低着头，不再答话。' }
       ]
     }

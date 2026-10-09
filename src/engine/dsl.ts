@@ -71,6 +71,7 @@ export function test(c?: Cond): boolean {
   if (c.eming !== undefined && S.eming < c.eming) return false;
   // 约：今天是约期，约还没了结（engine/shiguang.ts）
   if (c.yue !== undefined && !S.yue.some(y => y.id === c.yue && y.due === dayNo(S))) return false;
+  if (c.yueAhead !== undefined && !S.yue.some(y => y.id === c.yueAhead && y.due > dayNo(S))) return false;
   // 身份与差事（engine/shenfen.ts）
   if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
   if (c.job !== undefined && S.job?.id !== c.job) return false;

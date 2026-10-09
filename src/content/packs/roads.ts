@@ -27,8 +27,9 @@ const ROOMS: RoomDef[] = [
     npcs: ['gz_dc_chuanjia'],
     exits: [['北岸', 'gz_pier', '渡'], ['南岸', 'zj_xijin', '渡']],
     road: '你踏上跳板，渡船晃了一晃……' },
-  { id: 'zj_xijin', name: '西津渡', area: '镇江 · 京口', region: 'zj', t: 10, map: [50, 16],
+  { id: 'zj_xijin', name: '西津渡', area: '镇江 · 京口', region: 'zj', t: 10, map: [50, 16], nightQuiet: true,
     desc: [
+      { if: { hour: { from: 21, to: 5 } }, text: '夜里的西津渡没了人声。泊位上的船挤在一处，桅灯一盏一盏地晃；待渡亭里空荡荡的，江风灌进来，吹得柱上的旧告示哗哗响。' },
       { if: { shi: { id: 'sszj_du', at: ['zhangjia'] } },
         text: '西津渡的青石阶被挑夫的脚磨得发亮，一级一级通上岸去。渡口的泊位上插着沙船帮的旗，本地的船一条不见，跳板口立着块木牌：渡钱十文。' },
       { if: { shi: { id: 'sszj_du', at: ['bangjia'] } },
@@ -66,7 +67,7 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察'],
     actions: { 交谈: [
       { if: NIGHT, text: '「夜里也渡。」船家看了看江心，「只是江心那片荒洲，夜里有人见过灯火。咱们撑船的，都绕着走。」' },
-      { text: '「京口瓜洲一水间，客官要过江，坐稳了就走。」他把缆绳往桩上一甩，「船钱靠了岸再给，江上讲的是个信字。」' }
+      { text: '「京口瓜洲一水间，客官要过江，坐稳了就走。」他把缆绳往桩上一甩，「船钱上船先给，十文。江上讲的是个信字。」' }
     ] } },
   { id: 'zj_daiduting', name: '待渡亭', obj: true, icon: 'stele', brief: '亭柱上刻满了字',
     look: '亭柱上刻满了过客留的字，诗也有，骂人的话也有。有一行刻得极深，像是用剑划的：「一水之隔，二十年。」',

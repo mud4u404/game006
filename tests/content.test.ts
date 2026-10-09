@@ -702,6 +702,22 @@ describe('后果看得见', () => {
     report(errs);
   });
 
+  it('重招的后续（after）中不中都说得通：闪开时接「落了空」，挨打时接「正中你某处」，不许写成落空或打中（审查 F11）', () => {
+    const bad = FOES.flatMap(f => (f.tells ?? []).filter(t => /避过|让过|扑了个空|扫空|落了空|躲过|闪开|正中/.test(t.after ?? '')).map(t => `${f.id}「${t.name}」：${t.after}`));
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('破绽只写失误，不写「空门」，也不带主语：引擎会在前面接名字、后面接「某处空门大开」（审查 F35、E36）', () => {
+    const bad = FOES.flatMap(f => (f.opening ?? []).filter(o => o.includes('空门') || o.startsWith(f.name) || /^[^，]{1,6}们/.test(o)).map(o => `${f.id}：「${o}」`));
+    expect(bad, bad.join('\n')).toEqual([]);
+  });
+
+  it('只有序章、主线会自己挂上横幅：支线记不记挂由玩家定（docs/huojianghu.md 第四节，审查 B07）', () => {
+    const all = JSON.stringify({ ROOMS, NPCS, QUESTS, STORIES, FOES, ITEMS, NEWS, SKILLS, ENCOUNTERS, EYES, SHI, JOBS });
+    const bad = [...all.matchAll(/"type":"track","id":"([^"]+)"/g)].map(m => m[1]).filter(id => id !== 'prologue' && !id.startsWith('main'));
+    expect(bad, `这些支线被内容自己挂上了横幅：${bad.join('、')}。删掉 { type: 'track' }`).toEqual([]);
+  });
+
   /** 每个对手都要有一处开打，不然写了也白写（审查 D02：断云虎没处开打，走药材交不了）。欠账同上 */
   const NO_FIGHT_DEBT = ['xsb_xunren', 'xsb_xiongfan', 'xsb_jiaofei'];
   it('每个对手都有地方开打', () => {

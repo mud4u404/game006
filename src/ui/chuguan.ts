@@ -8,7 +8,7 @@ import { $, cn, liang } from '../core/util';
 import { room } from '../content';
 import { ZONE_NAME } from '../engine/duel';
 import { gongliText } from '../engine/ren';
-import { nextYue, settleAway, skillName, yueText, type RestReport } from '../engine/shiguang';
+import { nextYue, settleAway, skillName, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
 import { inFight } from './fight';
 import { openSheet, render } from './shell';
 
@@ -37,7 +37,7 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
   // 重伤闭关养不好（engine/shang.ts）：出关时说清楚去哪儿治
   const heavy = (['hand', 'foot', 'inner'] as const).filter(z => S.wounds[z] >= 2);
   if (heavy.length) lines.push(`<div><span class="tag danger">重伤</span><span>${heavy.map(z => ZONE_NAME[z]).join('、')}的伤还重。重伤闭关养不好，要找郎中看伤，或者服药（跌打酒治手足，内伤药治内息）。</span></div>`);
-  if (S.xinmo.n >= 0.5) lines.push(`<div><span class="tag danger">心魔</span><span>心中有愧（${S.xinmo.why}），静修难进。还了这份情、了却这件事，才化得开。</span></div>`);
+  if (S.xinmo.n >= 0.5) lines.push(`<div><span class="tag danger">心魔</span><span>${xinmoLine()}</span></div>`);
   for (const m of r.missed) lines.push(`<div><span class="tag danger">失约</span><span>${m}</span></div>`);
   if (y) lines.push(`<div><span class="tag warn">有约</span><span>${yueText(S, y)}</span></div>`);
   for (const n of r.news) lines.push(`<div><span class="tag warn">传闻</span><span>${n}</span></div>`);

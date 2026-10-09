@@ -43,6 +43,8 @@ export interface Cond {
   attr?: { key: AttrKey; atLeast: number };
   /** 今天是这个约的约期，约还没了结（engine/shiguang.ts） */
   yue?: string;
+  /** 手上挂着这个约，还没到日子（约期未到时人物说「还没到日子」，不再从头自我介绍） */
+  yueAhead?: string;
   /** 现在的营生是这个身份（engine/shenfen.ts）：youxia 游侠、biaoshi 镖师…… */
   shenfen?: string;
   /** 正在办这件差事（接下了，还没交差） */

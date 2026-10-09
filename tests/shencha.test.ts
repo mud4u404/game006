@@ -3,11 +3,12 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
-import { dayNo, setNowMs } from '../src/core/time';
+import { advanceDays, dayNo, setNowMs } from '../src/core/time';
 import { run } from '../src/engine/dsl';
 import { act, roomNpcs, verbsOf } from '../src/engine/world';
 import { npc } from '../src/content';
-import { canWait } from '../src/engine/shiguang';
+import { canWait, checkYue, xinmoLine } from '../src/engine/shiguang';
+import { nextTierLine } from '../src/engine/ren';
 
 beforeEach(() => {
   setNowMs(() => 1_000_000_000_000);
@@ -94,5 +95,30 @@ describe('约', () => {
     const day = S.day;
     expect(act('jc_yz_ruanniang', '住店').text).toContain('失约');
     expect([S.day, S.silver]).toEqual([day, 300]);
+  });
+});
+
+describe('差事', () => {
+  it('G18 悬赏榜上揭的差事误了期：这张榜过几日才能再揭，不生心魔（不对木榜心中有愧）', () => {
+    run([{ type: 'job', id: 'xs_hezei' }]);
+    expect(S.job?.id).toBe('xs_hezei');
+    advanceDays(S, 10);
+    checkYue(S);
+    expect(S.job).toBeNull();
+    expect(S.xinmo.n).toBe(0);
+  });
+});
+
+describe('修炼的说明', () => {
+  it('G10 人物页写下一档要什么、眼下差多少', () => {
+    expect(nextTierLine(S)).toMatch(/^要入三流：.*第三重.*功力/);
+  });
+  it('G17、G19、G26 心魔照实写：静修打几折、几层会走火、随日子淡；淡到很小不写「打十折」', () => {
+    S.xinmo = { n: 1, why: '失约于柳寒舟' };
+    expect(xinmoLine(S)).toContain('打八折');
+    expect(xinmoLine(S)).toContain('走火');
+    S.xinmo = { n: 0.1, why: '失约于柳寒舟' };
+    expect(xinmoLine(S)).toContain('几乎不受影响');
+    expect(xinmoLine(S)).not.toContain('化得开');
   });
 });

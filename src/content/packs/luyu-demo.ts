@@ -13,8 +13,9 @@ import type { ContentPack, EncounterDef, FoeDef, StoryDef } from '../types';
 const NIGHT = { hour: { from: 18, to: 6 } };
 
 const ENCOUNTERS: EncounterDef[] = [
-  { id: 'luyu_maishen', region: ['yz'], to: ['cheng', 'dukou'], once: true, story: 'ly_maishen' },
-  { id: 'luyu_xiaozei', region: ['yz'], to: ['cheng', 'cheng_tavern', 'yz_fuya', 'hu'], once: true, story: 'ly_xiaozei' },
+  // 卖身葬父、小毛贼都在白天；小毛贼不在府衙门口拦人（审查 B29）
+  { id: 'luyu_maishen', region: ['yz'], to: ['cheng', 'dukou'], once: true, if: { hour: { from: 6, to: 19 } }, story: 'ly_maishen' },
+  { id: 'luyu_xiaozei', region: ['yz'], to: ['cheng', 'cheng_tavern', 'hu'], once: true, if: { hour: { from: 6, to: 19 } }, story: 'ly_xiaozei' },
   // 那个孩子，过些日子在渡口又遇上了：你当初怎么待他，他现在就是什么样子
   { id: 'luyu_xiaozei_fed', region: ['yz'], to: ['dukou'], once: true, if: { flag: 'ly_xiaozei_fed' }, story: 'ly_xiaozei_fed' },
   { id: 'luyu_xiaozei_beat', region: ['yz'], to: ['dukou'], once: true, if: { flag: 'ly_xiaozei_beat' }, story: 'ly_xiaozei_beat' },
@@ -170,7 +171,7 @@ const XIAOZEI: FoeDef = {
   flourish: ['闭着眼睛抡过来', '棍子抡得呼呼响，脚下却直打晃', '咬着牙捅过来'],
   tells: [
     { name: '拼命一棍', text: '孩子双手攥紧木棍，憋红了脸，像是要把全身的力气都砸下来……', dom: 'li', after: '木棍砸在墙上，断成了两截！' },
-    { name: '扑上来抱腿', text: '孩子忽然扔了棍子，弓着身子朝你腿上扑过来……', dom: 'su', after: '他扑了个空，摔在泥里。' }
+    { name: '扑上来抱腿', text: '孩子忽然扔了棍子，弓着身子朝你腿上扑过来……', dom: 'su', after: '他自己收不住脚，踉跄了两步。' }
   ],
   asides: ['巷口有人探头看了一眼，又缩了回去。', '孩子的草鞋带子断了。'],
   opening: ['抡空了棍子', '脚下打滑', '喘得直不起腰'],

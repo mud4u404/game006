@@ -22,7 +22,7 @@ const ROOMS: RoomDef[] = [
       { text: '你沿着江堤走回小屋……' }
     ],
     onEnter: [{ if: { quest: { id: 'prologue', is: 2 } }, do: [{ type: 'story', id: 'p_night' }] }] },
-  { id: 'gz_town', name: '瓜洲镇', area: '瓜洲 · 老街', region: 'gz', t: 0, map: [62, 40],
+  { id: 'gz_town', name: '瓜洲镇', area: '瓜洲 · 老街', region: 'gz', t: 0, map: [62, 40], nightQuiet: true,
     desc: [
       { if: { hour: { from: 19, to: 5 } },
         text: '老街上了门板，茶摊的炉子封了火，卖鱼阿婆的鱼担也收回了家。街上只有打更的梆子声，一下，一下，敲得夜更长。' },
@@ -92,7 +92,8 @@ const NPCS: NpcDef[] = [
       ],
       请教: [{ text: '江伯摆摆手：「等我好些了，再陪你练。」他望着江面出神，像是在想很远的事。' }]
     } },
-  { id: 'huichun', name: '回春堂掌柜', ini: '药', tone: 'jade', brief: '在柜台后碾药',
+  // 药铺住在铺子楼上，夜里敲门也开（序章里江伯等着这两副药，过了时辰也得抓得到）
+  { id: 'huichun', name: '回春堂掌柜', ini: '药', tone: 'jade', brief: '在柜台后碾药', night: true,
     look: '圆脸的中年人，手指被药汁染成了褐色。',
     verbs: ['交谈', '观察', '抓药'],
     actions: {

@@ -154,6 +154,8 @@ log('了尘：', (await p.textContent('.reply')).slice(0, 24));
 await goQuest('运河渡口');
 await click('[data-act="sel:tu"]');
 await click('[data-act="do:动手"]');
+await p.waitForTimeout(500);
+await click('[data-act="do:动手"]');                  // 动手要再点一下才算
 log('屠千山', await fight(null));
 log('结算：', (await p.textContent('#sheetLayer .r-h')).trim());
 await snap('09-result');

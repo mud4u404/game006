@@ -4,8 +4,8 @@ import { npcName, roomNpcs } from '../../engine/world';
 import { ROOMS } from '../../content';
 import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
-import { gongliText, houtianOf, tierNow } from '../../engine/ren';
-import { LODGING, yueText } from '../../engine/shiguang';
+import { gongliText, houtianOf, nextTierLine, tierNow } from '../../engine/ren';
+import { LODGING, xinmoLine, yueText } from '../../engine/shiguang';
 import { shenfenOf, shenfenText, gongxianOf } from '../../engine/shenfen';
 import { menguiText, pastSectText, sectText } from '../../engine/shicheng';
 import { fullDate } from '../../core/time';
@@ -35,7 +35,7 @@ function renqingHTML(): string {
 /** 约与心事：答应过谁、哪天在哪里；心中有愧的事（docs/foundation.md 第三节第三、九条） */
 function yueHTML(): string {
   const rows = S.yue.slice().sort((a, b) => a.due - b.due).map(y => `<div><span class="tag warn">约</span><span>${yueText(S, y)}</span></div>`);
-  if (S.xinmo.n >= 0.05) rows.push(`<div><span class="tag danger">心魔</span><span>心中有愧（${S.xinmo.why}），静修打${cn(Math.round((1 - 0.2 * S.xinmo.n) * 10))}折。还诺、赔罪、了却这件事，才化得开；不化解，也会随日子慢慢淡。</span></div>`);
+  if (S.xinmo.n >= 0.05) rows.push(`<div><span class="tag danger">心魔</span><span>${xinmoLine()}</span></div>`);
   return rows.length ? `<section class="card here-card"><div class="sec-h"><h2>约与心事</h2></div><div class="news">${rows.join('')}</div></section>` : '';
 }
 
@@ -86,7 +86,7 @@ export function viewRenwu(): string {
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
     <div><span>江湖历</span><b>${fullDate(S)}</b></div>
-  </div></section>
+  </div>${nextTierLine(S) ? `<p class="muted">${nextTierLine(S)}</p>` : ''}</section>
   ${yingshengHTML()}
   ${shimenHTML()}
   ${yueHTML()}

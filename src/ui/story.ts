@@ -5,7 +5,7 @@ import { titleAccountHTML } from './views/account-link';
 import { S, load, newGame, save, saveBroken, setState, skipToYangzhou, type GameState } from '../core/state';
 import { dateStr } from '../core/time';
 import { $, cleanName, fmt } from '../core/util';
-import { storyById } from '../content';
+import { room, storyById } from '../content';
 import type { StoryDef } from '../content/types';
 import { lackOf, newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
 import { afterOutcome, hooks, registerHandlers, render, swapped, toast, tooSoon } from './shell';
@@ -128,8 +128,11 @@ function finishChapter(): void {
 
 /* ---------- 标题画面 ---------- */
 
+/** 存档里的地点可能已经改名、删掉（旧存档）：取不到就不写 */
+const areaOf = (id: string): string => { try { return room(id).area; } catch { return ''; } };
+/** 标题页「继续」底下的一行：谁、在哪儿（审查 H34、A36：原来写死「第一回 · 扬州」，人在苏州也这么写） */
 function chapterLabel(s: GameState): string {
-  return s.chapter === 0 ? '序章 · 瓜洲渡' : '第一回 · 扬州';
+  return s.chapter === 0 ? '序章 · 瓜洲渡' : `沈${s.name} · ${areaOf(s.loc)}`;
 }
 
 /** showTitle(true) 时若有存档会显示「继续」 */

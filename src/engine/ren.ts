@@ -7,7 +7,8 @@
 import type { GameState } from '../core/state';
 import { GRADE_COEF } from '../content';
 import type { SkillDef } from '../content/types';
-import { COMMON, gongliAt, houtian, hpMaxOf, mpMaxOf, tierName, tierOf, type Attr, type Person } from './person';
+import { COMMON, gongliAt, houtian, hpMaxOf, mpMaxOf, realmAt, tierName, tierOf, type Attr, type Person } from './person';
+import { cn } from '../core/util';
 import { activeOuter, slotSkill } from './wuxue';
 import { gearBonus } from './zhuangbei';
 
@@ -75,6 +76,20 @@ export function gongliText(g: number): string {
   };
   if (y === 0) return half ? '半年' : '不到半年';
   return (y === 1 && half ? '一年半' : cnN(y) + '年' + (half ? '多' : ''));
+}
+
+/**
+ * 下一档要什么、差多少（审查 G10：页面上看不到下一档的门槛）。到顶了返回 null。
+ * 档次看两样：搭配着的武功里练得最高的那门到了第几重，功力够不够这一档的一半（engine/person.ts 的 tierOf）
+ */
+export function nextTierLine(s: GameState): string | null {
+  const t = tierNow(s).t;
+  if (t >= 5) return null;
+  const p = personOf(s), r = Math.max(p.outer, p.neigong, p.qinggong);
+  const needR = Math.ceil(realmAt(t + 1) - 1e-9), needG = gongliAt(t + 1) * 0.5;
+  const a = `搭配着的武功里练得最高的一门到第${cn(needR)}重${r >= needR ? '（已到）' : `（眼下第${cn(r)}重）`}`;
+  const b = `功力${gongliText(needG)}${s.gongli >= needG ? '（已到）' : `（眼下${gongliText(s.gongli)}）`}`;
+  return `要入${tierName(t + 1)}：${a}，${b}。`;
 }
 
 /** 下一档要多少功力（档次看功力够不够这一档的一半） */
