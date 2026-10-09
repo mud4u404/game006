@@ -253,6 +253,7 @@ function narrate(evs: Ev[]): void {
       case 'dot': bubble('aside', { bleed: `${f.name}伤口血流不止。`, poison: `${f.name}毒性发作，脸色发青。`, burn: `${f.name}灼伤处火辣辣地疼。` }[e.kind], e.dmg, 'out'); break;
       case 'opening': showOpening(); break;
       case 'phase2': if (f.phase2) bubble('foe', f.phase2); break;
+      case 'ease': bubble('aside', `${f.name}收了攻势，只守不攻，陪你把约好的招数走完。`); break;
       case 'ally': {
         const a = c.prep.filter(p => p.ally)[e.i]?.ally;
         if (!a) break;
