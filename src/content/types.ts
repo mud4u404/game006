@@ -683,7 +683,13 @@ export interface StoryDef {
   endChapter?: { small: string; big: string };
 }
 
-export interface NewsDef { if?: Cond; text: string }
+/**
+ * 江湖传闻池（NEWS）。话要有来处（docs/huo-shijie.md 3.4）：
+ * - who：谁嘴里会有这句话——行当（说书、船夫、脚夫、更夫、掌柜、捕快、叫化、盐商、镖师、郎中、跑腿、和尚、道士、渔家……）或势力 id（dong、xi、guan、wang、gai、hei……）。不写 = 谁都不知道，不进池（CI 查）
+ * - far：外地的事，只从跑码头的（船夫、镖师、外乡人）嘴里出来，本地人不知道
+ * - about：说的是玩家自己的事迹（写了旗标条件、说「少年」「少侠」的），只在玩家做过之后、由目击者说起
+ */
+export interface NewsDef { if?: Cond; text: string; who?: string[]; far?: true; about?: 'you' }
 
 /** 地区；order 是地图上地区标签的先后，小的在前 */
 export interface RegionDef { name: string; note: string; order?: number }
