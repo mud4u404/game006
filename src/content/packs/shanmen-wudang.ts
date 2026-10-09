@@ -201,7 +201,7 @@ const NPCS: NpcDef[] = [
 const KAO: FoeDef = {
   id: 'smwd_kao', name: '清和道长', title: '武当考校', ini: '清', tone: 'jade',
   weapon: '一双肉掌', ws: '拳', tag: '考校',
-  nature: '中正', reach: '短', rank: 0.6, build: 'inner', spar: true, firstTell: 3,
+  nature: '中正', reach: '短', rank: 0.6, build: 'inner', spar: true, rounds: 30, firstTell: 3,
   moves: ['揽雀尾', '白鹤亮翅', '野马分鬃', '如封似闭'],
   flourish: ['掌走弧线，绵绵不断', '脚下踩着太极步，进退都在圈里', '一掌按来，掌心含着劲', '半斜半正，让到你侧门'],
   tells: [
@@ -234,7 +234,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smwd_zhuang', name: '武当 · 站桩', stages: [
-    { title: '在琼花观的老琼花树下站桩', to: 'smwd_qionghua' },
+    { title: '在琼花观的老琼花树下站桩', to: 'smwd_qionghua', who: 'smwd_saochen', hint: '扫尘会给你腾块地，在老琼花树下站住桩。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
     { title: '武当 · 站桩 · 完' }
   ] }
 ];

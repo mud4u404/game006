@@ -13,6 +13,7 @@ import { advanceDays, advanceMin, dayNo, setNowMs } from '../src/core/time';
 import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, SHI, STORIES, foeById, jobById, npc, questById, room, shiById, storyById } from '../src/content';
 import { pickBranch, run, test, type Outcome } from '../src/engine/dsl';
 import type { Effect } from '../src/content/types';
+import { questNav } from '../src/engine/daohang';
 import { act, curQuest, enter, hopMin, openExits, pathTo, payFare, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
 import { Duel, RANDOM, SKILLED, simulate, type DuelRes, type Policy } from '../src/engine/duel';
@@ -371,7 +372,16 @@ function play(r: Run): void {
     if (r.focus && S.quests[r.focus] === questById(r.focus)!.stages.length - 1) break;
     const where = `第 ${r.seed} 局第 ${i} 步（${room(S.loc).name}）`;
     // 照 ui/shell.ts 的 render：失约、江湖往前走
+    // 导航说真话（engine/daohang.ts）：推进一步的那一刻，见闻簿上这一步写的门槛（时辰除外：路上就到了）都该打勾、也没写着做不成
+    const pre = Object.keys(S.quests).map(id => ({ id, n: questNav(id) }));
     try { step(seen); checkYue(S); tickShi(); } catch (e) { err(`${where}报错：${(e as Error).message}`); }
+    for (const { id, n } of pre) {
+      if (!n || (S.quests[id] ?? -1) <= n.stage) continue;
+      const st = questById(id)!.stages[n.stage];
+      const miss = (st.need ?? []).filter((g, k) => !n.needs[k].ok && Object.keys(g.if).some(x => x !== 'hour')).map(g => g.text);
+      if (miss.length) err(`${where}：「${n.name}」第 ${n.stage + 1} 步推进了，见闻簿却写着还差「${miss.join('、')}」`);
+      if (n.state === '未竟') err(`${where}：「${n.name}」第 ${n.stage + 1} 步推进了，见闻簿却写着做不成了（${n.why}）`);
+    }
     for (const [id, st] of Object.entries(S.shi ?? {})) cov.shi.add(`${id}.${st.at}`);
     if (r.shi && Object.keys(shiById(r.shi)!.steps).every(k => cov.shi.has(`${r.shi}.${k}`))) break;
     // 这件事了结了，还有没走过的路：从头再起一回（另一个玩家会走另一条路）

@@ -6,7 +6,7 @@
  * - 约：人物和你定约。静修碰到约期，就在约期那天一早出关；过了约期还没了结，就是失约，生一层心魔。
  */
 import { tickShi } from './shishi';
-import { S, pushFeed, type GameState, type Yue } from '../core/state';
+import { S, pushFeed, type GameState, type Yue, type Zhu } from '../core/state';
 import { cn } from '../core/util';
 import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
 import { NEWS, npc, room, skillById } from '../content';
@@ -25,6 +25,18 @@ export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
  * 身上留一百文盘缠不拿来住店：一趟长闭关不至于把人花得一文不剩，连买条鱼、打点衙役的钱都没有（机器玩家摸底时发现）。
  */
 export const LODGING = { inn: 100, lusuEff: 0.8, keep: 100 };
+
+/**
+ * 住处三选一（docs/paiban.md D05，负责人 10-09 同意）：闭关、下线前自己选，下线沿用上回的选择。
+ * 客栈一日一百文，钱不够的那几夜露宿；露宿不花钱，打坐参悟打八折；有师门的回师门住，不花钱。
+ * 选了师门、后来没了师门的，算客栈。
+ */
+export function zhuOf(s: GameState): Zhu {
+  if (s.zhu === 'lusu') return 'lusu';
+  if (s.zhu === 'home' && s.sect) return 'home';
+  return 'inn';
+}
+export const ZHU_NAME: Record<Zhu, string> = { inn: '客栈', lusu: '露宿', home: '师门' };
 /** 心魔：每层打几折；每个江湖日淡多少层；几层以上静修会走火，走火一日的几率、一次掉几成功力 */
 export const XINMO = { k: 0.2, decay: 1 / 40, zouhuoAt: 2, zouhuoP: 0.02, zouhuoLoss: 0.1, max: 3 };
 
@@ -34,8 +46,12 @@ export const realHours = (s: GameState): number => Math.max(0, (nowMs() - s.real
 /** 铁律挡住时的话 */
 export const TIELV_TEXT = '江湖上的日子，已经走在现实前头了，这一夜过不去。先下线歇歇，回来再说。';
 
-/** 铁律：现在还能往前拨几个江湖日 */
-export const allowance = (s: GameState): number => Math.max(0, Math.floor(realHours(s) + SHIGUANG.slack - (dayNo(s) - s.real.startDay)));
+/**
+ * 铁律：现在还能往前拨几个江湖日。封顶在余裕加一次离开最多算的日子：
+ * 不然离开三天回来，下线静修只算十六日，剩下的几十日点闭关全拿回来，一次离开的上限形同虚设（审查 G06）
+ */
+export const allowance = (s: GameState): number =>
+  Math.max(0, Math.min(SHIGUANG.slack + SHIGUANG.awayCap, Math.floor(realHours(s) + SHIGUANG.slack - (dayNo(s) - s.real.startDay))));
 /** 离开了几个现实小时 */
 export const awayHours = (s: GameState): number => Math.max(0, (nowMs() - s.real.seen) / H);
 
@@ -104,8 +120,8 @@ export interface RestReport {
   zouhuo: number;
   news: string[];
   missed: string[];
-  /** 住处：全住了店，还是有几夜露宿；住店花了多少文 */
-  lodging: 'inn' | 'lusu';
+  /** 选的住处；住客栈的，钱不够那几夜露宿（lusuDays） */
+  lodging: Zhu;
   cost: number;
   lusuDays: number;
 }
@@ -114,9 +130,11 @@ export interface RestReport {
 export function jingxiu(s: GameState, days: number, rng: () => number = Math.random): RestReport {
   const xm0 = s.xinmo.n;
   const xm1 = Math.max(0, xm0 - XINMO.decay * days);
-  // 嚼用：盘缠以外的钱够住几日住几日，余下的日子露宿，睡不安稳，那几日打坐、参悟打八折
-  const innDays = Math.max(0, Math.min(days, Math.floor((s.silver - LODGING.keep) / LODGING.inn)));
-  const cost = innDays * LODGING.inn, lusuDays = days - innDays;
+  // 嚼用：住客栈的，盘缠以外的钱够住几日住几日，余下的日子露宿，睡不安稳，那几日打坐、参悟打八折；
+  // 自己选露宿的全露宿；回师门的不花钱、不打折
+  const zhu = zhuOf(s);
+  const innDays = zhu === 'home' ? days : zhu === 'lusu' ? 0 : Math.max(0, Math.min(days, Math.floor((s.silver - LODGING.keep) / LODGING.inn)));
+  const cost = zhu === 'inn' ? innDays * LODGING.inn : 0, lusuDays = days - innDays;
   s.silver -= cost;
   const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2) * (days ? (innDays + lusuDays * LODGING.lusuEff) / days : 1);
   const jx = jingxiuPlan(s, days, eff);
@@ -145,7 +163,7 @@ export function jingxiu(s: GameState, days: number, rng: () => number = Math.ran
   more.slice().reverse().forEach(n => pushFeed('传闻', n));
   news.push(...more);
   const missed = checkYue(s);
-  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed, lodging: lusuDays ? 'lusu' : 'inn', cost, lusuDays };
+  return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed, lodging: zhu, cost, lusuDays };
 }
 
 /** 过了约期还没了结的约：失约。执行失约的后果，生一层心魔。返回失约的说明 */

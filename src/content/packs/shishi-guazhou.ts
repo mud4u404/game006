@@ -24,6 +24,8 @@ const SHI: ShiDef[] = [
   {
     id: XUN, name: '鲥鱼汛争江面', region: 'gz',
     start: { quest: { id: 'prologue', atLeast: 3 }, flag: 'ssgz_seen' }, first: 'qi',
+    // 鲥鱼汛年年有：这一汛没赶上，下一汛还争（等有了月份，改成四到五月，docs/paiban.md C12）
+    again: 90,
     steps: {
       qi: {
         now: '鲥鱼汛到了，渔家的船在江口下了网。盐商的货船要道正压着渔场，两下里为江面争起来，网照下，船照开。',

@@ -85,7 +85,8 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
-        { if: { flag: 'bj_ztq_free' }, text: '孙镖头啐了一口：「瓜洲那条道上的贼，你也放？」他把麻绳勒紧：「也罢，听说那条道如今太平了。镖局的规矩是送到，怎么送到，老头子不管。」' },
+        // 放了钻天鹞，他还你一回人情；还过了就两清，下回各凭本事（审查 D08：原来趟趟一声口哨就白拿）
+        { if: { flag: 'bj_ztq_free', notFlag: 'bj_ztq_qing' }, text: '孙镖头啐了一口：「瓜洲那条道上的贼，你也放？」他把麻绳勒紧：「也罢，听说那条道如今太平了。镖局的规矩是送到，怎么送到，老头子不管。」' },
         { if: { flag: 'bj_ztq_guan' }, text: '孙镖头拍拍你的肩膀：「钻天鹞送了官，瓜洲那条道上的毛贼都老实了几天。不过他那几个弟兄，你往后走那条道，多留个心眼。」' },
         { if: { shenfen: 'biaoshi' }, text: '孙镖头勒紧麻绳：「走镖，三分靠刀，七分靠嘴。路上碰见拦道的，先让老蔡喊镖号，喊不住再动手。」' },
         { text: '孙镖头头也不抬：「看什么看？托镖去柜上。」' }
@@ -118,7 +119,10 @@ const NPCS: NpcDef[] = [
       交镖: [
         { if: { flag: 'bj_ztq_free' },
           text: '镇外林子里有人吹了一声口哨，三长一短，再没动静。老蔡愣了愣：「钻天鹞的哨子……他认得你。」回春堂掌柜出来点了货，在镖单上按了手印。',
-          do: [{ type: 'jobDone', id: 'bj_gz' }] },
+          do: [{ type: 'jobDone', id: 'bj_gz' }, { type: 'flag', flag: 'bj_ztq_qing' }] },
+        { if: { flag: 'bj_ztq_qing' },
+          text: '镇外林子里又是三长一短的哨子。钻天鹞从树后转出来，冲你抱了抱拳：「上回的情，还过了。今日各凭本事。」老蔡一把扯开嗓子：「威——远——」',
+          do: [{ type: 'fight', foe: 'bj_jie_gz' }] },
         { if: { flag: 'bj_ztq_guan' },
           text: '回春堂掌柜刚出来点货，镇外林子里窜出几条汉子，为首的一个黑脸膛：「钻天鹞是你送的官？今日连本带利讨回来！」老蔡一把扯开嗓子：「威——远——」',
           do: [{ type: 'fight', foe: 'bj_jie_gz2' }] },
@@ -223,7 +227,7 @@ const LOST_ZJ: FightResult = {
 const FOES: FoeDef[] = [
   {
     id: 'bj_shibiao', name: '孙镖头', title: '试镖', ini: '孙', tone: 'red', weapon: '雁翎刀', ws: '刀', tag: '试镖',
-    nature: '刚', reach: '短', rank: 0.8, build: 'outer', spar: true, firstTell: 3,
+    nature: '刚', reach: '短', rank: 0.8, build: 'outer', spar: true, rounds: 30, firstTell: 3,
     moves: ['缠头裹脑', '拦腰一刀', '劈山式', '顺水推舟'],
     flourish: ['刀背一翻，横拍过来', '一刀斜劈，收得干干净净', '刀走中宫，直取胸前', '脚下踏着镖局的青砖，步步逼近'],
     tells: [

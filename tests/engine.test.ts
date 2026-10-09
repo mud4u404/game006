@@ -552,7 +552,7 @@ describe('人情', () => {
 describe('从零练武：成长从江湖上来', () => {
   beforeEach(() => setState(skipToYangzhou()));
 
-  it('开局不入流：寒江三门都在初窥门径；出手轻重随境界，初窥门径打八成，大乘一倍六', () => {
+  it('开局不入流：寒江三门都在初窥门径；出手轻重随境界，初窥门径打八成，天人合一一倍六', () => {
     const g = newGame();
     expect(Object.values(g.skills).every(x => x!.r === 0 && x!.p === 0)).toBe(true);
     const lo = dmgMul(personOf(S));

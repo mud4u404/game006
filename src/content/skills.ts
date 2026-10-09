@@ -4,7 +4,8 @@
  */
 import type { FxKind, SectRank, SkillCategory, SkillGrade, SkillNature, SkillReach, SkillTeach, Slot, WeaponKind, WoundKind } from './types';
 
-export const REALMS = ['初窥门径', '略有小成', '融会贯通', '炉火纯青', '登堂入室', '出神入化', '一代宗师', '返璞归真', '大乘'];
+/** 九重境界的名字。第七重原叫「一代宗师」，和档次的「宗师」打架；第九重原叫「大乘」，是佛家修行的词（审查 G16，只改显示） */
+export const REALMS = ['初窥门径', '略有小成', '融会贯通', '炉火纯青', '登堂入室', '出神入化', '登峰造极', '返璞归真', '天人合一'];
 /** 每一重升到下一重所需的熟练度 */
 export const REALM_NEED = [200, 600, 1200, 2000, 3200, 4800, 7000, 10000, 99999];
 export const GRADES: [SkillGrade, string][] = [['凡品', 'fan'], ['良品', 'liang'], ['上品', 'shang'], ['绝品', 'jue'], ['神品', 'shen'], ['禁品', 'jin']];

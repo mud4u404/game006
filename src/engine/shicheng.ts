@@ -31,14 +31,14 @@ const rankIdx = (r: string): number => SECT_RANKS.indexOf(r as never);
  */
 export const pastSectsOf = (s: { pastSects?: readonly PastSect[] }): readonly PastSect[] => s.pastSects ?? [];
 
-/** 拜不回去的门派：叛出过、被逐出过的，返回是怎么离开的；出师的、没拜过的返回 undefined */
-export function barredFrom(s: { pastSects?: readonly PastSect[] }, school: string): '叛门' | '逐出' | undefined {
+/** 拜不回去的门派：辞别、叛出、被逐出过的，返回是怎么离开的；出师的、没拜过的返回 undefined */
+export function barredFrom(s: { pastSects?: readonly PastSect[] }, school: string): '辞别' | '叛门' | '逐出' | undefined {
   for (const p of pastSectsOf(s)) if (p.school === school && p.how !== '出师') return p.how;
   return undefined;
 }
 
 /** 怎么离开的，写给人看的说法：「出师于」「叛出」「被逐出」，后面接门派名 */
-export const leaveWord = (how: LeaveHow): string => (how === '出师' ? '出师于' : how === '叛门' ? '叛出' : '被逐出');
+export const leaveWord = (how: LeaveHow): string => (how === '出师' ? '出师于' : how === '辞别' ? '辞别了' : how === '叛门' ? '叛出' : '被逐出');
 
 /**
  * 学得了吗：门规 → 师门地位 → 前置武学 → 属性门槛 → 历练够不够（学艺的代价）。
@@ -137,7 +137,8 @@ export function realmCap(s: St, def: SkillDef): number {
     }
     cap = Math.min(cap, rooted >= 0 ? rooted + 1 : Math.max(0, any));
   }
-  // 叛出、被逐出的师门，本门武功就此封顶；出师的不封
-  if (barredFrom(s, def.school)) cap = Math.min(cap, s.skills[def.id]?.r ?? 0);
+  // 叛出、被逐出的师门，本门武功就此封顶；出师、辞别的不封
+  const how = barredFrom(s, def.school);
+  if (how === '叛门' || how === '逐出') cap = Math.min(cap, s.skills[def.id]?.r ?? 0);
   return cap;
 }

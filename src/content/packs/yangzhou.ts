@@ -439,9 +439,10 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'main1', name: '第一回 · 扬州', stages: [
-    { title: '寻访大明寺了尘大师', to: 'daming' },
-    { title: '前往运河渡口，截住黑风寨主', to: 'dukou' },
-    { title: '去东关街听听江湖怎么说', to: 'cheng' },
+    { title: '寻访大明寺了尘大师', to: 'daming', who: 'liaochen', hint: '上蜀冈大明寺，寻那扫地的白眉老僧了尘。' },
+    // 屠千山入夜回船上歇（运河渡口 nightQuiet），导航按作息算，不写进门槛
+    { title: '前往运河渡口，截住黑风寨主', to: 'dukou', who: 'tu', hint: '屠千山白天在渡口卸盐，掂量好斤两再上前动手。' },
+    { title: '去东关街听听江湖怎么说', to: 'cheng', who: 'shuoshu', hint: '说书人白天在东关街、晚上在望江楼，去听他一段书。' },
     { title: '寒江旧案 · 第一回完' }
   ] }
 ];

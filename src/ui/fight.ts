@@ -10,7 +10,7 @@ import { REALMS, foeById, itemById, jobById, room, skillById } from '../content'
 import type { AfterDef, AfterOpt, Effect, FoeDef, PrepDef, TellDef } from '../content/types';
 import { run, textVars } from '../engine/dsl';
 import { gainProf } from '../engine/growth';
-import { Duel, ZONE_NAME, type DuelRes, type Ev, type Opt, type RespKey, type Wounds } from '../engine/duel';
+import { Duel, JCY_MAX, ZONE_NAME, type DuelRes, type Ev, type Opt, type RespKey, type Wounds } from '../engine/duel';
 import { RESP_ACT, cheng, chengN, judgeText } from '../engine/formulas';
 import { respSkill } from '../engine/wuxue';
 import { npcName } from '../engine/world';
@@ -148,9 +148,21 @@ function fightHTML(c: Fight): string {
 
 /* ---------- 战斗记录 ---------- */
 
+/**
+ * 点到为止（审查 F03）：切磋、考校、对手不是练家子（饿急了的孩子）时，战报不见血。
+ * 长老刚说「只许点到，不许见血」，下一行就是「鲜血迸流」，出戏
+ */
+const GENTLE: [RegExp, string][] = [
+  [/鲜血迸流/g, '点到即收'], [/受了重创/g, '被点中要处'], [/血流不止/g, '一阵发麻'], [/一阵剧痛/g, '一阵酸麻'],
+  [/受伤/g, '被点中'], [/结结实实打在/g, '轻轻点在'], [/破开护体真气，余劲震得/g, '压住了劲，震得']
+];
+const gentle = (f: FoeDef): boolean => !!f.spar || (f.weak ?? 1) <= 0.2;
+const soften = (html: string): string => GENTLE.reduce((t, [re, to]) => t.replace(re, to), html);
+
 function bubble(type: string, html: string, dmg?: number, kind?: 'out' | 'in' | 'heal'): void {
   const log = $('#flog');
   if (!log) return;
+  if (C && gentle(C.f)) html = soften(html);
   const d = document.createElement('div');
   d.className = 'b ' + type;
   d.innerHTML = html + (dmg ? `<span class="dmg ${kind || 'out'}">${kind === 'heal' ? '+' : '−'}${Math.round(dmg)}</span>` : '');
@@ -570,7 +582,7 @@ function useSkill(k: string): void {
     return;
   }
   if (k === 'jcy') {
-    if ((S.items.jcy || 0) < 1 || c.d.hp >= c.d.hpMax) return;
+    if ((S.items.jcy || 0) < 1 || c.d.hp >= c.d.hpMax || c.d.jcyN >= JCY_MAX) return;
     S.items.jcy--;
     lockFor(c, 1200);
     const evs = c.d.jcy(), e = evs.find(x => x.k === 'item');
@@ -705,7 +717,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 function updAll(): void {
   if (!C) return;
   updFoe(); updMom(); updPlayer(); updSkills();
-  $('#fRound')!.textContent = `第 ${C.d.round} 合`;
+  // 考校「接三十招」：写明撑到第几合算过
+  $('#fRound')!.textContent = C.f.rounds ? `第 ${C.d.round} / ${C.f.rounds} 合` : `第 ${C.d.round} 合`;
 }
 
 function updFoe(): void {
@@ -768,8 +781,8 @@ function updSkills(): void {
   const ult = setSkill('#skUlt', act0 || !ready, !c.kit.ult ? '没有杀招' : ready ? '怒气已满' : `怒气 ${Math.floor(d.rage)}/100`);
   ult.classList.toggle('ready', ready);
   const jcy = $('#skJcy') as HTMLButtonElement;
-  jcy.textContent = `金疮药 ×${S.items.jcy || 0}`;
-  jcy.disabled = act0 || (S.items.jcy || 0) < 1 || d.hp >= d.hpMax;
+  jcy.textContent = d.jcyN >= JCY_MAX ? '金疮药 · 本场用尽' : `金疮药 ×${S.items.jcy || 0}`;
+  jcy.disabled = act0 || (S.items.jcy || 0) < 1 || d.hp >= d.hpMax || d.jcyN >= JCY_MAX;
   const dart = $('#skDart') as HTMLButtonElement;
   dart.textContent = `暗器 ×${S.items.fhs || 0}`;
   dart.disabled = act0 || (S.items.fhs || 0) < 1;

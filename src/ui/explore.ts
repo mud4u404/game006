@@ -5,18 +5,20 @@
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { advanceDays, dateStr } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
-import { questById, room, skillById } from '../content';
+import { room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
 import { XIEJIAO, checkYue, jingxiu, nightBlock, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
-import { act, curQuest, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
+import { questNav } from '../engine/daohang';
+import { act, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
+import { run } from '../engine/dsl';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
-import { setConfirmRestart } from './views/renwu';
+import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
 import { eyeLine } from './views/jianghu';
@@ -183,18 +185,29 @@ registerHandlers({
   travel: v => travelTo(v),
   travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
   quest: () => {
-    const q = curQuest();
+    // 卡住的也照去：差的那一步多半就在那儿办（缘故横幅上已经写着）
+    const q = S.track ? questNav(S.track) : null;
     if (q?.to && q.to !== S.loc) travelTo(q.to);
-    else toast('就在此处');
+    else toast(q && q.state !== '能做' ? q.why : '就在此处');
   },
   questbook: () => { openQuestbook(); },
+  // 离开师门：先看后果卡，再点一次才算（ui/views/renwu.ts 的 sectLeaveSheet）
+  sectLeaveAsk: v => { if (S.sect && (v === '辞别' || v === '叛门')) openSheet(sectLeaveSheet(v), true); },
+  sectLeave: v => {
+    if (!S.sect || (v !== '辞别' && v !== '叛门')) return;
+    if (v === '辞别' && S.pastSects?.some(x => x.how === '辞别')) return;
+    const school = S.sect.school;
+    run([{ type: 'leaveSect', how: v }]);
+    pushFeed('江湖', v === '辞别' ? `你向${school}的师长磕了三个头，辞别下山。` : `你叛出了${school}。`);
+    closeSheet();
+    render();
+  },
+  // 住处三选一（engine/shiguang.ts 的 zhuOf）
+  zhu: v => { if (v === 'inn' || v === 'lusu' || (v === 'home' && S.sect)) { S.zhu = v; render(); } },
   qtrack: v => { if (v) trackQuest(v); },
   qgo: v => {
     if (!v) return;
-    const def = questById(v);
-    if (!def) return;
-    const stageIdx = Math.min(S.quests[v] ?? 0, def.stages.length - 1);
-    const to = def.stages[stageIdx].to;
+    const to = questNav(v)?.to;
     if (!to) { toast('眼下没有要去的地方'); return; }
     if (to === S.loc) { toast('就在此处'); return; }
     closeSheet();

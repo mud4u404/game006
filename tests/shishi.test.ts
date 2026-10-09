@@ -197,12 +197,26 @@ describe('世事的引擎', () => {
     expect(S.feed[0].x).toContain('闹贼');
   });
 
-  it('走进事发的地方就看见了', () => {
+  it('没到过这一带的事停在起头，不白白错过；到了就听说，从那时起才往下走', () => {
     S.flags.boss = true;
     S.loc = 'gz_town'; tickShi();
+    advanceDays(S, 20); tickShi();
+    expect(S.shi?.ss_matou?.at).toBe('qi');
+    expect(S.shi?.ss_matou?.seen).toBeUndefined();
+    S.loc = 'cheng'; tickShi();
+    expect(S.shi?.ss_matou?.seen).toBe('qi');
     advanceDays(S, 2); tickShi();
     expect(S.shi?.ss_matou?.at).toBe('duizhi');
-    expect(S.shi?.ss_matou?.seen).toBeUndefined();
+  });
+
+  it('走进事发的地方就看见了', () => {
+    S.flags.boss = true;
+    S.loc = 'cheng'; tickShi();
+    // 听说了就往下走，人走开了也照走，只是听不到后来的话
+    S.loc = 'gz_town';
+    advanceDays(S, 2); tickShi();
+    expect(S.shi?.ss_matou?.at).toBe('duizhi');
+    expect(S.shi?.ss_matou?.seen).toBe('qi');
     S.loc = 'dukou'; enter('dukou');
     expect(S.shi?.ss_matou?.seen).toBe('duizhi');
     expect(roomNpcs('dukou')).toContain('ss_jiaowu');

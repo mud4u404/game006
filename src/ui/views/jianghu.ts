@@ -1,10 +1,11 @@
 import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
-import { foeById, npc, questById, room } from '../../content';
-import { curQuest, hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
+import { foeById, npc, room } from '../../content';
+import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
+import { questNav } from '../../engine/daohang';
 import { kanren } from '../../engine/zhaoshi';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef } from '../../content/types';
@@ -22,16 +23,19 @@ export function viewJianghu(): string {
   // 刚说完话人就走了（世事推着他离场、跳了河、回去报信）：话留着，不然玩家只看到动态里一行小字（审查 C03）
   const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id)
     ? `<section class="card here-card"><div class="detail"><div class="d-h"><b>${npcName(S.reply.id)}</b><small>${npc(S.reply.id)!.obj ? '' : '说完就走了'}</small></div><div class="reply">${S.reply.text}</div></div></section>` : '';
-  // 横幅只挂记挂着、还没了结的心事（docs/huojianghu.md 第三节第四条）
-  const cq = curQuest();
-  const q = cq && (S.quests[S.track] ?? 0) < (questById(S.track)?.stages.length ?? 0) - 1 ? cq : null;
+  // 横幅只挂记挂着、还没了结的心事（docs/huojianghu.md 第三节第四条）；要等、卡住的写一句缘故（engine/daohang.ts）
+  const nav = S.track ? questNav(S.track) : null;
+  const q = nav && (nav.state === '能做' || nav.state === '要等' || nav.state === '卡住') ? nav : null;
   const feed = S.feed.slice(0, 2).map(e =>
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
   // 横幅标签按任务种类：序章、主线（main 开头）、其余都是支线
   const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
+  // 要等、卡住的缘故另起一行写在标题下面，免得挤成半句
+  const why = q && q.state !== '能做' ? `<small class="qs ${q.state === '卡住' ? 'danger' : 'warn'}">${q.state}：${q.why.replace(/^差：/, '差')}</small>` : '';
+  const dist = q?.to && q.state === '能做' ? `<span class="qd">${q.dist === 0 ? '就在此处' : '约' + minLabel(q.dist)}</span>` : '';
   const quest = !q ? '' : q.to
-    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}</span><span class="qd">${S.loc === q.to ? '就在此处' : '约' + minLabel(travelMin(pathMin(S.loc, q.to)))}</span>${IC.chev}</button>`
-    : `<div class="card quest"><span class="tag accent">${kind}</span><span class="qt">${q.title}</span></div>`;
+    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}${why}</span>${dist}${IC.chev}</button>`
+    : `<button class="card quest" data-act="questbook"><span class="tag accent">${kind}</span><span class="qt">${q.title}${why}</span></button>`;
   const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button></div>`;
   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
   const y = nextYue(S);

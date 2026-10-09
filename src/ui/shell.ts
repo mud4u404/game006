@@ -17,6 +17,7 @@ import { viewDitu } from './views/ditu';
 import { checkYue } from '../engine/shiguang';
 import { tierNow } from '../engine/ren';
 import { tickShi } from '../engine/shishi';
+import { dropFailedTrack } from '../engine/daohang';
 import { isPreview } from '../core/preview';
 
 type Handler = (v: string, el: HTMLElement) => void;
@@ -187,6 +188,8 @@ export function render(): void {
   tierUp();
   // 江湖自己往前走（engine/shishi.ts）：该起头的起头，到日子的往下走
   tickShi();
+  // 记挂着的心事做不成了：放下横幅，动态里记一笔（engine/daohang.ts）
+  dropFailedTrack();
   const main = $('#main'), tabs = $('#tabs');
   if (!main || !tabs) return;
   renderBar();

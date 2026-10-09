@@ -397,7 +397,7 @@ const NPCS: NpcDef[] = [
         { if: { item: { id: 'sz_songwen' } }, text: '「两口剑？你当自己是剑冢里埋的。」' },
         { if: { silver: 600 },
           text: '闻铁匠取下一口松纹剑，油布擦得雪亮：「剑身的松纹是锻出来的，不是画的。苏州人爱挂着看，这口是砍人的。」（银两 −600 文）',
-          do: [{ type: 'silver', delta: -600 }, { type: 'item', id: 'sz_songwen', delta: 1 }, { type: 'toast', text: '松纹剑 +1' }] },
+          do: [{ type: 'silver', delta: -600 }, { type: 'item', id: 'sz_songwen', delta: 1 }, { type: 'toast', text: '吴门松纹剑 +1' }] },
         { text: '「六百文。」闻铁匠把剑横在砧上，「两面开刃，锻一千锤——便宜你了。」' }
       ],
       买枪: [
@@ -679,7 +679,7 @@ const NEWS: NewsDef[] = [
 
 const ITEMS: ItemDef[] = [
   { id: 'sz_yaodao', name: '雁翎腰刀', kind: '装备', price: 400, desc: '雁翎腰刀，刀身比寻常的窄一分，是走水路的打法制的。山塘街闻家铁铺打的名目。', equip: { slot: '兵器', weapon: '刀', reach: '短' } },
-  { id: 'sz_songwen', name: '松纹剑', kind: '装备', price: 600, desc: '剑身锻出细密的松针纹，两面开刃。闻铁匠一年打不了几口，打来是使的。', equip: { slot: '兵器', weapon: '剑', reach: '短' } },
+  { id: 'sz_songwen', name: '吴门松纹剑', kind: '装备', price: 600, desc: '剑身锻出细密的松针纹，两面开刃。闻铁匠一年打不了几口，打来是使的。', equip: { slot: '兵器', weapon: '剑', reach: '短' } },
   { id: 'sz_huaqiang', name: '花枪', kind: '装备', price: 500, desc: '枪头加了锡，走水路不生锈，枪缨染成火色。闻家的枪头，苏州的水上人都认。', equip: { slot: '兵器', weapon: '枪', reach: '长' } }
 ];
 
