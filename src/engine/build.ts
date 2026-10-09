@@ -105,7 +105,7 @@ export function kitOf(b: Build): Kit {
   const st = b.stage, ng = b.neigong;
   const rooted = (k: SkillDef): boolean => (ng ? rootsOn(k, ng) : k.school === JIANGHU_RULE.school);
   // 被动与合璧：和实战共用一套算法（beidong.ts）
-  const pv = passivesOf(b, { outer: outerOf(b) });
+  const pv = passivesOf(b, { outer: outerOf(b), weaponReady: !!b.weapon });
   const { sum: passive, openers, hit } = pv;
   const outer = outerOf(b);
   const moves: Move[] = [];

@@ -165,14 +165,15 @@ describe('共用的汇总算法：实战与模拟一致', () => {
     expect(heroSpec(S, fightKit(S), tu).passive).toMatchObject({ guard: 20, heal: 8 });
   });
 
-  it('合璧要真用得上：主是外功的，兵器不在手不成；主是内功的，刀搭在身上当搭档就成，不必在手', () => {
+  it('兵器类的那一门不论当主当搭档，兵器都要在手：易筋经加燃木刀，不握刀不成、握刀成', () => {
     wear({ neigong: 'sl_yijinjing', weapon: 'sl_ranmu' });
     delete S.gear.weapon;
-    // 刀禅一体写在易筋经（内功）上，燃木刀只是搭档
+    // 刀禅一体写在易筋经上，燃木刀是搭档：刀不在手，不成，并说得出缘故
+    expect(passivesNow(S).combos.find(c => c.combo.name === '刀禅一体')).toMatchObject({ paired: false, idle: true, on: false });
+    expect(heroSpec(S, fightKit(S), tu).passive).toMatchObject({ guard: 12, heal: 8 });
+    S.gear.weapon = 'jc_yaodao';
     expect(passivesNow(S).combos.find(c => c.combo.name === '刀禅一体')).toMatchObject({ paired: true, idle: false, on: true });
-    // 外功当主的合璧：太极剑写着太极合璧，剑不在手，主不出手，不成
-    wear({ neigong: 'wd_taijishengong', weapon: 'wd_taijijian', fist: 'wd_taijiquan' });
-    expect(passivesNow(S).combos.find(x => x.combo.name === '太极合璧')).toMatchObject({ paired: false, idle: true, on: false });
+    expect(heroSpec(S, fightKit(S), tu).passive).toMatchObject({ guard: 20, heal: 8 });
   });
 
   it('外功配外功：太极剑出手、太极拳搭在拳脚位，合璧成；太极剑不出手（剑不在手）就不成', () => {
@@ -197,7 +198,7 @@ describe('共用的汇总算法：实战与模拟一致', () => {
   it('同一份算法：搭配直接交给 passivesOf，和 heroSpec 汇总一致', () => {
     wear({ neigong: 'sl_yijinjing', weapon: 'sl_ranmu' });
     S.gear.weapon = 'jc_yaodao';
-    const pv = passivesOf({ neigong: skillById('sl_yijinjing'), weapon: skillById('sl_ranmu') }, { outer: skillById('sl_ranmu') });
+    const pv = passivesOf({ neigong: skillById('sl_yijinjing'), weapon: skillById('sl_ranmu') }, { outer: skillById('sl_ranmu'), weaponReady: true });
     expect(pv.sum.guard).toBe(20);
     expect(heroSpec(S, fightKit(S), tu).passive?.guard).toBe(pv.sum.guard);
     expect(foeSpec(tu, [])).not.toHaveProperty('passive');

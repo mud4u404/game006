@@ -89,7 +89,7 @@ const PASSIVE_LABEL: [keyof Pv['sum'], string][] = [['guard', '护体'], ['haste
 
 /** 一条合璧没生效的缘故 */
 function comboWhy(c: Pv['combos'][number]): string {
-  if (c.idle) return '搭档在身上，可这门外功眼下没出手（兵器得在手；合璧要这门出手才成，搭档摆在身上就行）';
+  if (c.idle) return '搭档在身上，可这条合璧要兵器在手（兵器类的那门不论当主当搭档，都得握着兵器），或要写这条合璧的外功正在出手';
   if (!c.paired) {
     const w = c.combo.with;
     return w.startsWith('门派:') ? `身上没有${w.slice(3)}的另一门武功` : `身上没有「${skillById(w)?.name ?? '搭档'}」`;
