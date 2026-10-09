@@ -248,3 +248,12 @@ describe('剧情选项写倾向，不写数（docs/paiban.md A9、A10、H16）',
     expect(new Set([0, 1, 2].map(amount)).size).toBe(1);
   });
 });
+
+describe('序章的默认路径（冒烟脚本和机器玩家都按「第一个选项」往前点）', () => {
+  it('「天明」那张卡的第一个选项是登船；「坟前再坐一会儿」只能排在后面', async () => {
+    const { storyById } = await import('../src/content');
+    const card = storyById('p_death')!.cards.find(c => c.title === '天明')!;
+    expect(card.choices[0].label).toContain('登船');
+    expect(card.choices.map(c => c.label)).toContain('在坟前再坐一会儿');
+  });
+});

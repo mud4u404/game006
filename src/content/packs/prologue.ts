@@ -97,8 +97,6 @@ const STORIES: StoryDef[] = [
         '码头上，一条去扬州的船正要起锚。'
       ],
       choices: [
-        { label: '在坟前再坐一会儿', if: { notFlag: 'p_fenqian' }, next: 2, do: [{ type: 'flag', flag: 'p_fenqian' }],
-          result: '你在坟前坐了很久。江上起了雾，又散了，来来往往的船，没有一条是江伯的。你想起他补网时总哼的那支调子，哼了两句，哼不下去了。' },
         { label: '登船 · 去扬州', next: -1, do: [
         { type: 'item', id: 'badge', delta: 1 },
         { type: 'quest', id: 'prologue', stage: 3 }, { type: 'chapter', value: 1 }, { type: 'shenfen', id: 'youxia' },
@@ -110,7 +108,10 @@ const STORIES: StoryDef[] = [
         { type: 'feed', tag: '传闻', text: '黑风寨劫了漕帮三船盐货，漕帮放出悬赏。' },
         { type: 'feed', tag: '主线', text: '江伯遗言：去扬州大明寺，找了尘大师。' },
         { type: 'quest', id: 'main1', stage: 0 }, { type: 'track', id: 'main1' }
-      ] }] }
+      ] },
+        { label: '在坟前再坐一会儿', if: { notFlag: 'p_fenqian' }, next: 2, do: [{ type: 'flag', flag: 'p_fenqian' }],
+          result: '你在坟前坐了很久。江上起了雾，又散了，来来往往的船，没有一条是江伯的。你想起他补网时总哼的那支调子，哼了两句，哼不下去了。' }
+      ] }
   ] }
 ];
 
