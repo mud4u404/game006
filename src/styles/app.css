@@ -141,6 +141,8 @@ svg{display:block}
 .act{height:44px;border-radius:12px;background:var(--chip);font-size:14px;font-weight:500}
 .acts.four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .act:disabled{opacity:.45}
+.act.priced{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15}
+.act.priced small{font-size:11px;font-weight:400;opacity:.8}
 .act.danger{background:var(--danger-soft);color:var(--danger)}
 .act.strong{background:var(--danger-fill);color:var(--on-danger);font-weight:700}
 .act.spar{background:var(--accent-soft);color:var(--accent);font-weight:700}

@@ -1,15 +1,15 @@
 import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
-import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
+import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbPoor, verbPrice, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
 import { questNav } from '../../engine/daohang';
 import { kanren } from '../../engine/zhaoshi';
 import { eyesOn } from '../../engine/yan';
-import type { EyeDef } from '../../content/types';
-import { fmt } from '../../core/util';
+import type { EyeDef, Verb } from '../../content/types';
+import { cn, fmt } from '../../core/util';
 import { XIEJIAO, canWait, nextYue, nightBlock, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
 import { test, textVars } from '../../engine/dsl';
@@ -95,8 +95,15 @@ function detail(id: string): string {
   const whom = foe && foe.id !== id && foe.name !== npcName(id) ? foe.name : '他';
   const look = foe ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kanren(S, foe).say}</b></p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
-    <div class="acts">${verbsOf(n).map(v => `<button class="act ${VERB_CLS[v] || ''}" data-act="do:${v}">${v}</button>`).join('')}</div>${reply}</div>`;
+    <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${reply}</div>`;
 }
+
+/** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
+const verbBtn = (id: string) => (v: Verb): string => {
+  const price = verbPrice(id, v);
+  const poor = price !== null && S.silver < price && verbPoor(id, v);
+  return `<button class="act ${VERB_CLS[v] || ''}${price !== null ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${price !== null ? `<small>${poor ? '囊中不足，要' : ''}${cn(price)}文</small>` : ''}</button>`;
+};
 
 function exitBtn(d: string, id: string, solo: boolean, questTo?: string): string {
   return `<button class="exit${solo ? ' solo' : ''}" data-act="travel:${id}"><span class="dir">${d}</span><span class="en"><b>${room(id).name}</b><small>${minLabel(travelMin(hopMin(S.loc, id)))}</small></span>${questTo === id ? '<span class="tag info">主线</span>' : ''}</button>`;
