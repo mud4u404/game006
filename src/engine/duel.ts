@@ -22,8 +22,19 @@
  * 引擎只出「事件」，不写文字、不碰界面；文字由界面按内容去写（ui/fight.ts）。种子固定，结果可以重放。
  */
 import type { FxDef, FxKind } from '../content/types';
+import { MP_FLOOR } from './combat';
+import { NO_PASSIVE, type PassiveSum } from './beidong';
 import type { Rng } from './rng';
 import { COMMON, SCALE, dmgMul, dodgeOf, hpMaxOf, huohouOf, mpMaxOf, tierCont, type BaseResp, type Person } from './person';
+
+/**
+ * 被动的两道闸（审查 PR #238：实战三四十合，固定回血累计接近一整条血，再叠护体，少林胜率翻了几倍）：
+ * - 被动回血：每合回 hpMax 的千分之 value（value 10 = 每合回千分之十），每场被动回血的总量不超过 hpMax 的一成；
+ *   量过（每格一千场）：少林易筋经加燃木刀对石墩、钻天鹞、河贼多胜 8～10 个点；连兵器都没握的空架子，原先多胜 57～70 个点，现在 11～17；
+ * - 被动护体：自己最多算两成五，与绝招给的护体相加，总的仍封顶五成。
+ */
+export const PASSIVE_HEAL_CAP = 0.1;
+export const PASSIVE_GUARD_CAP = 25;
 
 export type RespKey = BaseResp;
 export const RESP_KEYS: RespKey[] = ['block', 'dodge', 'parry', 'rush'];
@@ -104,6 +115,10 @@ export interface HeroSpec {
   bonus?: Partial<Record<RespKey, number>>;
   performs?: PerformSpec[];
   ult?: UltSpec;
+  /** 搭配给的被动（内功、轻功、合璧）：护体、身法、回血、涨怒气；内力低于一成五失效（MP_FLOOR） */
+  passive?: Partial<PassiveSum>;
+  /** 合璧里的减益：开战时施给对手 */
+  openers?: FxDef[];
 }
 
 /** 对手的一记重招：主要是哪一项（力、速、巧），强度由对手的火候算出来 */
@@ -196,6 +211,10 @@ export class Duel {
   pre: Wounds; hurtBy: Record<Zone, number> = { hand: 0, foot: 0, inner: 0 };
   performs: PerformSpec[]; pcd: number[]; ultSpec?: UltSpec;
   meSt: Partial<Record<MeSt, Status>> = {};
+  /** 搭配给的被动 */
+  passive: PassiveSum;
+  /** 这一场被动已回的气血（封顶 PASSIVE_HEAL_CAP），和攒着的零头 */
+  passiveHealed = 0; healFrac = 0;
   /** 运功：下一招的加成；正在蓄力时不能闪避 */
   charge = 0; charging = false;
   /* 对手 */
@@ -243,6 +262,7 @@ export class Duel {
     this.performs = hero.performs ?? [];
     this.pcd = this.performs.map(() => 0);
     this.ultSpec = hero.ult;
+    this.passive = { ...NO_PASSIVE, ...hero.passive };
     // 对手：用对手流程打的人，气血厚一些（玩家另有绝招、破绽、反击）
     const fp = foe.person, weak = foe.weak ?? 1, fm = dmgMul(fp, sc) * weak;
     this.ehpMax = Math.round(hpMaxOf(fp, sc) * sc.foeHp * weak);
@@ -270,6 +290,8 @@ export class Duel {
     this.crowd = opts.crowd ?? { n: 1, maxAtk: 1 };
     this.left = this.crowd.n - 1;
     this.log = { decisions: 0, prompts: 0, openings: 0, dealt: {}, last: null, swings: 0, deficit: 0, maxHeld: 0, feints: 0, saw: 0, fooled: 0, parry: 0, open: 0, ult: 0, taken: { ...NO_WOUNDS } };
+    // 合璧里的减益，开战时就施给对手
+    for (const fx of hero.openers ?? []) this.applyFx(fx);
   }
 
   /* ---------- 读数 ---------- */
@@ -285,7 +307,13 @@ export class Duel {
   /** 对手挨打的倍数：破绽 */
   private foeIn(): number { return 1 + (this.foeSt.break?.v ?? 0) / 100; }
   /** 自己挨打的倍数：护体 */
-  private meIn(): number { return 1 - Math.min(50, this.meSt.guard?.v ?? 0) / 100; }
+  private meIn(): number { return 1 - Math.min(50, this.guardNow()) / 100; }
+  /** 内力见底（低于一成五），搭配给的被动失效 */
+  passiveOn(): boolean { return this.mp >= this.mpMax * MP_FLOOR; }
+  /** 眼下的护体：被动加绝招给的 */
+  private guardNow(): number { return (this.passiveOn() ? Math.min(PASSIVE_GUARD_CAP, this.passive.guard) : 0) + (this.meSt.guard?.v ?? 0); }
+  /** 眼下的身法：被动加绝招给的（百分点） */
+  private hasteNow(): number { return (this.passiveOn() ? this.passive.haste : 0) + (this.meSt.haste?.v ?? 0); }
   private chargeMul(): number { const k = 1 + this.charge; this.charge = 0; return k; }
 
   /** 应对的选项：带伤时火候打折；虚实并进成算（是实招的把握 × 对实招的成算 + 是虚招的把握 × 应付虚招的几率） */
@@ -412,6 +440,16 @@ export class Duel {
     if (this.f.rounds && this.round >= this.f.rounds) { this.end('win', ev); return ev; }
     this.round++;
     if (this.f.script === 'rescue' && this.round >= this.rescueAt) { this.toScript('rescue', ev); return ev; }
+    // 搭配的被动：回血、涨怒气（内力见底就断了），在回内力之前算
+    if (this.passiveOn()) {
+      // 气血是整数：不足一点的零头攒着，攒够了再回
+      this.healFrac += this.hpMax * this.passive.heal / 1000;
+      const whole = Math.floor(this.healFrac);
+      this.healFrac -= whole;
+      const h = Math.max(0, Math.min(whole, Math.floor(this.hpMax * PASSIVE_HEAL_CAP) - this.passiveHealed, this.hpMax - this.hp));
+      this.hp += h; this.passiveHealed += h;
+      this.rage = Math.min(100, this.rage + this.passive.rage);
+    }
     this.mp = Math.min(this.mpMax, this.mp + this.mpRegen * (1 - 0.25 * this.pre.inner));
     this.pcd = this.pcd.map(x => Math.max(0, x - 1));
     if (this.foeImmune > 0) this.foeImmune--;
@@ -501,7 +539,7 @@ export class Duel {
   private foeAuto(ev: Ev[], side: boolean): void {
     const r = this.rng();
     const charging = this.charging;
-    let dg = charging ? 0 : this.dodge + (this.mom - 50) * 0.003 - 0.04 * this.pre.foot + (this.meSt.haste?.v ?? 0) / 100;
+    let dg = charging ? 0 : this.dodge + (this.mom - 50) * 0.003 - 0.04 * this.pre.foot + this.hasteNow() / 100;
     dg = clamp(dg, 0, 0.6);
     const pr = charging ? 0 : this.parryP;
     if (r < dg) { this.mom = clamp(this.mom + 2, 5, 95); ev.push({ k: 'auto', who: 'foe', res: 'dodge', dmg: 0, side }); this.maybeOpening(0.2, ev); return; }

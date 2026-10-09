@@ -7,7 +7,7 @@ import { advanceDays, dayNo, setNowMs } from '../src/core/time';
 import { run } from '../src/engine/dsl';
 import { act, roomNpcs, verbsOf } from '../src/engine/world';
 import { npc } from '../src/content';
-import { canWait, checkYue, xinmoLine } from '../src/engine/shiguang';
+import { checkYue, crossesNight, nightWarn, xinmoLine } from '../src/engine/shiguang';
 import { nextTierLine } from '../src/engine/ren';
 
 beforeEach(() => {
@@ -85,16 +85,18 @@ describe('瓜洲的人', () => {
 });
 
 describe('约', () => {
-  it('G01 今日有约没了结：歇脚、住店都不跨过半夜，免得人站在约地也判失约', () => {
+  it('G01 今日有约没了结：歇脚、住店跨过半夜先提醒会误约，不拦（10-09 试玩：原来全灰，玩家只能空点熬夜）', () => {
     run([{ type: 'yue', id: 't_yue', npc: 'liu', at: 'hu', inDays: 0, text: '湖畔再见' }]);
     expect(S.yue[0].due).toBe(dayNo(S));
     S.min = 20 * 60;
-    expect(canWait(S, 6)).toBe(false);
-    expect(canWait(S, 22)).toBe(true);
+    expect(nightWarn(S)).toContain('失约');
+    expect(crossesNight(S, 6)).toBe(true);
+    expect(crossesNight(S, 22)).toBe(false);
     S.loc = 'cheng'; S.silver = 300;
     const day = S.day;
-    expect(act('jc_yz_ruanniang', '住店').text).toContain('失约');
-    expect([S.day, S.silver]).toEqual([day, 300]);
+    const r = act('jc_yz_ruanniang', '住店');
+    expect(r.text).toContain('失约');
+    expect(S.day).not.toBe(day);
   });
 });
 

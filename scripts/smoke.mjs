@@ -89,6 +89,9 @@ async function fight(tag, pickBest = true) {
       await p.click(`[data-act="${choice.act}"]`).catch(() => {});
       continue;
     }
+    // 打到一半对手认栽（比如兵器被夺），弹出「胜负以后」的去路：挑一条不添恶名的
+    const fates = await p.$$eval('[data-act^="fFate:"]', els => els.filter(e => e.offsetParent && !e.disabled).map(e => ({ act: e.dataset.act, t: e.textContent })));
+    if (fates.length) { const f = fates.find(x => !x.t.includes('恶名')) ?? fates[0]; await p.click(`[data-act="${f.act}"]`).catch(() => {}); continue; }
     if (await p.$('#opening:not([hidden])')) { await p.click('#opening').catch(() => {}); continue; }
     // 杀招、绝招：按钮由搭配生成（engine/zhaoshi.ts）
     for (const s of ['#skUlt', '#skP0', '#skP1', '#skP2']) { const el = await p.$(s + ':not([disabled])'); if (el) { await el.click().catch(() => {}); break; } }

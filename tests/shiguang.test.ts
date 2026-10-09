@@ -30,17 +30,30 @@ describe('江湖历', () => {
   });
 });
 
-describe('江湖跑不过现实', () => {
-  it('开局就有十日的余裕；现实过一小时，多一日', () => {
+describe('江湖跑不过现实：只限成长，不限行动（宪章 P7，10-09 改定）', () => {
+  it('开局就有十日的余裕；现实过一小时，多一日；逛、打、办事走掉的日子不吃额度，只有长了修为的日子吃', () => {
     expect(allowance(S)).toBe(SHIGUANG.slack);
     at(5);
     expect(allowance(S)).toBe(SHIGUANG.slack + 5);
     advanceDays(S, 15);
+    expect(allowance(S)).toBe(SHIGUANG.slack + 5);
+    jingxiu(S, 15);
     expect(allowance(S)).toBe(0);
   });
-  it('闭关拨不过这条线：想闭关一月，只修得了余下的日子', () => {
-    expect(restDays(S, 30)).toMatchObject({ days: 10, why: 'tielv' });
-    expect(restDays(S, 7)).toEqual({ days: 7, why: undefined, yue: undefined });
+  it('闭关不再被拦：想闭关一月，日子照走一月，只有额度之内的十日长修为', () => {
+    expect(restDays(S, 30)).toMatchObject({ days: 30, grow: 10, why: 'tielv' });
+    expect(restDays(S, 7)).toEqual({ days: 7, grow: 7, why: undefined, yue: undefined });
+    S.lilian = 5000;
+    const d = dayNo(S);
+    const r = jingxiu(S, 30, () => 1, 10);
+    expect(dayNo(S)).toBe(d + 30);
+    expect(r.grow).toBe(10);
+    expect(allowance(S)).toBe(0);
+    // 额度用完再闭关：日子照走，修为一点不长
+    const lilian = S.lilian, gongli = S.gongli;
+    const r2 = jingxiu(S, 7, () => 1, 0);
+    expect([r2.used, r2.gongli, S.lilian, S.gongli]).toEqual([0, 0, lilian, gongli]);
+    expect(dayNo(S)).toBe(d + 37);
   });
 });
 
