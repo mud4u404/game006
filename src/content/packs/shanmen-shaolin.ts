@@ -234,7 +234,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smsl_shui', name: '少林 · 挑水上山', stages: [
-    { title: '替老葛把山下的水挑上灶房', to: 'smsl_jinshan' },
+    { title: '替老葛把山下的水挑上灶房', to: 'smsl_jinshan', who: 'smsl_laoge', hint: '跟火工老葛挑水上山，或白天接长老三十招。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
     { title: '少林 · 挑水上山 · 完' }
   ] }
 ];

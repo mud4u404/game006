@@ -546,10 +546,32 @@ export interface ItemDef {
   look?: Branch[];
 }
 
+/** 心事的一道门槛：条件成立就打勾，不成立见闻簿写出 text（钱、根基这类说得出差多少的，另写差多少） */
+export interface QuestGate { if: Cond; text: string }
+
+/**
+ * 心事的一步（engine/daohang.ts 的导航读它）：玩家要知道去哪、找谁、怎么做、差什么、还做不做得成。
+ * 只写推进这一步的分支里真有的条件，不另编（tests/daohang.test.ts 让机器玩家核对）。
+ */
+export interface QuestStage {
+  title: string;
+  to?: string;
+  /** 找谁：人物 id。见闻簿按作息写他眼下在不在、什么时辰在哪 */
+  who?: string;
+  /** 怎么做：一句江湖口吻的话。除了最后一步都要写 */
+  hint?: string;
+  /** 这一步的门槛 */
+  need?: QuestGate[];
+  /** 成立了，这一步就做不成了（未竟） */
+  fail?: QuestGate;
+}
+
 export interface QuestDef {
   id: string;
   name: string;
-  stages: { title: string; to?: string }[];
+  stages: QuestStage[];
+  /** 成立了，整件事就做不成了（未竟）；各步的 fail 只管那一步 */
+  fail?: QuestGate;
   /** 了结时给的历练；不写按阶段数算，每阶段 100（engine/lilian.ts） */
   lilian?: number;
 }

@@ -7,7 +7,10 @@ import { syncBody } from '../engine/ren';
 export interface SkillProg { r: number; p: number }
 /** 约：npc 在 at 等你，due 是哪一个江湖日（core/time.ts 的 dayNo）；miss 是失约的后果 */
 export interface Yue { id: string; npc: string; at: string; due: number; text: string; miss?: Effect[] }
-export interface ShiState { at: string; since: number; seen?: string; done?: number }
+/** 世事：走到哪一步、从何时起、玩家知道到哪一步、了结过几回、玩家插过手没有 */
+export interface ShiState { at: string; since: number; seen?: string; done?: number; hand?: true }
+/** 静修的住处 */
+export type Zhu = 'inn' | 'lusu' | 'home';
 export interface FeedEntry { t: FeedTag; x: string; n: number }
 export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
 /** 纸娃娃六个装备位在存档里的键：兵器、冠、衣、靴、佩、饰 */
@@ -78,6 +81,8 @@ export interface GameState {
   xinmo: { n: number; why: string };
   /** 营生（engine/shenfen.ts）：渔家、游侠、镖师……；本行里的地位（零被辞退，一到三）；哪一日入的行 */
   shenfen: { id: string; standing: number; since: number };
+  /** 闭关、下线静修住哪儿：客栈（一日一百文）、露宿（不花钱，打八折）、师门（有师门的，不花钱）。不写是客栈（engine/shiguang.ts 的 zhuOf） */
+  zhu?: Zhu;
   /** 手上的差事：哪一件、约期（江湖日）；办完的差事上回是哪一日办完的 */
   job: { id: string; due: number } | null;
   jobLog: Record<string, number>;

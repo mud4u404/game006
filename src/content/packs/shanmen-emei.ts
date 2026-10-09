@@ -227,7 +227,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smem_chao', name: '峨眉 · 听潮', stages: [
-    { title: '去江滩听潮，听出潮声里的调子', to: 'smem_guanyin' },
+    { title: '去江滩听潮，听出潮声里的调子', to: 'smem_guanyin', who: 'smem_xiaoman', hint: '小满会给你指江滩的路，坐下听出潮声的调子。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
     { title: '峨眉 · 听潮 · 完' }
   ] }
 ];

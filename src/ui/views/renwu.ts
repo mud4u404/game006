@@ -5,7 +5,7 @@ import { ROOMS } from '../../content';
 import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
 import { gongliText, houtianOf, nextTierLine, tierNow } from '../../engine/ren';
-import { LODGING, xinmoLine, yueText } from '../../engine/shiguang';
+import { LODGING, ZHU_NAME, xinmoLine, yueText, zhuOf } from '../../engine/shiguang';
 import { shenfenOf, shenfenText, gongxianOf } from '../../engine/shenfen';
 import { menguiText, pastSectText, sectText } from '../../engine/shicheng';
 import { fullDate } from '../../core/time';
@@ -44,7 +44,7 @@ function yingshengHTML(): string {
   if (S.chapter === 0) return '';
   return `<section class="card here-card"><div class="sec-h"><h2>营生</h2><span class="count">${shenfenText(S)}</span></div>
     <p class="muted">${shenfenOf(S).desc}</p>
-    <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文），身上留${cn(LODGING.keep)}文盘缠不动；钱不够就露宿，不花钱，睡不安稳，打坐参悟打八折。</span></div></div></section>`;
+    <div class="news"><div><span class="tag">嚼用</span><span>静修住${ZHU_NAME[zhuOf(S)]}（武功页「闭关修炼」里换）。客栈一日一钱银子（${LODGING.inn} 文），身上留${cn(LODGING.keep)}文盘缠不动，钱不够的那几夜露宿；露宿不花钱，睡不安稳，打坐参悟打八折；拜了师的回师门住，不花钱。</span></div></div></section>`;
 }
 
 /** 师门：门派、地位、门规；出过师、叛过门的写一行来历（docs/menpai.md 第七节） */

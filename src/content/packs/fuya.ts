@@ -159,9 +159,14 @@ const NPCS: NpcDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'side_caoshangfei', name: '六扇门 · 缉拿草上飞', stages: [
-    { title: '拿到第一条线索', to: 'jinshan' },
-    { title: '追查草上飞的行踪', to: 'zhuyuwan' },
-    { title: '押草上飞回府衙交差', to: 'yz_fuya' },
+    // 这一步在府衙揭榜才推进（周捕头或照壁上的告示），小金山的棋痴要揭了榜才开口，所以目的地写府衙
+    { title: '拿到第一条线索', to: 'yz_fuya', who: 'fuya_zhou', hint: '回府衙找周捕头揭榜，把这桩案子接下来。' },
+    { title: '追查草上飞的行踪', to: 'zhuyuwan', who: 'zy_csf', hint: '在茱萸湾问渔家、看破船，他入夜才回船上。',
+      need: [
+        { if: { flag: 'csf_clue2' }, text: '先在茱萸湾打听出他落脚的破船' },
+        { if: { hour: { from: 19, to: 5 } }, text: '入夜以后' }
+      ] },
+    { title: '押草上飞回府衙交差', to: 'yz_fuya', who: 'fuya_zhou', hint: '把草上飞带回扬州府衙，交给周捕头。' },
     { title: '缉拿草上飞 · 完' }
   ] }
 ];

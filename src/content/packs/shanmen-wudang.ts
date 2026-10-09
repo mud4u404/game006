@@ -234,7 +234,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smwd_zhuang', name: '武当 · 站桩', stages: [
-    { title: '在琼花观的老琼花树下站桩', to: 'smwd_qionghua' },
+    { title: '在琼花观的老琼花树下站桩', to: 'smwd_qionghua', who: 'smwd_saochen', hint: '扫尘会给你腾块地，在老琼花树下站住桩。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
     { title: '武当 · 站桩 · 完' }
   ] }
 ];

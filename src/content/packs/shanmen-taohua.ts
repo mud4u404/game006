@@ -369,7 +369,10 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'smth_zhen', name: '桃花岛 · 入门阵', stages: [
-    { title: '走出曲蘅摆的九宫阵', to: 'smth_xiaozhu' },
+    { title: '走出曲蘅摆的九宫阵', to: 'smth_xiaozhu', who: 'smth_quheng', hint: '曲蘅上午和入夜在小筑，请他摆阵走上一遭。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }],
+      // 小筑烧了，曲蘅下了江，再不回瓜洲（世事 smth_shi 的 shao 是尽头）
+      fail: { if: { shi: { id: 'smth_shi', at: ['shao'] } }, text: '听潮小筑叫人烧了，曲蘅连夜下了江，这阵再没人摆。' } },
     { title: '桃花岛 · 入门阵 · 完' }
   ] }
 ];
