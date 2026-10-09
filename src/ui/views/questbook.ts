@@ -5,7 +5,7 @@ import { yueText } from '../../engine/shiguang';
 import { knownShi, type ShiRow } from '../../engine/shishi';
 import { minLabel } from '../../core/time';
 import { cn } from '../../core/util';
-import { questNav, whoNav, type NavState, type QuestNav } from '../../engine/daohang';
+import { questNav, sectNav, whoNav, type NavState, type QuestNav } from '../../engine/daohang';
 import { IC } from '../icons';
 import { closeSheet, openSheet, render } from '../shell';
 
@@ -86,6 +86,26 @@ function whoLine(n: QuestNav): string {
   return `<li>找${w.name}：${at}</li>`;
 }
 
+/** 师门：眼下什么地位，升下一级找谁、要什么（engine/daohang.ts 的 sectNav） */
+function sectRow(): string {
+  const n = sectNav();
+  if (!n) return '';
+  const body = !n.next ? '<p>已是真传弟子。</p>'
+    : n.note ? `<p>想升${n.next}弟子。</p><small class="qb-why">${n.note}</small>`
+    : `<p>想升${n.next}弟子：找${n.who?.name ?? ''}「${n.verb}」。</p>
+      ${n.toName ? `<small class="qb-to">${n.who?.now ? `眼下在${n.toName}` : n.who?.when ? `${n.who.when}在${n.toName}` : n.toName}</small>` : ''}
+      ${n.needs.length ? `<ul class="qb-need">${n.needs.map(x => `<li class="${x.ok ? 'ok' : 'no'}">${x.ok ? '✓' : '×'} ${x.text}${x.lack ? `（${x.lack}）` : ''}</li>`).join('')}</ul>` : ''}`;
+  const state: NavState = !n.next ? '了结' : n.note ? '卡住' : n.needs.every(x => x.ok) ? '能做' : '卡住';
+  return `
+      <div class="qb-row active">
+        <div class="qb-info">
+          <div class="qb-top"><b>师门 · ${n.school}</b>${state === '了结' ? '' : navTag(state)}</div>
+          <span class="qb-stage">${n.rank}弟子</span>
+          ${body}
+        </div>
+      </div>`;
+}
+
 /**
  * 一件心事：走到第几步、这一步去哪找谁怎么做、门槛逐条打勾、做不成了写为什么。
  * 做过的步骤收在「前情」里，后面的步骤不剧透。
@@ -136,14 +156,15 @@ export function questbookSheetHtml(): string {
   const shi = knownShi();
   const shiOpen = shi.filter(r => !r.ended), shiDone = shi.filter(r => r.ended);
   const head = `<div class="qb-h"><h2>见闻</h2><button class="qb-close" data-act="sheetClose" aria-label="关闭">×</button></div>`;
-  if (!navs.length && !shi.length && !S.job) {
+  if (!navs.length && !shi.length && !S.job && !S.sect) {
     return `<div class="qb-wrap">${head}<p class="qb-empty">江湖寂寥，暂无要事。四处走走，找人打听打听。</p></div>`;
   }
 
   const shiHtml = `<h3 class="qb-sec${shiOpen.length ? '' : ' muted'}">江湖上的事 · ${shiOpen.length}</h3>${shiOpen.length
     ? shiOpen.map(shiRow).join('')
     : '<p class="qb-empty">还没听说什么。找人打听打听，或者到处走走看看。</p>'}`;
-  const activeHtml = `<h3 class="qb-sec${open.length ? '' : ' muted'}">心事 · ${open.length}</h3>${open.map(n => questRow(n, trackId)).join('')}`;
+  const sect = sectRow();
+  const activeHtml = `<h3 class="qb-sec${open.length || sect ? '' : ' muted'}">心事 · ${open.length + (sect ? 1 : 0)}</h3>${sect}${open.map(n => questRow(n, trackId)).join('')}`;
   // 手上的差事：限期几日，到哪儿交差，交差的人眼下在不在（江湖页顶上也挂着「有约」）
   const job = S.job && jobById(S.job.id);
   const jy = job && S.yue.find(y => y.id === 'job_' + job.id);

@@ -1,4 +1,4 @@
-import type { AttrKey, Effect, FeedTag, SectRank, SkillId } from '../content/types';
+import type { AttrKey, Effect, FeedTag, LeaveHow, SectRank, SkillId } from '../content/types';
 import type { Loadout } from '../engine/wuxue';
 import { clearSaveSafely, readSave, writeSave } from './save';
 import { nowMs } from './time';
@@ -58,7 +58,7 @@ export interface GameState {
   sect?: { school: string; rank: SectRank };
   /** 离开过的师门 */
   /** 离开过的师门：出师的回得去，叛门、被逐出的回不去（engine/shicheng.ts） */
-  pastSects?: { school: string; how: '出师' | '叛门' | '逐出' }[];
+  pastSects?: { school: string; how: LeaveHow }[];
   /** 功力（年）：一年一百点内力，靠静修的岁月熬（engine/ren.ts） */
   gongli: number;
   /**

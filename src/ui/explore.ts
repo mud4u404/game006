@@ -14,10 +14,11 @@ import { XIEJIAO, checkYue, jingxiu, nightBlock, restDays, skillName, waitUntil,
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
 import { act, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
+import { run } from '../engine/dsl';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
-import { setConfirmRestart } from './views/renwu';
+import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
 import { eyeLine } from './views/jianghu';
@@ -190,6 +191,17 @@ registerHandlers({
     else toast(q && q.state !== '能做' ? q.why : '就在此处');
   },
   questbook: () => { openQuestbook(); },
+  // 离开师门：先看后果卡，再点一次才算（ui/views/renwu.ts 的 sectLeaveSheet）
+  sectLeaveAsk: v => { if (S.sect && (v === '辞别' || v === '叛门')) openSheet(sectLeaveSheet(v), true); },
+  sectLeave: v => {
+    if (!S.sect || (v !== '辞别' && v !== '叛门')) return;
+    if (v === '辞别' && S.pastSects?.some(x => x.how === '辞别')) return;
+    const school = S.sect.school;
+    run([{ type: 'leaveSect', how: v }]);
+    pushFeed('江湖', v === '辞别' ? `你向${school}的师长磕了三个头，辞别下山。` : `你叛出了${school}。`);
+    closeSheet();
+    render();
+  },
   // 住处三选一（engine/shiguang.ts 的 zhuOf）
   zhu: v => { if (v === 'inn' || v === 'lusu' || (v === 'home' && S.sect)) { S.zhu = v; render(); } },
   qtrack: v => { if (v) trackQuest(v); },

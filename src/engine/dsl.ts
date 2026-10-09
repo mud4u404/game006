@@ -225,6 +225,9 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
           const school = S.sect.school;
           (S.pastSects ??= []).push({ school, how: e.how });
           delete S.sect;
+          // 辞别：贡献清零；叛门：江湖上的人看你是叛徒，恶名 +3（docs/paiban.md E05）
+          if (e.how === '辞别' && S.gongxian) delete S.gongxian[school];
+          if (e.how === '叛门') S.eming += 3;
           // 身份连着这个门派的（捕快之于六扇门），离了门派，身份也就没了
           if (SHENFEN[S.shenfen.id]?.sect === school) { pushFeed('江湖', `你离了${school}，不再是${SHENFEN[S.shenfen.id].name}。`); S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) }; S.job = null; }
         }

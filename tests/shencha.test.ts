@@ -184,3 +184,38 @@ describe('维护者按原则定的（docs/paiban.md）', () => {
     expect(allowance(S)).toBe(SHIGUANG.slack + SHIGUANG.awayCap);
   });
 });
+
+describe('门派：辞别、叛门、师门导航（docs/paiban.md E04、E05）', () => {
+  it('辞别：武功留着不封顶、贡献清零、原门派不再收', async () => {
+    const { realmCap } = await import('../src/engine/shicheng');
+    const { skillById } = await import('../src/content');
+    run([{ type: 'sect', school: '少林', rank: '记名' }]);
+    S.gongxian = { 少林: 80 };
+    S.skills.sl_hunyuan = { r: 1, p: 0 };
+    run([{ type: 'leaveSect', how: '辞别' }]);
+    expect(S.sect).toBeUndefined();
+    expect(S.gongxian?.少林).toBeUndefined();
+    expect(realmCap(S, skillById('sl_hunyuan')!)).toBeGreaterThan(1);
+    run([{ type: 'sect', school: '少林', rank: '记名' }]);
+    expect(S.sect).toBeUndefined();
+  });
+  it('叛门：恶名加三，本门武功封顶', async () => {
+    const { realmCap } = await import('../src/engine/shicheng');
+    const { skillById } = await import('../src/content');
+    run([{ type: 'sect', school: '少林', rank: '记名' }]);
+    S.skills.sl_hunyuan = { r: 1, p: 0 };
+    const e0 = S.eming;
+    run([{ type: 'leaveSect', how: '叛门' }]);
+    expect(S.eming).toBe(e0 + 3);
+    expect(realmCap(S, skillById('sl_hunyuan')!)).toBe(1);
+  });
+  it('师门导航：记名弟子升外门，写出找谁、差什么', async () => {
+    const { sectNav } = await import('../src/engine/daohang');
+    run([{ type: 'sect', school: '少林', rank: '记名' }]);
+    const n = sectNav()!;
+    expect(n.next).toBe('外门');
+    expect(n.who).toBeTruthy();
+    expect(n.needs.map(x => x.text)).toEqual(expect.arrayContaining(['罗汉拳练到略有小成', '侠义 15']));
+    expect(n.needs.some(x => !x.ok)).toBe(true);
+  });
+});

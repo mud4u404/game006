@@ -9,10 +9,12 @@
  */
 import { S, pushFeed } from '../core/state';
 import { shichen } from '../core/time';
-import { ROOMS, questById, room } from '../content';
-import type { QuestGate, QuestStage } from '../content/types';
+import { NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
+import { REALMS, SECT_RANKS } from '../content/skills';
+import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
 import { lackOf, test } from './dsl';
 import { npcName, pathMin, roomNpcs, roomObjs, travelMin } from './world';
+import { gongxianOf } from './shenfen';
 
 /** 能做：去了就办得成；要等：只差时辰、人不在；卡住：差别的门槛；未竟：做不成了；了结：办完了 */
 export type NavState = '能做' | '要等' | '卡住' | '未竟' | '了结';
@@ -131,4 +133,65 @@ export function dropFailedTrack(): void {
   if (n?.state !== '未竟') return;
   pushFeed('江湖', `「${n.name}」做不成了：${n.why}`);
   S.track = '';
+}
+
+/* ---------- 师门：升下一个地位要什么（docs/paiban.md E04、E05） ---------- */
+
+/** 一个条件拆成见闻簿上的几道门槛；剧情上的条件（旗标、任务……）不剧透，合成一句「还有本门的规矩」 */
+function gatesOf(c: Cond): NavNeed[] {
+  const out: NavNeed[] = [];
+  const one = (text: string, cond: Cond, lack?: string): void => {
+    const ok = test(cond);
+    out.push({ text, ok, lack: ok ? null : lack ?? lackOf(cond) });
+  };
+  if (c.realm) one(`${skillById(c.realm.skill)?.name ?? c.realm.skill}练到${REALMS[c.realm.atLeast ?? 0]}`, { realm: c.realm });
+  if (c.gongxian !== undefined) one(`本门贡献 ${c.gongxian}`, { gongxian: c.gongxian }, `眼下 ${gongxianOf(S)}`);
+  if (c.xia !== undefined) one(`侠义 ${c.xia}`, { xia: c.xia });
+  if (c.attr) one(`${c.attr.key} ${c.attr.atLeast}`, { attr: c.attr });
+  if (c.silver !== undefined) one(`${c.silver} 文`, { silver: c.silver });
+  if (c.learned) one(`学会${skillById(c.learned)?.name ?? c.learned}`, { learned: c.learned });
+  if (c.item) one(`带着${itemById(c.item.id)?.name ?? c.item.id}`, { item: c.item });
+  if (c.any) {
+    const subs = c.any.map(x => gatesOf(x).map(n => n.text).join('、')).filter(Boolean);
+    const ok = c.any.some(x => test(x));
+    if (subs.length) out.push({ text: subs.join('，或者'), ok, lack: null });
+  }
+  const plot: Cond = { flag: c.flag, notFlag: c.notFlag, quest: c.quest, shi: c.shi, hour: c.hour, rel: c.rel };
+  if (Object.values(plot).some(v => v !== undefined) && !test(plot)) out.push({ text: '还有本门的规矩没做到，问问师父', ok: false, lack: null });
+  return out;
+}
+
+export interface SectNav {
+  school: string;
+  rank: SectRank;
+  /** 下一个地位；做到真传了为空 */
+  next?: SectRank;
+  /** 谁管升这一级：人、动作 */
+  who?: NavWho;
+  verb?: Verb;
+  toName?: string;
+  needs: NavNeed[];
+  /** 师门还没定下怎么升的，写一句 */
+  note?: string;
+}
+
+const grants = (dos: Effect[] | undefined, school: string, rank: SectRank): boolean =>
+  !!dos?.some(e => e.type === 'sect' && e.school === school && e.rank === rank);
+
+/** 师门这一行：眼下什么地位，升下一级找谁、要什么。没有师门为空 */
+export function sectNav(): SectNav | null {
+  if (!S.sect) return null;
+  const { school, rank } = S.sect;
+  const next = SECT_RANKS[SECT_RANKS.indexOf(rank) + 1];
+  if (!next) return { school, rank, needs: [] };
+  for (const n of NPCS) {
+    for (const [verb, bs] of Object.entries(n.actions) as [Verb, { if?: Cond; do?: Effect[] }[]][]) {
+      const b = bs?.find(x => grants(x.do, school, next));
+      if (!b) continue;
+      const who = whoNav(n.id);
+      const at = who.now ?? roomsOf(n.id)[0];
+      return { school, rank, next, who, verb, toName: at ? room(at).name : undefined, needs: gatesOf(b.if ?? {}) };
+    }
+  }
+  return { school, rank, next, needs: [], note: next === '内门' ? '内门的考校，师门还没传下话来：先攒够四百贡献，替师门出力。' : `升${next}的规矩，师门还没传下话来。` };
 }
