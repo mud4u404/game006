@@ -532,7 +532,8 @@ describe('话有来处：传播的规律', () => {
       for (let i = 0; i < 20; i++) { advanceDays(S, 1); tickWorld(); }
       const holders = (text: string): string[] => Object.entries(S.w.ppl).filter(([, p]) => p.know?.some(k => k[0] === newsId(text))).map(([id]) => id);
       const far = holders(add[0].text);
-      expect(far).toContain('chuanfu');
+      // 对得上行当的优先：扬州有了写了活气的镖师（赵铁衣、孙镖头），外地事先落在他们身上
+      expect(far.some(id => lifeOf(id)?.trade === '镖师')).toBe(true);
       for (const id of far) expect(['船夫', '镖师', '脚夫', '外乡人'], id).toContain(lifeOf(id)?.trade);
       expect(holders(add[1].text)).toContain('yaopu');
       expect(S.w.rumor[newsId(add[2].text)]).toBeUndefined();
@@ -677,5 +678,60 @@ describe('话有来处：内容', () => {
       }
     }
     expect(errs, '\n' + errs.join('\n')).toEqual([]);
+  });
+});
+
+describe('阿七挨了板子：世事的结局改变了一个人的处境', () => {
+  const at = (hour: number): string[] => { S.min = hour * 60; return roomNpcs('yz_dongquan'); };
+  const end = (to: string): void => { run([{ type: 'shi', id: 'ss_zei', to }]); };
+
+  it('不管他（zhuo）：挨板子那几日东圈门白天没有他，期满回来', () => {
+    end('zhuo');
+    expect(stOf('ss_aqi')).toBe('hurt');
+    expect(at(10)).not.toContain('ss_aqi');
+    expect(marksOf('cheng').join('')).toContain('打板子');
+    advanceDays(S, 6); tickWorld();
+    expect(stOf('ss_aqi')).toBe('ok');
+    expect(at(10)).toContain('ss_aqi');
+    expect(at(22)).not.toContain('ss_aqi');
+  });
+
+  it('扭送府衙（songguan）同样挨板子；替他赔钱（huanle）不挨，白天直接在东圈门', () => {
+    end('songguan');
+    expect(at(10)).not.toContain('ss_aqi');
+    setState(skipToYangzhou()); S.min = 10 * 60;
+    end('huanle');
+    expect(stOf('ss_aqi')).toBe('ok');
+    expect(at(10)).toContain('ss_aqi');
+  });
+
+  it('问更夫说得出缘故：zhuo 说他自己看见的，songguan 说他夜里听到的，伤好了回到原来的闲话', () => {
+    // 不管它：玩家不在扬州，事情自己走到结局，更夫是牵涉的人，回来一问就说
+    const away = ROOMS.find(r => r.region !== 'yz')!.id, home = S.loc;
+    tickShi(); // 人在扬州，听说了起头（手写的事等玩家听说才往下走）
+    S.loc = away;
+    for (let i = 0; i < 40 && stOf('ss_aqi') !== 'hurt'; i++) { advanceDays(S, 1); tickShi(); tickWorld(); }
+    expect(stOf('ss_aqi')).toBe('hurt');
+    S.loc = home; S.min = 23 * 60;
+    expect(ask('ss_gengfu', { force: true }).text).toContain('长凳');
+    setState(skipToYangzhou()); S.min = 23 * 60;
+    end('songguan');
+    expect(ask('ss_gengfu', { force: true }).text).toContain('趴在草棚里');
+    advanceDays(S, 6); tickWorld();
+    S.min = 23 * 60;
+    advanceDays(S, 1);
+    expect(ask('ss_gengfu', { force: true }).text).not.toContain('趴在草棚里');
+  });
+
+  it('同一个种子重放，地方、处境、问到的话一字不差', () => {
+    const play = (): string => {
+      setState(skipToYangzhou()); S.min = 23 * 60;
+      end('zhuo');
+      const a = ask('ss_gengfu', { force: true }).text;
+      const m = at(10).join(',');
+      advanceDays(S, 6); tickWorld();
+      return JSON.stringify({ w: S.w, a, m, back: at(10).join(',') });
+    };
+    expect(play()).toBe(play());
   });
 });
