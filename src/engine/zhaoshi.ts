@@ -15,6 +15,7 @@ import { activeOuter, counterBonus, reachBonus, slotSkill, wielded } from './wux
 
 export { personOf } from './ren';
 import { test } from './dsl';
+import { passivesOf, type Passives } from './beidong';
 
 /** 绝招按钮最多几个 */
 export const MAX_PERFORMS = 3;
@@ -50,10 +51,15 @@ export const foePerson = (f: FoeDef): Person => standard(f.rank, f.build ?? 'eve
 /** 生效的备战：条件成立的都算，可以叠加 */
 export const activePrep = (f: FoeDef): PrepDef[] => (f.prep ?? []).filter(p => test(p.if));
 
+/** 眼下搭配生效的被动与合璧（实战、搭配页共用；和模拟的 kitOf 同一套算法） */
+export const passivesNow = (s: Pick<GameState, 'skills' | 'loadout'>): Passives =>
+  passivesOf({ neigong: slotSkill(s, 'neigong'), qinggong: slotSkill(s, 'qinggong'), fist: slotSkill(s, 'fist'), weapon: slotSkill(s, 'weapon'), ult: slotSkill(s, 'ult') });
+
 /** 交给引擎的玩家：气血、内力照存档；克制（性质、兵器长短）并进各应对的成算 */
 export function heroSpec(s: GameState, kit: FightKit, f: FoeDef): HeroSpec {
   const ng = slotSkill(s, 'neigong'), qg = slotSkill(s, 'qinggong'), o = kit.outer;
   const src: Record<RespKey, SkillDef | undefined> = { block: ng, dodge: qg, parry: o, rush: o };
+  const pv = passivesNow(s);
   const bonus: Partial<Record<RespKey, number>> = {};
   for (const k of Object.keys(src) as RespKey[]) {
     const d = src[k];
@@ -63,7 +69,10 @@ export function heroSpec(s: GameState, kit: FightKit, f: FoeDef): HeroSpec {
     person: personOf(s), name: s.name, hp: s.hp, hpMax: s.hpMax, mp: s.mp, mpMax: s.mpMax, wounds: { ...s.wounds },
     has: { block: !!ng, dodge: !!qg, parry: !!o, rush: !!o }, bonus,
     performs: kit.performs.map(p => ({ name: p.name, mp: p.mp, cd: p.cd, hits: p.hits, dmg: p.dmg, acc: p.acc, fx: p.fx ?? [] })),
-    ult: kit.ult ? { dmg: kit.ult.u.dmg, fx: kit.ult.u.fx ?? [] } : undefined
+    ult: kit.ult ? { dmg: kit.ult.u.dmg, fx: kit.ult.u.fx ?? [] } : undefined,
+    // 内功与合璧的被动，轻功的身法并进身法；合璧的减益开战即施给对手
+    passive: { ...pv.sum, haste: pv.sum.haste + pv.qinggongHaste },
+    openers: pv.openers
   };
 }
 
