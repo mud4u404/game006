@@ -1,7 +1,13 @@
 import { REL_LEGACY } from '../src/engine/renqing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { clearSaveSafely, exportCode, importCode, listBackups, migrate, readSave, useStore, writeSave, KEY, SAVE_VERSION, type SaveStore } from '../src/core/save';
-import { newGame, skipToYangzhou } from '../src/core/state';
+import { newGame, setState, skipToYangzhou, worldSeed } from '../src/core/state';
+import { V5_MATOU } from '../src/core/save';
+import { dayNo } from '../src/core/time';
+import { initWorld, marksOf, ownerOf } from '../src/engine/shijie';
+import { seedOf } from '../src/engine/rng';
+import { payFare } from '../src/engine/world';
+import { moveShi } from '../src/engine/shishi';
 import type { GameState } from '../src/core/state';
 import { personOf } from '../src/engine/ren';
 import { hpMaxOf } from '../src/engine/person';
@@ -66,6 +72,20 @@ describe('存档：更新游戏不丢档', () => {
     expect(s.loc).toBe(skipToYangzhou().loc);
     const p = migrate({ ...newGame(), loc: 'no_such_place' });
     expect(p.loc).toBe(newGame().loc);
+  });
+
+  it('退役的悬赏榜（xs_bang、xsb_bang，负责人 10-09 拆府衙）：手上的悬赏改到照壁下的书办那里交差，选中的榜不再选着', () => {
+    const old = {
+      ...skipToYangzhou(), loc: 'yz_fuya', sel: 'xsb_bang', reply: { id: 'xs_bang', text: '旧榜' },
+      job: { id: 'xs_hezei', due: 70 },
+      yue: [{ id: 'job_xs_hezei', npc: 'xs_bang', at: 'yz_fuya', due: 70, text: '拿运河渡口的河贼，押回府衙领赏', miss: [{ type: 'jobFail', id: 'xs_hezei' }] }]
+    };
+    const s = migrate(old);
+    expect(s.yue[0]).toMatchObject({ id: 'job_xs_hezei', npc: 'xsb_zhuren', at: 'yz_zhaobi', due: 70 });
+    expect(s.job).toEqual({ id: 'xs_hezei', due: 70 });
+    expect(s.sel).toBeNull();
+    expect(s.reply).toBeNull();
+    expect(s.loc, '府衙前堂沿用原来的 id').toBe('yz_fuya');
   });
 
   it('搭配里指向没学会、已删除、放错位置的武功，或者不认识的位置名，就空出来，不崩', () => {
@@ -157,7 +177,7 @@ describe('存档：更新游戏不丢档', () => {
   it('第三版升第四版：根基按常人的比例换成二十的刻度；内力去掉根基那一截，一百点算一年功力；气血、内力按原来的比例保留；没有伤', () => {
     const raw = JSON.parse(FIXTURES['./fixtures/saves/v3-latest.json']);
     const s = migrate(raw);
-    expect(s.v).toBe(4);
+    expect(s.v).toBe(SAVE_VERSION);
     expect(s.attr).toEqual({ 体魄: 22, 根骨: 22, 身法: 23, 悟性: 23, 胆魄: 22 });
     expect(s.gongli).toBeCloseTo((800 - 30) / 100);
     expect(s.wounds).toEqual({ hand: 0, foot: 0, inner: 0 });
@@ -168,5 +188,103 @@ describe('存档：更新游戏不丢档', () => {
     expect((s as unknown as Record<string, unknown>).hpFrac).toBeUndefined();
     // 再读一次不变
     expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
+  });
+});
+
+describe('存档第五版：世界状态', () => {
+  const raw = (f: string): Record<string, unknown> => JSON.parse(FIXTURES[`./fixtures/saves/${f}.json`]);
+
+  it('还没有世界的第四版存档：升到第五版，种子由名字和开局的现实时刻算，世界是开局的样子；反复读档不变', () => {
+    const old = raw('v4-before-world');
+    const s = migrate(raw('v4-before-world'));
+    expect(s.v).toBe(5);
+    expect(s.w.seed).toBe(seedOf('孤舟', 1791300000000));
+    expect(s.w.seed).toBe(worldSeed('孤舟', (old.real as { start: number }).start));
+    expect(s.w).toEqual(initWorld(s.w.seed, dayNo(s)));
+    expect(ownerOf('dukou', s)).toBe('dong');
+    expect(s.w.fac.hei.power).toBe(45);
+    expect(s.w.fac.dong.holds).toContain('dukou');
+    expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
+  });
+
+  it('打赢了屠千山、码头归了西舵的第四版存档：黑风寨残部实力十八，码头归西舵，过路钱二十文', () => {
+    const s = migrate(raw('v4-matou-xiduo'));
+    expect(s.v).toBe(5);
+    expect(s.w.seed).toBe(seedOf('寒舟', 1791400000000));
+    expect(s.w.day).toBe(dayNo(s));
+    expect(s.w.fac.hei.power).toBe(18);
+    expect(ownerOf('dukou', s)).toBe('xi');
+    expect(s.w.fac.xi.holds).toEqual(['dukou']);
+    expect(s.w.fac.dong.holds).not.toContain('dukou');
+    // 旗标、世事照旧留着
+    expect(s.flags.boss).toBe(true);
+    expect(s.shi?.ss_matou.at).toBe('xiduo');
+    setState(s);
+    s.silver = 100;
+    payFare('gz_kechuan');
+    expect(s.silver).toBe(60);
+    expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
+  });
+
+  it('码头一事的每一步：迁移推出的主人，和实玩时世事走到这一步写下的主人一样', () => {
+    for (const at of ['qi', 'duizhi', 'huobing', 'xiduo', 'dongduo', 'tiaoting', 'guanfu']) {
+      const r = raw('v4-matou-xiduo');
+      (r.shi as Record<string, { at: string }>).ss_matou.at = at;
+      const m = migrate(r);
+      expect(ownerOf('dukou', m), `迁移 ${at}`).toBe(V5_MATOU[at] ?? 'dong');
+      // 实玩：开局的世界，世事推到这一步
+      const live = skipToYangzhou();
+      live.flags.boss = true;
+      setState(live);
+      moveShi('ss_matou', at);
+      expect(ownerOf('dukou', live), `实玩 ${at}`).toBe(ownerOf('dukou', m));
+      expect(marksOf('dukou', live), `痕迹 ${at}`).toEqual(marksOf('dukou', m));
+    }
+    const t = raw('v4-matou-xiduo');
+    (t.shi as Record<string, { at: string }>).ss_matou.at = 'tiaoting';
+    expect(marksOf('dukou', migrate(t)).length).toBe(1);
+  });
+
+  it('第五版的存档缺了世界、或者世界缺了几块：按当前的内容补上，不丢档', () => {
+    const t = JSON.parse(JSON.stringify(skipToYangzhou()));
+    delete t.w;
+    const s = migrate(t);
+    expect(s.w).toEqual(initWorld(worldSeed(s.name, s.real.start), dayNo(s)));
+    const u = JSON.parse(JSON.stringify(skipToYangzhou()));
+    delete u.w.fac.gai;
+    delete u.w.place.cheng;
+    u.w.place.dukou.marks = null;
+    u.w.ppl = 'x';
+    const m = migrate(u);
+    expect(m.w.fac.gai.holds).toEqual(['bs2_longwang']);
+    expect(m.w.place.cheng.order).toBe(65);
+    expect(m.w.place.dukou.marks).toEqual([]);
+    expect(m.w.ppl).toEqual({});
+  });
+
+  it('1A 的第五版存档（还没有传闻）：传闻补成空、玩家听过的补成空，人原有的处境不丢，世界其余部分一字不差；反复读档不变', () => {
+    const old = raw('v5-1a') as { w: Record<string, unknown> & { ppl: Record<string, unknown> } };
+    expect(old.w.rumor).toBeUndefined();
+    expect('heard' in old).toBe(false);
+    const s = migrate(raw('v5-1a'));
+    expect(s.w.rumor).toEqual({});
+    expect(s.heard).toEqual([]);
+    expect(s.w.ppl).toEqual(old.w.ppl);
+    expect(s.w.ppl.chuanfu.st).toBe('hurt');
+    expect({ ...s.w, rumor: undefined }).toEqual({ ...old.w, rumor: undefined });
+    expect(marksOf('cheng', s).length).toBe(1);
+    expect(migrate(JSON.parse(JSON.stringify(s)))).toEqual(s);
+    // 人知道的传闻不是数组的（坏了的），丢掉，处境照旧
+    const bad = raw('v5-1a') as { w: { ppl: Record<string, Record<string, unknown>> } };
+    bad.w.ppl.chuanfu.know = 'x';
+    const b = migrate(bad);
+    expect(b.w.ppl.chuanfu).toEqual(old.w.ppl.chuanfu);
+  });
+
+  it('读不出来的第五版存档也原样另存，不覆盖', () => {
+    mem.setItem(KEY, JSON.stringify({ ...skipToYangzhou(), v: 5, w: 1, skills: null }).slice(0, -5));
+    expect(readSave().broken).toBe(true);
+    writeSave(newGame());
+    expect([...mem.m.keys()].filter(k => k.startsWith('jhyy-save-broken-')).length).toBe(1);
   });
 });

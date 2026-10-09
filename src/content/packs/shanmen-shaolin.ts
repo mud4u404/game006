@@ -114,7 +114,7 @@ const NPCS: NpcDef[] = [
           text: '「罗汉拳，一十八手，手手都是最笨的直拳拙掌。」长老一招一式拆给你看，掌出无风，「笨功夫练到不用想，就是罗汉。」你在殿前的青石板上，打了一整个下午。',
           do: [{ type: 'time', add: 120 }, { type: 'learn', skill: 'sl_luohan', prof: 60 }] },
         { if: { sect: SMSL_OUT, canLearn: 'sl_yiwei', notLearned: 'sl_yiwei' },
-          text: '长老指着寺前那一段院墙：「一苇渡江，渡的不是江，是自己的身子。先在墙头上走。走得稳了，江水自会渡你。」你在墙头上来来回回走了一个时辰，鞋底磨穿了一层。',
+          text: '长老指着寺前那一段院墙：「一苇渡江，渡的不是江，是自己的身子。先在墙头上走。走得稳了，江水自会渡你。」你在墙头上来来回回走了两个时辰，鞋底磨穿了一层。',
           do: [{ type: 'time', add: 240 }, { type: 'learn', skill: 'sl_yiwei', prof: 60 }] },
         { if: { sect: SMSL_OUT, canLearn: 'sl_jinzhong', notLearned: 'sl_jinzhong' },
           text: '长老拿起木鱼槌，在你身上从肩到背一处一处地敲：「金钟罩，不是硬挨，是把气布在皮里。槌到哪儿，气到哪儿。钟罩住了，槌就只是响。」敲完一轮，你浑身热得像刚出过一身大汗。',
@@ -234,8 +234,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smsl_shui', name: '少林 · 挑水上山', stages: [
-    { title: '替老葛把山下的水挑上灶房', to: 'smsl_jinshan', who: 'smsl_laoge', hint: '跟火工老葛挑水上山，或白天接长老三十招。',
-      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
+    { title: '过寂照长老的考校', to: 'smsl_jinshan', who: 'smsl_laoge', hint: '寂照长老说，拜师先过考校：接他三十招，或是替老葛把山下的水挑上灶房，他一样收。',
+      need: [{ if: { noSect: true }, text: '了断别家的名分' }] },
     { title: '少林 · 挑水上山 · 完' }
   ] }
 ];
@@ -255,13 +255,13 @@ const EYES: EyeDef[] = [
 /* ---------- 传闻 ---------- */
 
 const NEWS: NewsDef[] = [
-  { text: '金山寺来了位挂单的少林长老，说是云游，一住半年，要在江南收几个俗家弟子。' },
+  { text: '金山寺来了位挂单的少林长老，说是云游，一住半年，要在江南收几个俗家弟子。', who: ['和尚', '货郎', '渔家'] },
   { if: { flag: 'smsl_ju' },
-    text: '有人想拜金山寺长老的门，叫长老挡了驾——听说手上有冤孽的，他一概不收。' },
+    text: '有人想拜金山寺长老的门，叫长老挡了驾——听说手上有冤孽的，他一概不收。', who: ['和尚', '货郎', '说书'], about: 'you' },
   { if: { flag: 'smsl_in' },
-    text: '金山寺的少林长老收了个俗家弟子。带兵刃上山的，知客僧的脸色头一回收平了。' },
+    text: '金山寺的少林长老收了个俗家弟子。带兵刃上山的，知客僧的脸色头一回收平了。', who: ['和尚', '货郎', '小二'], about: 'you' },
   { if: { flag: 'smsl_wai' },
-    text: '金山寺那位俗家弟子升了外门，韦陀掌、金钟罩都摸得着了。香客们都说，寺里要出人物。' }
+    text: '金山寺那位俗家弟子升了外门，韦陀掌、金钟罩都摸得着了。香客们都说，寺里要出人物。', who: ['和尚', '货郎', '小二'], about: 'you' }
 ];
 
 const pack: ContentPack = {

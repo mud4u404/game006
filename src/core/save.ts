@@ -8,18 +8,19 @@
  * - 每天留一份备份，最多三份；重新开始前也先留一份。
  * - 内容里的 id 只增不删（tests/ids.test.ts 把关）；万一存档里的地点已经不存在，送回安全的地方。
  */
-import { ROOMS, SKILLS, itemById, shiById } from '../content';
+import { ROOMS, SKILLS, itemById, jobById, npc, shiById } from '../content';
+import { applyWorld, fillWorld, initWorld, setOwner, type WorldState } from '../engine/shijie';
 import { defaultLoadout, fits } from '../engine/wuxue';
 import { GEAR_KEYS, fitsGear } from '../engine/zhuangbei';
 import { syncBody } from '../engine/ren';
 import { migrateRel } from '../engine/renqing';
 import type { Loadout } from '../engine/wuxue';
 import type { AttrKey, Slot } from '../content/types';
-import { newGame, skipToYangzhou, type GameState } from './state';
+import { newGame, skipToYangzhou, worldSeed, type GameState } from './state';
 import { dateStr, dayNo, nowMs } from './time';
 import { storageKey } from './preview';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 /** 正式版的存档键。试玩预览（/preview/）换一套键，见 core/preview.ts；下面用到的键都经 saveKeys() 现算 */
 export const KEY = 'jhyy-save-v2';
 const META = 'jhyy-save-meta';
@@ -97,8 +98,37 @@ function v3toV4(o: Raw): Raw {
   };
 }
 
+/**
+ * 第五版：世界状态（engine/shijie.ts，docs/huo-shijie.md 3.2、第四节第一片第七条）。
+ * - 世界种子由名字和开局的现实时刻算（和新开局同一个算法）；还没有现实钟的更老的存档，按零算。
+ * - 先铺开局的世界，再按旧档的旗标、世事推出当时的样子：
+ *   打赢了屠千山（boss），黑风寨残部的实力压到十八；
+ *   「码头空出来以后」走到 xiduo，码头归西舵；dongduo 归东舵；tiaoting 归东舵，再照那一步写的痕迹记一笔「白天东舵、夜里西舵」；
+ *   guanfu 归府衙；其余（qi、duizhi、huobing、还没起头）照开局的主人。
+ */
+export const V5_MATOU: Record<string, string> = { xiduo: 'xi', dongduo: 'dong', tiaoting: 'dong', guanfu: 'guan' };
+export function worldFromOld(o: Raw): WorldState {
+  const real = o.real as { start?: unknown } | undefined;
+  const start = typeof real?.start === 'number' ? real.start : 0;
+  const day = dayNo({ year: Number(o.year) || 0, month: Number(o.month) || 1, day: Number(o.day) || 1 });
+  const w = initWorld(worldSeed(String(o.name ?? ''), start), day);
+  const flags = (o.flags ?? {}) as Record<string, boolean>;
+  if (flags.boss && w.fac.hei) w.fac.hei.power = 18;
+  const at = ((o.shi ?? {}) as Record<string, { at?: string } | undefined>).ss_matou?.at;
+  const to = at ? V5_MATOU[at] : undefined;
+  if (to) setOwner(w, 'dukou', to);
+  // 调停：码头归东舵，夜里西舵的船靠北头。痕迹的字照世事那一步写的（内容里只写一处，迁移和实玩对得上）
+  if (at === 'tiaoting') {
+    for (const e of shiById('ss_matou')?.steps.tiaoting?.do ?? []) if (e.type === 'w' && e.op === 'mark') applyWorld(w, e, day);
+  }
+  return w;
+}
+function v4toV5(o: Raw): Raw {
+  return { ...o, v: 5, w: worldFromOld(o) };
+}
+
 /** 第 n 版升到第 n+1 版的办法 */
-const MIGRATIONS: Record<number, (o: Raw) => Raw> = { 2: v2toV3, 3: v3toV4 };
+const MIGRATIONS: Record<number, (o: Raw) => Raw> = { 2: v2toV3, 3: v3toV4, 4: v4toV5 };
 
 /** 把读到的东西升到当前版本，补齐缺的字段，修掉指向已不存在内容的地方。不认识的版本直接抛错 */
 export function migrate(input: unknown): GameState {
@@ -125,6 +155,9 @@ function repair(s: GameState): GameState {
   if (!rec.real || typeof (rec.real as GameState['real']).start !== 'number') rec.real = { start: nowMs(), startDay: dayNo(s), seen: nowMs() };
   // 营生：序章里是渔家，走出瓜洲就是游侠
   if (!rec.shenfen || typeof (rec.shenfen as GameState['shenfen']).id !== 'string') rec.shenfen = { id: s.chapter === 0 ? 'yumin' : 'youxia', standing: 1, since: dayNo(s) };
+  // 世界状态（第五版）：缺了就按当前的内容铺开局的世界，不丢档；有的补齐内容里后来添的势力、地方
+  if (!rec.w || typeof rec.w !== 'object') rec.w = initWorld(worldSeed(s.name, s.real.start), dayNo(s));
+  else fillWorld(s.w, worldSeed(s.name, s.real.start), dayNo(s));
   for (const k of Object.keys(def)) if (rec[k] === undefined) rec[k] = def[k];
   // 装备（纸娃娃，docs/zhuangbei.md 第三节）：第四版的旧存档只有兵器，照样读得出来。
   // 只留认得的位置、放得进这个位置、行囊里还有的；手里的兵器已经不在行囊里了，就空着手。先于算气血上限，装备也算在里头
@@ -146,6 +179,15 @@ function repair(s: GameState): GameState {
   if (s.shi) for (const [id, st] of Object.entries(s.shi)) if (!shiById(id)?.steps[st?.at]) delete s.shi[id];
   // 地点没了，送回这一回的起点
   if (!ROOMS.some(r => r.id === s.loc)) s.loc = s.chapter === 0 ? newGame().loc : skipToYangzhou().loc;
+  // 差事的约：交差的人、交差的地方照当前的差事定义重写（负责人 10-09 拆府衙：悬赏改到照壁下的书办那里交差，
+  // 旧存档里还记着已经退役的悬赏榜 xs_bang；见 docs/decisions.md）
+  for (const y of s.yue ?? []) {
+    const j = y.id.startsWith('job_') ? jobById(y.id.slice(4)) : undefined;
+    if (j) { y.npc = j.npc; y.at = j.at; }
+  }
+  // 选中的、刚回过话的人物已经不在了（退役的物件），就不选
+  if (s.sel && !npc(s.sel)) s.sel = null;
+  if (s.reply && !npc(s.reply.id)) s.reply = null;
   // 搭配里指向没学会、或已经没有的武功，就空出来
   for (const [slot, id] of Object.entries(s.loadout) as [Slot, string][]) {
     const def = SKILLS.find(k => k.id === id);

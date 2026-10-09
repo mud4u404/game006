@@ -157,6 +157,7 @@ export type Ev =
   | { k: 'ult'; dmg: number; fx: FxKind[] }
   | { k: 'ally'; i: number; name: string; n: number; dmg: number }
   | { k: 'phase2' }
+  | { k: 'ease' }
   | { k: 'fallen'; left: number; fled: number }
   | { k: 'item'; kind: 'jcy' | 'dart'; v: number }
   | { k: 'fleeFail' }
@@ -202,7 +203,7 @@ export class Duel {
   foeSt: Partial<Record<FoeSt, Status>> = {}; foeImmune = 0; phase = 1;
   feintR: number;
   /* 局面 */
-  mom: number; round = 0; nextTell: number; lastTell = -1; heldRun = 0; lead = 0;
+  mom: number; round = 0; eased = false; nextTell: number; lastTell = -1; heldRun = 0; lead = 0;
   /** 剧本战 rescue：接过第一记重招以后，再过两合有人出手 */
   rescueAt = Infinity;
   prompt: Prompt | null = null; opening = false; over = false; res: DuelRes | null = null;
@@ -318,7 +319,8 @@ export class Duel {
       ev.push({ k: 'phase2' });
     }
     if (this.f.script === 'rescue' && this.ehp <= this.ehpMax * 0.6) { this.toScript('rescue', ev); return got; }
-    if (this.ehp <= this.efloor) {
+    // 考校考的是接招：约好了合数的切磋，对手打到三成也不算赢，要撑满招数才过
+    if (this.ehp <= this.efloor && !(this.f.spar && this.f.rounds)) {
       if (this.left > 0) {
         // 倒下一个：剩下的人各自可能溜走；还有人在，就补上来
         let stay = 0;
@@ -431,6 +433,13 @@ export class Duel {
     } else if (this.foeSt.chill && this.rng() < 0.5) { held = true; ev.push({ k: 'held', why: 'chill' }); }
     this.heldRun = held ? this.heldRun + 1 : 0;
     this.log.maxHeld = Math.max(this.log.maxHeld, this.heldRun);
+    // 考校：对手叫你逼到三成，收了攻势，只守不攻，陪你把约好的招数走完（招数照数，不因打得好就提前算过；也不叫玩家白白多挨十几合）
+    if (this.f.spar && this.f.rounds && this.ehp <= this.efloor) {
+      if (!this.eased) { this.eased = true; ev.push({ k: 'ease' }); }
+      this.endOfRound();
+      this.track();
+      return ev;
+    }
     this.nextTell--;
     if (this.nextTell <= 0 && !held) {
       this.heavy(false, ev);

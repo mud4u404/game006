@@ -135,4 +135,19 @@ describe('帮手、剧本、切磋', () => {
     const e = simulate(new Duel(hero(standard(0)), foe(standard(2), { spar: true }), { rng: mulberry32(22) }), RANDOM);
     expect(e.hp).toBeGreaterThanOrEqual(e.floor);
   });
+
+  it('考校（约好了合数）：对手打到三成也不算赢，收了攻势陪你走完招数，满了才过', () => {
+    const d = simulate(new Duel(hero(standard(2)), foe(standard(1), { spar: true, rounds: 30 }), { rng: mulberry32(21) }), SKILLED);
+    expect(d.ehp).toBe(d.efloor);
+    expect(d.res).toBe('win');
+    expect(d.round).toBe(30);
+    expect(d.eased).toBe(true);
+  });
+
+  it('考校：对手收了攻势以后，玩家不再挨打', () => {
+    const d = new Duel(hero(standard(2)), foe(standard(1), { spar: true, rounds: 30 }), { rng: mulberry32(21) });
+    const done = simulate(d, SKILLED);
+    expect(done.res).toBe('win');
+    expect(done.hp).toBeGreaterThanOrEqual(done.floor);
+  });
 });

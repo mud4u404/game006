@@ -37,8 +37,8 @@ describe('每件心事的导航写全了', () => {
   }
 });
 
-describe('导航算得对', () => {
-  it('找的人夜里不在：要等，写出他什么时辰在哪；白天去就能做', () => {
+describe('导航算得对、不剧透、不讲解', () => {
+  it('点过名的人夜里不在：写他什么时辰在哪；白天去就能去', () => {
     S.quests.main1 = 1;
     S.min = 22 * 60;
     expect(questNav('main1')).toMatchObject({ state: '要等', why: '屠千山卯时到戌时在运河渡口' });
@@ -46,18 +46,37 @@ describe('导航算得对', () => {
     expect(questNav('main1')).toMatchObject({ state: '能做', to: 'dukou' });
   });
 
-  it('差一步没做：卡住，写出差什么；做了只差时辰：要等，写「入夜以后」', () => {
+  it('剧情上的门槛不点破：只说「还缺些眉目」，不说缺的是哪条线索', () => {
     S.quests.side_caoshangfei = 1;
     S.min = 10 * 60;
     const n = questNav('side_caoshangfei')!;
-    expect(n.state).toBe('卡住');
-    expect(n.why).toContain('破船');
-    expect(n.needs.find(x => !x.ok)).toBeTruthy();
-    S.flags.csf_clue2 = true;
-    expect(questNav('side_caoshangfei')).toMatchObject({ state: '要等', why: '入夜以后' });
+    expect(n.why).toBe('还缺些眉目');
+    const html = questbookSheetHtml();
+    expect(html).toContain('还缺些眉目');
+    for (const g of QUESTS.find(q => q.id === 'side_caoshangfei')!.stages[1].need ?? []) {
+      if (!Object.keys(g.if).every(k => k === 'hour')) expect(html).not.toContain(g.text);
+    }
   });
 
-  it('做不成了：未竟，见闻簿写原因、归进「未竟」，记挂着的横幅放下', async () => {
+  it('没点过名的人不提：标题和盘算里没写他的名字，见闻簿里就没有他', () => {
+    for (const q of QUESTS) q.stages.forEach((st, i) => {
+      if (!st.who) return;
+      S.quests[q.id] = i;
+      const n = questNav(q.id);
+      if (n?.who) expect(`${st.title}${st.hint ?? ''}`).toContain(n.who.name);
+    });
+  });
+
+  it('见闻簿不挂「能做、卡住」的签，不打勾打叉', () => {
+    S.quests.side_yanhao = 2;
+    S.quests.side_caoshangfei = 1;
+    S.min = 10 * 60;
+    const html = questbookSheetHtml();
+    expect(html).not.toMatch(/[✓✗×] |>能做<|>卡住<|>要等</);
+    expect(html).toContain('前情');
+  });
+
+  it('做不成了：未竟，见闻簿写原因，记挂着的横幅放下', async () => {
     S.quests.smth_zhen = 0;
     S.track = 'smth_zhen';
     expect(questNav('smth_zhen')!.state).not.toBe('未竟');
@@ -70,16 +89,7 @@ describe('导航算得对', () => {
     const { dropFailedTrack } = await import('../src/engine/daohang');
     dropFailedTrack();
     expect(S.track).toBe('');
-    expect(S.feed[0].x).toContain('做不成了');
-  });
-
-  it('见闻簿：门槛逐条打勾，前情收起，找的人写在哪', () => {
-    S.quests.side_yanhao = 2;
-    S.min = 10 * 60;
-    const html = questbookSheetHtml();
-    expect(html).toContain('× 身契带在身上');
-    expect(html).toContain('前情 · 2 步');
-    expect(html).toMatch(/找云娘：/);
+    expect(S.feed[0].x).toContain('只好放下');
   });
 
   it('了结的心事：了结，不能记挂', () => {

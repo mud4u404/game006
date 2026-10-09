@@ -1,6 +1,7 @@
 // 等到有活可做才退出：每两分钟看一次 GitHub 上开着的 Issue 和 PR，等待期间不花模型的 token。
 // 挑任务的规则见 scripts/relay.mjs，与 AGENTS.md 第五节一致。自动模式的用法见 AGENTS.md 第十节。
-// 用法：node scripts/wait-for-work.mjs [--once] [--max-minutes N]
+// 用法：node scripts/wait-for-work.mjs [--for 名字] [--once] [--max-minutes N]
+//   --for 名字       自报名字（trae、qoder、codebuddy……）：能领带「给:名字」的任务，和没有指派的任务；不报名字只领没有指派的
 //   --once           只看一次
 //   --max-minutes N  最多等 N 分钟。工具限制单条命令运行时长时用，到时打印「暂时没有可做的任务」后退出
 import { execSync } from 'node:child_process';
@@ -8,6 +9,8 @@ import { describe, pickWork } from './relay.mjs';
 
 const args = process.argv.slice(2);
 const once = args.includes('--once');
+const fi = args.indexOf('--for');
+const me = (fi >= 0 ? args[fi + 1] : process.env.WORK_FOR) ?? '';
 const mi = args.indexOf('--max-minutes');
 const maxMin = mi >= 0 ? Number(args[mi + 1]) || 0 : 0;
 
@@ -64,7 +67,7 @@ const start = Date.now();
 let fails = 0;
 for (;;) {
   try {
-    const w = pickWork(await openItems(), remoteBranches());
+    const w = pickWork(await openItems(), remoteBranches(), me);
     fails = 0;
     if (w) {
       console.log(describe(w));

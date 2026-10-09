@@ -5,7 +5,7 @@
  * 维护者每天审查时运行 `npm run ids` 把新 id 记进来。
  */
 import { describe, expect, it } from 'vitest';
-import { ENCOUNTERS, FOES, ITEMS, NPCS, QUESTS, ROOMS, SHI, SKILLS, STORIES } from '../src/content';
+import { ENCOUNTERS, FACTIONS, FOES, ITEMS, NPCS, QUESTS, ROOMS, SHI, SKILLS, STORIES } from '../src/content';
 
 type Registry = { ids: Record<string, string[]>; stages: Record<string, number> };
 const RAW = import.meta.glob<string>('./id-registry.json', { query: '?raw', import: 'default', eager: true })['./id-registry.json'];
@@ -22,7 +22,9 @@ const current = (): Record<string, string[]> => ({
   // 存档里记着遇到过哪些路遇（encLog）
   encounters: ENCOUNTERS.map(x => x.id),
   // 存档里记着每件世事走到哪一步（shi）：事和步都不能改名
-  shi: SHI.flatMap(d => [d.id, ...Object.keys(d.steps).map(k => `${d.id}.${k}`)])
+  shi: SHI.flatMap(d => [d.id, ...Object.keys(d.steps).map(k => `${d.id}.${k}`)]),
+  // 存档里记着各股势力眼下的实力、据点、对你的账（w.fac）
+  factions: FACTIONS.map(x => x.id)
 });
 // 任务的阶段数也只增不减：存档里记着「第几阶段」
 const stages = (): Record<string, number> => Object.fromEntries(QUESTS.map(q => [q.id, q.stages.length]));

@@ -7,10 +7,12 @@ import { advanceMin, dayNo, shichen } from '../core/time';
 import { attrEffects } from './gengu';
 import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
-import { dating, panwen, seeShi } from './shishi';
+import { seeShi } from './shishi';
+import { ask, panwen } from './chuanwen';
 import { shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
 import { passBlock } from './shiguang';
+import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
 
 /** 江湖历的第几分钟（暂时走开的人什么时候回来） */
 export const nowMin = (): number => dayNo(S) * 1440 + S.min;
@@ -29,25 +31,33 @@ function staysAtNight(id: string, roomId: string): boolean {
   return S.yue.some(y => y.npc === id && y.at === roomId);
 }
 
-/** 此刻在场的：带条件的（作息、剧情）按条件挑；同一人写了几处作息的，只算一次 */
-function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string): string[] {
+/**
+ * 此刻在场的：带条件的（作息、剧情）按条件挑；同一人写了几处作息的，只算一次。
+ * 世界先定（engine/shijie.ts 的 whereNow）：事件把人叫到别处的、伤着的、坐牢的、走了的，不在常待的地方；
+ * 叫到这里的、关在这里的，不管作息都在。都没有，才照作息
+ */
+function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string, obj: boolean): string[] {
   const h = Math.floor(S.min / 60);
   const quiet = !!room(roomId).nightQuiet && (h >= NIGHT_HOME.from || h < NIGHT_HOME.to);
-  return [...new Set((list || []).filter(x => {
+  const here = (list || []).filter(x => {
     const id = typeof x === 'string' ? x : x.id;
+    if (whereNow(id) !== undefined) return false;
     if (typeof x !== 'string' && !test(x.if)) return false;
     if (awayNow(id)) return false;
     // 入夜回家：自己写了作息（带时辰条件）的照作息走
     return !quiet || (typeof x !== 'string' && timed(x.if)) || staysAtNight(id, roomId);
-  }).map(x => (typeof x === 'string' ? x : x.id)))];
+  }).map(x => (typeof x === 'string' ? x : x.id));
+  return [...new Set([...here, ...placedHere(roomId, obj).filter(id => !awayNow(id))])];
 }
 
-export const roomNpcs = (id: string): string[] => present(room(id).npcs, id);
-export const roomObjs = (id: string): string[] => present(room(id).objs, id);
+export const roomNpcs = (id: string): string[] => present(room(id).npcs, id, false);
+export const roomObjs = (id: string): string[] => present(room(id).objs, id, true);
 
+/** 地点描写；底下接这处地方的痕迹（engine/shijie.ts，最多两行）：码头换了主人、谁挨了打铺子上了门板…… */
 export function roomDesc(id: string): string {
   const d = room(id).desc;
-  return fmt(typeof d === 'string' ? d : pickBranch(d)?.text ?? '', textVars());
+  const text = fmt(typeof d === 'string' ? d : pickBranch(d)?.text ?? '', textVars());
+  return text + marksOf(id).join('');
 }
 
 export function roadText(id: string): string {
@@ -57,16 +67,22 @@ export function roadText(id: string): string {
 }
 
 /**
- * 上船付船钱（RoomDef.fare）：钱够就付；不够的，替船家撑篙、拉纤抵船钱，路上多耗一个时辰。
- * 界面赶路（ui/explore.ts）和机器玩家都走这里。返回记进动态的那句话，不是船返回空
+ * 上船付船钱（RoomDef.fare）、过码头交过路钱（RoomDef.life.toll，按眼下的主人算，engine/shijie.ts）：钱够就付；
+ * 不够的，替船家撑篙、替码头扛货抵了，路上多耗一个时辰。
+ * 界面赶路（ui/explore.ts）和机器玩家都走这里。返回记进动态的那句话，不收钱返回空
  */
 export function payFare(to: string): string | null {
-  const fare = room(to).fare;
-  if (!fare) return null;
-  const msg = S.silver >= fare
-    ? `上了${room(to).name}，付了船钱 ${fare} 文。`
-    : `身上不够船钱（${fare} 文），你替船家撑了一路篙，抵了船钱，路上多耗了一个时辰。`;
-  if (S.silver >= fare) S.silver -= fare;
+  const t = tollOf(to);
+  if (!t) return null;
+  const r = room(to), fee = t.fee, enough = S.silver >= fee;
+  const msg = t.owner
+    ? enough
+      ? `上了${r.name}，付了船钱 ${t.base} 文；${facName(t.owner)}的人守着码头，另交了过路钱 ${t.extra} 文。`
+      : `身上不够船钱和过路钱（共 ${fee} 文），你替${facName(t.owner)}的人扛了一趟货抵了，多耗了一个时辰。`
+    : enough
+      ? `上了${r.name}，付了船钱 ${fee} 文。`
+      : `身上不够船钱（${fee} 文），你替船家撑了一路篙，抵了船钱，路上多耗了一个时辰。`;
+  if (enough) S.silver -= fee;
   else advanceMin(S, 60);
   pushFeed('江湖', msg);
   return msg;
@@ -104,6 +120,16 @@ export function pathMin(from: string, to: string): number {
   let cur = from, t = 0;
   for (const n of pathTo(from, to)) { t += hopMin(cur, n); cur = n; }
   return t;
+}
+
+/**
+ * 这趟路要多久、花多少钱（地图点地名前先给玩家看，负责人 10-09：「成本和时间消耗」要看得见）：
+ * 总分钟、经过几处、沿途要付的船钱和过路钱（每上一处有船钱的地方付一回，同 payFare）。去不了返回 null
+ */
+export function tripCost(to: string): { min: number; hops: number; fee: number } | null {
+  const path = pathTo(S.loc, to);
+  if (!path.length) return null;
+  return { min: travelMin(pathMin(S.loc, to)), hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
 }
 
 /** 当前追踪的任务进度 */
@@ -152,6 +178,26 @@ const DEFAULT_MIN = 10;
 /** 天色转换时记一句见闻 */
 const DUSK: Record<string, string> = { 酉时: '日头偏西，天色向晚。', 戌时: '天黑了，街上点起了灯。', 子时: '夜深了，四下里静悄悄的。', 卯时: '天蒙蒙亮了。' };
 
+/**
+ * 这个动作要花多少钱（买卖、住店、看伤、打赏……）：按钮上写出价钱，玩家点之前就知道（试玩第三轮：买卖按钮标价）。
+ * 看的是「不算银两条件」时会走到的那个分支：钱不够时走到的是「没钱」的回话，不能因此就把价钱藏起来。没有扣钱返回 null
+ */
+export function verbPrice(id: string, verb: Verb): number | null {
+  const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
+  const b = bs?.find(x => { const { silver: _s, ...rest } = x.if ?? {}; return test(rest); });
+  if (!b?.do) return null;
+  const price = b.do.reduce((sum, e) => (e.type === 'silver' && e.delta < 0 ? sum - e.delta : sum), 0);
+  return price > 0 ? price : null;
+}
+
+/** 钱不够时真正走到的分支只是一句回绝（没有扣钱以外的实效）才算「买不起」；赊账、记账这类还能办事的分支，按钮不灰 */
+export function verbPoor(id: string, verb: Verb): boolean {
+  if (verbPrice(id, verb) === null) return false;
+  const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
+  const real = bs?.find(x => test(x.if ?? {}));
+  return !real || !(real.do ?? []).some(e => e.type !== 'time');
+}
+
 /** 对人物、物件做一个动作：执行分支，再按动作花掉时间。arg 是赠礼、典当时挑的那件道具 */
 export function act(id: string, verb: Verb, arg?: string): { text: string; out: Outcome; eyes: EyeDef[] } {
   const r = doAct(id, verb, arg);
@@ -193,10 +239,10 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
     // 赠礼、典当：从行囊里挑一件（engine/daoju.ts）。送了人物喜欢的，关系升一级
     case '赠礼': return { text: giveGift(n, who, arg), out };
     case '典当': return { text: pawn(who, arg), out };
-    // 打听：这一带的世事和传闻（engine/shishi.ts）
-    case '打听': return { text: dating(id, who), out };
-    // 盘问：捕快亮腰牌，谁都得答话，不论今天问没问过（人犯另写「盘问」的分支，问得出破绽）
-    case '盘问': return { text: panwen(who), out };
+    // 打听：问这个人知道什么（engine/chuanwen.ts）
+    case '打听': return { text: ask(id, { who }).text, out };
+    // 盘问：捕快亮腰牌，谁都得答话，不论今天问没问过、交情深浅（人犯另写「盘问」的分支，问得出破绽）
+    case '盘问': return { text: panwen(id, who), out };
     case '请教': return { text: `${who}摇摇头：「我没什么可教你的。」`, out };
     case '切磋': return { text: `${who}连连摆手：「不敢不敢。」`, out };
     case '偷窃': return { text: `你的手刚伸出去，${who}就警觉地看了过来。你只好装作整理衣襟。`, out };

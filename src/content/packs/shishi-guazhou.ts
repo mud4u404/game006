@@ -207,7 +207,8 @@ const NPCS: NpcDef[] = [
   {
     id: 'ssgz_shuisheng', name: '水生', ini: '水', tone: 'jade', brief: '摸黑修船出江',
     look: '二十出头的渔家后生，赤着脚，裤腿卷到膝上，一网补了一半搭在肩上。天不亮就到船头，是跟着潮水过日子的人。',
-    at: { room: 'gz_pier', if: { hour: { from: 3, to: 8 } } },
+    // 天不亮出江，天亮前已经走了（负责人 10-09：码头不许挤成一堆）
+    at: { room: 'gz_pier', if: { hour: { from: 3, to: 5 } } },
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [

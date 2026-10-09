@@ -12,6 +12,7 @@ import { ENCOUNTERS, room } from '../content';
 import type { EncounterDef } from '../content/types';
 import { test } from './dsl';
 import { hopMin, travelMin } from './world';
+import { worldRng } from './shijie';
 
 export const encounterChance = (min: number): number => Math.min(0.4, min / 150);
 /** 两次路遇之间至少隔这么多分钟（两个时辰） */
@@ -37,9 +38,9 @@ export function eligible(to: string): EncounterDef[] {
 
 /**
  * 走 from → to 这一段路，掷一次骰：遇上了返回那条路遇，否则 null。
- * rand 可以换成固定的数，方便测试。
+ * rand 可以换成固定的数，方便测试；界面不传，用世界的种子随机（engine/shijie.ts）。
  */
-export function rollEncounter(from: string, to: string, rand: () => number = Math.random): EncounterDef | null {
+export function rollEncounter(from: string, to: string, rand: () => number = worldRng): EncounterDef | null {
   if (S.chapter < 1) return null;
   const since = absMin(S) - (S.lastEnc ?? -Infinity);
   if (since >= 0 && since < ENC_GAP) return null;

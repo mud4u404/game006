@@ -57,6 +57,14 @@ const ROOMS: RoomDef[] = [
     ],
     npcs: ['yaopu', 'xiaoer'], exits: [['北', 'hu']],
     road: '你穿过高高的城门洞，市声渐渐近了……' },
+  // 负责人 10-09「场景不许像派出所审犯人」：房牙子、布庄掌柜、跑腿的阿七从东关街挪进东圈门
+  { id: 'yz_dongquan', name: '东圈门', area: '扬州城 · 东关街北', region: 'yz', t: 5, map: [70, 92], nightQuiet: true,
+    desc: [
+      { if: { hour: NIGHT_H }, text: '圈门洞里黑魆魆的，两边的高墙挡住了月光，深院里偶尔一声狗叫。巷子尽头挂着一盏灯笼，照着谁家门上的一对铜环。' },
+      { text: '东关街往北一拐，穿过一道砖砌的老圈门，便是东圈门。巷子窄窄的，两边高墙深院，墙头探出几枝枇杷、几丛修竹。巷口一家布庄半开着门板，过往的多是住在里头的人家。' }
+    ],
+    npcs: [], exits: [['街', 'cheng', '巷']],
+    road: '你从东关街往北一拐，钻进了老圈门的门洞……' },
   { id: 'jinshan', name: '小金山', area: '瘦西湖 · 湖心', region: 'yz', t: 10, map: [20, 50], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } }, text: '湖心岛上黑沉沉的，风亭里没有灯。石桌上那局残棋还摆着，棋子叫夜露打湿了，泛着微光。四下里只有湖水拍岸的声音。' },
@@ -439,10 +447,10 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'main1', name: '第一回 · 扬州', stages: [
-    { title: '寻访大明寺了尘大师', to: 'daming', who: 'liaochen', hint: '上蜀冈大明寺，寻那扫地的白眉老僧了尘。' },
+    { title: '寻访大明寺了尘大师', to: 'daming', who: 'liaochen', hint: '江伯咽气前只交代了一句：去扬州，大明寺，找了尘。玉佩和残谱，都在怀里。' },
     // 屠千山入夜回船上歇（运河渡口 nightQuiet），导航按作息算，不写进门槛
-    { title: '前往运河渡口，截住黑风寨主', to: 'dukou', who: 'tu', hint: '屠千山白天在渡口卸盐，掂量好斤两再上前动手。' },
-    { title: '去东关街听听江湖怎么说', to: 'cheng', who: 'shuoshu', hint: '说书人白天在东关街、晚上在望江楼，去听他一段书。' },
+    { title: '前往运河渡口，截住黑风寨主', to: 'dukou', who: 'tu', hint: '了尘大师说，黑风寨主屠千山霸着运河渡口，那三船盐是漕帮兄弟半年的血汗。要去截他，先掂掂自己的斤两。' },
+    { title: '去东关街听听江湖怎么说', to: 'cheng', who: 'shuoshu', hint: '渡口这一仗，想必已经传开了。东关街角的说书人嘴快，去听听江湖上怎么说。' },
     { title: '寒江旧案 · 第一回完' }
   ] }
 ];

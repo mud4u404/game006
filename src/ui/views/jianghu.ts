@@ -1,15 +1,15 @@
 import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
-import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbsOf } from '../../engine/world';
+import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbPoor, verbPrice, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
-import { questNav } from '../../engine/daohang';
+import { leadsNear, questNav } from '../../engine/daohang';
 import { kanren } from '../../engine/zhaoshi';
 import { eyesOn } from '../../engine/yan';
-import type { EyeDef } from '../../content/types';
-import { fmt } from '../../core/util';
+import type { EyeDef, Verb } from '../../content/types';
+import { cn, fmt } from '../../core/util';
 import { XIEJIAO, canWait, nextYue, nightBlock, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
 import { test, textVars } from '../../engine/dsl';
@@ -30,8 +30,8 @@ export function viewJianghu(): string {
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
   // 横幅标签按任务种类：序章、主线（main 开头）、其余都是支线
   const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
-  // 要等、卡住的缘故另起一行写在标题下面，免得挤成半句
-  const why = q && q.state !== '能做' ? `<small class="qs ${q.state === '卡住' ? 'danger' : 'warn'}">${q.state}：${q.why.replace(/^差：/, '差')}</small>` : '';
+  // 眼下去不成的缘故另起一行，写成心里话（engine/daohang.ts：不剧透、不讲解）
+  const why = q && q.state !== '能做' ? `<small class="qs">${q.why}</small>` : '';
   const dist = q?.to && q.state === '能做' ? `<span class="qd">${q.dist === 0 ? '就在此处' : '约' + minLabel(q.dist)}</span>` : '';
   const quest = !q ? '' : q.to
     ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}${why}</span>${dist}${IC.chev}</button>`
@@ -52,6 +52,7 @@ export function viewJianghu(): string {
   </section>
   ${questBar}
   ${yueBar}
+  ${leadsCard()}
   <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
   ${gone}
   ${all.length ? `<section class="card here-card">
@@ -61,6 +62,14 @@ export function viewJianghu(): string {
   </section>` : ''}
   <section class="go"><h2>去处</h2><div class="exits">${exits.map(([d, id]) => exitBtn(d, id, exits.length === 1, q?.to)).join('')}</div></section>
   ${xiejiaoHTML()}`;
+}
+
+/** 近处有事：眼下接得到的差事，派差的人在哪、约多久（最多三行，点了先看耗时再走）。不推你去做，只是告诉你哪里有事 */
+function leadsCard(): string {
+  if (S.chapter === 0) return '';
+  const ls = leadsNear();
+  if (!ls.length) return '';
+  return `<section class="card leads"><div class="sec-h"><h2>近处有事</h2></div>${ls.map(l => `<button class="lead" data-act="travelAsk:${l.to}"><span class="lt">${l.text}</span><span class="ld">${l.toName} · 约${minLabel(l.min)}</span>${IC.chev}</button>`).join('')}</section>`;
 }
 
 /** 歇脚：等到天亮、晌午、傍晚、入夜（人有作息，有的人、有的事只在夜里）。序章里不歇 */
@@ -95,8 +104,15 @@ function detail(id: string): string {
   const whom = foe && foe.id !== id && foe.name !== npcName(id) ? foe.name : '他';
   const look = foe ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kanren(S, foe).say}</b></p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
-    <div class="acts">${verbsOf(n).map(v => `<button class="act ${VERB_CLS[v] || ''}" data-act="do:${v}">${v}</button>`).join('')}</div>${reply}</div>`;
+    <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${reply}</div>`;
 }
+
+/** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
+const verbBtn = (id: string) => (v: Verb): string => {
+  const price = verbPrice(id, v);
+  const poor = price !== null && S.silver < price && verbPoor(id, v);
+  return `<button class="act ${VERB_CLS[v] || ''}${price !== null ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${price !== null ? `<small>${poor ? '囊中不足，要' : ''}${cn(price)}文</small>` : ''}</button>`;
+};
 
 function exitBtn(d: string, id: string, solo: boolean, questTo?: string): string {
   return `<button class="exit${solo ? ' solo' : ''}" data-act="travel:${id}"><span class="dir">${d}</span><span class="en"><b>${room(id).name}</b><small>${minLabel(travelMin(hopMin(S.loc, id)))}</small></span>${questTo === id ? '<span class="tag info">主线</span>' : ''}</button>`;
