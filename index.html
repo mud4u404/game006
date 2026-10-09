@@ -7,7 +7,8 @@
   <title>江湖夜雨</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Noto+Serif+SC:wght@600;900&amp;family=Zhi+Mang+Xing&amp;display=swap">
+  <!-- 字体异步加载：先用手机自带的苹方、宋体显示；Google 字体在国内常常打不开，原来写成阻塞的样式表，会让首屏一直等到它超时 -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Noto+Serif+SC:wght@600;900&amp;family=Zhi+Mang+Xing&amp;display=swap" media="print" onload="this.media='all'">
 </head>
 <body>
   <div id="app"></div>

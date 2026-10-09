@@ -34,7 +34,8 @@ describe('道具：说明里写了能做什么，就真能做到', () => {
       if (it.kind === '信物' && it.price !== undefined) errs.push(`${w}：信物、线索不卖，不写 price`);
       if (it.kind !== '信物' && !it.hidden && !(Number.isInteger(it.price) && it.price! > 0)) errs.push(`${w}：要写 price（买价，正整数，单位文），铺子卖它、当铺收它都按这个价`);
       for (const e of it.use ?? []) {
-        if (!['heal', 'feed', 'toast', 'flag', 'xinmo'].includes(e.type)) errs.push(`${w}：use 里只能写 heal、feed、toast、flag、xinmo，不能写 ${e.type}`);
+        // cure：治伤的药（跌打酒、内伤药，engine/shang.ts）
+        if (!['heal', 'cure', 'feed', 'toast', 'flag', 'xinmo'].includes(e.type)) errs.push(`${w}：use 里只能写 heal、cure、feed、toast、flag、xinmo，不能写 ${e.type}`);
         if (e.type === 'heal' && !(e.hp || e.mp || e.hpFrac || e.mpFrac || e.hpAtLeast)) errs.push(`${w}：heal 没写回多少`);
       }
       it.look?.forEach((b, i) => { if (!b.text) errs.push(`${w}：look[${i}] 没有 text`); });

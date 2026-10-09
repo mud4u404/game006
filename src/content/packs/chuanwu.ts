@@ -63,7 +63,8 @@ const NPCS: NpcDef[] = [
     id: 'cw_shuigui', name: '水鬼', ini: '鬼', tone: 'red', brief: '水中黑影',
     look: '一具湿淋淋的黑影从水里探出半身，斗笠压得很低，手里一柄鱼叉。斗笠底下，只看得见一张晒得黑瘦的脸。',
     altName: { if: { flag: 'cw_zhenxiang' }, name: '盐丁莫六' },
-    verbs: ['交谈', '观察', '动手', '报官', '通帮', '放过', '勒索'],
+    // 揭了底（知道他是人不是鬼）才有这四条路，选过一条就收起（审查 B17：一直挂着，还剧透了「他是活人」）
+    verbs: ['交谈', '观察', '动手', ...(['报官', '通帮', '放过', '勒索'] as const).map(verb => ({ verb, if: { flag: 'cw_zhenxiang', notFlag: 'cw_done' } }))],
     actions: {
       交谈: [
         { if: { flag: 'cw_kanguo', notFlag: 'cw_zhenxiang' },

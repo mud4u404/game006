@@ -11,7 +11,7 @@ import type { ContentPack, NpcDef, RoomDef } from '../types';
 const NIGHT = { hour: { from: 18, to: 6 } };
 
 const ROOMS: RoomDef[] = [
-  { id: 'gz_kechuan', name: '运河客船', area: '运河 · 扬州至瓜洲', region: 'gz', t: 60, map: [84, 56],
+  { id: 'gz_kechuan', name: '运河客船', area: '运河 · 扬州至瓜洲', region: 'gz', t: 60, map: [84, 56], fare: 20,
     desc: [
       { if: NIGHT, text: '客船在运河上缓缓走着，舱里点着一盏油灯，几个客人和衣躺着。船头的船家望着两岸黑沉沉的芦苇，不时咳嗽一声。' },
       { text: '客船在运河上不紧不慢地走，两岸芦苇连天，漕船一条接一条擦肩而过。舱里挤着行商、脚夫和几个赶考的书生。' }
@@ -19,7 +19,7 @@ const ROOMS: RoomDef[] = [
     npcs: ['gz_kc_chuanjia'],
     exits: [['北', 'dukou', '舟'], ['南', 'gz_pier', '舟']],
     road: '你上了客船，船家一篙点开，船顺着运河走了……' },
-  { id: 'gz_duchuan', name: '瓜洲渡船', area: '大江 · 瓜洲渡口', region: 'gz', t: 40, map: [30, 88],
+  { id: 'gz_duchuan', name: '瓜洲渡船', area: '大江 · 瓜洲渡口', region: 'gz', t: 40, map: [30, 88], fare: 10,
     desc: [
       { if: NIGHT, text: '渡船泊在江边，桅杆上一盏风灯晃来晃去。江面漆黑，对岸京口的灯火星星点点，近得像伸手就能够着。' },
       { text: '渡船泊在江边，船家正往船上搬缆绳。江面宽阔，对岸京口的城楼隐在雾里。「京口瓜洲一水间」，说的就是这一程。' }
@@ -27,8 +27,9 @@ const ROOMS: RoomDef[] = [
     npcs: ['gz_dc_chuanjia'],
     exits: [['北岸', 'gz_pier', '渡'], ['南岸', 'zj_xijin', '渡']],
     road: '你踏上跳板，渡船晃了一晃……' },
-  { id: 'zj_xijin', name: '西津渡', area: '镇江 · 京口', region: 'zj', t: 10, map: [50, 16],
+  { id: 'zj_xijin', name: '西津渡', area: '镇江 · 京口', region: 'zj', t: 10, map: [50, 16], nightQuiet: true,
     desc: [
+      { if: { hour: { from: 21, to: 5 } }, text: '夜里的西津渡没了人声。泊位上的船挤在一处，桅灯一盏一盏地晃；待渡亭里空荡荡的，江风灌进来，吹得柱上的旧告示哗哗响。' },
       { if: { shi: { id: 'sszj_du', at: ['zhangjia'] } },
         text: '西津渡的青石阶被挑夫的脚磨得发亮，一级一级通上岸去。渡口的泊位上插着沙船帮的旗，本地的船一条不见，跳板口立着块木牌：渡钱十文。' },
       { if: { shi: { id: 'sszj_du', at: ['bangjia'] } },
@@ -37,7 +38,9 @@ const ROOMS: RoomDef[] = [
         text: '西津渡的青石阶被挑夫的脚磨得发亮，一级一级通上岸去。待渡亭里挂了杆新秤，泊位以亭中为界，东边本地船，西边沙船帮，木牌上写的是「渡钱五文」。' },
       { if: { shi: { id: 'sszj_du', at: ['guanfu'] } },
         text: '西津渡的青石阶被挑夫的脚磨得发亮，一级一级通上岸去。渡口搭起了官家的税棚，府台的告示贴在柱上：渡钱官定四文，泊位官家分派。' },
-      { if: { shi: { id: 'sszj_dao', at: ['qi', 'diu'] } },
+      { if: { shi: { id: 'sszj_dao', at: ['qi'] } },
+        text: '西津渡被赶道场的香客挤得水泄不通，青石阶上人挨着人，挑夫的扁担都横不过来。有人背着孩子，有人把孩子架在肩上看热闹，一转眼就被人潮冲开了。' },
+      { if: { shi: { id: 'sszj_dao', at: ['diu'] } },
         text: '西津渡被赶道场的香客挤得水泄不通，青石阶上人挨着人，挑夫的扁担都横不过来。渡口的告示柱上新贴了一张寻人告示，围着的人在看，没人说话。' },
       { if: { shi: { id: 'sszj_dao', at: ['zhuoren'] } },
         text: '道场散了，香客退了潮，西津渡冷清下来。告示柱上那张寻人的告示还贴着，边角叫江风吹得卷了边，没人揭。' },
@@ -64,7 +67,7 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察'],
     actions: { 交谈: [
       { if: NIGHT, text: '「夜里也渡。」船家看了看江心，「只是江心那片荒洲，夜里有人见过灯火。咱们撑船的，都绕着走。」' },
-      { text: '「京口瓜洲一水间，客官要过江，坐稳了就走。」他把缆绳往桩上一甩，「船钱靠了岸再给，江上讲的是个信字。」' }
+      { text: '「京口瓜洲一水间，客官要过江，坐稳了就走。」他把缆绳往桩上一甩，「船钱上船先给，十文。江上讲的是个信字。」' }
     ] } },
   { id: 'zj_daiduting', name: '待渡亭', obj: true, icon: 'stele', brief: '亭柱上刻满了字',
     look: '亭柱上刻满了过客留的字，诗也有，骂人的话也有。有一行刻得极深，像是用剑划的：「一水之隔，二十年。」',

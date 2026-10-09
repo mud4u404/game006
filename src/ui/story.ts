@@ -5,21 +5,24 @@ import { titleAccountHTML } from './views/account-link';
 import { S, load, newGame, save, saveBroken, setState, skipToYangzhou, type GameState } from '../core/state';
 import { dateStr } from '../core/time';
 import { $, cleanName, fmt } from '../core/util';
-import { storyById } from '../content';
+import { room, storyById } from '../content';
 import type { StoryDef } from '../content/types';
-import { newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
-import { afterOutcome, hooks, registerHandlers, render } from './shell';
+import { lackOf, newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
+import { afterOutcome, hooks, registerHandlers, render, swapped, toast, tooSoon } from './shell';
 import { welcomeBack } from './chuguan';
 
 /* ---------- 剧情卡片 ---------- */
 
-interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void }
+interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void; lead?: string }
 let cur: Playing | null = null;
+/** 已经开着剧情时又来的剧情：排队，读完这一段再读（原来直接顶掉，旧剧情的收尾丢了，赶路停在半路） */
+const queue: [string, (() => void) | undefined, string | undefined][] = [];
 
-export function openStory(id: string, onDone?: () => void): void {
+export function openStory(id: string, onDone?: () => void, lead?: string): void {
+  if (cur) { queue.push([id, onDone, lead]); return; }
   const def = storyById(id);
   if (!def) { onDone?.(); return; }
-  cur = { def, i: 0, out: newOutcome(), onDone };
+  cur = { def, i: 0, out: newOutcome(), onDone, lead };
   draw();
   $('#storyLayer')!.hidden = false;
 }
@@ -36,17 +39,27 @@ function draw(): void {
     : '';
   const choices = cur.result !== undefined
     ? `<button class="choice primary" data-act="stNext"><b>继续</b></button>`
-    : card.choices.map((c, k) => test(c.if) ? `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${c.sub ? `<small>${c.sub}</small>` : ''}</button>` : '').join('');
+    : card.choices.map((c, k) => {
+      if (test(c.if)) return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${c.sub ? `<small>${c.sub}</small>` : ''}</button>`;
+      // 够不着的路也摆出来、写明差什么（钱、根基、侠义……）；剧情上的条件不成立的照旧藏着
+      const lack = lackOf(c.if);
+      return lack ? `<button class="choice locked" data-act="stLocked:${k}" aria-disabled="true"><b>${c.label}</b><small>${lack}</small></button>` : '';
+    }).join('');
+  swapped();
   $('#storyLayer')!.innerHTML = `<div class="story-l" role="dialog" aria-label="${card.title}">
     ${card.tag ? `<span class="tag accent">${card.tag}</span>` : ''}
     <h2>${fmt(card.title, v)}</h2>
+    ${cur.i === 0 && cur.lead ? cur.lead.split('\n').map(p => `<p class="sp">${p}</p>`).join('') : ''}
     ${card.paras.map(p => `<p class="sp">${fmt(p, v)}</p>`).join('')}
     ${card.gains ? `<div class="gains">${card.gains.map(g => `<span class="tag info">${g}</span>`).join('')}</div>` : ''}
     ${nameBox}
     ${cur.result !== undefined ? `<div class="sres">${fmt(cur.result, v)}</div>` : ''}
     <div class="choices">${choices}</div>
   </div>`;
-  $('#storyLayer .story-l')!.scrollTop = 0;
+  // 新的一张从头读；选完出了结果，把结果和「继续」滚进眼前（原来一律滚回顶部，「继续」常落在屏幕外）
+  const box = $('#storyLayer .story-l')!;
+  if (cur.result === undefined) box.scrollTop = 0;
+  else box.querySelector('.sres')?.scrollIntoView({ block: 'nearest' });
 }
 
 function pick(k: number): void {
@@ -88,20 +101,21 @@ function close(): void {
   L.hidden = true;
   L.innerHTML = '';
   save();
+  // 排着队的剧情，等这一段收完尾再开
+  const nx = queue.shift();
+  if (nx) window.setTimeout(() => openStory(...nx), 0);
 }
 
 /* ---------- 章回题字 ---------- */
 
 let chapDone: (() => void) | null = null;
-let chapTimer = 0;
+/** 章回题字：点一下才继续（原来三秒多自动消失，底下同时重画，正好点在那一刻就点穿到新画面的按钮上） */
 export function playChapter(small: string, big: string, done: () => void): void {
   render();
   const L = $('#chapLayer')!;
-  L.innerHTML = `<div class="chap" data-act="chapDone"><small>${small}</small><div class="cw">${big}</div><p>点击继续</p></div>`;
+  L.innerHTML = `<div class="chap" data-act="chapDone"><small>${small}</small><div class="cw">${big}</div><p>轻触继续</p></div>`;
   L.hidden = false;
   chapDone = done;
-  clearTimeout(chapTimer);
-  chapTimer = window.setTimeout(finishChapter, 3200);
 }
 function finishChapter(): void {
   const L = $('#chapLayer')!;
@@ -114,8 +128,11 @@ function finishChapter(): void {
 
 /* ---------- 标题画面 ---------- */
 
+/** 存档里的地点可能已经改名、删掉（旧存档）：取不到就不写 */
+const areaOf = (id: string): string => { try { return room(id).area; } catch { return ''; } };
+/** 标题页「继续」底下的一行：谁、在哪儿（审查 H34、A36：原来写死「第一回 · 扬州」，人在苏州也这么写） */
 function chapterLabel(s: GameState): string {
-  return s.chapter === 0 ? '序章 · 瓜洲渡' : '第一回 · 扬州';
+  return s.chapter === 0 ? '序章 · 瓜洲渡' : `沈${s.name} · ${areaOf(s.loc)}`;
 }
 
 /** showTitle(true) 时若有存档会显示「继续」 */
@@ -159,10 +176,12 @@ function hideTitle(): void {
 }
 
 registerHandlers({
-  stPick: v => pick(Number(v)),
-  stNext: () => { if (cur) advance(cur.next ?? cur.i + 1); },
+  stPick: v => { if (!tooSoon()) pick(Number(v)); },
+  stNext: () => { if (cur && !tooSoon()) advance(cur.next ?? cur.i + 1); },
   stName: v => { const el = $('#nameIn') as HTMLInputElement | null; if (el) el.value = v; },
-  chapDone: () => { clearTimeout(chapTimer); finishChapter(); },
+  chapDone: () => finishChapter(),
+  // 够不着的选项：点了说清差什么
+  stLocked: v => { const c = cur?.def.cards[cur.i].choices[Number(v)]; const lack = c && lackOf(c.if); if (lack) toast(`还走不了这条路：${lack}`); },
   tContinue: () => {
     const saved = load();
     if (!saved) return;

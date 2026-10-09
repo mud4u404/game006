@@ -39,8 +39,12 @@ import type { Cond, ContentPack, Effect, FightResult, FoeDef, ItemDef, NewsDef, 
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'bs2_wuguan', name: '广陵武馆', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [38, 94],
-    desc: '东关街拐进一条窄巷，黑漆门上挂着块旧匾「以武会友」，匾角叫虫蛀了。院里立着两排木桩，石锁、沙袋摆了一地，一个大个子正对着木桩一拳一拳地砸，木屑乱飞。',
+    id: 'bs2_wuguan', name: '广陵武馆', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [38, 94], nightQuiet: true,
+    desc: [
+      { if: { hour: { from: 21, to: 5 } },
+        text: '武馆的院门虚掩着，馆主早回家了。院里的木桩、石锁黑黢黢地立着，只有廊下一盏油灯，石墩就着灯光给自己手上的裂口抹药油。' },
+      { text: '东关街拐进一条窄巷，黑漆门上挂着块旧匾「以武会友」，匾角叫虫蛀了。院里立着两排木桩，石锁、沙袋摆了一地，一个大个子正对着木桩一拳一拳地砸，木屑乱飞。' }
+    ],
     npcs: ['bs2_lu', 'bs2_shidun'], objs: ['bs2_wg_jia'],
     exits: [['街', 'cheng', '馆']],
     road: '你从东关街拐进窄巷，老远就听见院里砰砰的砸桩声……'
@@ -154,7 +158,7 @@ const NPCS: NpcDef[] = [
     }
   },
   {
-    id: 'bs2_shidun', name: '石墩', ini: '石', tone: 'gray', brief: '对着木桩砸拳',
+    id: 'bs2_shidun', name: '石墩', ini: '石', tone: 'gray', brief: '对着木桩砸拳', night: true,
     look: '二十出头，膀大腰圆，一张圆脸晒得黑红。拳头上缠着布条，布条渗着血丝，他也不在意。',
     verbs: ['交谈', '观察', '切磋'],
     actions: {

@@ -4,8 +4,12 @@ import type { ContentPack, NpcDef, QuestDef, RoomDef, StoryDef } from '../types'
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_fuya', name: '扬州府衙', area: '扬州 · 府前街', region: 'yz', t: 10, map: [24, 84],
-    desc: '朱漆大门两旁蹲着一对石狮，照壁上贴满了告示。两个衙役拄着水火棍，打着哈欠。正堂门口，一个穿皂靴的中年汉子正翻着卷宗，眉头拧得像打了结。',
+    id: 'yz_fuya', name: '扬州府衙', area: '扬州 · 府前街', region: 'yz', t: 10, map: [24, 84], nightQuiet: true,
+    desc: [
+      { if: { hour: { from: 21, to: 5 } },
+        text: '府衙的大门关了，只开着一扇角门。门房里一盏油灯，值夜的衙役抱着水火棍打盹；后头大牢里有人在喊冤，喊两声又没了动静。照壁上的告示在风里哗哗地响。' },
+      { text: '朱漆大门两旁蹲着一对石狮，照壁上贴满了告示。两个衙役拄着水火棍，打着哈欠。正堂门口，一个穿皂靴的中年汉子正翻着卷宗，眉头拧得像打了结。' }
+    ],
     npcs: ['fuya_zhou', 'fuya_yayi'], objs: [{ id: 'fuya_gaoshi', if: { notFlag: 'fuya_gaoshi_taken' } }],
     exits: [['东', 'cheng', '西']],
     road: '你沿城墙根往西走，府衙的鼓楼渐渐近了……'
@@ -97,7 +101,7 @@ const NPCS: NpcDef[] = [
     }
   },
   {
-    id: 'fuya_yayi', name: '衙役', ini: '衙', tone: 'gray', brief: '打着哈欠',
+    id: 'fuya_yayi', name: '衙役', ini: '衙', tone: 'gray', brief: '打着哈欠', night: true,
     look: '皂衣歪戴，腰牌上的漆掉了一半，一看就是混日子的。水火棍靠在墙根下，棍头沾着半片落叶，腰间挂着个酒葫芦。',
     verbs: ['交谈', '观察', '打赏'],
     actions: {
@@ -124,7 +128,7 @@ const NPCS: NpcDef[] = [
     look: '告示上盖着扬州府大印，墨迹新鲜。最底下画着一张画像——短打汉子，左手缺了小指，绰号「草上飞」。悬赏白银五十两，有线索者速报。',
     verbs: ['观察', '细看', '揭榜'],
     actions: {
-      细看: [{ text: '「缉拿江洋大盗草上飞。近来出没于小金山、茱萸湾一带，夜闯商铺三家，劫银百两。有线索者，速报府衙六扇门。悬赏白银五十两正。扬州府衙 · 朱」（获得线索一条）',
+      细看: [{ text: '「缉拿江洋大盗草上飞。近来出没于小金山、茱萸湾一带，夜闯商铺三家，劫银三百两。有线索者，速报府衙六扇门。悬赏白银五十两正。扬州府衙 · 朱」（获得线索一条）',
         do: [{ type: 'flag', flag: 'gaoshi_read' }, { type: 'feed', tag: '江湖', text: '告示缉拿江洋大盗「草上飞」，悬赏五十两白银，线索指向小金山、茱萸湾。' }] }],
       揭榜: [
         { if: { quest: { id: 'side_caoshangfei', atLeast: 1 } }, text: '告示已经揭走了。' },
@@ -145,7 +149,9 @@ const NPCS: NpcDef[] = [
             { type: 'quest', id: 'side_caoshangfei', stage: 1 },
             { type: 'feed', tag: '江湖', text: '你自荐揭下了缉拿草上飞的告示。周捕头半信半疑，撂下一句狠话：拿不回人，自己去找府台说。' }
           ] },
-        { text: '你凑近看了看，告示上的字太小，看不清写的什么。' }
+        // 没细看就揭：先把告示看清楚（审查 B12：原来回「字太小，看不清」，观察时明明读得出）
+        { text: '你伸手之前，先把告示从头到尾看了一遍：缉拿江洋大盗草上飞，悬赏白银五十两。看清了，再揭不迟。',
+          do: [{ type: 'flag', flag: 'gaoshi_read' }] }
       ]
     }
   }

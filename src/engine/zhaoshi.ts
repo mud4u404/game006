@@ -119,7 +119,8 @@ export const FX_SAY: Partial<Record<FxKind, (foe: string) => string>> = {
  * 看人（docs/foundation.md 第三节第二条，验证 E1）：后台先替玩家照现在的本事试打几十场（备战、帮手都算上），
  * 按胜率说七句话之一。新手靠它避开打不过的仗。种子固定，同样的本事看同一个人，说法不会忽高忽低。
  */
-const KANREN: [number, string][] = [[0.95, '不堪一击'], [0.75, '远不如你'], [0.55, '稍逊一筹'], [0.45, '旗鼓相当'], [0.25, '略胜一筹'], [0.05, '远胜于你'], [-1, '深不可测']];
+/** 掂斤两的说法：主语写清是谁强（原来「稍逊一筹」「略胜一筹」一字之差、意思相反，扫一眼就看反，审查 H23） */
+const KANREN: [number, string][] = [[0.95, '他不堪一击'], [0.75, '他远不如你'], [0.55, '你胜面大些'], [0.45, '旗鼓相当'], [0.25, '他略强于你'], [0.05, '他远在你之上'], [-1, '深浅看不透']];
 export function kanren(s: GameState, f: FoeDef, n = 40): { p: number; say: string } {
   const prep = activePrep(f), kit = fightKit(s);
   let w = 0;

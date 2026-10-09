@@ -24,7 +24,7 @@ const STORIES: StoryDef[] = [
           result: '你被家丁按在地上揍了一顿，可那少爷的脑门上，也挨了你结结实实一扁担。' },
         { label: '绕到后面绊他一跤', sub: '身法 +1　悟性 +2', do: [{ type: 'attr', key: '身法', delta: 1 }, { type: 'attr', key: '悟性', delta: 2 }, { type: 'flag', flag: 'mem2_trip' }],
           result: '恶少摔了个狗啃泥，回头找人时，你早已钻进了人堆。' },
-        { label: '去叫来巡检，当面对质', sub: '根骨 +2　侠义 +5　结识周巡检', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'xia', delta: 5 }, { type: 'flag', flag: 'mem2_patrol' }],
+        { label: '去叫来巡检，当面对质', sub: '悟性 +2　侠义 +5　结识周巡检', do: [{ type: 'attr', key: '悟性', delta: 2 }, { type: 'xia', delta: 5 }, { type: 'flag', flag: 'mem2_patrol' }],
           result: '姓周的巡检秉公断了案，王家赔了阿婆一篮鱼钱。临走时，他记下了你的名字。' }
       ] },
     { tag: '十六岁', title: '剑光',
@@ -34,7 +34,7 @@ const STORIES: StoryDef[] = [
           result: '你记下了七八式，回去在床上比划了一夜。第二天江伯看你的眼神有些古怪，却什么也没说。' },
         { label: '走出去，求他教你', sub: '胆魄 +2　寒江剑法熟练 +40', do: [{ type: 'attr', key: '胆魄', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 40 }, { type: 'flag', flag: 'mem3_ask' }],
           result: '江伯沉默了很久，才道：「这剑法，本不该由我来教你。」可从那以后，每个雨夜，他都会带你到江边。' },
-        { label: '回屋彻夜难眠，跟着他的呼吸打坐', sub: '根骨 +2　寒江心法熟练 +80', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'prof', skill: 'xinfa', amount: 80 }],
+        { label: '回屋彻夜难眠，学着他平日的吐纳打坐', sub: '根骨 +2　寒江心法熟练 +80', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'prof', skill: 'xinfa', amount: 80 }],
           result: '不知过了多久，你觉得小腹里升起一缕暖意，顺着脊背缓缓流转。天亮时，你一点也不觉得困。' }
       ] },
     { tag: '名字', title: '你叫什么名字', input: 'name',
@@ -42,7 +42,7 @@ const STORIES: StoryDef[] = [
       choices: [{ label: '就叫这个名字' }] },
     { tag: '序章 · 瓜洲夜雨', title: '三月初五 · 瓜洲渡',
       paras: ['你在瓜洲渡口长大，跟着江伯打鱼、撑船，偶尔替人送货过江。', '江伯这些日子咳得厉害，人也瘦了一圈。', '今天，天阴得很低。'],
-      choices: [{ label: '回到小屋', next: -1 }] }
+      choices: [{ label: '去看看江伯', next: -1 }] }
   ] },
 
   { id: 'p_night', cards: [
@@ -53,7 +53,7 @@ const STORIES: StoryDef[] = [
 
   { id: 'p_after1', cards: [
     { tag: '序章', title: '雁翎刀',
-      paras: ['黑衣人栽倒在地，再也没有起来。', '你还没喘过气，屋梁上又落下一道黑影。这人身形高大，手提一柄雁翎刀，另外两个黑衣人立刻护到他身后。', '「小崽子，」他冷冷道，「把东西交出来。」'],
+      paras: ['黑衣人栽倒在地，再也没有起来。你握剑的手在抖——这是你头一回杀人。', '你还没喘过气，屋梁上又落下一道黑影。这人身形高大，手提一柄雁翎刀，另外两个黑衣人立刻护到他身后。', '「小崽子，」他冷冷道，「把东西交出来。」'],
       choices: [{ label: '握紧长剑', do: [{ type: 'fight', foe: 'heiyi2' }], next: -1 }] }
   ] },
 
@@ -70,11 +70,10 @@ const STORIES: StoryDef[] = [
       choices: [{ label: '江伯——' }] },
     { tag: '获得', title: '江伯的遗物',
       paras: ['玉佩上刻着一个「沈」字，还有半个「寒」字，断口参差，另一半不知在何处。', '油布包里是一页剑谱，墨迹被水洇开了一半，只认得出「断水」二字，和一式剑招的起手。'],
-      gains: ['半块玉佩', '断水残页', '习得绝技「断水」· 初窥门径'],
+      // 开局不给绝技（负责人 10-09：「开局就有绝技比较扯」）：残页只是一页残谱，断水要自己参悟（content/packs/core.ts 的 scroll）
+      gains: ['半块玉佩', '断水残页'],
       choices: [{ label: '掩埋江伯', do: [
-        { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 },
-        // 江伯临终所传：不花历练，代价是江伯的命（content/skills.ts 的 LEARN_LILIAN）
-        { type: 'learn', skill: 'duanshui', realm: 0, prof: 10, lilian: 0 }
+        { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 }
       ] }] },
     { tag: '序章', title: '天明',
       paras: [
@@ -107,7 +106,7 @@ const FOES: FoeDef[] = [
       { name: '夺命三刀', text: '黑衣人压低身形，短刀反握，脚下悄无声息地绕向你左侧……', dom: 'su', after: '刀锋划破了窗纸。' }
     ],
     asides: ['雨水从破了的屋顶漏下来，滴在江伯脸上。', '窗外的雨越下越大。'],
-    opening: ['刀势一老', '脚下一滑', '收刀时露了空门'],
+    opening: ['刀势一老', '脚下一滑', '收刀时身子一沉'],
     intro: '黑衣人一言不发，短刀已到胸前！',
     tips: ['战斗会自动进行，你来决定何时出招。内力够时，点「寒江孤影」。'],
     win: '黑衣人闷哼一声，栽倒在地，再也没有起来。',

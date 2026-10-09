@@ -1,22 +1,49 @@
 import { S, pushFeed } from '../core/state';
 import { fmt } from '../core/util';
 import { npc, questById, room, skillById } from '../content';
-import type { Branch, Cond, EyeDef, NpcDef, Verb } from '../content/types';
+import type { Branch, Cond, EyeDef, NpcDef, RoomDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
-import { advanceMin, shichen } from '../core/time';
+import { advanceMin, dayNo, shichen } from '../core/time';
 import { attrEffects } from './gengu';
 import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
 import { dating, panwen, seeShi } from './shishi';
 import { shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
+import { passBlock } from './shiguang';
+
+/** 江湖历的第几分钟（暂时走开的人什么时候回来） */
+export const nowMin = (): number => dayNo(S) * 1440 + S.min;
+
+/** 暂时走开了（效果 away）：跳了河、跑了，这几个时辰哪儿都见不到 */
+const awayNow = (id: string): boolean => (S.away?.[id] ?? 0) > nowMin();
+
+/** 入夜回家的时辰：亥时到寅时（RoomDef.nightQuiet） */
+export const NIGHT_HOME = { from: 21, to: 5 };
+const timed = (c?: Cond): boolean => !!c && (!!c.hour || !!c.any?.some(timed));
+/** 入夜了还在：住店、看病的铺子开着；手上有约在这儿等你的；住在这儿、守夜的（NpcDef.night） */
+function staysAtNight(id: string, roomId: string): boolean {
+  const n = npc(id);
+  if (!n || n.obj || n.night) return true;
+  if (n.service?.some(x => x === '宿' || x === '医')) return true;
+  return S.yue.some(y => y.npc === id && y.at === roomId);
+}
 
 /** 此刻在场的：带条件的（作息、剧情）按条件挑；同一人写了几处作息的，只算一次 */
-const present = (list: (string | { id: string; if: Cond })[] | undefined): string[] =>
-  [...new Set((list || []).filter(x => typeof x === 'string' || test(x.if)).map(x => (typeof x === 'string' ? x : x.id)))];
+function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string): string[] {
+  const h = Math.floor(S.min / 60);
+  const quiet = !!room(roomId).nightQuiet && (h >= NIGHT_HOME.from || h < NIGHT_HOME.to);
+  return [...new Set((list || []).filter(x => {
+    const id = typeof x === 'string' ? x : x.id;
+    if (typeof x !== 'string' && !test(x.if)) return false;
+    if (awayNow(id)) return false;
+    // 入夜回家：自己写了作息（带时辰条件）的照作息走
+    return !quiet || (typeof x !== 'string' && timed(x.if)) || staysAtNight(id, roomId);
+  }).map(x => (typeof x === 'string' ? x : x.id)))];
+}
 
-export const roomNpcs = (id: string): string[] => present(room(id).npcs);
-export const roomObjs = (id: string): string[] => present(room(id).objs);
+export const roomNpcs = (id: string): string[] => present(room(id).npcs, id);
+export const roomObjs = (id: string): string[] => present(room(id).objs, id);
 
 export function roomDesc(id: string): string {
   const d = room(id).desc;
@@ -29,6 +56,29 @@ export function roadText(id: string): string {
   return typeof r === 'string' ? r : pickBranch(r)?.text ?? '你动身上路……';
 }
 
+/**
+ * 上船付船钱（RoomDef.fare）：钱够就付；不够的，替船家撑篙、拉纤抵船钱，路上多耗一个时辰。
+ * 界面赶路（ui/explore.ts）和机器玩家都走这里。返回记进动态的那句话，不是船返回空
+ */
+export function payFare(to: string): string | null {
+  const fare = room(to).fare;
+  if (!fare) return null;
+  const msg = S.silver >= fare
+    ? `上了${room(to).name}，付了船钱 ${fare} 文。`
+    : `身上不够船钱（${fare} 文），你替船家撑了一路篙，抵了船钱，路上多耗了一个时辰。`;
+  if (S.silver >= fare) S.silver -= fare;
+  else advanceMin(S, 60);
+  pushFeed('江湖', msg);
+  return msg;
+}
+
+/**
+ * 眼下走得通的出口。序章里（江伯在床上等药）不开船：要坐船的出口一律不显示、不通（审查 A2）。
+ * 艄公那边的说法是「天要下大雨，今儿不开船了」
+ */
+export const openExits = (id: string): RoomDef['exits'] =>
+  room(id).exits.filter(([, to]) => !(S.chapter === 0 && room(to).fare));
+
 /** 两地之间赶路的分钟数 */
 export const hopMin = (a: string, b: string): number => Math.max(room(a).t, room(b).t) || 10;
 
@@ -40,7 +90,7 @@ export function pathTo(from: string, to: string): string[] {
   while (queue.length) {
     const cur = queue.shift()!;
     if (cur === to) break;
-    for (const [, next] of room(cur).exits) {
+    for (const [, next] of openExits(cur)) {
       if (!prev.has(next)) { prev.set(next, cur); queue.push(next); }
     }
   }
@@ -76,9 +126,14 @@ export function npcName(id: string): string {
  */
 export function verbsOf(n: NpcDef): Verb[] {
   const vs = n.verbs.flatMap(v => (typeof v === 'string' ? [v] : test(v.if) ? [v.verb] : []));
-  if (!n.obj && vs.includes('交谈') && !vs.includes('打听')) vs.splice(vs.indexOf('交谈') + 1, 0, '打听');
+  // 跟你动刀子的人（有「动手」）不会跟你聊江湖上的闲话：屠千山刚骂完「滚远点」，不会凑过来讲华山掌门
+  const hostile = n.verbs.some(v => (typeof v === 'string' ? v : v.verb) === '动手');
+  // 至亲也不打听：卧病的江伯不会说「知道的都跟你说了，改日再来吧」（审查 A13）
+  const kin = S.rel[n.id] === '相依为命';
+  if (!n.obj && !hostile && !kin && vs.includes('交谈') && !vs.includes('打听')) vs.splice(vs.indexOf('交谈') + 1, 0, '打听');
   // 身份的特权：捕快对谁都能亮腰牌盘问（engine/shenfen.ts 的 verbs）
-  if (!n.obj && vs.includes('交谈')) for (const v of shenfenOf(S).verbs ?? []) if (!vs.includes(v)) vs.splice(vs.indexOf('打听') + 1, 0, v);
+  const after = (): number => Math.max(vs.indexOf('打听'), vs.indexOf('交谈')) + 1;
+  if (!n.obj && vs.includes('交谈')) for (const v of shenfenOf(S).verbs ?? []) if (!vs.includes(v)) vs.splice(after(), 0, v);
   if (isPawnshop(n) && !vs.includes('典当')) vs.push('典当');
   return vs;
 }
@@ -124,6 +179,9 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
   }
   const bs = n.actions[verb as keyof typeof n.actions];
   const b = pickBranch(bs);
+  // 铁律：住店睡到天亮这类要跨过半夜的，江湖跑在现实前头时过不去（engine/shiguang.ts）
+  const block = b ? passBlock(S, b.do) : null;
+  if (block) return { text: block, out: newOutcome(), timed: true };
   if (b) {
     const short = lilianShort(bs, b);
     const out = run(b.do);

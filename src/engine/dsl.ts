@@ -7,7 +7,7 @@ import { emit } from '../core/bus';
 import { advanceMin, dayNo } from '../core/time';
 import { liang } from '../core/util';
 import { itemById, jobById, questById, skillById } from '../content';
-import { SECT_RANKS } from '../content/skills';
+import { REALMS, SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
@@ -17,20 +17,23 @@ import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
 import { hearsay, learnShi, moveShi } from './shishi';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
+import { markLight } from './shang';
 
 /** 三处伤，最重的先治；一样重时先内息，再手、足（和静修养伤同一个次序，engine/lilian.ts） */
 const ZONES: Zone[] = ['inner', 'hand', 'foot'];
 const isWounded = (): boolean => ZONES.some(z => S.wounds[z] > 0);
 
-/** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）。返回每处治好了几级 */
-function cureWounds(levels = Infinity): Partial<Record<Zone, number>> {
+/** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；zones 只治这几处。返回每处治好了几级 */
+function cureWounds(levels = Infinity, zones: Zone[] = ZONES): Partial<Record<Zone, number>> {
   const got: Partial<Record<Zone, number>> = {};
   for (let left = levels; left > 0; left--) {
-    const z = ZONES.slice().sort((a, b) => S.wounds[b] - S.wounds[a])[0];
+    const z = zones.slice().sort((a, b) => S.wounds[b] - S.wounds[a])[0];
     if (S.wounds[z] <= 0) break;
     S.wounds[z]--;
     got[z] = (got[z] ?? 0) + 1;
   }
+  // 治到一级的，开始算轻伤，过一日自己好（engine/shang.ts）
+  markLight(S);
   return got;
 }
 
@@ -68,6 +71,7 @@ export function test(c?: Cond): boolean {
   if (c.eming !== undefined && S.eming < c.eming) return false;
   // 约：今天是约期，约还没了结（engine/shiguang.ts）
   if (c.yue !== undefined && !S.yue.some(y => y.id === c.yue && y.due === dayNo(S))) return false;
+  if (c.yueAhead !== undefined && !S.yue.some(y => y.id === c.yueAhead && y.due > dayNo(S))) return false;
   // 身份与差事（engine/shenfen.ts）
   if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
   if (c.job !== undefined && S.job?.id !== c.job) return false;
@@ -110,6 +114,45 @@ export interface Outcome {
 }
 
 export const newOutcome = (): Outcome => ({ vars: {}, breaks: [] });
+
+/** 说得出口的条件：钱、根基、侠义、恶名、武功火候。够不着时把差什么摆出来，玩家知道还有这条路 */
+const MEASURED = new Set(['silver', 'attr', 'xia', 'eming', 'realm']);
+
+/** 一个说得出口的条件差什么；够得着返回空串 */
+function lackOne(c: Cond): string {
+  const out: string[] = [];
+  if (c.silver !== undefined && S.silver < c.silver) out.push(`要 ${c.silver} 文（身上 ${S.silver} 文）`);
+  if (c.attr && houtianOf(S)[c.attr.key] < c.attr.atLeast) out.push(`${c.attr.key}要 ${c.attr.atLeast}（你 ${houtianOf(S)[c.attr.key]}）`);
+  if (c.xia !== undefined && S.xia < c.xia) out.push(`侠义要 ${c.xia}（你 ${S.xia}）`);
+  if (c.eming !== undefined && S.eming < c.eming) out.push(`恶名要 ${c.eming}（你 ${S.eming}）`);
+  if (c.realm?.atLeast !== undefined && (S.skills[c.realm.skill]?.r ?? -1) < c.realm.atLeast)
+    out.push(`「${skillById(c.realm.skill)?.name ?? c.realm.skill}」要练到${REALMS[c.realm.atLeast] ?? ''}`);
+  return out.join('，');
+}
+
+/**
+ * 选项够不着时差什么（docs/huojianghu.md：够不着的路也让玩家看见）。
+ * 只管说得出口的条件（钱、根基、侠义、恶名、火候）；剧情上的条件（旗标、任务、世事、人情……）不成立的，返回 null，照旧藏着，不剧透。
+ * 条件成立返回 null。
+ */
+export function lackOf(c: Cond | undefined): string | null {
+  if (!c || test(c)) return null;
+  const plot: Cond = {}, measured: Cond = {};
+  for (const [k, v] of Object.entries(c)) {
+    if (v === undefined || k === 'any') continue;
+    (MEASURED.has(k) ? measured : plot)[k as keyof Cond] = v as never;
+  }
+  if (!test(plot)) return null;
+  const parts: string[] = [];
+  const own = lackOne(measured);
+  if (own) parts.push(own);
+  if (c.any && !c.any.some(x => test(x))) {
+    // 几条路走得通一条就行：都是说得出口的条件才摆出来
+    if (!c.any.every(x => Object.keys(x).every(k => MEASURED.has(k)))) return null;
+    parts.push(c.any.map(lackOne).filter(Boolean).join('；或者'));
+  }
+  return parts.join('，') || null;
+}
 
 /**
  * 被东家辞退（地位降到零、恶名太盛）：做回游侠，手上的差事作废；
@@ -186,7 +229,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
           if (SHENFEN[S.shenfen.id]?.sect === school) { pushFeed('江湖', `你离了${school}，不再是${SHENFEN[S.shenfen.id].name}。`); S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) }; S.job = null; }
         }
         break;
-      case 'attr': growAttr(S, e.key, e.delta, '江湖经历'); break;
+      case 'attr': growAttr(S, e.key, e.delta, S.chapter === 0 ? '少年往事' : '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;
       case 'gongxian': if (S.sect) addGongxian(S.sect.school, e.delta); break;
       case 'eming': {
@@ -202,15 +245,13 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'time':
         if (e.add) advanceMin(S, e.add);
         if (e.set !== undefined) { let d = e.set - S.min; if (d < 0) d += 1440; advanceMin(S, d); }
+        if (e.until !== undefined && e.until > S.min) advanceMin(S, e.until - S.min);
         break;
       case 'weather': S.weather = e.value; break;
       case 'heal':
-        if (e.hp === 'full') {
-          S.hp = S.hpMax;
-          // 好好歇一夜，最重的那一处伤缓一级
-          const z = (['inner', 'hand', 'foot'] as const).slice().sort((x, y) => S.wounds[y] - S.wounds[x])[0];
-          if (S.wounds[z] > 0) S.wounds[z]--;
-        } else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
+        // 好好歇一夜，气血回满；轻伤过一日自己好，重伤要看伤、服药（engine/shang.ts），歇一夜治不了
+        if (e.hp === 'full') S.hp = S.hpMax;
+        else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
         if (e.mp === 'full') S.mp = S.mpMax; else if (typeof e.mp === 'number') S.mp = Math.min(S.mpMax, S.mp + e.mp);
         if (e.hpAtLeast) S.hp = Math.max(S.hp, Math.round(S.hpMax * e.hpAtLeast));
         // 按上限的几成回（金疮药回三成，和战斗里服药一样）
@@ -218,13 +259,17 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (e.mpFrac) S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * e.mpFrac));
         break;
       case 'cure': {
-        const got = cureWounds(e.levels);
+        const got = cureWounds(e.levels, e.zones);
         const done = ZONES.filter(z => got[z]).map(z => `${ZONE_NAME[z]}伤${S.wounds[z] ? `轻了${liang(got[z]!)}级，还剩${liang(S.wounds[z])}级` : '好了'}`);
         if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
         break;
       }
       // 江湖上的话：这一带你还不知道的世事先说，没有再说闲话传闻（engine/shishi.ts 的 hearsay）
       case 'news': out.vars.news = hearsay() ?? '这几日太平得很，没听说什么。'; break;
+      case 'away':
+        (S.away ||= {})[e.npc] = dayNo(S) * 1440 + S.min + e.hours * 60;
+        for (const [k, t] of Object.entries(S.away)) if (t <= dayNo(S) * 1440 + S.min) delete S.away[k];
+        break;
       case 'yue':
         S.yue = S.yue.filter(y => y.id !== e.id).concat({ id: e.id, npc: e.npc, at: e.at, due: dayNo(S) + e.inDays, text: e.text, miss: e.miss });
         pushFeed('江湖', `定了约：${e.text}`);
