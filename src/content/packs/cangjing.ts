@@ -192,11 +192,11 @@ const NPCS: NpcDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'side_cangjing', name: '奇遇 · 藏经阁失窃', stages: [
-    { title: '听说藏经阁失窃', to: 'daming_cangjing', hint: '在阁里细看经柜、香炉，再看看阁后的泥地。' },
+    { title: '藏经阁失窃', to: 'daming_cangjing', hint: '善本经卷丢了：经柜敞着，香炉里的灰拨得乱，阁后泥地上也踩了几脚。总得看个明白。' },
     // 指认谁都能了结这件事，认对了才走到下一步；不写找谁，免得替玩家把人点出来
-    { title: '细看阁里的线索，指认偷经的人', to: 'daming_cangjing', hint: '把几条线索串起来，认准了是谁再当面指认。' },
+    { title: '细看阁里的线索，指认偷经的人', to: 'daming_cangjing', hint: '守阁的老僧、书贩、扫地的小沙弥，三个人都说不清。线索没拼拢之前，不好冤枉了谁。' },
     // 处置在剧情卡片里定；卡片中途断了，再对明心指认一回就接得上
-    { title: '替偷经的人定下去处', to: 'daming_cangjing', who: 'cangjing_mingxin', hint: '明心认了，替他拿个主意：求情、送官或出药钱。' },
+    { title: '替偷经的人定下去处', to: 'daming_cangjing', who: 'cangjing_mingxin', hint: '明心哭着认了，法空立在一旁，一句话也没有。这孩子往后怎样，总得有个了断。' },
     { title: '藏经阁失窃 · 完' }
   ] }
 ];
