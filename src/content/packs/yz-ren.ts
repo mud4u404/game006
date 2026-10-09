@@ -59,6 +59,7 @@ const LIFE: Record<string, NpcLife> = {
     voice: {
       lead: ['敲了一下梆子', '把梆子夹在胳肢窝底下', '缩着脖子'],
       idle: [
+        { if: { w: { p: { id: 'ss_aqi', st: ['hurt'] } } }, text: '巷口那个跑腿的孩子，叫衙门打了，趴在草棚里动不得。我夜里打那儿过，只听得他娘咳。' },
         { if: ZEI_OPEN, text: '这几夜我多敲两遍梆子，那贼听见了，兴许就不来了。' },
         { if: { w: { order: { place: 'cheng', below: 50 } } }, text: '街上不太平，我打更都绕开暗巷走。' },
         { if: DUKOU_XI, text: '半夜里常听见运河那头有船靠岸，篙子点水，声音压得极低。' },
