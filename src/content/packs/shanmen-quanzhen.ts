@@ -124,7 +124,7 @@ const NPCS: NpcDef[] = [
       { verb: '请教', if: { sect: QZ } },
       { verb: '讨差事', if: { sect: QZ } },
       { verb: '考校', if: { sect: QZ, notFlag: 'smqz_wai' } },
-      { verb: '补阵', if: { sect: QZ, shi: { id: SHI, at: ['fengsheng'] } } }],
+      { verb: '补阵', if: { sect: QZ, learned: 'tq_xinfa', shi: { id: SHI, at: ['fengsheng'] } } }],
     actions: {
       交谈: [
         { if: { shi: { id: SHI, at: ['ti_wu'] } },
@@ -147,6 +147,10 @@ const NPCS: NpcDef[] = [
       ],
       观察: [{ text: '殿前的星图碑，北斗位叫他摩挲得发亮。七个蒲团摆成一圈——观里的事，他想得比说的多。' }],
       拜师: [
+        { if: { pastSect: { school: '全真', how: '叛门' } },
+          text: '守一道长睁开了眼：「叛出山门的人，全真的山门不认。你走罢。」' },
+        { if: { pastSect: { school: '全真', how: '逐出' } },
+          text: '守一道长摇头：「被逐出去的，想回来得先上山跪着。你不是从正门走的，也别想从正门回来。」' },
         { if: { pastSect: { school: '全真' } },
           text: '守一道长睁开了眼：「全真的山门，出去时怎么走，回来就得怎么走回去——跪着进。你想清楚了，再来叩门。」' },
         { if: { any: [{ flag: 'cw_qiao' }, { flag: 'huafang_betray' }] },
@@ -227,7 +231,7 @@ const NPCS: NpcDef[] = [
   {
     id: 'smqz_baopu', name: '抱朴', ini: '朴', tone: 'blue', brief: '在粮房对账',
     look: '三十来岁的道士，肩背厚实——是扛过米的肩膀。对账的笔握得极紧，指节都白了。他待来客热络，对账目冷面。',
-    at: { room: 'smqz_guan' },
+    at: { room: 'smqz_guan', if: { shi: { id: 'smqz_shi', not: ['ti_wu'] } } },
     verbs: ['交谈', '观察',
       { verb: '踏罡', if: { flag: 'smqz_asked', notFlag: 'smqz_bu', noSect: true } },
       { verb: '交差', if: { job: 'smqz_job_xun' } },
@@ -263,7 +267,7 @@ const NPCS: NpcDef[] = [
   {
     id: 'smqz_yichen', name: '一尘', ini: '尘', tone: 'gray', brief: '在殿前擦星图碑',
     look: '二十出头的知客道人，眉眼清秀，嘴角却总抿着。擦碑的布洗得发白，叠得方方正正。见了生人，他把碑护在身后半步。',
-    at: [{ room: 'smqz_guan', if: { hour: { from: 9, to: 18 } } }],
+    at: [{ room: 'smqz_guan', if: { hour: { from: 9, to: 18 }, shi: { id: 'smqz_shi', not: ['qi', 'fengsheng'] } } }],
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
@@ -327,7 +331,7 @@ const KAO: FoeDef = {
   opening: ['拂尘收得太尽', '踏步时左肋沉了一沉', '七步走到第六步慢了半拍'],
   intro: '守一道长把拂尘斜斜一提：「全真考校，考的是气匀不匀。接老道三十招——点到为止。」',
   win: '守一道长收了拂尘，气息匀得像没动过：「好。气匀，心就静——全真的门，为你开。」',
-  lose: '拂尘丝轻轻搭上你的手腕，往下一带，你半边身子就酸了。守一道长收尘：「差着火候，不碍。心静了再 来。」',
+  lose: '拂尘丝轻轻搭上你的手腕，往下一带，你半边身子就酸了。守一道长收尘：「差着火候，不碍。心静了再来。」',
   prep: [
     { if: { flag: 'smqz_lei' }, atk: 0.9, big: 0.9,
       text: '你记着道长左肋下那道旧痕——内息岔过一次的地方。专攻他的左肋，逼他换气。他换气慢的那半拍，就是你进手的时候。',
