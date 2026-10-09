@@ -560,11 +560,11 @@ describe('从零练武：成长从江湖上来', () => {
     expect(S.hpMax).toBe(hp2);
   });
 
-  it('静修：先养伤（一级三日），再打坐长功力；功力有天花板，内功练不上去就熬不深', () => {
+  it('静修：只养得好轻伤（重伤要看伤、服药），日子都拿来打坐长功力；功力有天花板，内功练不上去就熬不深', () => {
     S.wounds = { hand: 1, foot: 0, inner: 2 };
     const p = jingxiuPlan(S, 7);
-    expect(p.healed).toEqual({ inner: 2 });
-    expect(p.dazuoDays).toBe(1);
+    expect(p.healed).toEqual({ hand: 1 });
+    expect(p.dazuoDays).toBe(7);
     const q = jingxiuPlan({ ...S, wounds: { hand: 0, foot: 0, inner: 0 } }, 30);
     expect(q.gongli).toBeGreaterThan(0.8);
     expect(q.gongli).toBeLessThan(1);

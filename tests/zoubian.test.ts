@@ -16,7 +16,8 @@ import type { Effect } from '../src/content/types';
 import { act, curQuest, enter, hopMin, pathTo, payFare, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
 import { Duel, RANDOM, SKILLED, simulate, type DuelRes, type Policy } from '../src/engine/duel';
-import { activePrep, alliesOf, fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
+import { activePrep, alliesOf, fightKit, foeSpec, heroSpec, kanren } from '../src/engine/zhaoshi';
+import { useItem } from '../src/engine/daoju';
 import { brace, fateOpts, settle, takeWounds } from '../src/engine/jiesuan';
 import { XIEJIAO, checkYue, jingxiu, nextYue, waitMin } from '../src/engine/shiguang';
 import { mulberry32 } from '../src/engine/rng';
@@ -91,6 +92,8 @@ function playStory(id: string, depth: number): void {
 function fight(fid: string, depth: number): void {
   const f = foeById(fid);
   if (!f) { err(`对手「${fid}」不存在`); return; }
+  // 开打前掂斤两（engine/shang.ts）：打赢了比自己弱的，落的伤封顶。机器玩家少掂几回，省时间
+  const odds = f.spar || f.script ? undefined : kanren(S, f, 8).p;
   brace(f);
   const prep = activePrep(f);
   const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, prep), { rng, allies: alliesOf(prep) });
@@ -105,7 +108,7 @@ function fight(fid: string, depth: number): void {
   S.hp = Math.max(0, Math.round(d.hp));
   S.mp = Math.max(0, Math.round(d.mp));
   const res = d.res!;
-  takeWounds(f, d.log.taken);
+  takeWounds(f, d.log.taken, res, odds);
   const opts = fateOpts(f, res);
   // 胜负以后的去路：盯着世事的，挑把它推到还没走过那一步的；其余没走过的优先（几局下来每条路都该有人走过）
   const aimFate = opts.filter(o => pushesNew(o.do));
@@ -131,7 +134,9 @@ const IDLE: Policy = { name: '不出手', pick: () => null, openTake: 0, perform
 
 /* ---------- 玩家能做的事 ---------- */
 
-type Act = { k: 'act'; id: string; v: string; key: string } | { k: 'go'; to: string; key: string; quest?: boolean; push?: boolean } | { k: 'rest'; key: string } | { k: 'wait'; key: string };
+type Act = { k: 'act'; id: string; v: string; key: string } | { k: 'go'; to: string; key: string; quest?: boolean; push?: boolean; cure?: boolean } | { k: 'rest'; key: string } | { k: 'wait'; key: string };
+/** 身上有重伤（二级以上，engine/shang.ts） */
+const heavy = (): boolean => S.wounds.hand >= 2 || S.wounds.foot >= 2 || S.wounds.inner >= 2;
 
 function branchKey(id: string, v: string): string {
   const n = npc(id)!;
@@ -160,6 +165,11 @@ function actions(): Act[] {
   // 盯着一件世事：往牵扯到它的人那里走（玩家听说了一件事，会去找那几个人）
   const near = cur?.shi ? nearestWith(id => SHI_NPC.get(cur!.shi!)!.has(id)) : null;
   if (near) list.push({ k: 'go', to: near, key: `go|${S.loc}|${near}`, quest: true, push: true });
+  // 身上有重伤：往最近的郎中那里走（玩家会去看伤）
+  if (heavy() && S.silver >= 150) {
+    const doc = nearestWith(id => !!npc(id)?.service?.includes('医'));
+    if (doc) list.push({ k: 'go', to: doc, key: `go|${S.loc}|${doc}`, cure: true });
+  }
   list.push({ k: 'rest', key: 'rest' }, { k: 'wait', key: 'wait' });
   return list;
 }
@@ -249,7 +259,10 @@ function pusherAtHour(id: string): number | null {
 /** 挑一件事做：没做过的优先，跟着任务走的其次；伤重了去闭关 */
 function choose(list: Act[], seen: Set<string>): Act {
   const w = list.map(a => {
-    if (a.k === 'rest') return S.hp < S.hpMax * 0.35 || S.wounds.hand + S.wounds.foot + S.wounds.inner >= 3 ? 20 : cur?.shi ? 0.02 : 0.2;
+    // 重伤闭关养不好（engine/shang.ts），找郎中、买药去；只有气血见底才闭关
+    if (a.k === 'rest') return S.hp < S.hpMax * 0.35 ? 20 : cur?.shi ? 0.02 : 0.2;
+    if (a.k === 'act' && heavy() && /^(看伤|买跌打酒|买内伤药)$/.test(a.v)) return 60;
+    if (a.k === 'go' && a.cure) return 50;
     // 盯着世事、要找的人眼下不在：多半是时辰不对，歇脚等一等
     if (a.k === 'wait') return cur?.shi && !roomNpcs(S.loc).some(pushers(cur.shi)) && !nearestWith(pushers(cur.shi)) ? 6 : 0.6;
     let x = a.k === 'go' ? 1 : 2;
@@ -291,6 +304,8 @@ function travel(to: string): void {
 }
 
 function step(seen: Set<string>): void {
+  // 带着治重伤的药，有重伤就吃（玩家会这样做）
+  for (const id of ['dieda', 'neishang']) if ((S.items[id] ?? 0) > 0 && heavy()) useItem(id);
   const a = choose(actions(), seen);
   seen.add(a.key);
   if (a.k === 'act') {

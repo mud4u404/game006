@@ -58,8 +58,13 @@ export interface GameState {
   pastSects?: { school: string; how: '出师' | '叛门' | '逐出' }[];
   /** 功力（年）：一年一百点内力，靠静修的岁月熬（engine/ren.ts） */
   gongli: number;
-  /** 身上的伤：手、足、内息各几级（零到三）。吃了重招才落下，打完才起作用，带到下一场；静修、歇息养好 */
+  /**
+   * 身上的伤：手、足、内息各几级（零到三）。吃了重招才落下，打完才起作用，带到下一场（engine/shang.ts）。
+   * 一级是轻伤，过一日自己好；二级以上是重伤，要找郎中看伤或者服药
+   */
   wounds: { hand: number; foot: number; inner: number };
+  /** 哪几处是轻伤、从江湖历第几分钟起算（过一日自己好，engine/shang.ts 的 healLight） */
+  lightSince?: Partial<Record<'hand' | 'foot' | 'inner', number>>;
   /**
    * 现实的钟（engine/shiguang.ts）：开局（或换算存档）时的现实时刻和那天的江湖日，上次在线的现实时刻。
    * 江湖跑不过现实：江湖的日数最多比开局以来的现实小时数多十日；下线就是静修，现实一小时算江湖一日。

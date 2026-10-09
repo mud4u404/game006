@@ -8,19 +8,25 @@ import type { AfterOpt, Effect, FightResult, FoeDef, PrepDef } from '../content/
 import type { DuelRes, Wounds } from './duel';
 import { newOutcome, run, test, type Outcome } from './dsl';
 import { fightLilian } from './lilian';
+import { capWounds, markLight, woundCap } from './shang';
 
 /** 开打前：剧本战撑不住时有人出手，开打时至少留一口气撑一阵 */
 export function brace(f: FoeDef): void {
   if (f.script) S.hp = Math.max(S.hp, Math.round(S.hpMax * 0.25) + 300);
 }
 
-/** 这一场吃重招落下的伤，打完才起作用，带到下一场（切磋点到为止、剧本战不落伤）。返回新落下的伤 */
-export function takeWounds(f: FoeDef, taken: Partial<Wounds>): Partial<Wounds> {
+/**
+ * 这一场吃重招落下的伤，打完才起作用，带到下一场（切磋点到为止、剧本战不落伤）。返回新落下的伤。
+ * 打赢了按开打前掂的斤两封顶（engine/shang.ts 的 woundCap）：打比你弱的人，赢了不该一身伤（负责人 10-09）
+ */
+export function takeWounds(f: FoeDef, taken: Partial<Wounds>, res?: DuelRes, odds?: number): Partial<Wounds> {
   const hurt: Partial<Wounds> = {};
   if (f.spar || f.script) return hurt;
-  for (const [z, n] of Object.entries(taken) as [keyof Wounds, number][]) {
+  const got = res ? capWounds(taken, woundCap(res, odds)) : taken;
+  for (const [z, n] of Object.entries(got) as [keyof Wounds, number][]) {
     if (n > 0) { S.wounds[z] = Math.min(3, S.wounds[z] + n); hurt[z] = n; }
   }
+  markLight(S);
   return hurt;
 }
 

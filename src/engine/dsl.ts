@@ -17,20 +17,23 @@ import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
 import { hearsay, learnShi, moveShi } from './shishi';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
+import { markLight } from './shang';
 
 /** 三处伤，最重的先治；一样重时先内息，再手、足（和静修养伤同一个次序，engine/lilian.ts） */
 const ZONES: Zone[] = ['inner', 'hand', 'foot'];
 const isWounded = (): boolean => ZONES.some(z => S.wounds[z] > 0);
 
-/** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）。返回每处治好了几级 */
-function cureWounds(levels = Infinity): Partial<Record<Zone, number>> {
+/** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；zones 只治这几处。返回每处治好了几级 */
+function cureWounds(levels = Infinity, zones: Zone[] = ZONES): Partial<Record<Zone, number>> {
   const got: Partial<Record<Zone, number>> = {};
   for (let left = levels; left > 0; left--) {
-    const z = ZONES.slice().sort((a, b) => S.wounds[b] - S.wounds[a])[0];
+    const z = zones.slice().sort((a, b) => S.wounds[b] - S.wounds[a])[0];
     if (S.wounds[z] <= 0) break;
     S.wounds[z]--;
     got[z] = (got[z] ?? 0) + 1;
   }
+  // 治到一级的，开始算轻伤，过一日自己好（engine/shang.ts）
+  markLight(S);
   return got;
 }
 
@@ -244,12 +247,9 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         break;
       case 'weather': S.weather = e.value; break;
       case 'heal':
-        if (e.hp === 'full') {
-          S.hp = S.hpMax;
-          // 好好歇一夜，最重的那一处伤缓一级
-          const z = (['inner', 'hand', 'foot'] as const).slice().sort((x, y) => S.wounds[y] - S.wounds[x])[0];
-          if (S.wounds[z] > 0) S.wounds[z]--;
-        } else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
+        // 好好歇一夜，气血回满；轻伤过一日自己好，重伤要看伤、服药（engine/shang.ts），歇一夜治不了
+        if (e.hp === 'full') S.hp = S.hpMax;
+        else if (typeof e.hp === 'number') S.hp = Math.min(S.hpMax, S.hp + e.hp);
         if (e.mp === 'full') S.mp = S.mpMax; else if (typeof e.mp === 'number') S.mp = Math.min(S.mpMax, S.mp + e.mp);
         if (e.hpAtLeast) S.hp = Math.max(S.hp, Math.round(S.hpMax * e.hpAtLeast));
         // 按上限的几成回（金疮药回三成，和战斗里服药一样）
@@ -257,7 +257,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (e.mpFrac) S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * e.mpFrac));
         break;
       case 'cure': {
-        const got = cureWounds(e.levels);
+        const got = cureWounds(e.levels, e.zones);
         const done = ZONES.filter(z => got[z]).map(z => `${ZONE_NAME[z]}伤${S.wounds[z] ? `轻了${liang(got[z]!)}级，还剩${liang(S.wounds[z])}级` : '好了'}`);
         if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
         break;

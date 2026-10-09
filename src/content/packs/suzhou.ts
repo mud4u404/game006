@@ -411,8 +411,19 @@ const NPCS: NpcDef[] = [
     id: 'sz_yelangzhong', name: '叶郎中', ini: '叶', tone: 'jade', brief: '在摊上看诊', service: ['医'],
     at: { room: 'sz_shantang' },
     look: '清瘦的老郎中，在山塘街口摆个药摊，一张桌，两把凳，药香老远就闻得到。你走三步他就看出了你的伤在哪条筋上——看伤看老了的人，眼睛比药准。',
-    verbs: ['交谈', '观察', '看伤', '购买'],
+    verbs: ['交谈', '观察', '看伤', '购买', '买跌打酒', '买内伤药'],
     actions: {
+      // 治重伤的药（engine/shang.ts）：重伤自己好不了，看伤贵，带两服药在身上便宜些
+      买跌打酒: [
+        { if: { silver: 80 }, text: '叶郎中从架上取下一小坛跌打酒：「揉在伤处，揉到发热为止。手脚上的重伤，一坛轻一级。」（银两 −80 文）',
+          do: [{ type: 'silver', delta: -80 }, { type: 'item', id: 'dieda', delta: 1 }, { type: 'toast', text: '跌打酒 +1' }] },
+        { text: '「跌打酒八十文一坛。」叶郎中把坛子放回架上。' }
+      ],
+      买内伤药: [
+        { if: { silver: 100 }, text: '叶郎中数出一包丸药，用油纸裹好：「温水送服，一日一服。内息的重伤，一服轻一级。」（银两 −100 文）',
+          do: [{ type: 'silver', delta: -100 }, { type: 'item', id: 'neishang', delta: 1 }, { type: 'toast', text: '内伤药 +1' }] },
+        { text: '「内伤药一百文一包。」叶郎中把药包收了回去。' }
+      ],
       交谈: [
         { if: { wounded: true },
           text: '叶郎中瞥了一眼你走路的样子：「伤在筋上，别拖。治一处一级，一百五十文，半个时辰。」' },

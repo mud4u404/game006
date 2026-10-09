@@ -17,7 +17,8 @@ import { npcName } from '../engine/world';
 import { SHENFEN, jobGongxian, jobPay } from '../engine/shenfen';
 import { brace, fateOpts, settle, takeWounds } from '../engine/jiesuan';
 import { checkYue } from '../engine/shiguang';
-import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, weaponWord, type FightKit } from '../engine/zhaoshi';
+import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, kanren, weaponWord, type FightKit } from '../engine/zhaoshi';
+import { woundNote } from '../engine/shang';
 import { IC } from './icons';
 import { mb } from './widgets';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, tooSoon } from './shell';
@@ -65,6 +66,8 @@ interface Fight {
   hurt?: Partial<Wounds>;
   /** 气血见底提醒过了 */
   lowWarned?: boolean;
+  /** 开打前掂的斤两（赢面）：打赢了按它给落的伤封顶（engine/shang.ts） */
+  odds?: number;
 }
 let C: Fight | null = null;
 export const inFight = (): boolean => !!C;
@@ -76,11 +79,13 @@ export function startFight(fid: string): void {
   if (C || !f) return;
   const prep = activePrep(f);
   const kit = fightKit(S);
+  // 开打前掂一掂斤两：打赢了比你弱的人，不该落一身伤（负责人 10-09）
+  const odds = f.spar || f.script ? undefined : kanren(S, f, 24).p;
   brace(f);
   const d = new Duel(heroSpec(S, kit, f), foeSpec(f, prep), { rng: Math.random, allies: alliesOf(prep) });
   C = {
     f, d, kit, prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
-    chargeT: 0, ui: null, openPart: null, busy: false, paused: false, lock: 0, big: [], T: {}
+    chargeT: 0, ui: null, openPart: null, busy: false, paused: false, lock: 0, big: [], T: {}, odds
   };
   const L = $('#fightLayer')!;
   L.innerHTML = fightHTML(C);
@@ -773,7 +778,7 @@ function endFight(res: DuelRes): void {
   cancelCharge();
   sync();
   // 这一场吃重招落下的伤，打完才起作用，带到下一场（engine/jiesuan.ts）
-  c.hurt = takeWounds(c.f, c.d.log.taken);
+  c.hurt = takeWounds(c.f, c.d.log.taken, res, c.odds);
   if (res === 'win' && c.f.win) bubble('foe', c.f.win);
   else if (res === 'lose' && c.f.lose) bubble('sys', c.f.lose);
   updAll();
@@ -881,7 +886,7 @@ function showResult(): void {
   const fateLine = pk ? `<div class="r-sub">胜负以后 · ${pk.label}</div><p class="story">${pk.later}</p>` : '';
   const hurt = Object.entries(c.hurt ?? {}) as [keyof Wounds, number][];
   const WHAT: Record<keyof Wounds, string> = { hand: '拆招、抢攻差一截，出手轻一成', foot: '闪避差一截', inner: '硬接差一截，内力回得慢' };
-  const hurtLine = hurt.length ? `<div class="r-sub">落下的伤</div><div class="news">${hurt.map(([z]) => `<div><span class="tag danger">${ZONE_NAME[z]}伤 ${liang(S.wounds[z])}级</span><span>${WHAT[z]}。闭关养伤，一级三日。</span></div>`).join('')}</div>` : '';
+  const hurtLine = hurt.length ? `<div class="r-sub">落下的伤</div><div class="news">${hurt.map(([z]) => `<div><span class="tag ${S.wounds[z] >= 2 ? 'danger' : 'warn'}">${ZONE_NAME[z]}伤 ${liang(S.wounds[z])}级</span><span>${WHAT[z]}。${woundNote(S.wounds[z])}。</span></div>`).join('')}</div>` : '';
   const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])], c.d.hp).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
   c.then = r.then;
   save();

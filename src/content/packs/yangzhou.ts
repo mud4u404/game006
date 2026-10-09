@@ -257,8 +257,19 @@ const NPCS: NpcDef[] = [
     } },
   { id: 'yaopu', name: '药铺掌柜', ini: '药', tone: 'jade', brief: '拨着算盘',
     look: '精瘦的老头，药柜上百个抽屉，他闭着眼也能抓对。',
-    verbs: ['交谈', '观察', '购买'],
+    verbs: ['交谈', '观察', '购买', '买跌打酒', '买内伤药'],
     actions: {
+      // 治重伤的药（engine/shang.ts）：重伤自己好不了，看伤贵，带两服药在身上便宜些
+      买跌打酒: [
+        { if: { silver: 60 }, text: '掌柜从架上取下一小坛跌打酒：「揉在伤处，揉到发热为止。手脚上的重伤，一坛轻一级。」（银两 −60 文）',
+          do: [{ type: 'silver', delta: -60 }, { type: 'item', id: 'dieda', delta: 1 }, { type: 'toast', text: '跌打酒 +1' }] },
+        { text: '「跌打酒六十文一坛。」掌柜把坛子放回架上。' }
+      ],
+      买内伤药: [
+        { if: { silver: 80 }, text: '掌柜数出一包丸药，用油纸裹好：「温水送服，一日一服。内息的重伤，一服轻一级。」（银两 −80 文）',
+          do: [{ type: 'silver', delta: -80 }, { type: 'item', id: 'neishang', delta: 1 }, { type: 'toast', text: '内伤药 +1' }] },
+        { text: '「内伤药八十文一包。」掌柜把药包收了回去。' }
+      ],
       交谈: [
         // 东关街夜里闹贼（packs/shishi-yangzhou.ts）
         { if: { shi: { id: 'ss_zei', at: ['qi', 'bang'] } }, text: '「昨夜又丢了两包药！专挑治咳嗽的拿，你说这贼是不是有病？」掌柜把算盘拍得山响，「金疮药二十文一包，看好了再买。」' },

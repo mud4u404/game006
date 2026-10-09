@@ -51,6 +51,8 @@ export function wear(key: GearKey, id: string | null): string | null {
 export function useBlock(it: ItemDef): string | null {
   if (!it.use?.length || !USE_VERB[it.kind]) return '这件东西不能服用';
   if (have(it.id) < 1) return '行囊里没有了';
+  // 治伤的药：对应的那几处没伤，就不必吃
+  for (const e of it.use) if (e.type === 'cure' && e.zones && !e.zones.some(z => S.wounds[z] > 0)) return `${e.zones.map(z => ({ hand: '手', foot: '足', inner: '内息' })[z]).join('、')}没有伤`;
   // 只是回气血、内力的，满了就不必吃
   const heals = it.use.flatMap(e => (e.type === 'heal' ? [e] : []));
   if (heals.length === it.use.filter(e => e.type !== 'toast' && e.type !== 'feed').length) {

@@ -318,8 +318,8 @@ export default pack;
 | `{ type: 'title', value: '渡口一剑' }` | 设置名号 |
 | `{ type: 'time', add: 30 }` | 时间往后推 30 分钟；`set: 1110` 表示设为当天 18:30，若已过则到第二天 |
 | `{ type: 'weather', value: '大雨' }` | 改天气 |
-| `{ type: 'heal', hp: 200 }` | 回复气血；`'full'` 为回满（算歇了一夜，顺带让最重的伤缓一级，住店用它）；`hpAtLeast: 0.4` 表示至少回到四成，`hpAtLeast: 1` 是只回满气血、不碰伤；`hpFrac: 0.3` 表示回上限的三成（金疮药），`mpFrac` 同理回内力 |
-| `{ type: 'cure', levels: 1 }` | 治伤：从最重的那处起，一共减 `levels` 级；不写 `levels` 是全治。治完自动记一条见闻。收钱治伤的分支要带 `if: { wounded: true }`，没伤的另写一句「没伤」（CI 查） |
+| `{ type: 'heal', hp: 200 }` | 回复气血；`'full'` 为回满（算歇了一夜，住店用它；不治伤：轻伤过一日自己好，重伤要看伤、服药，见 `engine/shang.ts`）；`hpAtLeast: 0.4` 表示至少回到四成，`hpAtLeast: 1` 是只回满气血、不碰伤；`hpFrac: 0.3` 表示回上限的三成（金疮药），`mpFrac` 同理回内力 |
+| `{ type: 'cure', levels: 1 }` | 治伤：从最重的那处起，一共减 `levels` 级；不写 `levels` 是全治；写 `zones: ['hand', 'foot']` 只治这几处（跌打酒）。治完自动记一条见闻。收钱治伤的分支要带 `if: { wounded: true }`，没伤的另写一句「没伤」（CI 查）。伤的规矩（负责人 10-09，`engine/shang.ts`）：打赢比你弱的落伤少；一级是轻伤，过一日自己好；二级以上是重伤，自己好不了，闭关也养不好，要看伤或者服药 |
 | `{ type: 'move', to: 'hu' }` | 把玩家移到某处 |
 | `{ type: 'news' }` | 随机抽一条江湖传闻写进见闻，文字里可以用 `{news}` 引用 |
 | `{ type: 'fight', foe: 'xxx' }` | 开打 |

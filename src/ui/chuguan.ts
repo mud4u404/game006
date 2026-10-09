@@ -29,10 +29,13 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
     healTxt ? `<span class="tag">${healTxt}</span>` : '',
     r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : '',
     r.lodging === 'inn' ? `<span class="tag">住店 −${r.cost} 文</span>`
-      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，伤好得慢</span>`
+      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，打坐参悟打了折</span>`
   ].filter(Boolean);
   const y = nextYue(S);
   const lines: string[] = [];
+  // 重伤闭关养不好（engine/shang.ts）：出关时说清楚去哪儿治
+  const heavy = (['hand', 'foot', 'inner'] as const).filter(z => S.wounds[z] >= 2);
+  if (heavy.length) lines.push(`<div><span class="tag danger">重伤</span><span>${heavy.map(z => ZONE_NAME[z]).join('、')}的伤还重。重伤闭关养不好，要找郎中看伤，或者服药（跌打酒治手足，内伤药治内息）。</span></div>`);
   if (S.xinmo.n >= 0.5) lines.push(`<div><span class="tag danger">心魔</span><span>心中有愧（${S.xinmo.why}），静修难进。还了这份情、了却这件事，才化得开。</span></div>`);
   for (const m of r.missed) lines.push(`<div><span class="tag danger">失约</span><span>${m}</span></div>`);
   if (y) lines.push(`<div><span class="tag warn">有约</span><span>${yueText(S, y)}</span></div>`);

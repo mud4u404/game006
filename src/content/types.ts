@@ -112,7 +112,8 @@ export type Effect =
   /** hpFrac、mpFrac：按上限的几成回，例如金疮药 hpFrac: 0.3 */
   | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number; hpFrac?: number; mpFrac?: number }
   /** 治伤（医馆、郎中）：不写 levels 治好全部伤；写了就从最重的那处起，一共减这么多级。治完记一条见闻 */
-  | { type: 'cure'; levels?: number }
+  /** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；写了 zones 只治这几处（跌打酒治手足、内伤药治内息） */
+  | { type: 'cure'; levels?: number; zones?: ('hand' | 'foot' | 'inner')[] }
   | { type: 'feedReset' }
   /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
   | { type: 'news' }

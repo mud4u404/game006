@@ -44,7 +44,7 @@ function yingshengHTML(): string {
   if (S.chapter === 0) return '';
   return `<section class="card here"><div class="sec-h"><h2>营生</h2><span class="count">${shenfenText(S)}</span></div>
     <p class="muted">${shenfenOf(S).desc}</p>
-    <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文），身上留${cn(LODGING.keep)}文盘缠不动；钱不够就露宿，不花钱，伤好得慢。</span></div></div></section>`;
+    <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文），身上留${cn(LODGING.keep)}文盘缠不动；钱不够就露宿，不花钱，睡不安稳，打坐参悟打八折。</span></div></div></section>`;
 }
 
 /** 师门：门派、地位、门规；出过师、叛过门的写一行来历（docs/menpai.md 第七节） */
@@ -71,7 +71,8 @@ export function viewRenwu(): string {
   // 和江湖页一致：没有名号时显示修为档
   const tier = tierNow(S).name;
   const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : shenfenOf(S).name + ' · ' + tier;
-  const hurt = (Object.entries(S.wounds) as ['hand' | 'foot' | 'inner', number][]).filter(([, n]) => n > 0).map(([z, n]) => `${ZONE_NAME[z]}${cn(n)}级`).join('、');
+  // 伤写明轻重：轻伤过一日自己好，重伤要看伤、服药（engine/shang.ts）
+  const hurt = (Object.entries(S.wounds) as ['hand' | 'foot' | 'inner', number][]).filter(([, n]) => n > 0).map(([z, n]) => `${ZONE_NAME[z]}${cn(n)}级（${n >= 2 ? '重伤，要找郎中或服药' : '轻伤，自己会好'}）`).join('、');
   return `
   ${dollHTML(fullName(), who)}
   <section class="card here"><div class="sec-h"><h2>根基</h2><span class="count">常人各二十</span></div><div class="attrs">${attrs}</div>

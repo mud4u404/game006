@@ -32,14 +32,14 @@ import type { ContentPack, Effect, ItemDef, NpcDef, RoomDef } from '../types';
 const PROLOGUE = { quest: { id: 'prologue', below: 3 } };
 const AFTER = { quest: { id: 'prologue', atLeast: 3 } };
 
-/** 看伤一次：治最重的那处一级，气血回满（不用 heal 的 full：那是歇了一夜，会再让伤缓一级），花半个时辰 */
+/** 看伤一次：治最重的那处一级，气血回满，花半个时辰。重伤（二级以上）自己好不了，就靠这个和药（engine/shang.ts） */
 const KANSHANG = (cost: number): Effect[] => [
   { type: 'silver', delta: -cost }, { type: 'cure', levels: 1 }, { type: 'heal', hpAtLeast: 1 }, { type: 'time', add: 30 }
 ];
 /** 喝一帖药、一碗药酒：只回气血 */
 const TIAOYANG = (cost: number, min: number): Effect[] => [{ type: 'silver', delta: -cost }, { type: 'heal', hpAtLeast: 1 }, { type: 'time', add: min }];
 /**
- * 住店一宿：睡到次日卯时，气血内力回满；heal 的 full 顺带让最重的伤缓一级。
+ * 住店一宿：睡到次日卯时，气血内力回满。轻伤过一日自己好，重伤睡一夜治不了（engine/shang.ts）。
  * 先推一个时辰再设到卯时：卯时前后进门的，不会才躺下就天亮（也不会一文钱不花地白睡）。
  */
 const SLEEP = (cost: number): Effect[] => [
@@ -138,8 +138,19 @@ const NPCS: NpcDef[] = [
   {
     id: 'jc_yz_langzhong', name: '葛郎中', ini: '葛', tone: 'jade', brief: '在给脚夫上夹板', service: ['医'],
     look: '瘦得像根竹竿，一双手却稳，腕上有道旧箭疤。看人先看步子，再看脸色——伤看多了的人，都这样。',
-    verbs: ['交谈', '观察', '看伤', '调养', '购买'],
+    verbs: ['交谈', '观察', '看伤', '调养', '购买', '买跌打酒', '买内伤药'],
     actions: {
+      // 治重伤的药（engine/shang.ts）：重伤自己好不了，看伤贵，带两服药在身上便宜些
+      买跌打酒: [
+        { if: { silver: 60 }, text: '葛郎中从架上取下一小坛跌打酒：「揉在伤处，揉到发热为止。手脚上的重伤，一坛轻一级。」（银两 −60 文）',
+          do: [{ type: 'silver', delta: -60 }, { type: 'item', id: 'dieda', delta: 1 }, { type: 'toast', text: '跌打酒 +1' }] },
+        { text: '「跌打酒六十文一坛。」葛郎中把坛子放回架上。' }
+      ],
+      买内伤药: [
+        { if: { silver: 80 }, text: '葛郎中数出一包丸药，用油纸裹好：「温水送服，一日一服。内息的重伤，一服轻一级。」（银两 −80 文）',
+          do: [{ type: 'silver', delta: -80 }, { type: 'item', id: 'neishang', delta: 1 }, { type: 'toast', text: '内伤药 +1' }] },
+        { text: '「内伤药八十文一包。」葛郎中把药包收了回去。' }
+      ],
       交谈: [
         // 海捕文书 · 玉面白七郎（packs/liushanmen.ts）：识破他的一条路
         { if: { shi: { id: 'lsm_bai', at: ['zuoan'] }, notFlag: 'lsm_bai_shipo' },
@@ -192,7 +203,7 @@ const NPCS: NpcDef[] = [
         { if: { silver: 100 },
           text: '阮娘子收了钱，摘下一块木牌递给你：「楼上东头第二间。」热水烫过脚，被褥晒得松软，你一觉睡到窗纸发白，楼下已经飘来粥香。（银两 −100 文）',
           do: SLEEP(100) },
-        { text: '阮娘子把算盘一推：「一百文一宿，少一文也不成。」她朝门外努努嘴，「运河堤上的柳树底下倒不要钱，就是夜里露水重，伤好得慢。」' }
+        { text: '阮娘子把算盘一推：「一百文一宿，少一文也不成。」她朝门外努努嘴，「运河堤上的柳树底下倒不要钱，就是夜里露水重，睡不踏实。」' }
       ]
     }
   },
@@ -280,8 +291,19 @@ const NPCS: NpcDef[] = [
     id: 'jc_gz_zhong', name: '钟郎中', ini: '钟', tone: 'jade', brief: '摆着跌打摊子', service: ['医'],
     at: { room: 'gz_town', if: { any: [{ quest: { id: 'prologue', below: 2 } }, AFTER] } },
     look: '六十来岁，酒糟鼻，一双手粗得像老树根，接起骨来却轻巧得很。摊子上摆着几罐药酒，一块狗皮膏药的招牌被江风吹得哗哗响。',
-    verbs: ['交谈', '观察', '看伤', '药酒', '购买'],
+    verbs: ['交谈', '观察', '看伤', '药酒', '购买', '买跌打酒', '买内伤药'],
     actions: {
+      // 治重伤的药（engine/shang.ts）：重伤自己好不了，看伤贵，带两服药在身上便宜些
+      买跌打酒: [
+        { if: { silver: 50 }, text: '钟郎中从架上取下一小坛跌打酒：「揉在伤处，揉到发热为止。手脚上的重伤，一坛轻一级。」（银两 −50 文）',
+          do: [{ type: 'silver', delta: -50 }, { type: 'item', id: 'dieda', delta: 1 }, { type: 'toast', text: '跌打酒 +1' }] },
+        { text: '「跌打酒五十文一坛。」钟郎中把坛子放回架上。' }
+      ],
+      买内伤药: [
+        { if: { silver: 80 }, text: '钟郎中数出一包丸药，用油纸裹好：「温水送服，一日一服。内息的重伤，一服轻一级。」（银两 −80 文）',
+          do: [{ type: 'silver', delta: -80 }, { type: 'item', id: 'neishang', delta: 1 }, { type: 'toast', text: '内伤药 +1' }] },
+        { text: '「内伤药八十文一包。」钟郎中把药包收了回去。' }
+      ],
       交谈: [
         { if: AFTER,
           text: '钟郎中灌了一口药酒，眯眼看你：「老江的孩子？」他叹了口气，「我跟他喝了二十年酒。他那一手接骨的功夫，比我还利索——打鱼的人，哪儿学来的？」他摆摆手，「罢了，人都走了。有伤来找我。」' },
@@ -346,8 +368,19 @@ const NPCS: NpcDef[] = [
   {
     id: 'jc_zj_ning', name: '宁大夫', ini: '宁', tone: 'jade', brief: '在灯下捣药', service: ['医'],
     look: '二十七八岁的女子，荆钗布裙，袖口扎得紧紧的。捣药的手很稳，眼睛却总往门外瞟——怕又抬进来一个。',
-    verbs: ['交谈', '观察', '看伤', '调养', '购买'],
+    verbs: ['交谈', '观察', '看伤', '调养', '购买', '买跌打酒', '买内伤药'],
     actions: {
+      // 治重伤的药（engine/shang.ts）：重伤自己好不了，看伤贵，带两服药在身上便宜些
+      买跌打酒: [
+        { if: { silver: 60 }, text: '宁大夫从架上取下一小坛跌打酒：「揉在伤处，揉到发热为止。手脚上的重伤，一坛轻一级。」（银两 −60 文）',
+          do: [{ type: 'silver', delta: -60 }, { type: 'item', id: 'dieda', delta: 1 }, { type: 'toast', text: '跌打酒 +1' }] },
+        { text: '「跌打酒六十文一坛。」宁大夫把坛子放回架上。' }
+      ],
+      买内伤药: [
+        { if: { silver: 80 }, text: '宁大夫数出一包丸药，用油纸裹好：「温水送服，一日一服。内息的重伤，一服轻一级。」（银两 −80 文）',
+          do: [{ type: 'silver', delta: -80 }, { type: 'item', id: 'neishang', delta: 1 }, { type: 'toast', text: '内伤药 +1' }] },
+        { text: '「内伤药八十文一包。」宁大夫把药包收了回去。' }
+      ],
       交谈: [
         { if: { wounded: true },
           text: '宁大夫看了看你的伤，脸色沉了下来：「我爹当年就是给人劝架，挨了一刀，没救回来。」她把药箱打开，「坐下吧。一级伤一百五十文，治一级算一级。」' },

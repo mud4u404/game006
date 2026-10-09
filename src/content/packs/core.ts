@@ -11,6 +11,11 @@ const ITEMS: ItemDef[] = [
     equip: { slot: '兵器', weapon: '剑', reach: '短', grade: '凡品' } },
   { id: 'jcy', name: '金疮药', kind: '药', price: 20, desc: '止血生肌，回复三成气血。战斗中也能服用；伤筋动骨的伤，还得静养。',
     use: [{ type: 'heal', hpFrac: 0.3 }] },
+  // 治重伤的药（负责人 10-09：「重伤需要找人医治或者服药」，engine/shang.ts）：一服轻一级，比请郎中看伤便宜，但要自己带着
+  { id: 'dieda', name: '跌打酒', kind: '药', price: 60, desc: '活血化瘀的药酒，揉在伤处，又热又辣。手、足的伤，一服轻一级；轻伤不揉，过一日也会好。',
+    use: [{ type: 'cure', levels: 1, zones: ['hand', 'foot'] }] },
+  { id: 'neishang', name: '内伤药', kind: '药', price: 80, desc: '调理内息的丸药，温水送服。内息的伤，一服轻一级；轻伤不吃，过一日也会好。',
+    use: [{ type: 'cure', levels: 1, zones: ['inner'] }] },
   { id: 'fhs', name: '飞蝗石', kind: '杂物', price: 3, desc: '暗器。战斗中随手打出，伤敌不重，聊胜于无。' },
   { id: 'flower', name: '杏花', kind: '杂物', price: 3, desc: '新折的杏花，可以送人。' },
   { id: 'med', name: '药', kind: '信物', desc: '回春堂的两副药，用油纸包着，还带着余温。' },

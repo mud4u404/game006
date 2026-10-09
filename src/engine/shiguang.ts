@@ -12,17 +12,18 @@ import { NEWS, npc, room, skillById } from '../content';
 import type { SkillId } from '../content/types';
 import { run, test } from './dsl';
 import { gainProf } from './growth';
-import { DAZUO, jingxiuPlan, retreatPlan } from './lilian';
+import { jingxiuPlan, retreatPlan } from './lilian';
+import { healLight, markLight } from './shang';
 import { syncBody } from './ren';
 import { npcName } from './world';
 
 /** 铁律的余裕（日）、一次离开最多算几日、现实一小时算江湖几日 */
 export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
 /**
- * 嚼用：住下房一日一钱银子（一百文，docs/foundation.md 第三节第六条）；钱不够就露宿，不花钱，养伤慢一倍。
+ * 嚼用：住下房一日一钱银子（一百文，docs/foundation.md 第三节第六条）；钱不够就露宿，不花钱，睡不安稳，那几日打坐、参悟打八折。
  * 身上留一百文盘缠不拿来住店：一趟长闭关不至于把人花得一文不剩，连买条鱼、打点衙役的钱都没有（机器玩家摸底时发现）。
  */
-export const LODGING = { inn: 100, lusuHeal: 6, keep: 100 };
+export const LODGING = { inn: 100, lusuEff: 0.8, keep: 100 };
 /** 心魔：每层打几折；每个江湖日淡多少层；几层以上静修会走火，走火一日的几率、一次掉几成功力 */
 export const XINMO = { k: 0.2, decay: 1 / 40, zouhuoAt: 2, zouhuoP: 0.02, zouhuoLoss: 0.1, max: 3 };
 
@@ -86,13 +87,14 @@ export interface RestReport {
 export function jingxiu(s: GameState, days: number, rng: () => number = Math.random): RestReport {
   const xm0 = s.xinmo.n;
   const xm1 = Math.max(0, xm0 - XINMO.decay * days);
-  const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2);
-  // 嚼用：盘缠以外的钱够住几日住几日，余下的日子露宿，伤好得慢（按住店、露宿的日子折算养伤的快慢）
+  // 嚼用：盘缠以外的钱够住几日住几日，余下的日子露宿，睡不安稳，那几日打坐、参悟打八折
   const innDays = Math.max(0, Math.min(days, Math.floor((s.silver - LODGING.keep) / LODGING.inn)));
   const cost = innDays * LODGING.inn, lusuDays = days - innDays;
   s.silver -= cost;
-  const jx = jingxiuPlan(s, days, eff, lusuDays ? Math.round((innDays * DAZUO.healDays + lusuDays * LODGING.lusuHeal) / days) : undefined);
+  const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2) * (days ? (innDays + lusuDays * LODGING.lusuEff) / days : 1);
+  const jx = jingxiuPlan(s, days, eff);
   for (const [z, n] of Object.entries(jx.healed) as ['hand' | 'foot' | 'inner', number][]) s.wounds[z] = Math.max(0, s.wounds[z] - n);
+  markLight(s);
   s.gongli = Math.round((s.gongli + jx.gongli) * 100) / 100;
   // 心魔重了，静修时会走火：功力掉一成
   let zouhuo = 0;
@@ -121,6 +123,8 @@ export function jingxiu(s: GameState, days: number, rng: () => number = Math.ran
 
 /** 过了约期还没了结的约：失约。执行失约的后果，生一层心魔。返回失约的说明 */
 export function checkYue(s: GameState): string[] {
+  // 日子往前走了：轻伤过一日自己好（engine/shang.ts）
+  healLight(s);
   const today = dayNo(s), out: string[] = [];
   for (const y of s.yue.filter(x => x.due < today)) {
     s.yue = s.yue.filter(x => x !== y);

@@ -99,7 +99,7 @@ describe('医馆看伤', () => {
 });
 
 describe('客栈住店', () => {
-  it('一百文一宿，睡到次日卯时，气血内力回满，最重的伤缓一级', () => {
+  it('一百文一宿，睡到次日卯时，气血内力回满；轻伤过一日自己好，重伤睡一夜治不了', () => {
     S.wounds = { hand: 1, foot: 0, inner: 2 };
     S.silver = 300; S.hp = 10; S.mp = 0;
     const day = S.day;
@@ -107,7 +107,7 @@ describe('客栈住店', () => {
     expect(S.silver).toBe(200);
     expect([S.day, S.min]).toEqual([day + 1, 6 * 60]);
     expect([S.hp, S.mp]).toEqual([S.hpMax, S.mpMax]);
-    expect(S.wounds).toEqual({ hand: 1, foot: 0, inner: 1 });
+    expect(S.wounds).toEqual({ hand: 1, foot: 0, inner: 2 });
   });
   it('后半夜投店睡到当天天亮；卯时前后进门的，也不会才躺下就天亮', () => {
     S.silver = 1000;
