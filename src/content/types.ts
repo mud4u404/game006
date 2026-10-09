@@ -818,6 +818,8 @@ export interface JobDef {
   npc: string;
   at: string;
   days: number;
+  /** 办差路上已知的线头，按顺序列出；只显示 if 成立的。at 不写时按人物作息找去处，不进存档 */
+  xian?: { npc: string; at?: string; if?: Cond; text: string }[];
   /** 办完以后隔几个江湖日才能再接（不写为三日） */
   again?: number;
   /** 报酬的倍数（难办的差事多给些），不写为一 */
