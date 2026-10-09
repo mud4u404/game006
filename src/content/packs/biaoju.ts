@@ -13,9 +13,9 @@ import type { ContentPack, FoeDef, FightResult, JobDef, NewsDef, NpcDef, PrepDef
  *
  * 入口：望江楼斗酒或请酒结识赵铁衣（旗标 biaoju_invite，在 dongguan-tavern.ts）。
  * 营生：镖师接镖 → 定一个约（几日之内送到）→ 到地头交镖，路上一场劫镖，老蔡作帮手 → 领钱。误了镖期、丢了镖，地位降一级；降到底被辞退。
- * 盼头：镖局兵器架上一口好刀，东关街房牙子手里一处小院，价钱写明，一时买不起。
+ * 盼头：镖局兵器架上一口好刀，东圈门房牙子手里一处小院，价钱写明，一时买不起。
  *
- * 悬赏榜（游侠的营生）也放在这里做示范：府衙照壁上的榜，可以反复揭。
+ * 悬赏（游侠的营生）也放在这里做示范：府衙照壁上悬赏一栏的河贼，可以反复揭；揭榜、领赏都在照壁下的书办那里（负责人 10-09）。
  */
 
 const ROOMS: RoomDef[] = [
@@ -144,29 +144,7 @@ const NPCS: NpcDef[] = [
       ]
     }
   },
-  /* ---------- 悬赏榜：游侠的营生 ---------- */
-  {
-    id: 'xs_bang', name: '悬赏榜', obj: true, icon: 'stele', brief: '照壁一角的木榜',
-    at: { room: 'yz_fuya' },
-    look: '照壁一角钉着一块木榜，榜上贴着几张悬赏，墨迹有新有旧。揭走了的，留下一块浆糊印。',
-    verbs: ['观察', '细看',
-      { verb: '揭榜', if: { jobOpen: 'xs_hezei' } },
-      { verb: '领赏', if: { job: 'xs_hezei', flag: 'xs_hezei_caught' } }],
-    actions: {
-      细看: [
-        { if: { job: 'xs_hezei' }, text: '你揭走的那张榜，浆糊印还湿着：运河渡口的河贼，入夜才上岸。' },
-        { text: '「运河渡口一带，有河贼夜里上岸偷漕船的货。拿获者，赏银若干。扬州府衙。」榜上没写赏多少——看揭榜的人是什么身手。' }
-      ],
-      揭榜: [
-        { text: '你揭下榜文。衙役在簿子上记了你的名字：「三日之内拿人来领赏。那贼入夜才上岸，在渡口盐包后头出没。」',
-          do: [{ type: 'flag', flag: 'xs_hezei_caught', value: false }, { type: 'job', id: 'xs_hezei' }] }
-      ],
-      领赏: [
-        { text: '衙役验过人犯，往簿子上画了个勾，从柜上点出一串铜钱：「赏银。下回还有榜，还来。」',
-          do: [{ type: 'flag', flag: 'xs_hezei_caught', value: false }, { type: 'jobDone', id: 'xs_hezei' }] }
-      ]
-    }
-  },
+  /* ---------- 悬赏：游侠的营生。榜在府衙照壁（packs/fuya.ts），揭榜、领赏找书办（packs/xuanshang.ts） ---------- */
   {
     id: 'xs_hezei', name: '河贼', ini: '贼', tone: 'red', brief: '在盐包后头鬼鬼祟祟',
     at: { room: 'dukou', if: { job: 'xs_hezei', notFlag: 'xs_hezei_caught', hour: { from: 19, to: 5 } } },
@@ -176,23 +154,23 @@ const NPCS: NpcDef[] = [
       动手: [{ text: '你从盐包后头转出来。河贼一惊，拔出尖刀就扑。', do: [{ type: 'fight', foe: 'xs_hezei' }] }]
     }
   },
-  /* ---------- 盼头：东关街的房牙子 ---------- */
+  /* ---------- 盼头：东圈门的房牙子 ---------- */
   {
     id: 'bj_yazi', name: '房牙子', ini: '牙', tone: 'jade', brief: '手里捏着一沓房契',
-    at: { room: 'cheng' },
+    at: { room: 'yz_dongquan' },
     look: '瘦小精干，一双眼睛滴溜溜地转，袖子里揣着一沓房契，见人就往上凑。',
     verbs: ['交谈', '观察', '买院子'],
     actions: {
       交谈: [
         { if: { flag: 'yz_xiaoyuan' }, text: '房牙子作了个揖：「东家，院里那棵枇杷今年结得好，小的替您看着呢。」' },
-        { text: '房牙子凑过来：「客官要置业？东关街后头有一处小院，两进，带一口井一棵枇杷，作价二百两。」他打量你一眼，笑道：「客官先攒着，小的给您留意着。」' }
+        { text: '房牙子凑过来：「客官要置业？东圈门里有一处小院，两进，带一口井一棵枇杷，作价二百两。」他打量你一眼，笑道：「客官先攒着，小的给您留意着。」' }
       ],
       买院子: [
         { if: { flag: 'yz_xiaoyuan' }, text: '「东家已经有一处了，再买就是置产业了。」房牙子笑得见牙不见眼。' },
         { if: { silver: 200000 },
           text: '你把二百两银票拍在桌上。房牙子手都抖了，连夜请了中人写契：「东家，从今往后，扬州城里您有个落脚的地方了。」（银两 −200000 文）',
           do: [{ type: 'silver', delta: -200000 }, { type: 'flag', flag: 'yz_xiaoyuan' },
-            { type: 'feed', tag: '收获', text: '你在扬州东关街后头买下了一处小院，两进，带一口井一棵枇杷。' }] },
+            { type: 'feed', tag: '收获', text: '你在扬州东圈门里买下了一处小院，两进，带一口井一棵枇杷。' }] },
         { text: '房牙子把房契往袖子里一揣：「二百两，客官。」他倒也不恼：「小的给您留着，跑不了。」' }
       ]
     }
@@ -363,15 +341,15 @@ FOES.push({
 const JOBS: JobDef[] = [
   { id: 'bj_gz', shenfen: 'biaoshi', tier: 1, title: '护一车药材去瓜洲镇回春堂', npc: 'bj_cai_gz', at: 'gz_town', days: 2 },
   { id: 'bj_zj', shenfen: 'biaoshi', tier: 2, title: '押一箱银子过江，交到镇江大市口', npc: 'bj_cai_zj', at: 'zj_shi', days: 3, again: 5 },
-  // 交差在悬赏榜（领赏）；周捕头不管这张榜
-  { id: 'xs_hezei', shenfen: 'youxia', tier: 1, title: '拿运河渡口的河贼，押回府衙领赏', npc: 'xs_bang', at: 'yz_fuya', days: 3 }
+  // 榜上揭的：在照壁下的书办那里揭、那里交差（负责人 10-09：书办是唯一的登记人）；周捕头不管这张榜
+  { id: 'xs_hezei', shenfen: 'youxia', tier: 1, title: '拿运河渡口的河贼，押回府衙领赏', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, bang: true }
 ];
 
 const NEWS: NewsDef[] = [
   { if: { flag: 'bj_joined' }, text: '威远镖局新收了个镖师，听说是赵少镖头在望江楼斗酒斗来的。' },
   { if: { flag: 'bj_ztq_free' }, text: '瓜洲镇外那片林子近来太平了。有人说钻天鹞回家伺候老娘去了。' },
   { if: { flag: 'bj_ztq_guan' }, text: '钻天鹞关进了瓜洲巡检司。他那几个弟兄放出话来，要找威远镖局算账。' },
-  { if: { flag: 'yz_xiaoyuan' }, text: '东关街后头那处带枇杷树的小院，听说卖给了一位江湖上的少年。' }
+  { if: { flag: 'yz_xiaoyuan' }, text: '东圈门里那处带枇杷树的小院，听说卖给了一位江湖上的少年。' }
 ];
 
 const pack: ContentPack = {

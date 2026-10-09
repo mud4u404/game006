@@ -86,7 +86,7 @@ describe('海捕文书上的人犯', () => {
     expect(S.shenfen.standing).toBe(2);
     tickShi();
     expect(S.shi?.lsm_bai?.at).toBe('zaitao');
-    S.loc = 'yz_fuya';
+    S.loc = 'yz_fuya_lao';
     act('lsm_laotou', '提审');
     expect(S.flags.lsm_bai_shipo, '钱三供出了白七郎').toBe(true);
     expect(act('lsm_laotou', '提审').text, '提审过的不再提审').toContain('没有');

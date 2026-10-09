@@ -185,7 +185,7 @@ const NPCS: NpcDef[] = [
   },
   {
     id: 'smhs_shenbo', name: '申伯', ini: '申', tone: 'blue', brief: '在廊下抄案卷', at: { room: 'yz_fuya' },
-    look: '六十来岁的老书办，左手按着纸，右手悬着笔，写三个字就要停下来揉一揉眼睛。案卷码得半人高，边角都对得整整齐齐。',
+    look: '六十来岁，抄案卷的老书吏，左手按着纸，右手悬着笔，写三个字就要停下来揉一揉眼睛。案卷码得半人高，边角都对得整整齐齐。',
     verbs: ['交谈', '观察',
       { verb: '求信', if: { noItem: 'smhs_xin' } }],
     actions: {

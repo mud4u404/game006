@@ -3,7 +3,7 @@ import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { cn, cleanName, fmt, liang } from '../src/core/util';
 import { dayName, minLabel, shichen, shichenKe } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
-import { act, curQuest, enter, hopMin, openExits, pathMin, pathTo, roomNpcs, verbsOf } from '../src/engine/world';
+import { act, curQuest, enter, hopMin, openExits, pathMin, pathTo, roomNpcs, roomObjs, verbsOf } from '../src/engine/world';
 import type { NpcDef } from '../src/content/types';
 import { activePrep, alliesOf, fightKit, foeSpec, heroSpec, personOf } from '../src/engine/zhaoshi';
 import { Duel, RULES, odds } from '../src/engine/duel';
@@ -168,6 +168,28 @@ describe('条件与效果', () => {
     expect(S.quests.side_caoshangfei).toBe(1);
     act('fuya_zhou', '交谈');
     expect(S.quests.side_caoshangfei).toBe(1);
+  });
+  it('照壁上一块榜（负责人 10-09）：看缉拿再进前堂找周捕头揭；悬赏找书办揭、找书办交差；榜上不揭榜', () => {
+    expect(roomObjs('yz_zhaobi')).toEqual(['fuya_gaoshi']);
+    expect(verbsOf(npcDef('fuya_gaoshi')!)).toEqual(['观察', '看缉拿', '看悬赏', '看海捕']);
+    // 生人：没看榜，周捕头不信；看过榜就能自荐
+    expect(act('fuya_zhou', '揭榜').text).toContain('先看清楚');
+    expect(act('fuya_gaoshi', '看缉拿').text).toContain('前堂见周捕头');
+    act('fuya_zhou', '揭榜');
+    expect(S.quests.side_caoshangfei).toBe(1);
+    expect(act('fuya_gaoshi', '看缉拿').text).toContain('已叫人揭了');
+    // 悬赏：书办是唯一的登记人，揭、交都在照壁下（游侠的营生）
+    S.shenfen = { id: 'youxia', standing: 1, since: 0 };
+    expect(act('fuya_gaoshi', '看悬赏').text).toContain('书办');
+    expect(verbsOf(npcDef('xsb_zhuren')!)).toContain('揭河贼');
+    act('xsb_zhuren', '揭河贼');
+    expect(S.yue.find(y => y.id === 'job_xs_hezei')).toMatchObject({ npc: 'xsb_zhuren', at: 'yz_zhaobi' });
+    expect(verbsOf(npcDef('xsb_zhuren')!)).not.toContain('交河贼');
+    S.flags.xs_hezei_caught = true;
+    const silver = S.silver;
+    act('xsb_zhuren', '交河贼');
+    expect(S.job).toBeNull();
+    expect(S.silver).toBeGreaterThan(silver);
   });
   it('观察：先是外貌，再接上随条件变化的细节', () => {
     const t = act('fuya_zhou', '观察').text;
@@ -439,13 +461,13 @@ describe('缉拿草上飞走得完', () => {
     night();
     run(FOES.find(f => f.id === 'zy_csf')!.results.win.do!);
     expect(S.quests.side_caoshangfei).toBe(2);
-    expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
+    expect(roomNpcs('yz_fuya_lao')).toContain('zy_zhangfang');
     expect(verbsOf(NPCS_BY.zhou())).toContain('交差');
     const silver = S.silver;
     act('fuya_zhou', '交差');
     expect(S.quests.side_caoshangfei).toBe(3);
     expect(S.silver).toBe(silver + 2000);
-    expect(roomNpcs('yz_fuya')).not.toContain('zy_zhangfang');
+    expect(roomNpcs('yz_fuya_lao')).not.toContain('zy_zhangfang');
     expect(act('zy_yuweng', '交谈').text).toContain('官爷的事');
   });
 
@@ -474,7 +496,7 @@ describe('缉拿草上飞走得完', () => {
     act('zy_csf', '放他走');
     expect(S.quests.side_caoshangfei).toBe(3);
     expect(act('fuya_zhou', '交差').text).toContain('他就出不来');
-    expect(roomNpcs('yz_fuya')).toContain('zy_zhangfang');
+    expect(roomNpcs('yz_fuya_lao')).toContain('zy_zhangfang');
     expect(act('zy_zhangfang', '交谈').text).toContain('三天又三天');
   });
 });

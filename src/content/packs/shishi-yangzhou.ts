@@ -129,10 +129,10 @@ const NPCS: NpcDef[] = [
     verbs: ['观察', '跟上去'],
     actions: { 跟上去: [{ do: [{ type: 'story', id: 'ss_zei_gen' }] }] } },
 
-  /* ---------- 阿七：替他赔了钱以后，白天在街上跑腿 ---------- */
-  { id: 'ss_aqi', name: '阿七', ini: '七', tone: 'amber', brief: '在街上跑腿',
+  /* ---------- 阿七：替他赔了钱以后，白天在东圈门巷口跑腿 ---------- */
+  { id: 'ss_aqi', name: '阿七', ini: '七', tone: 'amber', brief: '在巷口跑腿',
     look: '十三四岁，瘦得像根竹竿，眼睛却亮。屁股上的板子伤还没好利索，走路一瘸一拐的，跑起来倒比谁都快。',
-    at: { room: 'cheng', if: { hour: { from: 7, to: 19 }, shi: { id: ZEI, at: ['huanle'] } } },
+    at: { room: 'yz_dongquan', if: { hour: { from: 7, to: 19 }, shi: { id: ZEI, at: ['huanle'] } } },
     verbs: ['交谈', '观察', '打听'],
     actions: {
       交谈: [{ text: '「恩公！」阿七一溜烟跑过来，「我娘吃了三副药，能下地了。您要打听什么，只管问我。」' }],

@@ -112,7 +112,7 @@ describe('作息不挡路', () => {
     expect(roomNpcs('cheng')).not.toContain('bs2_hu');
     expect(roomNpcs('cheng')).toContain('ss_gengfu');
     expect(roomNpcs('yz_fuya')).not.toContain('fuya_zhou');
-    expect(roomNpcs('yz_fuya')).toContain('fuya_yayi');
+    expect(roomNpcs('yz_zhaobi')).toContain('fuya_yayi');
     // 有约在这儿等你的，夜里也等着
     run([{ type: 'yue', id: 'test_zhou', npc: 'fuya_zhou', at: 'yz_fuya', inDays: 1, text: '回话' }]);
     expect(roomNpcs('yz_fuya')).toContain('fuya_zhou');
@@ -263,7 +263,7 @@ describe('世事的引擎', () => {
     run([{ type: 'shi', id: 'ss_zei', to: 'huanle' }]);
     expect(roomNpcs('cheng')).not.toContain('ss_heiying');
     S.min = 10 * 60;
-    expect(roomNpcs('cheng')).toContain('ss_aqi');
+    expect(roomNpcs('yz_dongquan')).toContain('ss_aqi');
     S.flags.boss = true; tickShi();
     S.shi!.ss_matou.seen = undefined;
     act('ss_aqi', '打听');

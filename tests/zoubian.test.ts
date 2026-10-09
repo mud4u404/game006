@@ -317,6 +317,8 @@ function choose(all: Act[], seen: Set<string>): Act {
     let x = a.k === 'go' ? 1 : 2;
     if (!cov.branch.has(a.key) && a.k === 'act') x += 12;
     if (a.k === 'act' && cur?.shi && SHI_NPC.get(cur.shi)!.has(a.id)) x += 30;
+    // 盯着一件心事：到了推动它的人、递线索给东西的人面前，玩家会开口问、求信，不会转身就走（华山磨剑：申伯那儿的「求信」）
+    if (a.k === 'act' && cur?.focus && QUEST_NPC.get(cur.focus)?.has(a.id)) x += 25;
     // 盯着世事：这个动作眼下会把它推到还没走过的那一步，直奔；推到走过的那一步（会就此了结），先放一放
     if (a.k === 'act' && cur?.shi) {
       const n = npc(a.id)!, b = pickBranch(n.actions[a.v as keyof typeof n.actions]);
