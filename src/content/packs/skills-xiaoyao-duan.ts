@@ -150,7 +150,7 @@ const SKILLS: SkillDef[] = [
     teach: '真传',
     requires: [{ skill: 'xd_liuyang', realm: 4 }],
     ult: {
-      title: '生死符 · 绝招',
+      title: '生死符 · 杀招',
       text: '你并指一弹，一枚冰晶无声无息没入{foe}{part}穴道——初时火热难当，继而寒毒攻心、奇痒彻骨，{foe}满地翻滚，求生不得，求死不能！',
       dmg: [400, 480],
       fx: [{ kind: 'poison', value: 10, rounds: 4 }, { kind: 'busy', rounds: 1 }]

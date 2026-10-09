@@ -219,3 +219,11 @@ describe('门派：辞别、叛门、师门导航（docs/paiban.md E04、E05）'
     expect(n.needs.some(x => !x.ok)).toBe(true);
   });
 });
+
+describe('文字（docs/wenfeng.md）', () => {
+  it('杀招的题字一律写「· 杀招」', async () => {
+    const { SKILLS } = await import('../src/content');
+    const bad = SKILLS.filter(k => k.ult?.title && !k.ult.title.endsWith(' · 杀招')).map(k => `${k.id}：${k.ult!.title}`);
+    expect(bad).toEqual([]);
+  });
+});
