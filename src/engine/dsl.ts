@@ -18,6 +18,7 @@ import { hearsay, learnShi, moveShi } from './shishi';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
 import { markLight } from './shang';
+import { runWorld, testWorld } from './shijie';
 
 /** 三处伤，最重的先治；一样重时先内息，再手、足（和静修养伤同一个次序，engine/lilian.ts） */
 const ZONES: Zone[] = ['inner', 'hand', 'foot'];
@@ -83,6 +84,8 @@ export function test(c?: Cond): boolean {
     if (c.shi.at && !(at !== undefined && c.shi.at.includes(at))) return false;
     if (c.shi.not && at !== undefined && c.shi.not.includes(at)) return false;
   }
+  // 世界状态（engine/shijie.ts）：码头归谁、治安、物价、势力、人的处境
+  if (c.w && !testWorld(c.w)) return false;
   if (c.hour) {
     const h = Math.floor(S.min / 60);
     const { from, to } = c.hour;
@@ -338,6 +341,8 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         else run([{ type: 'standing', delta: -1 }]);
         break;
       }
+      // 世界状态（engine/shijie.ts）：换主人、势力和地方的数、人的处境、地方的痕迹
+      case 'w': runWorld(e); break;
       case 'fight': out.fight = e.foe; break;
       case 'story': out.story = e.id; break;
     }

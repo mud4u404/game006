@@ -11,6 +11,7 @@ import { dating, panwen, seeShi } from './shishi';
 import { shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
 import { passBlock } from './shiguang';
+import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
 
 /** 江湖历的第几分钟（暂时走开的人什么时候回来） */
 export const nowMin = (): number => dayNo(S) * 1440 + S.min;
@@ -29,25 +30,33 @@ function staysAtNight(id: string, roomId: string): boolean {
   return S.yue.some(y => y.npc === id && y.at === roomId);
 }
 
-/** 此刻在场的：带条件的（作息、剧情）按条件挑；同一人写了几处作息的，只算一次 */
-function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string): string[] {
+/**
+ * 此刻在场的：带条件的（作息、剧情）按条件挑；同一人写了几处作息的，只算一次。
+ * 世界先定（engine/shijie.ts 的 whereNow）：事件把人叫到别处的、伤着的、坐牢的、走了的，不在常待的地方；
+ * 叫到这里的、关在这里的，不管作息都在。都没有，才照作息
+ */
+function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string, obj: boolean): string[] {
   const h = Math.floor(S.min / 60);
   const quiet = !!room(roomId).nightQuiet && (h >= NIGHT_HOME.from || h < NIGHT_HOME.to);
-  return [...new Set((list || []).filter(x => {
+  const here = (list || []).filter(x => {
     const id = typeof x === 'string' ? x : x.id;
+    if (whereNow(id) !== undefined) return false;
     if (typeof x !== 'string' && !test(x.if)) return false;
     if (awayNow(id)) return false;
     // 入夜回家：自己写了作息（带时辰条件）的照作息走
     return !quiet || (typeof x !== 'string' && timed(x.if)) || staysAtNight(id, roomId);
-  }).map(x => (typeof x === 'string' ? x : x.id)))];
+  }).map(x => (typeof x === 'string' ? x : x.id));
+  return [...new Set([...here, ...placedHere(roomId, obj).filter(id => !awayNow(id))])];
 }
 
-export const roomNpcs = (id: string): string[] => present(room(id).npcs, id);
-export const roomObjs = (id: string): string[] => present(room(id).objs, id);
+export const roomNpcs = (id: string): string[] => present(room(id).npcs, id, false);
+export const roomObjs = (id: string): string[] => present(room(id).objs, id, true);
 
+/** 地点描写；底下接这处地方的痕迹（engine/shijie.ts，最多两行）：码头换了主人、谁挨了打铺子上了门板…… */
 export function roomDesc(id: string): string {
   const d = room(id).desc;
-  return fmt(typeof d === 'string' ? d : pickBranch(d)?.text ?? '', textVars());
+  const text = fmt(typeof d === 'string' ? d : pickBranch(d)?.text ?? '', textVars());
+  return text + marksOf(id).join('');
 }
 
 export function roadText(id: string): string {
@@ -57,16 +66,22 @@ export function roadText(id: string): string {
 }
 
 /**
- * 上船付船钱（RoomDef.fare）：钱够就付；不够的，替船家撑篙、拉纤抵船钱，路上多耗一个时辰。
- * 界面赶路（ui/explore.ts）和机器玩家都走这里。返回记进动态的那句话，不是船返回空
+ * 上船付船钱（RoomDef.fare）、过码头交过路钱（RoomDef.life.toll，按眼下的主人算，engine/shijie.ts）：钱够就付；
+ * 不够的，替船家撑篙、替码头扛货抵了，路上多耗一个时辰。
+ * 界面赶路（ui/explore.ts）和机器玩家都走这里。返回记进动态的那句话，不收钱返回空
  */
 export function payFare(to: string): string | null {
-  const fare = room(to).fare;
-  if (!fare) return null;
-  const msg = S.silver >= fare
-    ? `上了${room(to).name}，付了船钱 ${fare} 文。`
-    : `身上不够船钱（${fare} 文），你替船家撑了一路篙，抵了船钱，路上多耗了一个时辰。`;
-  if (S.silver >= fare) S.silver -= fare;
+  const t = tollOf(to);
+  if (!t) return null;
+  const r = room(to), fee = t.fee, enough = S.silver >= fee;
+  const msg = t.owner
+    ? enough
+      ? `${facName(t.owner)}的人守着${r.name}，交了过路钱 ${fee} 文。`
+      : `身上不够过路钱（${fee} 文），你替${facName(t.owner)}的人扛了一趟货抵了，多耗了一个时辰。`
+    : enough
+      ? `上了${r.name}，付了船钱 ${fee} 文。`
+      : `身上不够船钱（${fee} 文），你替船家撑了一路篙，抵了船钱，路上多耗了一个时辰。`;
+  if (enough) S.silver -= fee;
   else advanceMin(S, 60);
   pushFeed('江湖', msg);
   return msg;

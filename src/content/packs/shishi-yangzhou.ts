@@ -21,7 +21,9 @@ const SHI: ShiDef[] = [
       qi: {
         now: '屠千山一倒，运河渡口空了出来。码头北头多了几个西舵的生面孔，抱着胳膊，什么活也不干。',
         news: '屠千山一倒，渡口那块码头成了肥肉，漕帮东西两舵都盯上了。',
-        next: { days: 2, to: 'duizhi' }
+        next: { days: 2, to: 'duizhi' },
+        // 寨主一倒，黑风寨只剩残部（存档迁移按旗标 boss 推出同样的数：core/save.ts）
+        do: [{ type: 'w', op: 'power', fac: 'hei', delta: -27 }]
       },
       duizhi: {
         now: '西舵的焦五带人占了码头北头，东舵的人守着南头，两边谁也不让，脚夫们都不敢上工。',
@@ -36,19 +38,25 @@ const SHI: ShiDef[] = [
       xiduo: {
         now: '码头归了西舵。焦五的人守着跳板，过一回船先交二十文；夜里常有盐船悄悄靠岸。',
         news: '渡口归了西舵，过一回船要交二十文，夜里常有盐船靠岸。',
-        where: 'dukou'
+        where: 'dukou',
+        // 码头的主人是真的：过路钱跟着变（yz-shili.ts 的 toll）。旗标照旧留给别的内容读，主人以世界为准
+        do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'xi' }]
       },
       dongduo: {
         now: '你打跑了焦五，东舵守住了码头。东舵的兄弟都记着你。',
-        news: '渡口那位少侠又出手了，焦五叫他打得丢了码头。'
+        news: '渡口那位少侠又出手了，焦五叫他打得丢了码头。',
+        do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'dong' }]
       },
       tiaoting: {
         now: '你把两舵领头的叫到一处，码头一分为二：白天归东舵，夜里归西舵，没再见血。',
-        news: '漕帮两舵不打了，听说是一位少侠从中说和，码头一家一半。'
+        news: '漕帮两舵不打了，听说是一位少侠从中说和，码头一家一半。',
+        do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'dong' },
+          { type: 'w', op: 'mark', place: 'dukou', k: '主人', days: 360, text: '缆桩顶上的旗子一日换两回：日头底下挂东舵的，掌了灯换成西舵的。' }]
       },
       guanfu: {
         now: '你报了官。府衙封了码头，搭起税棚，两舵谁也没占着，过船的钱倒先交给了官府。',
-        news: '府衙封了渡口，搭了税棚，漕帮两舵都没占着便宜。'
+        news: '府衙封了渡口，搭了税棚，漕帮两舵都没占着便宜。',
+        do: [{ type: 'w', op: 'owner', place: 'dukou', to: 'guan' }]
       }
     }
   },

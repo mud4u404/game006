@@ -3,6 +3,8 @@ import type { Loadout } from '../engine/wuxue';
 import { clearSaveSafely, readSave, writeSave } from './save';
 import { nowMs } from './time';
 import { syncBody } from '../engine/ren';
+import { initWorld, type WorldState } from '../engine/shijie';
+import { seedOf } from '../engine/rng';
 
 export interface SkillProg { r: number; p: number }
 /** 约：npc 在 at 等你，due 是哪一个江湖日（core/time.ts 的 dayNo）；miss 是失约的后果 */
@@ -17,7 +19,7 @@ export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
 export type GearKey = 'weapon' | 'head' | 'body' | 'feet' | 'waist' | 'ring';
 
 export interface GameState {
-  v: 4;
+  v: 5;
   /** 0 为序章，1 起为第几回 */
   chapter: number;
   /** 名，姓固定为沈 */
@@ -106,6 +108,11 @@ export interface GameState {
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */
   encLog: Record<string, number>;
   lastEnc: number;
+  /**
+   * 世界状态（engine/shijie.ts，docs/huo-shijie.md 3.2，存档第五版）：势力、地方、人的处境、世界的种子。
+   * 种子开局定下（名字和开局的现实时刻），同一个种子、同样的操作，跑出同一个江湖
+   */
+  w: WorldState;
   feed: FeedEntry[];
   /** 战后说书，供说书人复述 */
   story: string;
@@ -118,15 +125,20 @@ export interface GameState {
 /** 开局时的现实钟：现在，和开局那天的江湖日 */
 export const realNow = (day: number): GameState['real'] => ({ start: nowMs(), startDay: day, seen: nowMs() });
 
+/** 开局的世界：种子由名字和开局的现实时刻算出（存档迁移用同一个算法，core/save.ts） */
+export const worldSeed = (name: string, start: number): number => seedOf(name, start);
+const newWorld = (name: string, real: GameState['real']): WorldState => initWorld(worldSeed(name, real.start), real.startDay);
+
 export const ATTR0: Record<AttrKey, number> = { 体魄: 22, 根骨: 22, 身法: 23, 悟性: 23, 胆魄: 22 };
 
 /** 新游戏：从序章「瓜洲夜雨」开始。一个只会几招粗浅功夫的渔家少年，属性略低，由童年三忆补上 */
 export function newGame(): GameState {
+  const real = realNow(65);
   const s: GameState = {
-    v: 4, chapter: 0, name: '孤舟', loc: 'gz_home', year: 0, month: 3, day: 5, min: 15 * 60 + 20, weather: '阴',
+    v: 5, chapter: 0, name: '孤舟', loc: 'gz_home', year: 0, month: 3, day: 5, min: 15 * 60 + 20, weather: '阴',
     // 气血、内力的上限由「人」算出来（engine/ren.ts 的 syncBody）；功力三年：江伯教过吐纳
     hp: 1e9, hpMax: 0, mp: 150, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
-    real: realNow(65), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
+    real, w: newWorld('孤舟', real), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
     silver: 30, items: { qingfeng: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
     // 瓜洲的街坊看着你长大：回春堂掌柜、茶摊老汉、卖鱼阿婆、艄公、钟郎中、谭老栓（审查 A12、C34）
@@ -149,10 +161,11 @@ const JIEFANG: Record<string, string> = Object.fromEntries(
 
 /** 跳过序章，直接从扬州开始：和走完序章的样子相当（江伯故去，留下断水残页，断水要自己参悟；惊鸿剑要自己去小金山悟） */
 export function skipToYangzhou(): GameState {
+  const real = realNow(67);
   const s: GameState = {
-    v: 4, chapter: 1, name: '孤舟', loc: 'hu', year: 0, month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
+    v: 5, chapter: 1, name: '孤舟', loc: 'hu', year: 0, month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
     hp: 1e9, hpMax: 0, mp: 1e9, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
-    real: realNow(67), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'youxia', standing: 1, since: 67 }, job: null, jobLog: {},
+    real, w: newWorld('孤舟', real), yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'youxia', standing: 1, since: 67 }, job: null, jobLog: {},
     silver: 120, items: { qingfeng: 1, jcy: 3, fhs: 5, jade: 1, scroll: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
     flags: { skipped: true }, rel: { liu: '素不相识', ...JIEFANG }, title: '', xia: 12, eming: 0,

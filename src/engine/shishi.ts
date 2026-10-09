@@ -8,10 +8,10 @@
  */
 import { S, pushFeed, type ShiState } from '../core/state';
 import { absMin, dayNo } from '../core/time';
-import { pick } from '../core/util';
 import { NEWS, SHI, room, shiById } from '../content';
 import type { ShiDef, ShiStep } from '../content/types';
 import { run, test } from './dsl';
+import { worldPick } from './shijie';
 
 const DAY = 1440;
 
@@ -122,7 +122,7 @@ export function hearsay(): string | null {
   const recent = new Set(S.feed.slice(0, 12).map(f => f.x));
   const pool = NEWS.filter(n => test(n.if) && !recent.has(n.text));
   if (!pool.length) return null;
-  const n = pick(pool).text;
+  const n = worldPick(pool).text;
   pushFeed('传闻', n);
   return n;
 }
@@ -140,7 +140,7 @@ export function dating(npcId: string, who: string): string {
   asked[npcId] = today;
   const line = hearsay();
   if (!line) return `${who}想了想：「这几日太平得很，没听说什么。」`;
-  return `${who}${pick(DATING_LEAD)}：「${line}」`;
+  return `${who}${worldPick(DATING_LEAD)}：「${line}」`;
 }
 
 /** 盘问：捕快亮出腰牌，谁都得答话（docs/lizu.md：六扇门的特权）。不像打听那样一天一回 */

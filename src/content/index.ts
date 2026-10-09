@@ -1,10 +1,11 @@
 /**
- * 内容总表：自动收录 src/content/packs/ 下所有内容包，并做两件合并工作：
+ * 内容总表：自动收录 src/content/packs/ 下所有内容包，并做三件合并工作：
  * 1. 出口写了回程方位的，给对面地点补上回来的出口；
- * 2. 人物写了 at 的，放进对应地点。
+ * 2. 人物写了 at 的，放进对应地点；
+ * 3. 内容包写了 roomLife 的，给对应地点挂上活气（RoomDef.life，engine/shijie.ts）。
  * 新增内容只需要在 packs/ 下新建文件，这里不用改。
  */
-import type { ContentPack, EncounterDef, EyeDef, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, ShiDef, SkillDef, StoryDef } from './types';
+import type { ContentPack, EncounterDef, EyeDef, FactionDef, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, ShiDef, SkillDef, StoryDef } from './types';
 
 export { REALMS, REALM_NEED, GRADES, GRADE_COEF, SLOT_CATS, SLOT_NAME } from './skills';
 
@@ -25,6 +26,7 @@ export interface Registry {
   JOBS: JobDef[];
   EYES: EyeDef[];
   SHI: ShiDef[];
+  FACTIONS: FactionDef[];
 }
 
 /** 合并内容包：补回程出口、按 at 放人物 */
@@ -42,7 +44,8 @@ export function mergePacks(list: ContentPack[]): Registry {
     ENCOUNTERS: list.flatMap(p => p.encounters || []),
     JOBS: list.flatMap(p => p.jobs || []),
     EYES: list.flatMap(p => p.eyes || []),
-    SHI: list.flatMap(p => p.shi || [])
+    SHI: list.flatMap(p => p.shi || []),
+    FACTIONS: list.flatMap(p => p.factions || [])
   };
   const byId = new Map(reg.ROOMS.map(r => [r.id, r]));
   for (const r of reg.ROOMS) {
@@ -62,10 +65,17 @@ export function mergePacks(list: ContentPack[]): Registry {
       list2.push(at.if ? { id: n.id, if: at.if } : n.id);
     }
   }
+  // 地方的活气：给别的内容包里的地点补上（地点自己写了 life 的，以地点自己的为准）
+  for (const p of list) {
+    for (const [id, life] of Object.entries(p.roomLife ?? {})) {
+      const target = byId.get(id);
+      if (target && !target.life) target.life = life;
+    }
+  }
   return reg;
 }
 
-export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS, SKILLS, ENCOUNTERS, JOBS, EYES, SHI } = mergePacks(packs);
+export const { REGIONS, ROOMS, NPCS, FOES, QUESTS, STORIES, ITEMS, NEWS, SKILLS, ENCOUNTERS, JOBS, EYES, SHI, FACTIONS } = mergePacks(packs);
 
 const roomMap = new Map(ROOMS.map(r => [r.id, r]));
 const npcMap = new Map(NPCS.map(n => [n.id, n]));
@@ -76,6 +86,7 @@ const itemMap = new Map(ITEMS.map(i => [i.id, i]));
 const skillMap = new Map(SKILLS.map(k => [k.id, k]));
 const jobMap = new Map(JOBS.map(j => [j.id, j]));
 const shiMap = new Map(SHI.map(d => [d.id, d]));
+const facMap = new Map(FACTIONS.map(f => [f.id, f]));
 
 export function room(id: string): RoomDef {
   const r = roomMap.get(id);
@@ -90,3 +101,4 @@ export const itemById = (id: string): ItemDef | undefined => itemMap.get(id);
 export const skillById = (id: string): SkillDef | undefined => skillMap.get(id);
 export const jobById = (id: string): JobDef | undefined => jobMap.get(id);
 export const shiById = (id: string): ShiDef | undefined => shiMap.get(id);
+export const facById = (id: string): FactionDef | undefined => facMap.get(id);

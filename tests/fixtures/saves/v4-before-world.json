@@ -1,0 +1,121 @@
+{
+  "v": 4,
+  "chapter": 1,
+  "name": "孤舟",
+  "loc": "hu",
+  "year": 0,
+  "month": 3,
+  "day": 7,
+  "min": 460,
+  "weather": "微雨",
+  "hp": 563,
+  "hpMax": 662,
+  "mp": 204,
+  "mpMax": 306,
+  "gongli": 3,
+  "wounds": {
+    "hand": 0,
+    "foot": 0,
+    "inner": 0
+  },
+  "real": {
+    "start": 1791300000000,
+    "startDay": 67,
+    "seen": 1791380000000
+  },
+  "yue": [],
+  "xinmo": {
+    "n": 0,
+    "why": ""
+  },
+  "shenfen": {
+    "id": "youxia",
+    "standing": 1,
+    "since": 67
+  },
+  "job": null,
+  "jobLog": {},
+  "silver": 120,
+  "items": {
+    "qingfeng": 1,
+    "jcy": 3,
+    "fhs": 5,
+    "jade": 1,
+    "scroll": 1
+  },
+  "quests": {
+    "prologue": 3,
+    "main1": 0
+  },
+  "track": "main1",
+  "flags": {
+    "skipped": true
+  },
+  "rel": {
+    "liu": "素不相识",
+    "huichun": "点头之交",
+    "chatan": "点头之交",
+    "ayp": "点头之交",
+    "shaogong": "点头之交",
+    "jc_gz_zhong": "点头之交",
+    "jc_gz_tan": "点头之交"
+  },
+  "title": "",
+  "xia": 12,
+  "eming": 0,
+  "attr": {
+    "体魄": 22,
+    "根骨": 22,
+    "身法": 23,
+    "悟性": 23,
+    "胆魄": 22
+  },
+  "lilian": 506,
+  "encLog": {},
+  "lastEnc": -1000000000,
+  "skills": {
+    "hanjiang": {
+      "r": 0,
+      "p": 120
+    },
+    "taxue": {
+      "r": 0,
+      "p": 50
+    },
+    "xinfa": {
+      "r": 0,
+      "p": 80
+    }
+  },
+  "loadout": {
+    "neigong": "xinfa",
+    "qinggong": "taxue",
+    "weapon": "hanjiang"
+  },
+  "gear": {
+    "weapon": "qingfeng"
+  },
+  "feed": [
+    {
+      "t": "江湖",
+      "x": "你在扬州城外的破庙里歇了一夜，江伯教的那几招剑法，比划来比划去，总觉得差着火候。",
+      "n": 0
+    },
+    {
+      "t": "传闻",
+      "x": "黑风寨劫了漕帮三船盐货，漕帮吃了哑巴亏。",
+      "n": 0
+    }
+  ],
+  "story": "",
+  "sel": "liu",
+  "reply": null,
+  "tab": "jianghu",
+  "shi": {
+    "ss_zei": {
+      "at": "qi",
+      "since": 96940,
+      "seen": "qi"
+    }
+  }
+}
