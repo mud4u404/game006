@@ -122,3 +122,32 @@ describe('修炼的说明', () => {
     expect(xinmoLine(S)).not.toContain('化得开');
   });
 });
+
+describe('负责人 10-09 定的', () => {
+  it('开局不给绝技：断水要等寒江剑法略有小成、拿六百历练，对着江伯的残页参悟', async () => {
+    const { lookItem } = await import('../src/engine/daoju');
+    expect(S.skills.duanshui).toBeUndefined();
+    setState(newGame());
+    expect(S.skills.duanshui).toBeUndefined();
+    setState(skipToYangzhou());
+    expect(lookItem('scroll').more).toContain('略有小成');
+    S.skills.hanjiang = { r: 1, p: 0 };
+    S.lilian = 100;
+    expect(lookItem('scroll').more).toContain('历练六百');
+    expect(S.skills.duanshui).toBeUndefined();
+    S.lilian = 700;
+    lookItem('scroll');
+    expect(S.skills.duanshui).toBeDefined();
+    expect(S.lilian).toBe(100);
+  });
+  it('了尘不白教：截住屠千山以前，请教只给几句话', () => {
+    S.loc = 'daming'; S.min = 10 * 60;
+    S.quests.main1 = 1;
+    const p0 = S.skills.xinfa!.p;
+    act('liaochen', '请教');
+    expect(S.skills.xinfa!.p).toBe(p0);
+    S.flags.boss = true;
+    act('liaochen', '请教');
+    expect(S.flags.lc_tiaoxi).toBe(true);
+  });
+});

@@ -142,7 +142,7 @@ export function newGame(): GameState {
 const JIEFANG: Record<string, string> = Object.fromEntries(
   ['huichun', 'chatan', 'ayp', 'shaogong', 'jc_gz_zhong', 'jc_gz_tan'].map(id => [id, '点头之交']));
 
-/** 跳过序章，直接从扬州开始：和走完序章的样子相当（江伯故去，学了断水的起手；惊鸿剑要自己去小金山悟） */
+/** 跳过序章，直接从扬州开始：和走完序章的样子相当（江伯故去，留下断水残页，断水要自己参悟；惊鸿剑要自己去小金山悟） */
 export function skipToYangzhou(): GameState {
   const s: GameState = {
     v: 4, chapter: 1, name: '孤舟', loc: 'hu', year: 0, month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
@@ -153,8 +153,9 @@ export function skipToYangzhou(): GameState {
     flags: { skipped: true }, rel: { liu: '素不相识', ...JIEFANG }, title: '', xia: 12, eming: 0,
     // 历练：序章了结 300，加上那一夜两场被江伯救下的恶战 26 + 180（engine/lilian.ts）
     attr: { ...ATTR0 }, lilian: 506, encLog: {}, lastEnc: -1e9,
-    skills: { hanjiang: { r: 0, p: 120 }, taxue: { r: 0, p: 50 }, xinfa: { r: 0, p: 80 }, duanshui: { r: 0, p: 10 } },
-    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang', ult: 'duanshui' }, gear: { weapon: 'qingfeng' },
+    // 断水不在开局：江伯留下的残页要自己参悟（负责人 10-09）
+    skills: { hanjiang: { r: 0, p: 120 }, taxue: { r: 0, p: 50 }, xinfa: { r: 0, p: 80 } },
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'qingfeng' },
     feed: [
       { t: '江湖', x: '你在扬州城外的破庙里歇了一夜，江伯教的那几招剑法，比划来比划去，总觉得差着火候。', n: 0 },
       { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮吃了哑巴亏。', n: 0 }

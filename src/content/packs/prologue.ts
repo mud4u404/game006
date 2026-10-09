@@ -70,11 +70,10 @@ const STORIES: StoryDef[] = [
       choices: [{ label: '江伯——' }] },
     { tag: '获得', title: '江伯的遗物',
       paras: ['玉佩上刻着一个「沈」字，还有半个「寒」字，断口参差，另一半不知在何处。', '油布包里是一页剑谱，墨迹被水洇开了一半，只认得出「断水」二字，和一式剑招的起手。'],
-      gains: ['半块玉佩', '断水残页', '习得绝技「断水」· 初窥门径'],
+      // 开局不给绝技（负责人 10-09：「开局就有绝技比较扯」）：残页只是一页残谱，断水要自己参悟（content/packs/core.ts 的 scroll）
+      gains: ['半块玉佩', '断水残页'],
       choices: [{ label: '掩埋江伯', do: [
-        { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 },
-        // 江伯临终所传：不花历练，代价是江伯的命（content/skills.ts 的 LEARN_LILIAN）
-        { type: 'learn', skill: 'duanshui', realm: 0, prof: 10, lilian: 0 }
+        { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 }
       ] }] },
     { tag: '序章', title: '天明',
       paras: [

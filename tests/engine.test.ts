@@ -326,7 +326,8 @@ describe('师承与前置', () => {
     expect(learnSkill('duanshui')).toEqual([]);
     expect(S.skills.duanshui).toBeUndefined();
     expect(S.feed[0].x).toContain('根基未到');
-    S.skills.hanjiang = { r: 0, p: 0 };
+    // 断水的前置是寒江剑法略有小成（负责人 10-09：开局不给绝技，要自己参悟）
+    S.skills.hanjiang = { r: 1, p: 0 };
     // 学艺有代价：断水是绝品，要拿六百历练去换（content/skills.ts 的 LEARN_LILIAN）
     S.lilian = 599;
     expect(cond({ canLearn: 'duanshui' })).toBe(false);
@@ -340,6 +341,7 @@ describe('师承与前置', () => {
 
   it('剧情、奇遇里写明了代价的，不花历练', () => {
     delete S.skills.duanshui;
+    S.skills.hanjiang!.r = 1;
     S.lilian = 0;
     run([{ type: 'learn', skill: 'duanshui', lilian: 0 }]);
     expect(S.skills.duanshui).toBeDefined();
@@ -804,6 +806,10 @@ describe('武功上身：实战里的招式由搭配来', () => {
   });
 
   it('杀招来自绝技位；没有本门内功打底，绝招、杀招都使不出来', () => {
+    // 开局没有断水（要对着残页自己参悟），这里先当已经参出来了
+    expect(fightKit(S).ult).toBeUndefined();
+    S.skills.duanshui = { r: 0, p: 0 };
+    S.loadout.ult = 'duanshui';
     expect(fightKit(S).ult?.def.id).toBe('duanshui');
     S.skills.jh_tuna = { r: 0, p: 0 };
     S.loadout.neigong = 'jh_tuna';
