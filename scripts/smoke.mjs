@@ -115,7 +115,10 @@ async function settle() {
 // 按任务横幅赶路；路上开了打、停在半路的，再点一次接着走
 async function goQuest(dest) {
   for (let k = 0; k < 5; k++) {
-    await click('[data-act="quest"]');
+    // 上一段路尾巴上弹出的路遇（随机，出在脚本走开的那一刻）会盖住横幅：先处理掉；点不动就再处理一遍
+    await settle();
+    try { await p.waitForSelector('[data-act="quest"]', { timeout: 8000 }); await p.click('[data-act="quest"]', { timeout: 4000 }); }
+    catch { await settle(); continue; }
     await settle();
     if ((await p.textContent('#appbar h1')).includes(dest)) return;
   }
