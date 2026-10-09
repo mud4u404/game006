@@ -29,7 +29,7 @@ const NPCS: NpcDef[] = [
       走布匹: [
         { text: '程先生抽出一张镖单递给你：「一车细布，送去瓜洲布行。老蔡押车。路上有个关卡，税吏姓吴，你到了自会明白。」',
           // 每趟布匹都要重新过关交税：上一趟的税票不作数（审查 D03：第二趟交不了）
-          do: [{ type: 'job', id: 'zb_bu' }, { type: 'flag', flag: 'zb_tax_paid', value: false }] }
+          do: [{ type: 'job', id: 'zb_bu' }, { type: 'flag', flag: 'zb_tax_paid', value: false }, { type: 'flag', flag: 'zb_tax_name', value: false }, { type: 'flag', flag: 'zb_tax_route', value: false }, { type: 'flag', flag: 'zb_tax_done', value: false } ] }
       ],
       走药材: [
         { text: '程先生把镖单压在算盘底下：「一批川贝和老参，送去镇江百草堂。这趟走水路过江，江上不太平——老蔡跟着你。」',
@@ -52,25 +52,27 @@ const NPCS: NpcDef[] = [
       ],
       观察: [{ text: '凉棚柱子上贴了一张价目表：车三十文、马二十文、人十文。表旁边还有一行小字：「军车免——须有牌票」。' }],
       打点: [
-        { if: { silver: 30 },
+        { if: { silver: 30, notFlag: 'zb_tax_done' },
           text: '你把三十文递过去。吴开掂了掂，朝后面的伙计喊了一声：「抬杆——放行！」镖车吱吱呀呀地过了关卡。（银两 −30 文）',
           do: [
             { type: 'silver', delta: -30 },
-            { type: 'flag', flag: 'zb_tax_paid' },
+            { type: 'flag', flag: 'zb_tax_paid' }, { type: 'flag', flag: 'zb_tax_done' },
             { type: 'feed', tag: '江湖', text: '关卡打点了三十文，镖车顺利过关。' }
           ] },
         { text: '你摸了摸钱袋，三十文还凑不齐。吴开蒲扇一收：「没钱？那货物留下了，人可以走。」' }
       ],
       报名号: [
-        { if: { notFlag: 'zb_tax_paid' },
+        { if: { notFlag: 'zb_tax_done', flag: 'zb_bu_done' },
           text: '你把威远镖局的镖单亮出来。吴开眯眼看了看火印，蒲扇停了半拍：「威远的？赵老镖头救过我爹的腿。」他朝伙计摆手，「放行！」',
-          do: [{ type: 'flag', flag: 'zb_tax_name' }] },
+          do: [{ type: 'flag', flag: 'zb_tax_name' }, { type: 'flag', flag: 'zb_tax_done' }] },
+        { if: { notFlag: 'zb_tax_done' },
+          text: '吴开眯着眼把镖单翻了个面：「生面孔。威远的名头我认，你这个人我还没认。」他蒲扇一指价目表，「这趟老规矩，下回再说。」' },
         { text: '吴开摆摆手：「这一车已经放行了。」' }
       ],
       绕小路: [
-        { if: { notFlag: 'zb_tax_paid' },
-          text: '你在棚子外头探头探脑，吴开叫破了：「想绕牵道？多半个时辰，翻车陷泥，钞关不担待。」你带着车绕了牵道，泥浆裹了半车布，总算擦着闸口过去了。',
-          do: [{ type: 'flag', flag: 'zb_tax_route' }] },
+        { if: { notFlag: 'zb_tax_done' },
+          text: '你在棚子外头探头探脑，吴开叫破了：「想绕牵道？多半个时辰，翻车陷泥，钞关不担待。」你带着车绕了牵道，泥浆裹了半车布，天都擦黑了才擦着闸口过去。',
+          do: [{ type: 'time', add: 60 }, { type: 'flag', flag: 'zb_tax_route' }, { type: 'flag', flag: 'zb_tax_done' }] },
         { text: '吴开蒲扇一指：「你这车都过了闸了，绕什么绕。」' }
       ],
     }
@@ -86,32 +88,27 @@ const NPCS: NpcDef[] = [
           text: '朝奉点了布匹，一匹不少。「威远镖局的货，从来不用操心。」他在镖单上按了手印，「下回还走你们家的镖。」',
           do: [
             { type: 'jobDone', id: 'zb_bu' },
-            { type: 'flag', flag: 'zb_bu_done' }, { type: 'flag', flag: 'zb_tax_paid', value: false },
+            { type: 'flag', flag: 'zb_bu_done' }, { type: 'flag', flag: 'zb_tax_paid', value: false }, { type: 'flag', flag: 'zb_tax_name', value: false }, { type: 'flag', flag: 'zb_tax_route', value: false }, { type: 'flag', flag: 'zb_tax_done', value: false },
             { type: 'feed', tag: '江湖', text: '瓜洲布行点了货，一匹不少。这趟布匹的镖走完了。' }
           ] },
-        { if: { flag: 'zb_tax_name', notFlag: 'zb_bu_done' },
+        { if: { flag: 'zb_tax_name' },
           text: '朝奉听到你亮了威远镖局的名号，笑着点了货：「赵老镖头的面子，谁不买？布匹一件不少。」',
           do: [
             { type: 'jobDone', id: 'zb_bu' },
-            { type: 'flag', flag: 'zb_bu_done' },
+            { type: 'flag', flag: 'zb_bu_done' }, { type: 'flag', flag: 'zb_tax_paid', value: false }, { type: 'flag', flag: 'zb_tax_name', value: false }, { type: 'flag', flag: 'zb_tax_route', value: false }, { type: 'flag', flag: 'zb_tax_done', value: false },
             { type: 'feed', tag: '江湖', text: '瓜洲布行点了货。威远镖局的名号，瓜洲人都知道。' }
           ] },
-        { if: { flag: 'zb_tax_route', notFlag: 'zb_bu_done' },
-          text: '朝奉看了一眼天色：「走了小路？布倒是没湿——就是镖期怕是误了。不过威远的名头在，货到了就算数。」',
+        { if: { flag: 'zb_tax_route' },
+          text: '朝奉捻了捻布角上的泥：「走了小路？洗是洗得出来，就是镖期擦了边。威远的名头在，货到了就算数。」',
           do: [
             { type: 'jobDone', id: 'zb_bu' },
-            { type: 'flag', flag: 'zb_bu_done' },
+            { type: 'flag', flag: 'zb_bu_done' }, { type: 'flag', flag: 'zb_tax_paid', value: false }, { type: 'flag', flag: 'zb_tax_name', value: false }, { type: 'flag', flag: 'zb_tax_route', value: false }, { type: 'flag', flag: 'zb_tax_done', value: false },
             { type: 'feed', tag: '江湖', text: '你走小路把布匹送到了瓜洲布行，镖期擦边赶上了。' }
           ] },
         { text: '朝奉翻了翻镖单，又抬眼看你：「关上的税票呢？没有税票，这车布我不敢收。」' }
       ],
       交谈: [
-        { if: { flag: 'zb_tax_paid' },
-          text: '朝奉点了布匹，一匹不少。「威远镖局的货，从来不用操心。」他在镖单上按了手印，「下回还走你们家的镖。」' },
-        { if: { flag: 'zb_tax_name' },
-          text: '朝奉听到你亮了威远镖局的名号，笑着点了货：「赵老镖头的面子，谁不买？布匹一件不少。」' },
-        { if: { flag: 'zb_tax_route' },
-          text: '朝奉看了一眼天色：「走了小路？布倒是没湿——就是镖期怕是误了。不过威远的名头在，货到了就算数。」' },
+        { if: { job: 'zb_bu' }, text: '朝奉推了推水晶镜：「车到了就交镖，我一匹一匹对。关上的事，税票也好，名号也好，我只认镖单上的火印。」' },
         { text: '朝奉开始点布匹。' }
       ]
     }
@@ -236,14 +233,15 @@ const NPCS_EXTRA: NpcDef[] = [
     actions: {
       交谈: [{ text: '库吏验了镖单：「箱子点交。记死一条，路上谁让你开箱，都不开。」' }],
       提箱: [
-        { text: '库吏把银箱抬上你的车，火印朝上：「三百两，五日镖期。西津渡有个姓兰的，别理他。」',
-          do: [{ type: 'flag', flag: 'zb_yin_tibx' }] }
+        { if: { notFlag: 'zb_yin_tibx' }, text: '库吏把银箱抬上你的车，火印朝上：「三百两，五日镖期。西津渡有个姓兰的，别理他。」',
+          do: [{ type: 'flag', flag: 'zb_yin_tibx' }] },
+        { text: '库吏拿鹿皮手套拍了拍箱盖：「箱子你已经拿走了，点交的单子在这儿，路上自己当心。」' }
       ]
     }
   },
   { id: 'zb_lanxiang', name: '姓兰的拦箱人', ini: '兰', tone: 'purple', brief: '在西津渡候着',
     look: '绸衫中年人，笑面，两个随从一左一右。',
-    at: { room: 'gz_duchuan', if: { hour: { from: 20, to: 24 }, job: 'zb_yin', flag: 'zb_yin_tibx' } },
+    at: { room: 'zj_xijin', if: { hour: { from: 22, to: 24 }, job: 'zb_yin', flag: 'zb_yin_tibx' } },
     verbs: ['交谈', '开箱', '撂挑子'],
     actions: {
       交谈: [{ text: '姓兰的拱手笑道：「兄弟，这箱银子府台别院要用一急。开箱点五十两，回执照写三百两，谁也不亏。」' }],

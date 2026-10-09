@@ -30,7 +30,7 @@ const NPCS: NpcDef[] = [
         do: [{ type: 'job', id: 'xsb_xunren' }] }],
       揭寻物: [{ text: '你揭下寻物的榜。书办登记道：「绣娘阿蕙的玉佩，被偷了。赏二百文，先去找她问经过。」',
         do: [{ type: 'job', id: 'xsb_xunwu' }] }],
-      揭缉凶: [{ text: '你揭下缉凶的榜。书办道：「赵屠户，杀了布行钱掌柜。赏银二两，周氏见过凶手。」',
+      揭缉凶: [{ text: '你揭下缉凶的榜。书办道：「郝屠户，杀了布行钱掌柜。赏银二两，周氏见过凶手。」',
         do: [{ type: 'job', id: 'xsb_xiong' }] }],
       揭剿匪: [{ text: '你揭下剿匪的榜。书办道：「黑风寨二十来号人。赏银五两，找猎户老韩带路。」',
         do: [{ type: 'job', id: 'xsb_jiaofei' }] }],
@@ -67,11 +67,11 @@ const NPCS: NpcDef[] = [
       ],
       交缉凶: [
         { if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat' },
-          text: '书办验看了凶手：「赵屠户，命案在身——正是海捕文书上的人。」他在册子上画了个勾，他从柜里点出一串铜钱，比前两张榜都沉。',
+          text: '书办验看了凶手：「郝屠户，命案在身——正是海捕文书上的人。」他在册子上画了个勾，他从柜里点出一串铜钱，比前两张榜都沉。',
           do: [
             { type: 'jobDone', id: 'xsb_xiong' },
             { type: 'flag', flag: 'xsb_xiong_done' },
-            { type: 'feed', tag: '江湖', text: '你缉拿了命案凶手赵屠户，领了赏钱。' }
+            { type: 'feed', tag: '江湖', text: '你缉拿了命案凶手郝屠户，领了赏钱。' }
           ] },
         { text: '「缉凶的榜还没结果——拿住了再来领赏。」' }
       ],
@@ -131,23 +131,23 @@ const NPCS: NpcDef[] = [
 ];
 
 const CHAIN_NPCS: NpcDef[] = [
-  { id: 'xsb_jiuju', name: '小栓的舅舅', ini: '舅', tone: 'gray', brief: '躲在酒肆角落',
-    look: '尖腮薄唇的汉子，见了生人就躲。',
-    at: { room: 'gz_pier', if: { hour: { from: 18, to: 22 }, flag: 'xsb_xr_clue1' } },
+  { id: 'xsb_jiuju', name: '小栓的舅舅', ini: '舅', tone: 'gray', brief: '躲在酒楼角落',
+    look: '尖腮薄唇的汉子，袖口沾着麻屑，十指的指肚上有一层骰子磨出的硬茧，见了生人就把酒碗往怀里拢。',
+    at: { room: 'cheng_tavern', if: { hour: { from: 21, to: 24 }, flag: 'xsb_xr_clue1' } },
     verbs: ['交谈', '观察', '点破'],
     actions: {
       交谈: [{ text: '舅舅的酒碗一转：「小栓？他自己要走的好不好！」他不敢看你的眼睛。' }],
       点破: [
         { if: { any: [{ attr: { key: '悟性', atLeast: 25 } }, { attr: { key: '胆魄', atLeast: 25 } }] },
-          text: '你点破了他袖口的麻屑和骰子茧：「孩子被你押在码头抵赌债了吧。」舅舅脸白了：「在枫桥码头货栈里！」',
+          text: '你点破了他袖口的麻屑和骰子茧：「孩子被你押在码头抵赌债了吧。」舅舅脸白了：「在苏州枫桥码头的货栈里！」',
           do: [{ type: 'flag', flag: 'xsb_xr_clue2' }] },
         { text: '他埋头喝酒，一个字也再不肯吐。' }
       ]
     }
   },
   { id: 'xsb_xiaoshuan', name: '小栓', ini: '栓', tone: 'amber', brief: '在货栈里扛包',
-    look: '十六岁的少年，手上全是新磨的血泡。',
-    at: { room: 'yz_zhaobi', if: { hour: { from: 6, to: 14 }, flag: 'xsb_xr_clue2' } },
+    look: '十六岁的少年，两手全是新磨的血泡，肩上的麻袋压得他半边身子歪着，说话时眼睛还往货栈门口瞟。',
+    at: { room: 'sz_matou', if: { hour: { from: 6, to: 14 }, flag: 'xsb_xr_clue2' } },
     verbs: ['交谈'],
     actions: { 交谈: [
       { if: { flag: 'xsb_xr_found' }, text: '小栓朝你鞠了个躬：「地痞跑了，我回铺子里去。谢谢你。」' },
@@ -155,21 +155,21 @@ const CHAIN_NPCS: NpcDef[] = [
     ] }
   },
   { id: 'xsb_dipi_ren', name: '看场的地痞', ini: '地', tone: 'red', brief: '叉腰守着货栈门',
-    look: '横肉的汉子，木棒立在墙边。',
-    at: { room: 'yz_zhaobi', if: { hour: { from: 6, to: 14 }, flag: 'xsb_xr_clue2' } },
+    look: '横肉的汉子，木棒立在货栈门边的墙上，袖子卷到肘弯，脚边一地瓜子壳。',
+    at: { room: 'sz_matou', if: { hour: { from: 6, to: 14 }, flag: 'xsb_xr_clue2' } },
     verbs: ['交谈', '动手'],
     actions: {
-      交谈: [{ text: '地痞把棒一横：「闲人绕道。」' }],
+      交谈: [{ text: '地痞把棒一横，往地上啐了一口：「货栈重地，闲人绕道。要找人？先说是谁家的。」' }],
       动手: [{ do: [{ type: 'fight', foe: 'xsb_xunren' }] }]
     }
   },
   { id: 'xsb_xiuniang', name: '绣娘阿蕙', ini: '蕙', tone: 'purple', brief: '摆着绣摊',
-    look: '年轻绣娘，指头上有针茧。',
+    look: '年轻绣娘，右手食指肚上一层针茧，绷架边搁着没绣完的帕子，线头还穿在针上。',
     at: { room: 'yz_zhaobi', if: { job: 'xsb_xunwu' } },
     verbs: ['交谈'],
     actions: { 交谈: [
       { if: { flag: 'xsb_xw_found' }, text: '阿蕙捧着玉佩：「针脚都替公子绣一幅，不要钱。」' },
-      { text: '阿蕙抹着眼睛：「前几日来个收旧货的陈三，看了一眼就走了。当夜玉佩就没了。」',
+      { text: '阿蕙抹着眼睛：「前几日来个收旧货的陈三，看了一眼就走了。当夜玉佩就没了。」她抹了把脸，「听街坊讲，他过了江，在镇江大市口摆担子。」',
         do: [{ type: 'flag', flag: 'xsb_xw_clue' }] }
     ] }
   },
@@ -187,21 +187,21 @@ const CHAIN_NPCS: NpcDef[] = [
       ]
     }
   },
-  { id: 'xsb_zhao', name: '赵屠户', ini: '赵', tone: 'red', brief: '清早在肉铺帮工',
-    look: '膀阔腰圆的屠户，换了名字在城里肉铺帮工。',
-    at: { room: 'cheng_tavern', if: { hour: { from: 4, to: 11 }, flag: 'xsb_xiong_clue' } },
+  { id: 'xsb_zhao', name: '郝屠户', ini: '赵', tone: 'red', brief: '清早在肉铺帮工',
+    look: '膀阔腰圆的屠户，换了个名字在东关街的肉铺帮工，围裙上的油渍洗不净，剔骨刀就别在腰后。',
+    at: { room: 'cheng', if: { hour: { from: 4, to: 6 }, flag: 'xsb_xiong_clue' } },
     verbs: ['交谈', '动手'],
     actions: {
-      交谈: [{ text: '他剔骨的手一顿：「你认错人了。」' }],
+      交谈: [{ text: '他剔骨的手一顿，刀尖在案板上点了点：「认错人了。肉要几斤？」' }],
       动手: [{ do: [{ type: 'fight', foe: 'xsb_xiongfan' }] }]
     }
   },
   { id: 'xsb_erdangjia', name: '二当家', ini: '二', tone: 'red', brief: '在寨口磨刀',
-    look: '九环大刀靠在肩上。',
-    at: { room: 'daming', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_clue' } },
+    look: '九环大刀扛在肩上，铁环叮当，一只脚踩着块磨刀石，刀刃上的水还没干。',
+    at: { room: 'yz_guandao', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_clue' } },
     verbs: ['交谈', '动手'],
     actions: {
-      交谈: [{ text: '二当家把刀往地上一顿：「屠千山在扬州栽了，我们占了蜀冈。」' }],
+      交谈: [{ text: '二当家把刀往地上一顿：「屠千山在扬州栽了，这山头如今是我们的。」他朝官道那头抬了抬下巴，「想拿人，过来试试。」' }],
       动手: [{ do: [{ type: 'fight', foe: 'xsb_jiaofei' }] }]
     }
   }
@@ -233,60 +233,60 @@ const XUNREN: FoeDef = {
 };
 
 const XIONGFAN: FoeDef = {
-  id: 'xsb_xiongfan', name: '赵屠户', title: '命案在身的凶手', ini: '凶', tone: 'red',
+  id: 'xsb_xiongfan', name: '郝屠户', title: '命案在身的凶手', ini: '凶', tone: 'red',
   weapon: '剔骨尖刀', ws: '刀', tag: '缉凶',
   rank: 1.5, build: 'outer',
   firstTell: 2,
   moves: ['剔骨刀法', '穿喉刺', '断筋割', '背后一刀'],
   flourish: ['剔骨尖刀在月光下一闪', '他是杀猪的出身，手稳得很', '刀刀往要害招呼，没有一招是虚的', '眼睛里全是绝望的狠劲'],
   tells: [
-    { name: '穿喉刺', text: '赵屠户并指如刺，一记直刺快如闪电，直取咽喉……', dom: 'su', after: '刀风擦着咽喉掠过，凉意还在后颈！' },
-    { name: '断筋割', text: '赵屠户矮身一刀横扫，专割脚筋，杀猪的手法用在人身上……', dom: 'qiao', after: '刀锋贴着脚踝掠过去，鞋面豁开了口！' }
+    { name: '穿喉刺', text: '郝屠户并指如刺，一记直刺快如闪电，直取咽喉……', dom: 'su', after: '刀风擦着咽喉掠过，凉意还在后颈！' },
+    { name: '断筋割', text: '郝屠户矮身一刀横扫，专割脚筋，杀猪的手法用在人身上……', dom: 'qiao', after: '刀锋贴着脚踝掠过去，鞋面豁开了口！' }
   ],
   asides: ['街坊的窗户关得紧紧的，没人敢看。', '一只野猫从墙头窜过，惊起一阵灰尘。'],
   opening: ['把刀在围裙上擦了擦', '换到左手时慢了半拍', '眼睛盯着你不放'],
-  intro: '赵屠户提着剔骨刀转过身来：「我等的就是你——来拿我的人？」',
-  win: '赵屠户的刀脱手落地。他跪了下来，肩膀塌了下去：「你赢了。跟我走罢。」',
-  lose: '剔骨刀划过你的肋下。你倒在地上，看着赵屠户消失在巷口。他没有追——他只要你不跟着他。',
+  intro: '郝屠户提着剔骨刀转过身来：「我等的就是你——来拿我的人？」',
+  win: '郝屠户的刀脱手落地。他跪了下来，肩膀塌了下去：「你赢了。跟我走罢。」',
+  lose: '剔骨刀划过你的肋下。你倒在地上，看着郝屠户消失在巷口。他没有追——他只要你不跟着他。',
   prep: [
     { if: { flag: 'xsb_xiong_clue' }, atk: 0.85, big: 0.85,
-      text: '你记着周氏的话——死者身上三道刀伤，都是正面伤。赵屠户是杀猪的，惯用左手。你站到了他的右侧。',
-      story: '你从周氏口中得知死者的伤都在正面，凶手是左撇子。你站到了赵屠户的右侧。' }
+      text: '你记着周氏的话——死者身上三道刀伤，都是正面伤。郝屠户是杀猪的，惯用左手。你站到了他的右侧。',
+      story: '你从周氏口中得知死者的伤都在正面，凶手是左撇子。你站到了郝屠户的右侧。' }
   ],
   results: {
     lose: { tag: '缉凶 · 负', title: '刀光一错', button: '揉着肋下',
-      story: '剔骨刀贴着你肋下划过，一凉——赵屠户收了手：「别再跟了。」你挣扎着爬起来，人已不见。',
+      story: '剔骨刀贴着你肋下划过，一凉——郝屠户收了手：「别再跟了。」你挣扎着爬起来，人已不见。',
       do: [{ type: 'heal', hpAtLeast: 0.3 }] },
     win: { tag: '缉凶 · 胜', title: '凶手到案', button: '定他的下场',
-      story: '赵屠户跪在地上，剔骨刀掉在脚边。他的肩膀塌了下去——杀了人的那天起，他就一直在等这一天。',
+      story: '郝屠户跪在地上，剔骨刀掉在脚边。他的肩膀塌了下去——杀了人的那天起，他就一直在等这一天。',
       do: [{ type: 'flag', flag: 'xsb_xiong_beat' }],
       after: {
-        plea: '「我婆娘病了，郎中说要三十两。我去找布行的钱掌柜借，他不借还骂我……我一刀下去，收不住手。」赵屠户的声音很低，「人是我杀的，我认罪。」',
+        plea: '「我婆娘病了，郎中说要三十两。我去找布行的钱掌柜借，他不借还骂我……我一刀下去，收不住手。」郝屠户的声音很低，「人是我杀的，我认罪。」',
         opts: [
           { label: '送他去府衙', sub: '杀人偿命，天经地义',
-            say: '你摇了摇头：「杀人偿命。走罢。」赵屠户站起来，自己朝府衙走去。',
+            say: '你摇了摇头：「杀人偿命。走罢。」郝屠户站起来，自己朝府衙走去。',
             do: [
               { type: 'flag', flag: 'xsb_xiong_sent' }, { type: 'flag', flag: 'xsb_xiong_done' },
               { type: 'xia', delta: 2 },
-              { type: 'feed', tag: '江湖', text: '你缉拿了命案凶手赵屠户，送去了府衙。遗孀周氏在灵前烧了纸。' }
+              { type: 'feed', tag: '江湖', text: '你缉拿了命案凶手郝屠户，送去了府衙。遗孀周氏在灵前烧了纸。' }
             ],
-            later: '赵屠户被判了斩监候。周氏去牢里送了最后一顿饭。' },
+            later: '郝屠户被判了斩监候。周氏去牢里送了最后一顿饭。' },
           { label: '听他说完，送他去自首', sub: '侠义 +1',
             say: '你听完他的事，沉默了半晌：「情有可原，法不可饶。但你可以自己走去府衙——比你被我押着去，体面。」',
             do: [
               { type: 'flag', flag: 'xsb_xiong_self' }, { type: 'flag', flag: 'xsb_xiong_done' },
               { type: 'xia', delta: 1 },
-              { type: 'feed', tag: '江湖', text: '赵屠户自己走去府衙自首了。周氏说，他总算做了回有担当的人。' }
+              { type: 'feed', tag: '江湖', text: '郝屠户自己走去府衙自首了。周氏说，他总算做了回有担当的人。' }
             ],
-            later: '赵屠户自己去了府衙自首。街上的人都说，这个杀猪的，走的时候有骨气。' },
+            later: '郝屠户自己去了府衙自首。街上的人都说，这个杀猪的，走的时候有骨气。' },
           { label: '放他走', sub: '恶名 +2',
-            say: '你收了剑：「走吧。你身上背的人命，你自己掂量。」赵屠户朝你磕了个头，消失在了巷口。',
+            say: '你收了剑：「走吧。你身上背的人命，你自己掂量。」郝屠户朝你磕了个头，消失在了巷口。',
             do: [
               { type: 'flag', flag: 'xsb_xiong_gone' }, { type: 'flag', flag: 'xsb_xiong_done' },
               { type: 'eming', delta: 2 },
-              { type: 'feed', tag: '江湖', text: '你放走了命案凶手赵屠户。城里的人都说，官府不管的事，也没人管得了。' }
+              { type: 'feed', tag: '江湖', text: '你放走了命案凶手郝屠户。城里的人都说，官府不管的事，也没人管得了。' }
             ],
-            later: '赵屠户从此销声匿迹。但周氏的冤屈，再也没有人替她讨了。' }
+            later: '郝屠户从此销声匿迹。但周氏的冤屈，再也没有人替她讨了。' }
         ]
       } }
   }
@@ -362,23 +362,23 @@ const JOBS: JobDef[] = [
   // 榜上揭的差事：一律在照壁下的书办这里登记、交差（负责人 10-09）
   { id: 'xsb_xunren', shenfen: 'youxia', tier: 0, title: '帮布庄掌柜找回走失的学徒小栓', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, bang: true },
   { id: 'xsb_xunwu', shenfen: 'youxia', tier: 1, title: '帮绣娘阿蕙追回被偷的玉佩', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, again: 5, bang: true },
-  { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手赵屠户', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 5, bang: true },
+  { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手郝屠户', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 5, bang: true },
   { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, k: 1.5, bang: true }
 ];
 
 const NEWS: NewsDef[] = [
   { if: { flag: 'xsb_xr_done' }, text: '布庄走失的学徒小栓找到了，他师父领着人回去了。街坊说，是一个佩剑的公子帮着打听的。', who: ['掌柜', '货郎', '小二'], about: 'you' },
   { if: { flag: 'xsb_xw_done' }, text: '寡妇周氏丢的玉佩找回来了。有人说是一个江湖客从小偷手里追回来的。', who: ['货郎', '小二', '捕快'], about: 'you' },
-  { if: { flag: 'xsb_xiong_done' }, text: '命案凶手赵屠户到案了。遗孀周氏说，终于能睡个安稳觉了。', who: ['捕快', '衙役', '货郎', 'guan'] },
+  { if: { flag: 'xsb_xiong_done' }, text: '命案凶手郝屠户到案了。遗孀周氏说，终于能睡个安稳觉了。', who: ['捕快', '衙役', '货郎', 'guan'] },
   { if: { flag: 'xsb_jf_han' }, text: '蜀冈山上有个猎户帮着剿匪，箭无虚发。山下的采药人都说老韩好样的。', who: ['猎户', '郎中', '脚夫', 'hei'] },
     { if: { flag: 'xsb_jf_ercapt' }, text: '黑风寨的二当家叫人拿住了，匪徒们散伙回了家。蜀冈山道太平了。', who: ['猎户', '脚夫', '捕快', 'hei'] },
     { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。', who: ['捕快', '衙役', 'guan', '猎户'] },
     { if: { flag: 'xsb_jf_sha' }, text: '黑风寨叫人一把火烧了。跑得慢的匪徒，烟熏死在了山洞里。', who: ['猎户', '脚夫', '捕快', 'hei'], about: 'you' },
     { if: { flag: 'xsb_jf_done' }, text: '蜀冈黑风寨叫人平了。山下的猎户采药人，都说是位侠客帮了大忙。', who: ['猎户', '郎中', '脚夫', 'hei'], about: 'you' },
     { if: { flag: 'xsb_xr_clue1' }, text: '布庄的学徒小栓失踪前，他舅舅来过一趟。掌柜的逢人便念叨这孩子。', who: ['掌柜', '货郎', '小二'] },
-    { if: { flag: 'xsb_xiong_sent' }, text: '命案凶手赵屠户被送去了府衙。遗孀周氏说，他走的时候有担当。', who: ['货郎', '衙役', 'guan', '小二'], about: 'you' },
-    { if: { flag: 'xsb_xiong_self' }, text: '赵屠户自己走去府衙自首了。街上的人都说，这个杀猪的，走的时候有骨气。', who: ['货郎', '衙役', 'guan', '小二'] },
-    { if: { flag: 'xsb_xiong_gone' }, text: '命案凶手赵屠户叫人放走了，至今逍遥法外。周氏的眼泪已经流干了。', who: ['货郎', '捕快', '小二'], about: 'you' },
+    { if: { flag: 'xsb_xiong_sent' }, text: '命案凶手郝屠户被送去了府衙。遗孀周氏说，他走的时候有担当。', who: ['货郎', '衙役', 'guan', '小二'], about: 'you' },
+    { if: { flag: 'xsb_xiong_self' }, text: '郝屠户自己走去府衙自首了。街上的人都说，这个杀猪的，走的时候有骨气。', who: ['货郎', '衙役', 'guan', '小二'] },
+    { if: { flag: 'xsb_xiong_gone' }, text: '命案凶手郝屠户叫人放走了，至今逍遥法外。周氏的眼泪已经流干了。', who: ['货郎', '捕快', '小二'], about: 'you' },
     { if: { flag: 'jy_fei_let' }, text: '汪家货栈夜里丢了一包湖丝，飞贼没抓着，掌柜的说要换锁。', who: ['wang', '更夫', '盐商', '掌柜'] },
     { if: { flag: 'jy_fei_shout' }, text: '汪家货栈夜里进了飞贼，有人喊跑了贼，汪老爷赏了二十文。', who: ['wang', '更夫', '盐商', '小二'], about: 'you' }
 ];
