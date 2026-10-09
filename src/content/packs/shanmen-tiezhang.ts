@@ -70,7 +70,7 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察',
       { verb: '拜师', if: { notFlag: 'smtz_in' } },
       { verb: '接事', if: { flag: 'smtz_asked', notFlag: 'smtz_shi_done', noSect: true } },
-      { verb: '复命', if: { quest: { id: 'smtz_shishi', is: 0 }, noSect: true } },
+      { verb: '复命', if: { quest: { id: 'smtz_shishi', is: 1 }, noSect: true } },
       { verb: '请教', if: { sect: TZ } },
       { verb: '讨差事', if: { sect: TZ } },
       { verb: '考校', if: { sect: TZ, notFlag: 'smtz_wai' } },
@@ -221,15 +221,15 @@ const NPCS: NpcDef[] = [
     actions: {
       收钱: [
         { text: '你把帖子亮出来。孟娘子盯着那张纸看了半晌，转身进了里屋——出来时，手里攥着两块银锞子，指尖掐得发白：「二百文，点清楚。」她把钱拍在柜上，没有看你，「钱给帮里。委屈我认了——铺子留下就行。」你收了钱，一路觉得袖子里沉得不像银子。',
-          do: [{ type: 'flag', flag: 'smtz_shou_done' }, { type: 'silver', delta: 200 }] }
+          do: [{ type: 'flag', flag: 'smtz_shou_done' }, { type: 'silver', delta: 200 }, { type: 'quest', id: 'smtz_shishi', stage: 1 }] }
       ],
       替垫: [
         { text: '你把帖子收了回去，从自己钱袋里数出二百文放在柜上：「平安钱我替交——就说钱收到了。铺子是你的命，别为二百文把命搭进去。」孟娘子愣住了，眼泪在眼眶里转了两圈才落下：「公子……这个钱，我记成借的。铺子缓过来，一分不少还。」',
-          do: [{ type: 'silver', delta: -200 }, { type: 'flag', flag: 'smtz_dian_done' }, { type: 'rel', npc: 'smtz_mengniangzi', value: '相谈甚欢', from: ['素不相识'], note: '你替她垫了平安钱，她说这钱记成借的' }] }
+          do: [{ type: 'silver', delta: -200 }, { type: 'flag', flag: 'smtz_dian_done' }, { type: 'quest', id: 'smtz_shishi', stage: 1 }, { type: 'rel', npc: 'smtz_mengniangzi', value: '相谈甚欢', from: ['素不相识'], note: '你替她垫了平安钱，她说这钱记成借的' }] }
       ],
       硬逼: [
         { text: '你把帖子拍在柜上，手按着剑柄：「帮里的规矩，月底的平安钱。你交是不交？」孟娘子的手抖了，到底还是从柜底摸出了钱匣。她把钱推过来，眼睛红了，人却没有哭——她把哭咽了回去。街上有人探头看了一眼，又缩回去。你收了钱，觉得满街的门板都在看你。',
-          do: [{ type: 'flag', flag: 'smtz_qiang_done' }, { type: 'eming', delta: 2 }] }
+          do: [{ type: 'flag', flag: 'smtz_qiang_done' }, { type: 'eming', delta: 2 }, { type: 'quest', id: 'smtz_shishi', stage: 1 }] }
       ],
       递状: [
         { if: { flag: 'smtz_pao' },
@@ -333,8 +333,13 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'smtz_shishi', name: '铁掌帮 · 收一份平安钱', stages: [
-    { title: '去山塘街绸缎铺收月底的平安钱', to: 'sz_shantang' },
-    { title: '回分舵复命' },
+    // 孟娘子那里收了钱、替垫、硬逼，都推到第 1 步：回分舵复命
+    { title: '去山塘街绸缎铺收月底的平安钱', to: 'sz_shantang', who: 'smtz_mengniangzi', hint: '找山塘街的孟娘子收下钱，或替她垫上，或硬逼她交。' },
+    { title: '回分舵复命', to: 'smtz_fenzhang', who: 'smtz_leizhenshan', hint: '回山塘街西头的铁掌分舵，向雷震山复命。',
+      need: [
+        { if: { any: [{ flag: 'smtz_shou_done' }, { flag: 'smtz_dian_done' }, { flag: 'smtz_qiang_done' }] }, text: '从孟娘子那里把平安钱收到手' },
+        { if: { noSect: true }, text: '身上没有别家师门' }
+      ] },
     { title: '铁掌帮 · 收一份平安钱 · 完' }
   ] }
 ];

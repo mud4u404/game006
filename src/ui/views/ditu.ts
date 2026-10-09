@@ -1,6 +1,6 @@
 import { S } from '../../core/state';
 import { REGIONS, ROOMS, room } from '../../content';
-import { curQuest } from '../../engine/world';
+import { questNav } from '../../engine/daohang';
 import { layoutRegion } from '../maplayout';
 
 /** 正在看的地区；不设时看所在的地区。走到别的地区时自动回到所在地区 */
@@ -18,7 +18,9 @@ export function viewDitu(): string {
   if (viewedFrom !== here) viewing = null;
   const region = viewing ?? here;
   const rooms = ROOMS.filter(r => r.region === region);
-  const q = curQuest()?.to;
+  // 记挂着的心事眼下该去的地方（engine/daohang.ts：找的人在哪就标哪）；做不成的不标
+  const nav = S.track ? questNav(S.track) : null;
+  const q = nav && nav.state !== '未竟' && nav.state !== '了结' ? nav.to : undefined;
   // 摆地图（ui/maplayout.ts）：街边的去处收进那条街，压在一起的地名推开、不出框
   const w = Math.max(240, ((typeof document !== 'undefined' && document.getElementById('main')?.clientWidth) || 390) - 32);
   const lay = layoutRegion(rooms, w, q);

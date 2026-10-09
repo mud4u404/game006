@@ -1,6 +1,7 @@
 /**
  * 世事：江湖自己转（docs/huojianghu.md 第三节第一条）。
  * - 一件事分几步，到了日子自己往下走，玩家不插手也会走到结局；插手的用效果 { type: 'shi', id, to } 把它推到另一步。
+ * - 玩家没到过这一带、也没听说的事，停在起头那一步；到了这一带就听说，从那时起才往下走（不白白错过）。
  * - 世界上走到哪一步，和玩家知道到哪一步，分开记：玩家人在这个地区时听得到传开的话，走进事情发生的地点看得见，
  *   向人打听问得到，自己插手当然知道。见闻簿只写玩家知道的那一步。
  * - tickShi 在每次画界面（ui/shell.ts）、静修（engine/shiguang.ts）、机器玩家每一步之后跑，可以反复跑。
@@ -37,6 +38,7 @@ function goStep(d: ShiDef, to: string, at: number, heard: string[]): void {
   const st: ShiState = { at: to, since: at };
   if (prev?.seen !== undefined) st.seen = prev.seen;
   if (prev?.done) st.done = prev.done;
+  if (prev?.hand) st.hand = true;
   (S.shi ||= {})[d.id] = st;
   const step = d.steps[to];
   run(step.do);
@@ -63,6 +65,16 @@ export function tickShi(): string[] {
       goStep(d, d.first, st.since + d.again * DAY, heard);
       S.shi![d.id].done = done;
     }
+    // 玩家没到过这一带、也没听说的事，停在起头那一步等着：到了这一带就听说，从那时起才往下走
+    // （负责人 10-09：「它自动了结了玩家没赶上岂不是浪费？」）。听说了不管，才是错过
+    st = shiOf(d.id)!;
+    if (st.seen === undefined) {
+      if (room(S.loc).region !== d.region) { st.since = now; continue; }
+      const step = d.steps[st.at];
+      heard.push(step.news ?? step.now);
+      st.seen = st.at;
+      st.since = now;
+    }
     for (let guard = 0; guard < 50; guard++) {
       st = shiOf(d.id)!;
       const nx = d.steps[st.at]?.next;
@@ -81,6 +93,7 @@ export function moveShi(id: string, to: string): void {
   const heard: string[] = [];
   goStep(d, to, absMin(S), heard);
   shiOf(id)!.seen = to;
+  shiOf(id)!.hand = true;
   heard.forEach(n => pushFeed('传闻', n));
 }
 
@@ -138,11 +151,20 @@ export function panwen(who: string): string {
 }
 
 /** 见闻簿：玩家知道的事，按「还在走」「了结的」分开；写的是玩家知道的那一步，不一定是眼下的 */
-export interface ShiRow { id: string; name: string; region: string; now: string; stale: boolean; ended: boolean }
+export interface ShiRow {
+  id: string; name: string; region: string; now: string; stale: boolean; ended: boolean;
+  /** 了结了，玩家没插手（这一回没赶上） */
+  missed: boolean;
+  /** 隔几日还会再来（ShiDef.again） */
+  again?: number;
+  /** 第几回（头一回为 1） */
+  round: number;
+}
 export function knownShi(): ShiRow[] {
   return SHI.flatMap(d => {
     const st = shiOf(d.id);
     if (!st || st.seen === undefined || !d.steps[st.seen]) return [];
-    return [{ id: d.id, name: d.name, region: d.region, now: d.steps[st.seen].now, stale: st.seen !== st.at, ended: isEnding(d, st.seen) }];
+    const ended = isEnding(d, st.seen);
+    return [{ id: d.id, name: d.name, region: d.region, now: d.steps[st.seen].now, stale: st.seen !== st.at, ended, missed: ended && !st.hand, again: d.again, round: (st.done ?? 0) + 1 }];
   });
 }

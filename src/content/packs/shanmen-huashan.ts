@@ -216,7 +216,7 @@ const NPCS: NpcDef[] = [
 const KAO: FoeDef = {
   id: 'smhs_kao', name: '柏舟先生', title: '华山考校', ini: '柏', tone: 'purple',
   weapon: '三尺青锋', ws: '剑', tag: '考校',
-  nature: '中正', reach: '短', rank: 0.5, build: 'outer', spar: true, firstTell: 3,
+  nature: '中正', reach: '短', rank: 0.5, build: 'outer', spar: true, rounds: 30, firstTell: 3,
   moves: ['金雁横空', '苍松迎客', '截剑式', '断云势'],
   flourish: ['剑光在鞘口亮了一亮', '剑走偏锋，贴着你的兵刃滑过来', '脚步碾着磨剑石的边走', '一剑递出，半途忽然收力'],
   tells: [
@@ -249,7 +249,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smhs_mo', name: '华山 · 磨剑', stages: [
-    { title: '替柏舟先生把那口剑磨亮', to: 'smhs_jianlu' },
+    { title: '替柏舟先生把那口剑磨亮', to: 'smhs_jianlu', who: 'smhs_yashu', hint: '请哑叔领你磨剑，或白天接柏舟先生三十招。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
     { title: '华山 · 磨剑 · 完' }
   ] }
 ];

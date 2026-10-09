@@ -192,9 +192,11 @@ const NPCS: NpcDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'side_cangjing', name: '奇遇 · 藏经阁失窃', stages: [
-    { title: '听说藏经阁失窃', to: 'daming_cangjing' },
-    { title: '细看阁里的线索，指认偷经的人' },
-    { title: '替偷经的人定下去处' },
+    { title: '听说藏经阁失窃', to: 'daming_cangjing', hint: '在阁里细看经柜、香炉，再看看阁后的泥地。' },
+    // 指认谁都能了结这件事，认对了才走到下一步；不写找谁，免得替玩家把人点出来
+    { title: '细看阁里的线索，指认偷经的人', to: 'daming_cangjing', hint: '把几条线索串起来，认准了是谁再当面指认。' },
+    // 处置在剧情卡片里定；卡片中途断了，再对明心指认一回就接得上
+    { title: '替偷经的人定下去处', to: 'daming_cangjing', who: 'cangjing_mingxin', hint: '明心认了，替他拿个主意：求情、送官或出药钱。' },
     { title: '藏经阁失窃 · 完' }
   ] }
 ];

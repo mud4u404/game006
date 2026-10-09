@@ -8,6 +8,7 @@ import { $, cn, liang } from '../core/util';
 import { room } from '../content';
 import { ZONE_NAME } from '../engine/duel';
 import { gongliText } from '../engine/ren';
+import { gongliCeiling } from '../engine/lilian';
 import { nextYue, settleAway, skillName, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
 import { inFight } from './fight';
 import { openSheet, render } from './shell';
@@ -26,10 +27,14 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
     ...r.gains.map(([k, v]) => `<span class="tag accent">${skillName(k)} +${v}</span>`),
     ...r.breaks.map(x => `<span class="tag info">${x}</span>`),
     // 写长了多少：原来三回出关都写「功力深到三年」，看着像一点没长（审查 G12）
-    r.gongli > 0 ? `<span class="tag accent">功力深了${r.gongli >= 1 ? gongliText(r.gongli) : `${cn(Math.max(1, Math.round(r.gongli * 12)))}个月`}（如今${gongliText(S.gongli)}）</span>` : '',
+    r.gongli > 0 ? `<span class="tag accent">功力深了${r.gongli >= 1 ? gongliText(r.gongli) : `${cn(Math.max(1, Math.round(r.gongli * 12)))}个月`}（如今${gongliText(S.gongli)}）</span>`
+      // 功力熬到了这一重内功的顶：写明白，别让人以为白闭关了（审查 G11）
+      : S.gongli >= gongliCeiling(S) - 1e-6 ? `<span class="tag warn">功力已到这一重内功的顶（${gongliText(S.gongli)}），要再深，先把内功往上练一重</span>` : '',
     healTxt ? `<span class="tag">${healTxt}</span>` : '',
     r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : '',
-    r.lodging === 'inn' ? `<span class="tag">住店 −${r.cost} 文</span>`
+    r.lodging === 'home' ? `<span class="tag">住在师门，不花钱</span>`
+      : r.lodging === 'lusu' ? `<span class="tag warn">露宿${cn(r.lusuDays)}夜，不花钱，睡不安稳，打坐参悟打八折</span>`
+      : !r.lusuDays ? `<span class="tag">住店 −${r.cost} 文</span>`
       : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，打坐参悟打了折</span>`
   ].filter(Boolean);
   const y = nextYue(S);

@@ -117,6 +117,8 @@ export interface FoeSpec {
   firstTell?: number;
   /** 切磋：打到三成即止 */
   spar?: boolean;
+  /** 撑满这么多合不倒，也算赢（考校「接三十招」） */
+  rounds?: number;
   /** 剧本战：rescue 由人救下（对手不死），cup 打到底线时有人出手 */
   script?: 'rescue' | 'cup';
   /** 首领：气血过半以后狂怒 */
@@ -176,6 +178,9 @@ export interface DuelLog {
   /** 这一场新落下的伤（打完以后起作用） */
   taken: Wounds;
 }
+
+/** 一场最多吃几包金疮药 */
+export const JCY_MAX = 2;
 
 export class Duel {
   readonly rules: Rules;
@@ -401,6 +406,8 @@ export class Duel {
     const ev: Ev[] = [];
     if (this.over || this.prompt || this.waiting) return ev;
     if (this.opening) ev.push(...this.dropOpening());
+    // 考校：撑满了约好的招数还站着，就算过
+    if (this.f.rounds && this.round >= this.f.rounds) { this.end('win', ev); return ev; }
     this.round++;
     if (this.f.script === 'rescue' && this.round >= this.rescueAt) { this.toScript('rescue', ev); return ev; }
     this.mp = Math.min(this.mpMax, this.mp + this.mpRegen * (1 - 0.25 * this.pre.inner));
@@ -656,11 +663,14 @@ export class Duel {
   /** 运功：长按蓄力，松手后下一招威力提升（最多八成） */
   addCharge(x: number): void { this.charge = Math.min(0.8, this.charge + x); }
 
-  /** 金疮药：回三成气血 */
+  /** 这一场已经吃了几包金疮药 */
+  jcyN = 0;
+  /** 金疮药：回三成气血。一场最多两包（JCY_MAX）：不然钱能直接买档次，带十包能打赢高一档的对手（审查 F02） */
   jcy(): Ev[] {
-    if (this.over || this.waiting || this.hp >= this.hpMax) return [];
+    if (this.over || this.waiting || this.hp >= this.hpMax || this.jcyN >= JCY_MAX) return [];
     const h = Math.min(Math.round(this.hpMax * 0.3), this.hpMax - this.hp);
     this.hp += h;
+    this.jcyN++;
     return [{ k: 'item', kind: 'jcy', v: h }];
   }
 

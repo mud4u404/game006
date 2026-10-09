@@ -8,7 +8,8 @@ import { activeOuter, fits, respSkill, slotSkill, weaponReady } from '../../engi
 import { gongliText, tierNow } from '../../engine/ren';
 import { canPerform, realmCap } from '../../engine/shicheng';
 import { RETREAT, gongliCeiling } from '../../engine/lilian';
-import { allowance } from '../../engine/shiguang';
+import { LODGING, ZHU_NAME, allowance, zhuOf } from '../../engine/shiguang';
+import type { Zhu } from '../../core/state';
 
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
 
@@ -19,18 +20,38 @@ export function viewWugong(): string {
   ${loadoutCard()}
   <section class="card here-card"><div class="sec-h"><h2>闭关修炼</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
     <p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多消化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练，闭门造车，进境有限。</p>
-    <p class="muted">闭关也养伤、长功力：先养伤，一级伤三日；剩下的日子打坐，闭关一月功力深近一年，内功越深越快，也熬得越深（现在${gongliText(S.gongli)}，内功这一重最多熬到${gongliText(gongliCeiling(S))}）。</p>
+    <p class="muted">闭关也打坐长功力：闭关一月功力深近一年，内功越深越快，也熬得越深（现在${gongliText(S.gongli)}，内功这一重最多熬到${gongliText(gongliCeiling(S))}）。轻伤过一日自己好；重伤闭关养不好，要找郎中、服药。</p>
+    ${zhuPick()}
     ${S.chapter === 0
       ? '<p class="muted">江伯还病着，眼下不是闭关的时候。</p>'
       : `<p class="muted">江湖跑不过现实：${allowance(S) >= 1 ? `现在最多还能闭关${cn(allowance(S))}日` : '这几日江湖上的日子已经走在现实前头，先下线歇歇'}。下线就是静修，现实一个钟头算江湖一日，回来先读出关邸报。</p>
         <div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${allowance(S) < 1 ? ' disabled' : ''}>${l}</button>`).join('')}</div>`}
   </section>
   <section class="card here-card"><div class="sec-h"><h2>见招拆招</h2></div>
-    <p class="muted">对手出重招时，你能用的应对来自你搭配的武功：内功硬接，轻功闪避，出手的那门外功拆招、抢攻。成算取决于你的造诣与对手这一招的强弱，境界越高，成算越高；武功的性质还有相生相克。</p></section>
+    <p class="muted">对手出重招时，你能用的应对来自你搭配的武功：内功硬接，轻功闪避，出手的那门外功拆招、抢攻。成算取决于你的造诣与对手这一招的强弱，境界越高，成算越高；武功的性质还有相生相克。</p>
+    <ul class="muted resp-help">
+      <li><b>硬接</b>：比内力，稳；得手把他震退。最怕虚招，一掌落空。</li>
+      <li><b>闪避</b>：比身法；得手他招式用老，露出空门。</li>
+      <li><b>拆招</b>：比招数巧拙，不怕虚招；得手顺势还他一记。</li>
+      <li><b>抢攻</b>：比谁先找到空隙，最险；得手重创，失手正撞上他这一招。</li>
+    </ul></section>
   <section class="card here-card"><div class="sec-h"><h2>品级</h2></div>
     <div class="grades">${GRADES.map(([g, c]) => `<span class="tag g-${c}">${g}</span>`).join('')}</div>
     <p class="muted">品级是武功的先天资质，境界是你的苦功。低品武功练到极致，一样能技惊四座。</p></section>
   ${learned.map(skillCard).join('')}`;
+}
+
+/** 住处三选一（engine/shiguang.ts 的 zhuOf）：闭关、下线静修都按它 */
+function zhuPick(): string {
+  const cur = zhuOf(S);
+  const opts: [Zhu, string, boolean][] = [['inn', '客栈', true], ['lusu', '露宿', true], ['home', '师门', !!S.sect]];
+  const say: Record<Zhu, string> = {
+    inn: `一日${LODGING.inn}文，钱不够的那几夜露宿`,
+    lusu: '不花钱，睡不安稳，打坐参悟打八折',
+    home: S.sect ? `回${S.sect.school}住，不花钱` : ''
+  };
+  return `<p class="muted">住处：${ZHU_NAME[cur]}，${say[cur]}。${S.sect ? '' : '拜了师才能回师门住。'}下线静修也住这儿。</p>
+    <div class="acts zhu">${opts.map(([k, l, ok]) => `<button class="act${cur === k ? ' on' : ''}" data-act="zhu:${k}"${ok ? '' : ' disabled'} aria-pressed="${cur === k}">${l}</button>`).join('')}</div>`;
 }
 
 /* ---------- 搭配：五个位置，点一个位置换武功（docs/zhuangbei.md 第二节） ---------- */

@@ -201,7 +201,7 @@ const NPCS: NpcDef[] = [
 const KAO: FoeDef = {
   id: 'smsl_kao', name: '寂照长老', title: '少林考校', ini: '寂', tone: 'blue',
   weapon: '一双肉掌', ws: '拳', tag: '考校',
-  nature: '中正', reach: '短', rank: 0.6, build: 'inner', spar: true, firstTell: 3,
+  nature: '中正', reach: '短', rank: 0.6, build: 'inner', spar: true, rounds: 30, firstTell: 3,
   moves: ['黑虎掏心', '白猿献果', '罗汉撞钟', '横担铁门闩'],
   flourish: ['掌出无风，收掌有度', '脚下踏着桩步，纹丝不乱', '一掌拍来，掌缘带着衣袂的响', '半个身子始终朝着殿门'],
   tells: [
@@ -234,7 +234,8 @@ const KAO: FoeDef = {
 
 const QUESTS: QuestDef[] = [
   { id: 'smsl_shui', name: '少林 · 挑水上山', stages: [
-    { title: '替老葛把山下的水挑上灶房', to: 'smsl_jinshan' },
+    { title: '替老葛把山下的水挑上灶房', to: 'smsl_jinshan', who: 'smsl_laoge', hint: '跟火工老葛挑水上山，或白天接长老三十招。',
+      need: [{ if: { noSect: true }, text: '身上没有别家师门' }] },
     { title: '少林 · 挑水上山 · 完' }
   ] }
 ];
