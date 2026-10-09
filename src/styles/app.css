@@ -141,6 +141,8 @@ svg{display:block}
 .act{height:44px;border-radius:12px;background:var(--chip);font-size:14px;font-weight:500}
 .acts.four{grid-template-columns:repeat(4,minmax(0,1fr))}
 .act:disabled{opacity:.45}
+.act.priced{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15}
+.act.priced small{font-size:11px;font-weight:400;opacity:.8}
 .act.danger{background:var(--danger-soft);color:var(--danger)}
 .act.strong{background:var(--danger-fill);color:var(--on-danger);font-weight:700}
 .act.spar{background:var(--accent-soft);color:var(--accent);font-weight:700}
@@ -228,6 +230,14 @@ svg{display:block}
 .mout button{min-height:48px;padding:6px 14px;border-radius:12px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;color:var(--fg)}
 .mout small{font-size:11px;color:var(--muted)}
 .mout b{font-size:14px;font-weight:600}
+.leads .lead{width:100%;min-height:48px;padding:6px 0;display:flex;align-items:center;gap:10px;text-align:left;color:var(--fg);border-top:1px solid var(--line)}
+.leads .lead:first-of-type{border-top:0}
+.leads .lt{flex:1;min-width:0;font-size:14px}
+.leads .ld{font-size:12px;color:var(--muted);white-space:nowrap}
+.mchips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.mchips button{min-height:48px;padding:6px 14px;border-radius:12px;background:var(--card);box-shadow:inset 0 0 0 1px var(--accent);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;color:var(--fg)}
+.mchips small{font-size:11px;color:var(--muted)}
+.mchips b{font-size:14px;font-weight:600}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:8px;height:8px;border-radius:50%;display:inline-block}

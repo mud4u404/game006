@@ -43,4 +43,14 @@ describe('接力：挑下一个任务', () => {
     expect(deps('背景\n依赖：#12、#13\n其他 #99')).toEqual([12, 13]);
     expect(deps(null)).toEqual([]);
   });
+
+  it('指派：带「给:名字」的任务只给自报名字的人；不报名字的领不到', () => {
+    const items = [issue(21, ['内容', '给:trae']), issue(22, ['内容'])];
+    expect(pickWork(items)?.number).toBe(22);
+    expect(pickWork(items, [], 'trae')?.number).toBe(21);
+    expect(pickWork(items, [], 'Trae')?.number).toBe(21);
+    expect(pickWork(items, [], 'qoder')?.number).toBe(22);
+    expect(pickWork([issue(21, ['内容', '给:trae'])])).toBeNull();
+    expect(pickWork([issue(21, ['内容', '给:trae'])], [], 'qoder')).toBeNull();
+  });
 });

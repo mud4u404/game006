@@ -22,6 +22,8 @@ import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, 
 import { woundNote } from '../engine/shang';
 import { IC } from './icons';
 import { mb } from './widgets';
+import { growthHTML } from './growth';
+import { pickFresh } from './fresh';
 import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, tooSoon } from './shell';
 
 const ROUND_MS = 1500;
@@ -57,6 +59,8 @@ const NOTE: Record<RespKey, string> = { block: '得手反震', dodge: '得手露
 interface PromptUI { t: TellDef; dur: number; end: number; rem?: number; untimed?: boolean }
 interface Fight {
   f: FoeDef; d: Duel; kit: FightKit;
+  /** 本场用过的战报句子（ui/fresh.ts） */
+  used: Set<string>;
   /** 生效的备战：知彼、帮手（engine/zhaoshi.ts 的 activePrep） */
   prep: PrepDef[];
   /** 帮手各自打掉了多少 */
@@ -97,7 +101,7 @@ export function startFight(fid: string, lead?: string): void {
   brace(f);
   const d = new Duel(heroSpec(S, kit, f), foeSpec(f, prep), { rng: Math.random, allies: alliesOf(prep) });
   C = {
-    f, d, kit, prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
+    f, d, kit, used: new Set(), prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
     chargeT: 0, ui: null, openPart: null, busy: false, paused: false, lock: 0, big: [], T: {}, odds,
     learn: 0.5 ** foeRepeats(S, f.id)
   };
@@ -182,6 +186,9 @@ function bubble(type: string, html: string, dmg?: number, kind?: 'out' | 'in' | 
   log.scrollTop = log.scrollHeight;
 }
 
+/** 本场没用过的句子里挑一句 */
+const fresh = <T>(id: string, pool: readonly T[]): T => pickFresh(C!.used, id, pool);
+
 /** 出手那门外功练到了的招式里挑一招；空手又没有拳脚功夫时，随手一拳 */
 function myMove(part: string): { name: string; text: string } {
   const o = C!.kit.outer;
@@ -191,8 +198,9 @@ function myMove(part: string): { name: string; text: string } {
   const all = (o?.moves ?? []).filter(m => (m.realm ?? 0) <= r);
   const ms = all.some(m => !perf.has(m.name)) ? all.filter(m => !perf.has(m.name)) : all;
   if (!ms.length) return { name: '随手一拳', text: `你挥拳打向${C!.f.name}${part}。` };
-  const m = pick(ms);
-  return { name: m.name, text: fmt(m.text, { foe: C!.f.name, part }) };
+  const m = fresh('mv', ms);
+  const text = m.alts?.length ? fresh(`mv:${m.name}`, [m.text, ...m.alts]) : m.text;
+  return { name: m.name, text: fmt(text, { foe: C!.f.name, part }) };
 }
 
 /** 对手中招的部位记在伤势图上 */
@@ -233,17 +241,17 @@ function narrate(evs: Ev[]): void {
         if (e.who === 'me') {
           const mv = myMove(p);
           const t = `你使一招${M(mv.name)}，${mv.text}`;
-          if (e.res === 'dodge') bubble('me', t + pick(FOE_DODGE)(f));
-          else if (e.res === 'parry') bubble('me', t + pick(FOE_PARRY)(f));
-          else { bubble('me', t + pick(gentle(f) ? FOE_HIT_SPAR : FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
+          if (e.res === 'dodge') bubble('me', t + fresh('fd', FOE_DODGE)(f));
+          else if (e.res === 'parry') bubble('me', t + fresh('fp', FOE_PARRY)(f));
+          else { bubble('me', t + fresh(gentle(f) ? 'fhs' : 'fh', gentle(f) ? FOE_HIT_SPAR : FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
         } else {
           // 花样是自成一句的（「一脚踢翻了粥桶」「刀光一闪」），前面不拼兵器名：拼了就成「尖刀一脚踹翻了箩筐」
-          let t = `${f.name}一招${MO(pick(f.moves))}，${pick(f.flourish)}，直取你${p}！`;
-          if (e.res === 'dodge') bubble('foe', t + pick(ME_DODGE));
-          else if (e.res === 'parry') bubble('foe', t + pick(ME_PARRY)(weaponWord(S)));
+          let t = `${f.name}一招${MO(fresh('foeMove', f.moves))}，${fresh('foeFlourish', f.flourish)}，直取你${p}！`;
+          if (e.res === 'dodge') bubble('foe', t + fresh('md', ME_DODGE));
+          else if (e.res === 'parry') bubble('foe', t + fresh('mp', ME_PARRY)(weaponWord(S)));
           else {
             if (e.charging) { cancelCharge(); t += '你正凝神运功，躲闪不及——'; }
-            bubble('foe', t + pick(gentle(f) ? ME_HIT_SPAR : ME_HIT)(p), e.dmg, 'in');
+            bubble('foe', t + fresh(gentle(f) ? 'mhs' : 'mh', gentle(f) ? ME_HIT_SPAR : ME_HIT)(p), e.dmg, 'in');
             hurtFx(e.dmg);
           }
         }
@@ -253,6 +261,7 @@ function narrate(evs: Ev[]): void {
       case 'dot': bubble('aside', { bleed: `${f.name}伤口血流不止。`, poison: `${f.name}毒性发作，脸色发青。`, burn: `${f.name}灼伤处火辣辣地疼。` }[e.kind], e.dmg, 'out'); break;
       case 'opening': showOpening(); break;
       case 'phase2': if (f.phase2) bubble('foe', f.phase2); break;
+      case 'ease': bubble('aside', `${f.name}收了攻势，只守不攻，陪你把约好的招数走完。`); break;
       case 'ally': {
         const a = c.prep.filter(p => p.ally)[e.i]?.ally;
         if (!a) break;
@@ -888,12 +897,6 @@ function rewardChips(effects: Effect[] | undefined, hpEnd = 0): string[] {
   return chips;
 }
 
-const GROWTH = `<div class="r-sub">变强之道</div><div class="news">
-  <div><span class="tag accent">历练</span><span>输了也有收获，这一战已记进历练。闭关时，历练会化成功夫。</span></div>
-  <div><span class="tag accent">知彼</span><span>打不过的人，先去打听他的底细：常在他身边的人，往往知道他的软肋。</span></div>
-  <div><span class="tag accent">帮手</span><span>一个人打不过，就去找肯帮你的人。你在江湖上做过的事，别人都记着。</span></div>
-  <div><span class="tag accent">问道</span><span>大明寺的了尘大师见多识广，不妨去请教。</span></div></div>`;
-
 /** 结算页上的「援手」：谁来帮了、打掉对手几成 */
 function alliesHTML(c: Fight): string {
   const rows = c.prep.filter(p => p.ally).map((p, i) => {
@@ -919,7 +922,7 @@ function showResult(): void {
   if (story === '@compose') { story = composeStory(c); S.story = story; }
   else story = fmt(story, textVars());
   const lg = c.d.log;
-  const statline = `<p class="statline">共 ${c.d.round} 合 · 见招拆招得手 ${lg.parry} 次${lg.saw ? ` · 看破虚招 ${lg.saw} 次` : ''}${lg.fooled ? ` · 上当 ${lg.fooled} 次` : ''} · 破绽 ${lg.open} 次 · 杀招 ${lg.ult} 次</p>`;
+  const statline = `<p class="statline">${c.f.rounds ? `接了 ${c.d.round} / ${c.f.rounds} 招` : `共 ${c.d.round} 合`} · 见招拆招得手 ${lg.parry} 次${lg.saw ? ` · 看破虚招 ${lg.saw} 次` : ''}${lg.fooled ? ` · 上当 ${lg.fooled} 次` : ''} · 破绽 ${lg.open} 次 · 杀招 ${lg.ult} 次</p>`;
   const fateLine = pk ? `<div class="r-sub">胜负以后 · ${pk.label}</div><p class="story">${pk.later}</p>` : '';
   const hurt = Object.entries(c.hurt ?? {}) as [keyof Wounds, number][];
   const WHAT: Record<keyof Wounds, string> = { hand: '拆招、抢攻差一截，出手轻一成', foot: '闪避差一截', inner: '硬接差一截，内力回得慢' };
@@ -929,7 +932,7 @@ function showResult(): void {
   save();
   openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${pk?.title ?? (r.title || '')}</h2></div>
     ${r.story === '@compose' && !pk?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${alliesHTML(c)}${hurtLine}${statline}
-    ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? GROWTH : ''}
+    ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? growthHTML() : ''}
     <button class="btn" data-act="fResult">${pk && r.button === '定他的下场' ? '了结此事' : r.button || '继续'}</button>`);
   swapped();
 }

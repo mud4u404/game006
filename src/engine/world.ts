@@ -122,6 +122,16 @@ export function pathMin(from: string, to: string): number {
   return t;
 }
 
+/**
+ * 这趟路要多久、花多少钱（地图点地名前先给玩家看，负责人 10-09：「成本和时间消耗」要看得见）：
+ * 总分钟、经过几处、沿途要付的船钱和过路钱（每上一处有船钱的地方付一回，同 payFare）。去不了返回 null
+ */
+export function tripCost(to: string): { min: number; hops: number; fee: number } | null {
+  const path = pathTo(S.loc, to);
+  if (!path.length) return null;
+  return { min: travelMin(pathMin(S.loc, to)), hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
+}
+
 /** 当前追踪的任务进度 */
 export function curQuest(): { name: string; title: string; to?: string } | null {
   const q = questById(S.track);
@@ -167,6 +177,26 @@ const DEFAULT_MIN = 10;
 
 /** 天色转换时记一句见闻 */
 const DUSK: Record<string, string> = { 酉时: '日头偏西，天色向晚。', 戌时: '天黑了，街上点起了灯。', 子时: '夜深了，四下里静悄悄的。', 卯时: '天蒙蒙亮了。' };
+
+/**
+ * 这个动作要花多少钱（买卖、住店、看伤、打赏……）：按钮上写出价钱，玩家点之前就知道（试玩第三轮：买卖按钮标价）。
+ * 看的是「不算银两条件」时会走到的那个分支：钱不够时走到的是「没钱」的回话，不能因此就把价钱藏起来。没有扣钱返回 null
+ */
+export function verbPrice(id: string, verb: Verb): number | null {
+  const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
+  const b = bs?.find(x => { const { silver: _s, ...rest } = x.if ?? {}; return test(rest); });
+  if (!b?.do) return null;
+  const price = b.do.reduce((sum, e) => (e.type === 'silver' && e.delta < 0 ? sum - e.delta : sum), 0);
+  return price > 0 ? price : null;
+}
+
+/** 钱不够时真正走到的分支只是一句回绝（没有扣钱以外的实效）才算「买不起」；赊账、记账这类还能办事的分支，按钮不灰 */
+export function verbPoor(id: string, verb: Verb): boolean {
+  if (verbPrice(id, verb) === null) return false;
+  const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
+  const real = bs?.find(x => test(x.if ?? {}));
+  return !real || !(real.do ?? []).some(e => e.type !== 'time');
+}
 
 /** 对人物、物件做一个动作：执行分支，再按动作花掉时间。arg 是赠礼、典当时挑的那件道具 */
 export function act(id: string, verb: Verb, arg?: string): { text: string; out: Outcome; eyes: EyeDef[] } {
