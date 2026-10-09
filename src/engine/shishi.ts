@@ -114,7 +114,11 @@ export function hearsay(): string | null {
   return n;
 }
 
-/** 打听：人人都问得（engine/world.ts 的 verbsOf 自动加上）。一个人一天只问一回 */
+/** 打听时开口前的样子：一圈问下来别都一个腔调 */
+const DATING_LEAD = ['压低了声音', '左右看了看', '凑近了些', '想了想', '往四下里瞟了一眼', '咂了咂嘴', '叹了口气', '把声音放得很低',
+  '朝你招招手', '先摆摆手说不该多嘴，到底没忍住', '掰着指头数了数', '吐掉嘴里的草棍'];
+
+/** 打听：说得上话的人都问得（engine/world.ts 的 verbsOf 自动加上，跟你动刀子的除外）。一个人一天只问一回 */
 export function dating(npcId: string, who: string): string {
   const today = dayNo(S);
   const asked = (S.asked ||= {});
@@ -123,7 +127,7 @@ export function dating(npcId: string, who: string): string {
   asked[npcId] = today;
   const line = hearsay();
   if (!line) return `${who}想了想：「这几日太平得很，没听说什么。」`;
-  return `${who}${pick(['压低了声音', '左右看了看', '凑近了些', '想了想'])}：「${line}」`;
+  return `${who}${pick(DATING_LEAD)}：「${line}」`;
 }
 
 /** 盘问：捕快亮出腰牌，谁都得答话（docs/lizu.md：六扇门的特权）。不像打听那样一天一回 */

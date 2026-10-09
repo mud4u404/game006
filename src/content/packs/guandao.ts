@@ -7,7 +7,7 @@ import type { ContentPack, NpcDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_guandao', name: '蜀冈官道', area: '扬州 · 城北', region: 'yz', t: 25, map: [18, 14],
+    id: 'yz_guandao', name: '蜀冈官道', area: '扬州 · 城北', region: 'yz', t: 25, map: [18, 14], nightQuiet: true,
     desc: [
       { if: { hour: { from: 5, to: 18 } },
         text: '官道沿蜀冈西麓向北而去，直通淮安、京城。道旁驿亭边搭着一顶边军的帐子，旗上写个「募」字。驿卒牵着马换公文，茶棚里的粗茶冒着热气。' },

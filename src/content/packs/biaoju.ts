@@ -20,13 +20,15 @@ import type { ContentPack, FoeDef, FightResult, JobDef, NewsDef, NpcDef, PrepDef
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'biaoju', name: '威远镖局', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [64, 94],
+    id: 'biaoju', name: '威远镖局', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [64, 94], nightQuiet: true,
     desc: [
+      { if: { hour: { from: 21, to: 5 } },
+        text: '镖局的黑漆大门上了闩，门缝里漏出一线灯光。院里两辆镖车蒙着油布，看门的老狗趴在石狮子底下，听见脚步声抬了抬眼皮。要见镖头，明儿一早再来。' },
       { if: { shenfen: 'biaoshi' }, text: '镖局的大门照旧敞着，门楣上「威远」两个金字晒得有些发白。院里停着两辆镖车，趟子手们见了你，笑着喊一声「师傅」。兵器架靠着东墙，最上头挂着一口好刀。' },
       { text: '黑漆大门敞着，门楣上悬着「威远」两个金字，门口一对石狮子被摸得发亮。院里停着两辆镖车，镖旗卷着，几个趟子手正往车上捆麻绳。兵器架靠着东墙，最上头挂着一口好刀。' }
     ],
     npcs: ['bj_zhao', 'bj_sun'], objs: ['bj_jia'],
-    exits: [['街', 'cheng', '镖局']],
+    exits: [['街', 'cheng', '镖']],
     road: '你顺着东关街往南走，远远就看见一面杏黄镖旗在风里招展……'
   }
 ];
@@ -53,7 +55,8 @@ const NPCS: NpcDef[] = [
           text: '赵老镖头把铁胆转得哗哗响：「误了镖期的人，镖局本不该再用。铁衣替你说了几回情——你要回来，先赔一桌酒，给弟兄们一个交代。」' },
         { if: { flag: 'biaoju_invite' },
           text: '赵老镖头上下打量你：「铁衣那小子说起过你。」他把镖单一合：「想吃镖局这碗饭，先过试镖。跟孙镖头走几招，接得住，明日就跟车。」' },
-        { text: '赵老镖头看了你一眼：「托镖去柜上。镖局不收生人。」' }
+        // 不收生人，也得让人知道怎样才不算生人：铁衣在望江楼（packs/dongguan-tavern.ts）
+        { text: '赵老镖头看了你一眼：「托镖去柜上。镖局不收生人。」他低头翻镖单，又补了一句：「想吃这碗饭，先找个镖局里的人替你说句话。我那不成器的铁衣，成天泡在望江楼。」' }
       ],
       试镖: [
         { text: '赵老镖头朝院里扬了扬下巴。孙镖头放下手里的麻绳，从兵器架上抽了一口刀：「点到为止。」',
@@ -322,7 +325,11 @@ const FOES: FoeDef[] = [
         do: [{ type: 'flag', flag: 'xs_hezei_caught' }] },
       lose: { tag: '悬赏', title: '贼跳了河', button: '回到渡口',
         story: '河面上冒了几个泡，再没动静。他水性好，跑不远——明晚多半还得上岸。',
-        do: [{ type: 'heal', hpAtLeast: 0.3 }] }
+        // 跳了河，今夜不会再上岸
+        do: [{ type: 'heal', hpAtLeast: 0.3 }, { type: 'away', npc: 'xs_hezei', hours: 12 }] },
+      flee: { tag: '悬赏', title: '你退开了', button: '回到渡口',
+        story: '你退到缆桩后头。河贼也不追，扛起麻袋，一猫腰钻进了漕船底下的黑影里。今夜他是不会再露头了。',
+        do: [{ type: 'away', npc: 'xs_hezei', hours: 12 }] }
     }
   }
 ];
@@ -352,7 +359,8 @@ FOES.push({
 const JOBS: JobDef[] = [
   { id: 'bj_gz', shenfen: 'biaoshi', tier: 1, title: '护一车药材去瓜洲镇回春堂', npc: 'bj_cai_gz', at: 'gz_town', days: 2 },
   { id: 'bj_zj', shenfen: 'biaoshi', tier: 2, title: '押一箱银子过江，交到镇江大市口', npc: 'bj_cai_zj', at: 'zj_shi', days: 3, again: 5 },
-  { id: 'xs_hezei', shenfen: 'youxia', tier: 1, title: '拿运河渡口的河贼，押回府衙领赏', npc: 'fuya_zhou', at: 'yz_fuya', days: 3 }
+  // 交差在悬赏榜（领赏）；周捕头不管这张榜
+  { id: 'xs_hezei', shenfen: 'youxia', tier: 1, title: '拿运河渡口的河贼，押回府衙领赏', npc: 'xs_bang', at: 'yz_fuya', days: 3 }
 ];
 
 const NEWS: NewsDef[] = [

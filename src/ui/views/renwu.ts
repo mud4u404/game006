@@ -4,8 +4,8 @@ import { npcName, roomNpcs } from '../../engine/world';
 import { ROOMS } from '../../content';
 import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
-import { gongliText, houtianOf, tierNow } from '../../engine/ren';
-import { LODGING, yueText } from '../../engine/shiguang';
+import { gongliText, houtianOf, nextTierLine, tierNow } from '../../engine/ren';
+import { LODGING, xinmoLine, yueText } from '../../engine/shiguang';
 import { shenfenOf, shenfenText, gongxianOf } from '../../engine/shenfen';
 import { menguiText, pastSectText, sectText } from '../../engine/shicheng';
 import { fullDate } from '../../core/time';
@@ -35,16 +35,16 @@ function renqingHTML(): string {
 /** 约与心事：答应过谁、哪天在哪里；心中有愧的事（docs/foundation.md 第三节第三、九条） */
 function yueHTML(): string {
   const rows = S.yue.slice().sort((a, b) => a.due - b.due).map(y => `<div><span class="tag warn">约</span><span>${yueText(S, y)}</span></div>`);
-  if (S.xinmo.n >= 0.05) rows.push(`<div><span class="tag danger">心魔</span><span>心中有愧（${S.xinmo.why}），静修打${cn(Math.round((1 - 0.2 * S.xinmo.n) * 10))}折。还诺、赔罪、了却这件事，才化得开；不化解，也会随日子慢慢淡。</span></div>`);
-  return rows.length ? `<section class="card here"><div class="sec-h"><h2>约与心事</h2></div><div class="news">${rows.join('')}</div></section>` : '';
+  if (S.xinmo.n >= 0.05) rows.push(`<div><span class="tag danger">心魔</span><span>${xinmoLine()}</span></div>`);
+  return rows.length ? `<section class="card here-card"><div class="sec-h"><h2>约与心事</h2></div><div class="news">${rows.join('')}</div></section>` : '';
 }
 
 /** 营生：身份的义务和门路，过日子的开销（docs/foundation.md 第三节第六、八条） */
 function yingshengHTML(): string {
   if (S.chapter === 0) return '';
-  return `<section class="card here"><div class="sec-h"><h2>营生</h2><span class="count">${shenfenText(S)}</span></div>
+  return `<section class="card here-card"><div class="sec-h"><h2>营生</h2><span class="count">${shenfenText(S)}</span></div>
     <p class="muted">${shenfenOf(S).desc}</p>
-    <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文），身上留${cn(LODGING.keep)}文盘缠不动；钱不够就露宿，不花钱，伤好得慢。</span></div></div></section>`;
+    <div class="news"><div><span class="tag">嚼用</span><span>静修时住店，一日一钱银子（${LODGING.inn} 文），身上留${cn(LODGING.keep)}文盘缠不动；钱不够就露宿，不花钱，睡不安稳，打坐参悟打八折。</span></div></div></section>`;
 }
 
 /** 师门：门派、地位、门规；出过师、叛过门的写一行来历（docs/menpai.md 第七节） */
@@ -56,7 +56,7 @@ function shimenHTML(): string {
   // 门派贡献：替师门办差攒下，升地位、学外门以上的武功拿它去换（docs/menpai.md 第七节第八条）
   if (S.sect) rows.push(`<div><span class="tag">贡献</span><span>${S.sect.school}贡献 ${gongxianOf(S)}。替师门办差事攒下；升地位、学外门以上的武功要拿它去换。</span></div>`);
   if (past) rows.push(`<div><span class="tag">来历</span><span>${past}。</span></div>`);
-  return `<section class="card here"><div class="sec-h"><h2>师门</h2><span class="count">${sectText(S)}</span></div><div class="news">${rows.join('')}</div></section>`;
+  return `<section class="card here-card"><div class="sec-h"><h2>师门</h2><span class="count">${sectText(S)}</span></div><div class="news">${rows.join('')}</div></section>`;
 }
 
 let confirmRestart = false;
@@ -71,10 +71,11 @@ export function viewRenwu(): string {
   // 和江湖页一致：没有名号时显示修为档
   const tier = tierNow(S).name;
   const who = S.chapter === 0 ? '瓜洲渡渔家少年' : S.title ? '江湖人称「' + S.title + '」' : shenfenOf(S).name + ' · ' + tier;
-  const hurt = (Object.entries(S.wounds) as ['hand' | 'foot' | 'inner', number][]).filter(([, n]) => n > 0).map(([z, n]) => `${ZONE_NAME[z]}${cn(n)}级`).join('、');
+  // 伤写明轻重：轻伤过一日自己好，重伤要看伤、服药（engine/shang.ts）
+  const hurt = (Object.entries(S.wounds) as ['hand' | 'foot' | 'inner', number][]).filter(([, n]) => n > 0).map(([z, n]) => `${ZONE_NAME[z]}${cn(n)}级（${n >= 2 ? '重伤，要找郎中或服药' : '轻伤，自己会好'}）`).join('、');
   return `
   ${dollHTML(fullName(), who)}
-  <section class="card here"><div class="sec-h"><h2>根基</h2><span class="count">常人各二十</span></div><div class="attrs">${attrs}</div>
+  <section class="card here-card"><div class="sec-h"><h2>根基</h2><span class="count">常人各二十</span></div><div class="attrs">${attrs}</div>
     <p class="muted">大字是先天，只有奇遇改得了；后天随武功长，内功长体魄、根骨，轻功长身法，外功长悟性、胆魄。交手看后天，多出常人的天赋另算。</p>
     <div class="rows">${effects}</div></section>
   <section class="card"><div class="kv">
@@ -85,12 +86,12 @@ export function viewRenwu(): string {
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
     <div><span>江湖历</span><b>${fullDate(S)}</b></div>
-  </div></section>
+  </div>${nextTierLine(S) ? `<p class="muted">${nextTierLine(S)}</p>` : ''}</section>
   ${yingshengHTML()}
   ${shimenHTML()}
   ${yueHTML()}
-  <section class="card here"><div class="sec-h"><h2>人情</h2><span class="count">${meaningful}</span></div>${renqingHTML()}</section>
-  <section class="card here"><div class="sec-h"><h2>存档</h2></div>
+  <section class="card here-card"><div class="sec-h"><h2>人情</h2><span class="count">${meaningful}</span></div>${renqingHTML()}</section>
+  <section class="card here-card"><div class="sec-h"><h2>存档</h2></div>
     ${saveCardHTML()}
     ${confirmRestart
       ? `<p class="muted">清空前会先另存一份，之后在「找回备份」里还能换回来。</p><div class="btnrow"><button class="btn ghost" data-act="restartNo">算了</button><button class="btn warn" data-act="restartYes">清空存档</button></div>`

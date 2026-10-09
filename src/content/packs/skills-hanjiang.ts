@@ -54,8 +54,8 @@ const SKILLS: SkillDef[] = [
   {
     id: 'duanshui', name: '断水', grade: '绝品', category: '绝技', school: '寒江', nature: '刚',
     desc: '寒江剑法的终极一式。传说练至化境，一剑横江，流水为之一断。',
-    learn: '江伯临终所传',
-    teach: '奇遇', requires: [{ skill: 'hanjiang', realm: 0 }],
+    learn: '江伯留下的残页，寒江剑法略有小成后自己参悟',
+    teach: '奇遇', requires: [{ skill: 'hanjiang', realm: 1 }],
     ult: { title: '寒江剑法 · 绝招', text: '你长剑一收，凝气于锋，一剑横斩而出——剑气如匹练横江，竟将眼前的雨幕生生斩断！', dmg: [520, 600] }
   }
 ];

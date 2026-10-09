@@ -22,7 +22,7 @@ const ROOMS: RoomDef[] = [
       { text: '你沿着江堤走回小屋……' }
     ],
     onEnter: [{ if: { quest: { id: 'prologue', is: 2 } }, do: [{ type: 'story', id: 'p_night' }] }] },
-  { id: 'gz_town', name: '瓜洲镇', area: '瓜洲 · 老街', region: 'gz', t: 0, map: [62, 40],
+  { id: 'gz_town', name: '瓜洲镇', area: '瓜洲 · 老街', region: 'gz', t: 0, map: [62, 40], nightQuiet: true,
     desc: [
       { if: { hour: { from: 19, to: 5 } },
         text: '老街上了门板，茶摊的炉子封了火，卖鱼阿婆的鱼担也收回了家。街上只有打更的梆子声，一下，一下，敲得夜更长。' },
@@ -36,11 +36,15 @@ const ROOMS: RoomDef[] = [
     exits: [['西', 'gz_home'], ['南', 'gz_pier']],
     road: '你沿着江堤往镇上走，风里带着雨意……',
     onEnter: [
-      { if: { notFlag: 'ssgz_seen' },
+      // 「还是老样子」是重回瓜洲时说的话：序章里主角天天在这条街上
+      { if: { ...AFTER, notFlag: 'ssgz_seen' },
         do: [{ type: 'flag', flag: 'ssgz_seen' }, { type: 'feed', tag: '江湖', text: '瓜洲的老街还是老样子，鱼腥味混着药香。渡口的船来来去去，镇上人的日子照旧过。' }] }
     ] },
   { id: 'gz_pier', name: '瓜洲码头', area: '瓜洲渡', region: 'gz', t: 5, map: [62, 78],
     desc: [
+      // 序章里不开船（engine/world.ts 的 openExits）：江伯在床上等药
+      { if: { chapter: 0 },
+        text: '码头上的船都系紧了缆绳，艄公把篙收进船舱，冲天上努努嘴：「要下大雨了，今儿不开船。」江面上压着黑沉沉的云。' },
       { if: { hour: { from: 19, to: 3 } },
         text: '夜里的码头泊满了船，艄公早收了船回家。渔火三三两两，夜潮一下一下拍着缆桩，风里全是水汽。' },
       { if: { shi: { id: 'ssgz_xun', at: ['zheng'] } },
@@ -59,15 +63,18 @@ const ROOMS: RoomDef[] = [
     npcs: [], objs: [{ id: 'shengchuan', if: { quest: { id: 'prologue', below: 3 } } }],
     exits: [['北', 'gz_town']],
     road: '你穿过老街，走到江边码头……' },
-  { id: 'gz_fen', name: '江伯坟', area: '瓜洲 · 江堤', region: 'gz', t: 5, map: [24, 70],
+  // 序章里江伯还活着：这里只是江堤上一株老柳，坟是序章以后才有的
+  { id: 'gz_fen', name: '江堤老柳', area: '瓜洲 · 江堤', region: 'gz', t: 5, map: [24, 70],
     desc: [
+      { if: { quest: { id: 'prologue', below: 3 } },
+        text: '江堤下游一株老柳，枝条垂到了水面。江伯补网的时候爱坐在这截树根上，说这里风顺，听得见上游来船。树根叫他坐得发亮。' },
       { if: { flag: 'gz_fen_wine' }, text: '江堤上那株老柳下，坟前的土还洇着酒气。木牌上「江伯之墓」四个字，刻得歪歪扭扭。' },
       { text: '江堤上那株老柳下，一座新坟的土还没长草。坟前插着一块木牌，「江伯之墓」四个字，是那天清晨你用刀一笔一笔刻的。' }
     ],
-    npcs: [], objs: ['gz_fenmu'],
+    npcs: [], objs: [{ id: 'gz_fenmu', if: AFTER }],
     exits: [['北', 'gz_home', '南']],
     road: '你沿着江堤往下游走，老柳的枝条垂到了水面……',
-    onEnter: [{ if: { notFlag: 'gz_fen_seen' },
+    onEnter: [{ if: { ...AFTER, notFlag: 'gz_fen_seen' },
       text: '你在江伯坟前站了很久。',
       do: [{ type: 'flag', flag: 'gz_fen_seen' }, { type: 'rel', npc: 'jiangbo', value: '阴阳两隔', note: '葬在瓜洲江堤的老柳下' }] }] }
 ];
@@ -85,7 +92,8 @@ const NPCS: NpcDef[] = [
       ],
       请教: [{ text: '江伯摆摆手：「等我好些了，再陪你练。」他望着江面出神，像是在想很远的事。' }]
     } },
-  { id: 'huichun', name: '回春堂掌柜', ini: '药', tone: 'jade', brief: '在柜台后碾药',
+  // 药铺住在铺子楼上，夜里敲门也开（序章里江伯等着这两副药，过了时辰也得抓得到）
+  { id: 'huichun', name: '回春堂掌柜', ini: '药', tone: 'jade', brief: '在柜台后碾药', night: true,
     look: '圆脸的中年人，手指被药汁染成了褐色。',
     verbs: ['交谈', '观察', '抓药'],
     actions: {
@@ -100,9 +108,14 @@ const NPCS: NpcDef[] = [
         { if: { quest: { id: 'prologue', is: 1 } },
           text: '掌柜看了方子，抬头打量你一眼：「老江的药？……拿去吧，钱下回再说。」他把药包递过来，又压低声音：「这两天镇上来了些外乡人，打听一个右手使剑的老头。你们……小心些。」',
           do: [{ type: 'quest', id: 'prologue', stage: 2 }, { type: 'item', id: 'med', delta: 1 },
-            { type: 'time', set: 18 * 60 + 10 }, { type: 'weather', value: '大雨' },
+            { type: 'time', until: 18 * 60 + 10 }, { type: 'weather', value: '大雨' },
             { type: 'feed', tag: '主线', text: '药抓好了。天色已晚，快回渡口小屋。' }, { type: 'toast', text: '获得 药 ×2' }] },
-        { if: { quest: { id: 'prologue', atLeast: 2 } }, text: '「药已经给你了，快回去吧，要下大雨了。」' },
+        { if: { quest: { id: 'prologue', is: 2 } }, text: '「药已经给你了，快回去吧，要下大雨了。」' },
+        // 序章以后：照常卖金疮药（试玩第二轮 C11）
+        { if: { quest: { id: 'prologue', atLeast: 3 }, silver: 20 },
+          text: '掌柜包了一包金疮药递给你，收了二十文：「老江常说你练剑不知轻重。……拿着吧。」',
+          do: [{ type: 'silver', delta: -20 }, { type: 'item', id: 'jcy', delta: 1 }, { type: 'toast', text: '金疮药 +1' }] },
+        { if: { quest: { id: 'prologue', atLeast: 3 } }, text: '「金疮药二十文一包。」掌柜看了看你的钱袋，没再往下说。' },
         { text: '「抓药？方子呢？」' }
       ]
     } },
@@ -170,7 +183,8 @@ const NPCS: NpcDef[] = [
       { if: { item: { id: 'huadiao' } },
         text: '你拍开泥封，把一壶花雕慢慢洒在坟前。江伯生前爱喝两口，总说等你长大了，陪他喝一回。',
         do: [{ type: 'item', id: 'huadiao', delta: -1 }, { type: 'flag', flag: 'gz_fen_wine' }] },
-      { text: '你在坟前跪下，磕了三个头。江面上一条渔船慢慢划过，船上的人朝这边望了一眼，又低下头去。' }
+      { text: '你在坟前跪下，磕了三个头。江面上一条渔船慢慢划过，船上的人朝这边望了一眼，又低下头去。',
+        do: [{ type: 'flag', flag: 'gz_fen_bai' }] }
     ] } },
   { id: 'door', name: '虚掩的门', obj: true, icon: 'door', brief: '屋里没有点灯',
     look: '门虚掩着，门闩断成了两截。',

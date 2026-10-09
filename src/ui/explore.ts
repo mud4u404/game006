@@ -10,11 +10,11 @@ import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { XIEJIAO, checkYue, jingxiu, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
+import { XIEJIAO, checkYue, jingxiu, nightBlock, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
-import { act, curQuest, enter, hopMin, pathTo, roadText, travelMin } from '../engine/world';
+import { act, curQuest, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
 import { markEncounter, rollEncounter } from '../engine/encounter';
-import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, toast } from './shell';
+import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
 import { setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
@@ -23,72 +23,110 @@ import { eyeLine } from './views/jianghu';
 import { pickItemFirst } from './daoju';
 
 let traveling = false;
+/** 赶路途中点了「停下」：走完这一段就停 */
+let stopAsked = false;
 
 /** 过了约期还在线的：赶路、做事以后就算失约，不必等到下一次闭关（机器玩家摸底时发现） */
 function lateYue(): void {
-  const missed = checkYue(S);
-  if (missed.length) toast(missed[0]);
+  missedToast(checkYue(S));
 }
 export const isTraveling = (): boolean => traveling;
 
+/**
+ * 赶路（负责人 10-09：「点着点着会卡住，个别选项点不中」）：
+ * 原来每走一段（0.76 秒）整块重画一次地点，手指底下的按钮被换掉，点空或点错。
+ * 现在起步时画一次，途中只改顶栏的地名时辰和赶路条上的字；下面的按钮一律灰着，赶路条上只留「停下」。
+ */
 export function travelTo(dest: string, onArrive?: () => void): void {
-  if (traveling) { toast('正在赶路……'); return; }
+  if (traveling) { toast('正在赶路……要停，点赶路条上的「停下」'); return; }
   if (dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
   const path = pathTo(S.loc, dest);
-  if (!path.length) { toast('从这里去不了那儿'); return; }
+  if (!path.length) { toast(S.chapter === 0 ? '要下大雨了，码头今儿不开船。' : '从这里去不了那儿'); return; }
   traveling = true;
-  S.tab = 'jianghu';
+  stopAsked = false;
+  S.tab = 'jianghu'; S.sel = null; S.reply = null;
   render();
   const bar = $('#travel')!;
+  const app = $('#app')!;
+  app.classList.add('traveling');
+  const finish = (): void => {
+    traveling = false;
+    stopAsked = false;
+    app.classList.remove('traveling');
+    bar.hidden = true;
+  };
   const arrive = (): void => {
+    render();
     $('#main')!.scrollTop = 0;
     const out = enter(S.loc);
     if (out) afterOutcome(out);
-    onArrive?.();
+    if (S.loc === dest) onArrive?.();
   };
   const step = (): void => {
-    const nx = path.shift();
+    const nx = stopAsked ? undefined : path.shift();
     if (!nx) {
-      traveling = false;
-      bar.hidden = true;
+      if (stopAsked && S.loc !== dest) toast(`在${room(S.loc).name}停下了`);
+      finish();
       arrive();
       return;
     }
     const from = S.loc;
     const ex = room(from).exits.find(x => x[1] === nx);
-    bar.innerHTML = `<b>往${ex ? ex[0] : ''} · ${room(nx).name}</b><small>${roadText(nx)}</small><div class="tb"><i></i></div>`;
+    bar.innerHTML = `<div class="tinfo"><b>往${ex ? ex[0] : ''} · ${room(nx).name}</b><small>${roadText(nx)}</small><div class="tb"><i></i></div></div><button class="tstop" data-act="travelStop">停下</button>`;
     bar.hidden = false;
     window.setTimeout(() => {
-      const m = travelMin(hopMin(from, nx));
-      S.min += m;
-      if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
-      S.loc = nx; S.sel = null; S.reply = null;
-      lateYue();
-      // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
-      const enc = rollEncounter(from, nx);
-      if (enc) {
-        markEncounter(enc);
-        traveling = false;
-        bar.hidden = true;
+      try {
+        const m = travelMin(hopMin(from, nx));
+        S.min += m;
+        if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
+        S.loc = nx;
+        payFare(nx);
+        lateYue();
+        // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
+        const enc = rollEncounter(from, nx);
+        if (enc) {
+          markEncounter(enc);
+          finish();
+          render();
+          hooks.openStory(enc.story, () => { if (S.loc === dest) arrive(); else travelTo(dest, onArrive); });
+          return;
+        }
+        renderBar();
+        step();
+      } catch (e) {
+        // 出了错也要复位，不然「正在赶路」永远不消，什么都点不了
+        finish();
         render();
-        hooks.openStory(enc.story, () => { if (S.loc === dest) arrive(); else travelTo(dest, onArrive); });
-        return;
+        throw e;
       }
-      render();
-      step();
     }, reduceMotion ? 250 : 760);
   };
   step();
 }
 
+/** 同一个人、同一个动作，连点两下只算一下（原来双击「交谈」会说两遍、花两份时辰） */
+let lastAct = { key: '', t: 0 };
+let armed = { key: '', t: 0 };
 function doAct(verb: Verb): void {
   const id = S.sel;
   if (!id) return;
+  const key = `${id}|${verb}`, now = performance.now();
+  if (key === lastAct.key && now - lastAct.t < 450) return;
+  lastAct = { key, t: now };
+  // 动手、偷窃收不回：三秒内再点一下才算，免得手一滑当街行凶（审查 H43）
+  if (verb === '动手' || verb === '偷窃') {
+    if (armed.key !== key || now - armed.t > 3000) {
+      armed = { key, t: now };
+      toast(`真要${verb}？再点一下「${verb}」`);
+      return;
+    }
+    armed = { key: '', t: 0 };
+  }
   // 赠礼、典当：先从行囊里挑一件（ui/daoju.ts）
   if (pickItemFirst(id, verb)) return;
   const { text, out, eyes } = act(id, verb);
   lateYue();
-  if (out.story || out.fight) { afterOutcome(out); return; }
+  if (out.story || out.fight) { afterOutcome(out, text || undefined); return; }
   // 根基之眼：观察时根基够了多看出的那一层，跟在描写后面（engine/yan.ts）
   const seen = eyes.map(e => eyeLine(e)).join('');
   S.reply = text || seen ? { id, text: text + seen } : null;
@@ -102,7 +140,7 @@ function retreat(want: number): void {
   const r = restDays(S, want);
   if (r.days < 1) {
     openSheet(`<div class="r-h"><span class="tag accent">闭关</span><h2>${r.why === 'yue' ? '今日有约' : '江湖跑不过现实'}</h2></div>
-      <p class="muted">${r.why === 'yue' && r.yue ? yueText(S, r.yue) + '。先去赴约吧。' : '这几日江湖上的日子，已经走在现实前头了。下了线，现实里过一个时辰，江湖上就静修一日；回来先读出关邸报。'}</p>
+      <p class="muted">${r.why === 'yue' && r.yue ? yueText(S, r.yue) + '。先去赴约吧。' : '这几日江湖上的日子，已经走在现实前头了。下了线，现实里过一个钟头，江湖上就静修一日；回来先读出关邸报。'}</p>
       <button class="btn" data-act="sheetClose">知道了</button>`);
     return;
   }
@@ -125,7 +163,7 @@ function retreat(want: number): void {
 
 registerHandlers({
   // 搭配：点一个位置，列出能放进去的武功；战斗中不能换（战斗界面盖住了武功页）
-  slotPick: v => openSheet(slotSheet(v as Slot)),
+  slotPick: v => openSheet(slotSheet(v as Slot), true),
   slotSet: v => {
     const [slot, id] = v.split(':') as [Slot, string];
     const def = id ? skillById(id) : undefined;
@@ -143,6 +181,7 @@ registerHandlers({
   sel: v => { S.sel = v; S.reply = null; render(); },
   do: v => doAct(v as Verb),
   travel: v => travelTo(v),
+  travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
   quest: () => {
     const q = curQuest();
     if (q?.to && q.to !== S.loc) travelTo(q.to);
@@ -156,19 +195,28 @@ registerHandlers({
     if (!def) return;
     const stageIdx = Math.min(S.quests[v] ?? 0, def.stages.length - 1);
     const to = def.stages[stageIdx].to;
-    if (!to) { toast('此阶段无目的地'); return; }
+    if (!to) { toast('眼下没有要去的地方'); return; }
     if (to === S.loc) { toast('就在此处'); return; }
     closeSheet();
     travelTo(to);
   },
+  // 见闻簿里差事的「去」：赶到交差的地方
+  jgo: v => { if (!v || v === S.loc) return; closeSheet(); travelTo(v); },
   retreat: v => retreat(Number(v)),
   // 歇脚：等到某个钟点（engine/shiguang.ts 的 waitUntil）
   xiejiao: v => {
     if (traveling) return;
     const h = Number(v), label = XIEJIAO.find(([x]) => x === h)?.[1] ?? '';
-    if (!waitUntil(S, h)) { toast('江湖跑不过现实：今日不能再往后拖了'); return; }
-    pushFeed('江湖', `你找了个地方歇脚，一直歇到${label}。`);
+    const m = waitUntil(S, h);
+    if (!m) { toast(nightBlock(S) ?? '今日不能再往后拖了'); return; }
+    // 歇着也缓过一点气力：一个时辰回三分，最多回三成（审查 G22、H42：歇了十几个时辰一点不回）
+    const frac = Math.min(0.3, (m / 60) * 0.03);
+    S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * frac));
+    S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * frac));
+    pushFeed('江湖', `你找了个地方歇脚，一直歇到${label}，缓过了些气力。`);
     render();
+    // 新的描写在最上头（审查 H09：歇完停在底部，看不到）
+    $('#main')!.scrollTop = 0;
     lateYue();
   },
   sheetClose: () => { closeSheet(); render(); },

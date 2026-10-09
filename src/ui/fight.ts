@@ -17,10 +17,12 @@ import { npcName } from '../engine/world';
 import { SHENFEN, jobGongxian, jobPay } from '../engine/shenfen';
 import { brace, fateOpts, settle, takeWounds } from '../engine/jiesuan';
 import { checkYue } from '../engine/shiguang';
-import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, weaponWord, type FightKit } from '../engine/zhaoshi';
+import { foeRepeats } from '../engine/lilian';
+import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, kanren, weaponWord, type FightKit } from '../engine/zhaoshi';
+import { woundNote } from '../engine/shang';
 import { IC } from './icons';
 import { mb } from './widgets';
-import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render } from './shell';
+import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, tooSoon } from './shell';
 
 const ROUND_MS = 1500;
 const PARTS = ['左肩', '右肩', '左臂', '右臂', '胸口', '右肋', '左肋', '小腹', '左腿', '右腿'];
@@ -63,28 +65,40 @@ interface Fight {
   after?: AfterDef | null; pick?: AfterOpt;
   /** 这一场新落下的伤 */
   hurt?: Partial<Wounds>;
+  /** 气血见底提醒过了 */
+  lowWarned?: boolean;
+  /** 「会使虚招」提醒过了 */
+  feintWarned?: boolean;
+  /** 开打前掂的斤两（赢面）：打赢了按它给落的伤封顶（engine/shang.ts） */
+  odds?: number;
+  /** 实战长熟练的折扣：七天之内反复打同一个人，一次比一次少（engine/lilian.ts 的 foeRepeats） */
+  learn: number;
 }
 let C: Fight | null = null;
 export const inFight = (): boolean => !!C;
 
 /* ---------- 开打 ---------- */
 
-export function startFight(fid: string): void {
+export function startFight(fid: string, lead?: string): void {
   const f = foeById(fid);
   if (C || !f) return;
   const prep = activePrep(f);
   const kit = fightKit(S);
+  // 开打前掂一掂斤两：打赢了比你弱的人，不该落一身伤（负责人 10-09）
+  const odds = f.spar || f.script ? undefined : kanren(S, f, 24).p;
   brace(f);
   const d = new Duel(heroSpec(S, kit, f), foeSpec(f, prep), { rng: Math.random, allies: alliesOf(prep) });
   C = {
     f, d, kit, prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
-    chargeT: 0, ui: null, openPart: null, busy: false, paused: false, lock: 0, big: [], T: {}
+    chargeT: 0, ui: null, openPart: null, busy: false, paused: false, lock: 0, big: [], T: {}, odds,
+    learn: 0.5 ** foeRepeats(S, f.id)
   };
   const L = $('#fightLayer')!;
   L.innerHTML = fightHTML(C);
   L.hidden = false;
   bindCharge();
   updAll();
+  if (lead) bubble('aside', lead.replace(/\n/g, '<br>'));
   bubble('sys', f.intro);
   prep.forEach(p => bubble(p.ally ? 'ally' : 'aside', p.text));
   (f.tips || []).forEach(t => bubble('sys', t));
@@ -107,7 +121,7 @@ function fightHTML(c: Fight): string {
   <div class="flog-wrap"><div class="flog" id="flog" aria-live="polite"></div></div>
   <section class="fsheet" id="fsheet">
     <div class="rh" id="rHead"><b>见招拆招</b><span id="rTime">对手出重招时在这里应对</span></div>
-    <button class="opstrip" id="opening" data-act="fOpening" hidden><span class="ops-t"><b>趁虚而入</b><small id="opPart"></small></span><span class="ops-k">点此出手</span><i></i></button>
+    <button class="opstrip" id="opening" data-act="fOpening" hidden><span class="ops-t"><b>趁虚而入</b><small id="opPart"></small></span><span class="ops-k">趁隙出手</span><i></i></button>
     <div class="rbody" id="rBody" hidden>
       <p class="rtip" id="rTip" hidden>对手要出重招了。下面是你能用的应对，来自你练成的武功；成算越高越稳。这一次不限时，慢慢看。</p>
       <p class="rtell" id="rTell"></p>
@@ -120,15 +134,15 @@ function fightHTML(c: Fight): string {
     <div class="sk" id="idleBody">
       ${c.kit.performs.map((p, i) => `<button class="skb" id="skP${i}" data-act="fSkill:p${i}"><b>${p.name}</b><small></small></button>`).join('')}
       ${c.kit.locked.map(p => `<button class="skb" disabled><b>${p.name}</b><small>${REALMS[p.realm ?? 0]}可用</small></button>`).join('')}
-      <button class="skb" id="skCharge"><b>运功</b><small>长按蓄力</small></button>
-      <button class="skb ult" id="skUlt" data-act="fSkill:ult"><b>${c.kit.ult ? '杀招·' + c.kit.ult.def.name : '杀招'}</b><small></small></button>
+      <button class="skb" id="skCharge"><b>运功</b><small>按住运功</small></button>
+      <button class="skb ult" id="skUlt" data-act="fSkill:ult"${c.kit.ult ? '' : ' hidden'}><b>${c.kit.ult ? '杀招·' + c.kit.ult.def.name : '杀招'}</b><small></small></button>
       <button class="skb minor" id="skJcy" data-act="fSkill:jcy"></button>
       <button class="skb minor" id="skDart" data-act="fSkill:dart"></button>
-      ${f.spar ? '<button class="skb minor" data-act="fSkill:yield">认输</button>' : '<button class="skb minor" data-act="fSkill:flee">逃跑</button>'}
+      ${f.spar ? '<button class="skb minor" id="skOut" data-act="fSkill:yield">认输</button>' : '<button class="skb minor" id="skOut" data-act="fSkill:flee">逃跑</button>'}
     </div>
   </section>
   <div class="ult-layer" id="ultL" hidden><small id="ultLabel"></small><div class="ult-w"><div class="ult-word" id="ultWord"></div><span class="ult-seal" id="ultSeal"></span></div><span class="ult-slash"></span></div>
-  <div class="pause-layer" id="pauseL" hidden><div class="box"><b>已暂停</b><small>对手也在等你</small><button class="btn" data-act="fResume">继续</button></div></div>
+  <div class="pause-layer" id="pauseL" hidden><div class="box"><b>按剑暂歇</b><small>对手也在等你</small><button class="btn" data-act="fResume">继续</button></div></div>
 </div>`;
 }
 
@@ -151,7 +165,10 @@ function bubble(type: string, html: string, dmg?: number, kind?: 'out' | 'in' | 
 function myMove(part: string): { name: string; text: string } {
   const o = C!.kit.outer;
   const r = o ? S.skills[o.id]?.r ?? 0 : 0;
-  const ms = (o?.moves ?? []).filter(m => (m.realm ?? 0) <= r);
+  // 跟绝招同名的招不当普通招式使：不然战报里刚使过「江枫渔火」，按钮上的「江枫渔火」却还灰着
+  const perf = new Set((o?.performs ?? []).map(p => p.name));
+  const all = (o?.moves ?? []).filter(m => (m.realm ?? 0) <= r);
+  const ms = all.some(m => !perf.has(m.name)) ? all.filter(m => !perf.has(m.name)) : all;
   if (!ms.length) return { name: '随手一拳', text: `你挥拳打向${C!.f.name}${part}。` };
   const m = pick(ms);
   return { name: m.name, text: fmt(m.text, { foe: C!.f.name, part }) };
@@ -199,7 +216,8 @@ function narrate(evs: Ev[]): void {
           else if (e.res === 'parry') bubble('me', t + pick(FOE_PARRY)(f));
           else { bubble('me', t + pick(FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
         } else {
-          let t = `${f.name}一招${MO(pick(f.moves))}，${f.weapon}${pick(f.flourish)}，直取你${p}！`;
+          // 花样是自成一句的（「一脚踢翻了粥桶」「刀光一闪」），前面不拼兵器名：拼了就成「尖刀一脚踹翻了箩筐」
+          let t = `${f.name}一招${MO(pick(f.moves))}，${pick(f.flourish)}，直取你${p}！`;
           if (e.res === 'dodge') bubble('foe', t + pick(ME_DODGE));
           else if (e.res === 'parry') bubble('foe', t + pick(ME_PARRY)(weaponWord(S)));
           else {
@@ -218,7 +236,9 @@ function narrate(evs: Ev[]): void {
         const a = c.prep.filter(p => p.ally)[e.i]?.ally;
         if (!a) break;
         c.allyDealt[e.i] += e.dmg;
-        bubble('ally', `<span class="who">${a.name}</span>${a.say[Math.min(e.n - 1, a.say.length - 1)]}`, e.dmg, 'out');
+        // 前面已经标了名字，话头再是自己的名字就去掉，免得「柳寒舟柳寒舟收伞一拂」（审查 A30）
+        const say = a.say[Math.min(e.n - 1, a.say.length - 1)];
+        bubble('ally', `<span class="who">${a.name}</span>${say.startsWith(a.name) ? say.slice(a.name.length) : say}`, e.dmg, 'out');
         mark(pick(PARTS));
         break;
       }
@@ -337,7 +357,10 @@ function startTell(): void {
   buzz(30);
   $('#rTell')!.textContent = t.text;
   // 虚实：这一招是不是虚招，玩家看不出；按钮上的成算已经并进了「它可能是虚招」
-  $('#rJudge')!.textContent = judgeText(pr.pw, c.d.hh, c.f.ws) + (c.d.feintR > 0 ? `${c.f.name}会使虚招，全力硬接最怕落空。` : '');
+  // 虚招的提醒：虚招两成以上的对手才说，一场只说一回（审查 F40：句句都说）
+  const warnFeint = c.d.feintR >= 0.2 && !c.feintWarned;
+  if (warnFeint) c.feintWarned = true;
+  $('#rJudge')!.textContent = judgeText(pr.pw, c.d.hh, c.f.ws) + (warnFeint ? `${c.f.name}会使虚招，全力硬接最怕落空。` : '');
   $('#rOpts')!.innerHTML = pr.opts.map(o => optHTML(o)).join('');
   const qg = S.skills[S.loadout.qinggong ?? '']?.r ?? 0;
   const dur = Math.round((5000 + qg * 300) * (c.d.phase === 2 ? 0.85 : 1));
@@ -375,7 +398,8 @@ function armPrompt(rem: number, frac: number): void {
   c.T.prompt = window.setTimeout(() => resolveTell(null), rem);
   clearInterval(c.T.cd);
   const lab = $('#rTime')!;
-  const upd = (): void => { if (C && C.ui) lab.textContent = Math.max(0, (C.ui.end - performance.now()) / 1000).toFixed(1) + 's'; };
+  // 倒计时不写「4.3s」这种现代记法，写还剩几息（审查 H22）
+  const upd = (): void => { if (C && C.ui) lab.textContent = `还剩${cn(Math.ceil(Math.max(0, (C.ui.end - performance.now()) / 1000)))}息`; };
   upd();
   c.T.cd = window.setInterval(upd, 100);
   updSkills();
@@ -387,6 +411,7 @@ function setPromptUI(on: boolean): void {
   sh.classList.toggle('alert', on);
   $('#rBody')!.hidden = !on;
   $('#idleBody')!.hidden = on;
+  swapped();
   // 矮屏上底部面板放不下时可以滚动；出重招时滚到应对按钮露全，免得按钮在屏幕外、玩家以为卡死
   if (on) requestAnimationFrame(() => {
     const o = $('#rOpts');
@@ -432,7 +457,8 @@ function resolveTell(choice: RespKey | null): void {
         else if (e.key === 'dodge') bubble('foe', `${MO(t.name)}落了空，${t.after}`);
         else if (e.key === 'parry') { bubble('foe', `你以巧破拙，将${MO(t.name)}化于无形，顺势还了一${ww}，正中他${H(part)}！`, e.dmg, 'out'); mark(part); }
         else { bubble('foe', `${f.name}招式未成，${H(part + '先中一' + ww)}，${MO(t.name)}硬生生憋了回去！`, e.dmg, 'out'); mark(part); }
-        if (sk) { gainProf(sk.id, 15); bubble('aside', `实战有得：「${sk.name}」熟练 +15`); }
+        const got = Math.round(15 * c.learn);
+        if (sk && got > 0) { gainProf(sk.id, got); bubble('aside', `实战有得：「${sk.name}」熟练 +${cn(got)}`); }
       } else {
         const txt = {
           block: `你内力不及，${MO(t.name)}破开护体真气，余劲震得你${H(part)}一阵剧痛！`,
@@ -495,6 +521,16 @@ function rescue(): void {
 
 /* ---------- 主动招式 ---------- */
 
+/**
+ * 出手以后的一小段时间锁（暗器、药、绝招、杀招、逃跑之后）：期间按钮真的变灰，锁一过再亮。
+ * 原来锁着却不变灰，玩家点了没反应，以为「点不中」（负责人 10-09）
+ */
+function lockFor(c: Fight, ms: number): void {
+  c.lock = performance.now() + ms;
+  updSkills();
+  window.setTimeout(() => { if (C === c) updSkills(); }, ms + 20);
+}
+
 function useSkill(k: string): void {
   const c = C;
   if (!c || c.d.over || c.paused || c.busy) return;
@@ -503,7 +539,7 @@ function useSkill(k: string): void {
   const f = c.f;
   if (k === 'dart') {
     if ((S.items.fhs || 0) < 1 || c.d.prompt) return;
-    c.lock = now + 500;
+    lockFor(c, 500);
     S.items.fhs--;
     const p = pick(PARTS), evs = c.d.dart(), e = evs.find(x => x.k === 'item');
     bubble('me', `你扬手打出一枚飞蝗石，「嗤」的一声正中${f.name}${H(p)}。`, e && e.k === 'item' ? e.v : 0, 'out');
@@ -512,11 +548,11 @@ function useSkill(k: string): void {
     return;
   }
   if (c.d.prompt) return;
-  if (k.startsWith('p')) { usePerform(Number(k.slice(1)), now); return; }
+  if (k.startsWith('p')) { usePerform(Number(k.slice(1))); return; }
   if (k === 'ult') {
     const u = c.kit.ult;
     if (!u || c.d.rage < 100) return;
-    c.busy = true; c.lock = now + 1500;
+    c.busy = true; lockFor(c, 1500);
     hideOpening();
     if (c.openPart) { c.openPart = null; c.d.dropOpening(); }
     clearTimeout(c.T.tick);
@@ -527,7 +563,7 @@ function useSkill(k: string): void {
       const p = pick(PARTS), evs = C.d.ult(), e = evs.find(x => x.k === 'ult');
       bubble('me crit', fmt(u.u.text, { foe: C.f.name, part: p }));
       if (e && e.k === 'ult') { bubble('foe', `${C.f.name}踉跄后退，${H(p + '受了重创')}！`, e.dmg, 'out'); mark(p); sayFx(e.fx); }
-      gainProf(u.def.id, 20);
+      gainProf(u.def.id, Math.round(20 * C.learn));
       act(evs.filter(x => x.k !== 'ult'));
       if (C && !C.d.over && !C.d.waiting && !C.openPart) next(1100);
     });
@@ -536,7 +572,7 @@ function useSkill(k: string): void {
   if (k === 'jcy') {
     if ((S.items.jcy || 0) < 1 || c.d.hp >= c.d.hpMax) return;
     S.items.jcy--;
-    c.lock = now + 1200;
+    lockFor(c, 1200);
     const evs = c.d.jcy(), e = evs.find(x => x.k === 'item');
     bubble('sys', '你服下一包金疮药，伤口一阵清凉。', e && e.k === 'item' ? e.v : 0, 'heal');
     act([]);
@@ -544,7 +580,7 @@ function useSkill(k: string): void {
   }
   if (k === 'yield' || k === 'flee') {
     if (f.script) { bubble('sys', '此时此地，无路可退。'); return; }
-    c.lock = now + 1000;
+    lockFor(c, 1000);
     if (k === 'yield') {
       if (f.spar) { bubble('me', '你收剑后退，抱拳道：「是我输了。」'); act(c.d.yieldUp()); return; }
       bubble('foe', `${f.name}狞笑：「认输？晚了！」`);
@@ -565,10 +601,10 @@ function sayFx(fx: string[]): void {
 }
 
 /** 施展一门绝招 */
-function usePerform(i: number, now: number): void {
+function usePerform(i: number): void {
   const c = C!, x = c.kit.performs[i];
   if (!x || !c.d.canPerform(i)) return;
-  c.lock = now + 600 + 150 * x.hits;
+  lockFor(c, 600 + 150 * x.hits);
   const part = pick(PARTS);
   bubble('me', fmt(x.text, { foe: c.f.name, part }));
   const evs = c.d.perform(i), e = evs.find(y => y.k === 'perform');
@@ -577,7 +613,7 @@ function usePerform(i: number, now: number): void {
     else if (x.hits) bubble('foe', `${c.f.name}拼着衣衫被划破，堪堪避过这一招。`);
     sayFx(e.fx);
   }
-  if (c.kit.outer) gainProf(c.kit.outer.id, 3);
+  if (c.kit.outer) gainProf(c.kit.outer.id, Math.round(3 * c.learn));
   act(evs.filter(y => y.k !== 'perform'));
 }
 
@@ -697,8 +733,16 @@ function updMom(): void {
 }
 
 function updPlayer(): void {
-  const d = C!.d;
-  $('#pBars')!.innerHTML = mb('气血', Math.round(d.hp), d.hpMax, 'hp') + mb('内力', Math.round(d.mp), d.mpMax, 'mp') + mb('怒气', Math.floor(d.rage), 100, 'rage');
+  const c = C!, d = c.d;
+  // 没有杀招的（序章头一场），怒气攒满了也没处使：不摆怒气条
+  $('#pBars')!.innerHTML = mb('气血', Math.round(d.hp), d.hpMax, 'hp') + mb('内力', Math.round(d.mp), d.mpMax, 'mp') + (c.kit.ult ? mb('怒气', Math.floor(d.rage), 100, 'rage') : '');
+  // 气血见底：攻守之势再好，也该吃药、该走了（势和气血是两回事）
+  const low = d.hp > 0 && d.hp < d.hpMax * 0.25;
+  $('#pBars')!.classList.toggle('low', low);
+  if (low && !c.lowWarned && !d.over) {
+    c.lowWarned = true;
+    bubble('sys', '你气血见底了。攻守之势再好，挨上一记重的也撑不住——该吃药，或者走。');
+  }
 }
 
 function setSkill(id: string, disabled: boolean, sub: string): HTMLButtonElement {
@@ -711,12 +755,13 @@ function setSkill(id: string, disabled: boolean, sub: string): HTMLButtonElement
 
 function updSkills(): void {
   const c = C!, d = c.d;
-  const dis = d.over || c.busy || c.paused || d.waiting, act0 = dis || !!d.prompt;
+  const locked = performance.now() < c.lock;
+  const dis = d.over || c.busy || c.paused || d.waiting || locked, act0 = dis || !!d.prompt;
   c.kit.performs.forEach((_, i) => setSkill(`#skP${i}`, act0 || !d.canPerform(i), d.pcd[i] > 0 ? `调息 ${d.pcd[i]} 合` : `内力 ${d.performCost(i)}`));
   const ch = $('#skCharge') as HTMLButtonElement;
   ch.disabled = act0;
   if (!c.chargeT) {
-    ch.querySelector('small')!.textContent = d.charge > 0 ? `已蓄 +${Math.round(d.charge * 100)}%` : '长按蓄力';
+    ch.querySelector('small')!.textContent = d.charge > 0 ? `已蓄 +${Math.round(d.charge * 100)}%` : '按住运功';
     ch.classList.toggle('charged', d.charge > 0);
   }
   const ready = !!c.kit.ult && d.rage >= 100;
@@ -728,6 +773,9 @@ function updSkills(): void {
   const dart = $('#skDart') as HTMLButtonElement;
   dart.textContent = `暗器 ×${S.items.fhs || 0}`;
   dart.disabled = act0 || (S.items.fhs || 0) < 1;
+  // 逃跑、认输也归这里管：原来从不变灰，锁着、暂停着点了也没反应
+  const out = $('#skOut') as HTMLButtonElement | null;
+  if (out) out.disabled = act0;
 }
 
 /* ---------- 收场 ---------- */
@@ -744,7 +792,7 @@ function endFight(res: DuelRes): void {
   cancelCharge();
   sync();
   // 这一场吃重招落下的伤，打完才起作用，带到下一场（engine/jiesuan.ts）
-  c.hurt = takeWounds(c.f, c.d.log.taken);
+  c.hurt = takeWounds(c.f, c.d.log.taken, res, c.odds);
   if (res === 'win' && c.f.win) bubble('foe', c.f.win);
   else if (res === 'lose' && c.f.lose) bubble('sys', c.f.lose);
   updAll();
@@ -766,6 +814,7 @@ function showAftermath(): void {
   $('#fateOpts')!.innerHTML = c.after.opts.map((o, i) =>
     `<button class="ropt fate" data-act="fFate:${i}"><span class="rn"><b>${o.label}</b></span><span class="rx">${o.sub ?? ''}</span></button>`).join('');
   $('#fateBody')!.hidden = false;
+  swapped();
 }
 
 function chooseFate(i: number): void {
@@ -794,21 +843,23 @@ function composeStory(c: Fight): string {
 }
 
 /** 由结算效果自动生成奖励标签 */
-function rewardChips(effects: Effect[] | undefined): string[] {
+function rewardChips(effects: Effect[] | undefined, hpEnd = 0): string[] {
   const chips: string[] = [];
   for (const e of effects || []) {
     if (e.type === 'prof') chips.push(`<span class="tag accent">${skillById(e.skill)?.name} 熟练 +${e.amount}</span>`);
     else if (e.type === 'lilian') chips.push(`<span class="tag accent">历练 +${e.amount}</span>`);
     else if (e.type === 'learn') chips.push(`<span class="tag accent">习得 ${skillById(e.skill)?.name}</span>`);
-    else if (e.type === 'xia') chips.push(`<span class="tag accent">侠义 +${e.delta}</span>`);
-    else if (e.type === 'eming') chips.push(`<span class="tag danger">恶名 +${e.delta}</span>`);
+    // 正负分开写：原来降恶名也写成「恶名 +-2」、还用红色（审查 H18）
+    else if (e.type === 'xia') chips.push(e.delta >= 0 ? `<span class="tag accent">侠义 +${e.delta}</span>` : `<span class="tag danger">侠义 −${-e.delta}</span>`);
+    else if (e.type === 'eming') chips.push(e.delta >= 0 ? `<span class="tag danger">恶名 +${e.delta}</span>` : `<span class="tag accent">恶名 −${-e.delta}</span>`);
     else if (e.type === 'silver') chips.push(e.delta > 0 ? `<span class="tag accent">银两 +${e.delta} 文</span>` : `<span class="tag danger">银两 −${-e.delta} 文</span>`);
     else if (e.type === 'item' && e.delta > 0) chips.push(`<span class="tag accent">获得 ${itemById(e.id)?.name}</span>`);
     else if (e.type === 'title') chips.push(`<span class="tag purple">名号「${e.value}」</span>`);
-    else if (e.type === 'heal' && e.hpAtLeast) chips.push(`<span class="tag">气血恢复至${cn(Math.round(e.hpAtLeast * 10))}成</span>`);
+    // 打完时气血本就不止这几成的，不说「恢复」
+    else if (e.type === 'heal' && e.hpAtLeast && hpEnd < S.hpMax * e.hpAtLeast) chips.push(`<span class="tag">气血恢复至${cn(Math.round(e.hpAtLeast * 10))}成</span>`);
     else if (e.type === 'rel') chips.push(`<span class="tag">${npcName(e.npc)} · ${e.value}</span>`);
     else if (e.type === 'jobDone') { const j = jobById(e.id); if (j) chips.push(`<span class="tag accent">交差 · ${j.sect ? `${j.sect}贡献 +${jobGongxian(j)}` : `银两 +${jobPay(j)} 文`}</span>`); }
-    else if (e.type === 'jobFail') chips.push('<span class="tag danger">差事办砸了 · 地位降一级</span>');
+    else if (e.type === 'jobFail') chips.push(`<span class="tag danger">差事办砸了 · ${jobById(e.id)?.sect ? '扣门派贡献' : '地位降一级'}</span>`);
     else if (e.type === 'standing' && e.delta > 0) chips.push(`<span class="tag accent">地位升一级</span>`);
     else if (e.type === 'shenfen') chips.push(`<span class="tag purple">身份 · ${SHENFEN[e.id]?.name ?? e.id}</span>`);
   }
@@ -825,7 +876,7 @@ const GROWTH = `<div class="r-sub">变强之道</div><div class="news">
 function alliesHTML(c: Fight): string {
   const rows = c.prep.filter(p => p.ally).map((p, i) => {
     const n = Math.round((c.allyDealt[i] / c.d.ehpMax) * 10);
-    return `<div><span class="tag accent">${p.ally!.name}</span><span>${c.allyDealt[i] > 0 ? `出手${cn(c.d.allyHits[i])}次，替你打掉他${n >= 1 ? liang(n) + '成' : '一些'}气血。` : '来了，还没来得及出手。'}</span></div>`;
+    return `<div><span class="tag accent">${p.ally!.name}</span><span>${c.allyDealt[i] > 0 ? `出手${liang(c.d.allyHits[i])}次，替你打掉他${n >= 1 ? liang(n) + '成' : '一些'}气血。` : '来了，还没来得及出手。'}</span></div>`;
   });
   return rows.length ? `<div class="r-sub">援手</div><div class="news">${rows.join('')}</div>` : '';
 }
@@ -850,14 +901,15 @@ function showResult(): void {
   const fateLine = pk ? `<div class="r-sub">胜负以后 · ${pk.label}</div><p class="story">${pk.later}</p>` : '';
   const hurt = Object.entries(c.hurt ?? {}) as [keyof Wounds, number][];
   const WHAT: Record<keyof Wounds, string> = { hand: '拆招、抢攻差一截，出手轻一成', foot: '闪避差一截', inner: '硬接差一截，内力回得慢' };
-  const hurtLine = hurt.length ? `<div class="r-sub">落下的伤</div><div class="news">${hurt.map(([z]) => `<div><span class="tag danger">${ZONE_NAME[z]}伤 ${liang(S.wounds[z])}级</span><span>${WHAT[z]}。闭关养伤，一级三日。</span></div>`).join('')}</div>` : '';
-  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])]).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
+  const hurtLine = hurt.length ? `<div class="r-sub">落下的伤</div><div class="news">${hurt.map(([z]) => `<div><span class="tag ${S.wounds[z] >= 2 ? 'danger' : 'warn'}">${ZONE_NAME[z]}伤 ${liang(S.wounds[z])}级</span><span>${WHAT[z]}。${woundNote(S.wounds[z])}。</span></div>`).join('')}</div>` : '';
+  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])], c.d.hp).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
   c.then = r.then;
   save();
   openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${pk?.title ?? (r.title || '')}</h2></div>
     ${r.story === '@compose' && !pk?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${alliesHTML(c)}${hurtLine}${statline}
     ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? GROWTH : ''}
-    <button class="btn" data-act="fResult">${r.button || '继续'}</button>`);
+    <button class="btn" data-act="fResult">${pk && r.button === '定他的下场' ? '了结此事' : r.button || '继续'}</button>`);
+  swapped();
 }
 
 function closeFight(): void {
@@ -874,12 +926,13 @@ function closeFight(): void {
 
 registerHandlers({
   fSkill: v => useSkill(v),
-  fReact: v => { if (C && C.ui) resolveTell(v as RespKey); },
+  fReact: v => { if (C && C.ui && !tooSoon()) resolveTell(v as RespKey); },
   fOpening: () => takeOpening(),
   fPause: () => pauseFight(),
   fResume: () => resumeFight(),
-  fFate: v => chooseFate(Number(v)),
+  fFate: v => { if (!tooSoon()) chooseFate(Number(v)); },
   fResult: () => {
+    if (tooSoon()) return;
     const then = C?.then;
     closeSheet();
     closeFight();

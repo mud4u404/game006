@@ -11,17 +11,18 @@ import { describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { advanceDays, advanceMin, dayNo, setNowMs } from '../src/core/time';
 import { ENCOUNTERS, FOES, NPCS, QUESTS, ROOMS, SHI, STORIES, foeById, jobById, npc, questById, room, shiById, storyById } from '../src/content';
-import { run, test, type Outcome } from '../src/engine/dsl';
+import { pickBranch, run, test, type Outcome } from '../src/engine/dsl';
 import type { Effect } from '../src/content/types';
-import { act, curQuest, enter, hopMin, pathTo, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
+import { act, curQuest, enter, hopMin, openExits, pathTo, payFare, roomNpcs, roomObjs, travelMin, verbsOf } from '../src/engine/world';
 import { markEncounter, rollEncounter } from '../src/engine/encounter';
 import { Duel, RANDOM, SKILLED, simulate, type DuelRes, type Policy } from '../src/engine/duel';
-import { activePrep, alliesOf, fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
+import { activePrep, alliesOf, fightKit, foeSpec, heroSpec, kanren } from '../src/engine/zhaoshi';
+import { useItem } from '../src/engine/daoju';
 import { brace, fateOpts, settle, takeWounds } from '../src/engine/jiesuan';
 import { XIEJIAO, checkYue, jingxiu, nextYue, waitMin } from '../src/engine/shiguang';
 import { mulberry32 } from '../src/engine/rng';
 import { tierNow } from '../src/engine/ren';
-import { tickShi } from '../src/engine/shishi';
+import { isEnding, tickShi } from '../src/engine/shishi';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const VERBOSE = !!env.ZOUBIAN;
@@ -91,6 +92,8 @@ function playStory(id: string, depth: number): void {
 function fight(fid: string, depth: number): void {
   const f = foeById(fid);
   if (!f) { err(`对手「${fid}」不存在`); return; }
+  // 开打前掂斤两（engine/shang.ts）：打赢了比自己弱的，落的伤封顶。机器玩家少掂几回，省时间
+  const odds = f.spar || f.script ? undefined : kanren(S, f, 8).p;
   brace(f);
   const prep = activePrep(f);
   const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, prep), { rng, allies: alliesOf(prep) });
@@ -105,7 +108,7 @@ function fight(fid: string, depth: number): void {
   S.hp = Math.max(0, Math.round(d.hp));
   S.mp = Math.max(0, Math.round(d.mp));
   const res = d.res!;
-  takeWounds(f, d.log.taken);
+  takeWounds(f, d.log.taken, res, odds);
   const opts = fateOpts(f, res);
   // 胜负以后的去路：盯着世事的，挑把它推到还没走过那一步的；其余没走过的优先（几局下来每条路都该有人走过）
   const aimFate = opts.filter(o => pushesNew(o.do));
@@ -131,7 +134,9 @@ const IDLE: Policy = { name: '不出手', pick: () => null, openTake: 0, perform
 
 /* ---------- 玩家能做的事 ---------- */
 
-type Act = { k: 'act'; id: string; v: string; key: string } | { k: 'go'; to: string; key: string; quest?: boolean; push?: boolean } | { k: 'rest'; key: string } | { k: 'wait'; key: string };
+type Act = { k: 'act'; id: string; v: string; key: string } | { k: 'go'; to: string; key: string; quest?: boolean; push?: boolean; cure?: boolean } | { k: 'rest'; key: string } | { k: 'wait'; key: string };
+/** 身上有重伤（二级以上，engine/shang.ts） */
+const heavy = (): boolean => S.wounds.hand >= 2 || S.wounds.foot >= 2 || S.wounds.inner >= 2;
 
 function branchKey(id: string, v: string): string {
   const n = npc(id)!;
@@ -146,7 +151,8 @@ function actions(): Act[] {
     if (!n) { err(`地点「${S.loc}」里的「${id}」不存在`); continue; }
     for (const v of verbsOf(n)) list.push({ k: 'act', id, v, key: branchKey(id, v) });
   }
-  for (const [, to] of room(S.loc).exits) list.push({ k: 'go', to, key: `go|${S.loc}|${to}` });
+  // 照界面：只走眼下开着的出口（序章里不开船，engine/world.ts 的 openExits）
+  for (const [, to] of openExits(S.loc)) list.push({ k: 'go', to, key: `go|${S.loc}|${to}` });
   // 跟着任务横幅、约走：玩家大多这样走
   for (const dest of [curQuest()?.to, ...S.yue.map(y => y.at)]) {
     if (!dest || dest === S.loc) continue;
@@ -160,6 +166,11 @@ function actions(): Act[] {
   // 盯着一件世事：往牵扯到它的人那里走（玩家听说了一件事，会去找那几个人）
   const near = cur?.shi ? nearestWith(id => SHI_NPC.get(cur!.shi!)!.has(id)) : null;
   if (near) list.push({ k: 'go', to: near, key: `go|${S.loc}|${near}`, quest: true, push: true });
+  // 身上有重伤：往最近的郎中那里走（玩家会去看伤）
+  if (heavy() && S.silver >= 150) {
+    const doc = nearestWith(id => !!npc(id)?.service?.includes('医'));
+    if (doc) list.push({ k: 'go', to: doc, key: `go|${S.loc}|${doc}`, cure: true });
+  }
   list.push({ k: 'rest', key: 'rest' }, { k: 'wait', key: 'wait' });
   return list;
 }
@@ -169,11 +180,25 @@ function actions(): Act[] {
  * 盯着一件世事时往这些人那里去（往告示、闲人那里去没用）
  */
 const pushes = (x: unknown, id: string): boolean => !!x && JSON.stringify(x).includes(`"type":"shi","id":"${id}","to"`);
-const SHI_NPC = new Map(SHI.map(d => [d.id, new Set(NPCS.filter(n => {
-  if (pushes(n.actions, d.id)) return true;
-  const ids = [...JSON.stringify(n.actions).matchAll(/"type":"(?:fight|story)","(?:foe|id)":"([^"]+)"/g)].map(m => m[1]);
-  return ids.some(x => pushes(foeById(x), d.id) || pushes(storyById(x), d.id));
-}).map(n => n.id))]));
+/** 这些条件里要的旗标 */
+const flagsIn = (x: unknown): string[] => [...JSON.stringify(x ?? {}).matchAll(/"flag":"([^"]+)"/g)].map(m => m[1]);
+/** 谁的动作会写下这个旗标（递线索的人：文朝奉说了，严捕头那里才有「报线」） */
+const setters = (flag: string): string[] => NPCS.filter(n => JSON.stringify(n.actions).includes(`"type":"flag","flag":"${flag}"}`)).map(n => n.id);
+const SHI_NPC = new Map(SHI.map(d => {
+  const direct = NPCS.filter(n => {
+    if (pushes(n.actions, d.id)) return true;
+    const ids = [...JSON.stringify(n.actions).matchAll(/"type":"(?:fight|story)","(?:foe|id)":"([^"]+)"/g)].map(m => m[1]);
+    return ids.some(x => pushes(foeById(x), d.id) || pushes(storyById(x), d.id));
+  });
+  // 往回多找一层：推动它的那个动作要先有的旗标，是谁递的
+  const need = direct.flatMap(n => Object.entries(n.actions).flatMap(([v, bs]) => {
+    const push = (bs ?? []).filter(b => pushes(b, d.id));
+    if (!push.length) return [];
+    const gate = n.verbs.find(x => typeof x !== 'string' && x.verb === v);
+    return flagsIn([gate, push.map(b => b.if)]);
+  }));
+  return [d.id, new Set([...direct.map(n => n.id), ...need.flatMap(setters)])];
+}));
 
 /** 从这里出发，最近的一处有没点过的动作的地点，返回往那里走的第一步 */
 function nearestNew(): string | null {
@@ -191,7 +216,7 @@ function nearestWith(ok: (id: string) => boolean): string | null {
       while (prev.get(c) !== S.loc) c = prev.get(c)!;
       return c;
     }
-    for (const [, nx] of room(cur).exits) if (!prev.has(nx)) { prev.set(nx, cur); queue.push(nx); }
+    for (const [, nx] of openExits(cur)) if (!prev.has(nx)) { prev.set(nx, cur); queue.push(nx); }
   }
   return null;
 }
@@ -235,12 +260,21 @@ function pusherAtHour(id: string): number | null {
 /** 挑一件事做：没做过的优先，跟着任务走的其次；伤重了去闭关 */
 function choose(list: Act[], seen: Set<string>): Act {
   const w = list.map(a => {
-    if (a.k === 'rest') return S.hp < S.hpMax * 0.35 || S.wounds.hand + S.wounds.foot + S.wounds.inner >= 3 ? 20 : cur?.shi ? 0.02 : 0.2;
+    // 重伤闭关养不好（engine/shang.ts），找郎中、买药去；只有气血见底才闭关
+    if (a.k === 'rest') return S.hp < S.hpMax * 0.35 ? 20 : cur?.shi ? 0.02 : 0.2;
+    if (a.k === 'act' && heavy() && /^(看伤|买跌打酒|买内伤药)$/.test(a.v)) return 60;
+    if (a.k === 'go' && a.cure) return 50;
     // 盯着世事、要找的人眼下不在：多半是时辰不对，歇脚等一等
     if (a.k === 'wait') return cur?.shi && !roomNpcs(S.loc).some(pushers(cur.shi)) && !nearestWith(pushers(cur.shi)) ? 6 : 0.6;
     let x = a.k === 'go' ? 1 : 2;
     if (!cov.branch.has(a.key) && a.k === 'act') x += 12;
     if (a.k === 'act' && cur?.shi && SHI_NPC.get(cur.shi)!.has(a.id)) x += 30;
+    // 盯着世事：这个动作眼下会把它推到还没走过的那一步，直奔；推到走过的那一步（会就此了结），先放一放
+    if (a.k === 'act' && cur?.shi) {
+      const n = npc(a.id)!, b = pickBranch(n.actions[a.v as keyof typeof n.actions]);
+      const to = (b?.do ?? []).find(e => e.type === 'shi' && e.id === cur!.shi && e.to);
+      if (to) x = pushesNew([to]) ? x + 60 : x * 0.1;
+    }
     if (!seen.has(a.key)) x += 4;
     if (a.k === 'go' && a.quest) x += S.yue.length ? 40 : 6;
     // 盯着世事：能推动它的人就在附近（人犯出没的时辰短），直奔过去
@@ -260,6 +294,7 @@ function travel(to: string): void {
   S.min += m;
   if (S.min >= 1440) { S.min -= 1440; advanceDays(S, 1); }
   S.loc = to; S.sel = null; S.reply = null;
+  payFare(to);
   cov.room.add(to);
   const enc = rollEncounter(from, to, rng);
   if (enc) { markEncounter(enc); cov.enc.add(enc.id); playStory(enc.story, 0); }
@@ -270,6 +305,8 @@ function travel(to: string): void {
 }
 
 function step(seen: Set<string>): void {
+  // 带着治重伤的药，有重伤就吃（玩家会这样做）
+  for (const id of ['dieda', 'neishang']) if ((S.items[id] ?? 0) > 0 && heavy()) useItem(id);
   const a = choose(actions(), seen);
   seen.add(a.key);
   if (a.k === 'act') {
@@ -337,6 +374,8 @@ function play(r: Run): void {
     try { step(seen); checkYue(S); tickShi(); } catch (e) { err(`${where}报错：${(e as Error).message}`); }
     for (const [id, st] of Object.entries(S.shi ?? {})) cov.shi.add(`${id}.${st.at}`);
     if (r.shi && Object.keys(shiById(r.shi)!.steps).every(k => cov.shi.has(`${r.shi}.${k}`))) break;
+    // 这件事了结了，还有没走过的路：从头再起一回（另一个玩家会走另一条路）
+    if (r.shi) { const d = shiById(r.shi)!, at = S.shi?.[r.shi]?.at; if (at && isEnding(d, at)) run([{ type: 'shi', id: r.shi, to: d.first }]); }
     // 过了约期的约不该还挂着（界面上会一直写「今日」）
     if (S.yue.some(y => y.due < dayNo(S))) err('过了约期的约还挂着');
     check(where.replace(/第 \d+ 步/, '某一步'));
@@ -354,7 +393,7 @@ describe('机器玩家走遍江湖', () => {
   for (const q of QUESTS) for (let k = 0; k < 24 && !done(q.id); k++) play({ start: k % 2 ? 'skip' : 'new', steps: 5000, seed: 1000 + k, focus: q.id });
   // 还有没走到的世事的步，盯着那件事再走几局（往牵扯到它的人那里去，认真打，胜负以后挑没走过的路）
   const shiLeft = (id: string): boolean => Object.keys(shiById(id)!.steps).some(k => !cov.shi.has(`${id}.${k}`));
-  for (const d of SHI) for (let k = 0; k < 12 && shiLeft(d.id); k++) play({ start: 'skip', steps: 3000, seed: 2000 + k, shi: d.id });
+  for (const d of SHI) for (let k = 0; k < 24 && shiLeft(d.id); k++) play({ start: 'skip', steps: 3000, seed: 2000 + k, shi: d.id });
   const ms = Date.now() - t0;
 
   // 覆盖报告

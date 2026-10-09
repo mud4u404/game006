@@ -43,6 +43,8 @@ export interface Cond {
   attr?: { key: AttrKey; atLeast: number };
   /** 今天是这个约的约期，约还没了结（engine/shiguang.ts） */
   yue?: string;
+  /** 手上挂着这个约，还没到日子（约期未到时人物说「还没到日子」，不再从头自我介绍） */
+  yueAhead?: string;
   /** 现在的营生是这个身份（engine/shenfen.ts）：youxia 游侠、biaoshi 镖师…… */
   shenfen?: string;
   /** 正在办这件差事（接下了，还没交差） */
@@ -106,13 +108,17 @@ export type Effect =
   | { type: 'title'; value: string }
   | { type: 'chapter'; value: number }
   | { type: 'move'; to: string }
-  /** add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天） */
-  | { type: 'time'; add?: number; set?: number }
+  /**
+   * add：往后推若干分钟；set：直接设为当天第几分钟（若早于现在则到第二天）；
+   * until：拨到当天这个钟点，已经过了就不动（不跨日）。序章抓药用它：过了酉时再抓药，不会凭空丢一天
+   */
+  | { type: 'time'; add?: number; set?: number; until?: number }
   | { type: 'weather'; value: string }
   /** hpFrac、mpFrac：按上限的几成回，例如金疮药 hpFrac: 0.3 */
   | { type: 'heal'; hp?: number | 'full'; mp?: number | 'full'; hpAtLeast?: number; hpFrac?: number; mpFrac?: number }
   /** 治伤（医馆、郎中）：不写 levels 治好全部伤；写了就从最重的那处起，一共减这么多级。治完记一条见闻 */
-  | { type: 'cure'; levels?: number }
+  /** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；写了 zones 只治这几处（跌打酒治手足、内伤药治内息） */
+  | { type: 'cure'; levels?: number; zones?: ('hand' | 'foot' | 'inner')[] }
   | { type: 'feedReset' }
   /** 从 NEWS 里随机抽一条传闻，写进见闻，并可在文字里用 {news} 引用 */
   | { type: 'news' }
@@ -121,6 +127,8 @@ export type Effect =
    * 到了那一日在那里了结它（`yueDone`）；过了那一日还没了结，就是失约：执行 miss，再生一层心魔。
    */
   | { type: 'yue'; id: string; npc: string; at: string; inDays: number; text: string; miss?: Effect[] }
+  /** 这个人暂时走开几个时辰（跳了河、跑了、回去报信）：这段时间哪儿都见不到他（engine/world.ts） */
+  | { type: 'away'; npc: string; hours: number }
   | { type: 'yueDone'; id: string }
   /** 心魔：做了违背信条的事加一层，化解了减一层（还诺、赔罪、了却） */
   | { type: 'xinmo'; delta: number; why?: string }
@@ -166,6 +174,14 @@ export interface RoomDef {
   onEnter?: Branch[];
   /** 在地图上的位置（百分比） */
   map: [number, number];
+  /**
+   * 街市、码头、衙门这类地方：入夜（亥时到寅时）没写作息的人都回家了（engine/world.ts 的 roomNpcs）。
+   * 照旧在的：开店住宿、看病的（service 有「宿」「医」），手上有约在这里等你的，人物上写了 night 的。
+   * 写了它，desc 里就要有一段夜景（带 hour 条件），CI 查。
+   */
+  nightQuiet?: true;
+  /** 客船、渡船：上船付的船钱（文）。钱不够的，替船家撑篙抵船钱，路上多耗一个时辰（engine/world.ts 的 payFare） */
+  fare?: number;
 }
 
 /** 基础服务：医馆（看伤）、客栈（住店）、兵器铺、当铺、杂货铺。tests/content.test.ts「基础设施」按它查各地齐不齐 */
@@ -185,6 +201,8 @@ export interface NpcDef {
   at?: NpcAt | NpcAt[];
   /** 条件成立时改用另一个名字，例如通报姓名之后 */
   altName?: { if: Cond; name: string };
+  /** 夜里也在（住在这儿的、守夜的）：入夜回家的地点（RoomDef.nightQuiet）不把他请走 */
+  night?: true;
   /** 头像上的单字；物品用 icon */
   ini?: string;
   icon?: 'stele' | 'go' | 'boat' | 'door';
@@ -288,6 +306,7 @@ export interface FoeDef {
   firstTell?: number;
   tag: string;
   moves: string[];
+  /** 出招时的花样，自成一句（「一脚踢翻了粥桶」「刀光一闪」）：战报写成「某某一招『招名』，花样，直取你左肩！」，前面不拼兵器名 */
   flourish: string[];
   tells: TellDef[];
   asides: string[];

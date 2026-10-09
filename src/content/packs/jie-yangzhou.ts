@@ -184,7 +184,7 @@ const LIMAZI: FoeDef = {
 
 const SHUIZEI_FOE: FoeDef = {
   id: 'jy_feizei', name: '女飞贼', title: '梁上的黑影', ini: '贼', tone: 'purple',
-  weapon: '柳叶短刀', ws: '刀', tag: '好手',
+  weapon: '一对柳叶短刀', ws: '刀', tag: '好手',
   rank: 0.4, build: 'light' as const,
   moves: ['燕子三抄水', '回风掠影', '投石问路', '倒挂珠帘'],
   flourish: ['双刀剪出的寒光一闪即逝', '黑影贴着墙脊滑出半丈', '她落脚没有声音'],

@@ -124,6 +124,9 @@ describe('修为', () => {
     setState(newGame());
     expect(xiuwei(S).rank).toBe('不入流');
     setState(skipToYangzhou());
+    // 家传武功连断水在内（断水要对着残页自己参悟，开局没有）
+    S.skills.duanshui = { r: 0, p: 0 };
+    S.loadout.ult = 'duanshui';
     for (const id of Object.keys(S.skills)) S.skills[id]!.r = 8;
     expect(xiuwei(S).rank).toBe('绝顶');
     S.skills.jh_bagua = { r: 8, p: 0 };
