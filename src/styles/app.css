@@ -561,3 +561,5 @@ html.preview #app{height:calc(100% - var(--pv-h))}
 .acts.zhu .act:disabled{opacity:.45}
 .resp-help{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13.5px;line-height:1.6}
 .resp-help b{color:var(--fg)}
+.qb-memo{font-family:var(--f-serif);font-size:13px;line-height:1.65;color:var(--muted)}
+.quest .qs{color:var(--muted)}

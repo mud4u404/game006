@@ -3,18 +3,17 @@
  * 读 QuestDef 每一步的 who、hint、need、fail（content/types.ts 的 QuestStage），算出：
  * - 走到哪：做过的步骤、这一步、共几步；
  * - 去哪、找谁：找的人按作息眼下在哪，不在的话什么时辰在；
- * - 卡在哪：门槛逐条打勾，钱、根基这类写出差多少（dsl.ts 的 lackOf）；
+ * - 卡在哪：写成心里的盘算，只说玩家自己知道的（见 questNav 上面的注释）；
  * - 做不成了：fail 成立，写明为什么。
  * 纯函数，只读 S（试作息时临时改 S.min，算完还原）。见闻簿、江湖页横幅、地图都读它。
  */
 import { S, pushFeed } from '../core/state';
 import { shichen } from '../core/time';
 import { NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
-import { REALMS, SECT_RANKS } from '../content/skills';
+import { SECT_RANKS } from '../content/skills';
 import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
 import { lackOf, test } from './dsl';
 import { npcName, pathMin, roomNpcs, roomObjs, travelMin } from './world';
-import { gongxianOf } from './shenfen';
 
 /** 能做：去了就办得成；要等：只差时辰、人不在；卡住：差别的门槛；未竟：做不成了；了结：办完了 */
 export type NavState = '能做' | '要等' | '卡住' | '未竟' | '了结';
@@ -45,7 +44,10 @@ export interface QuestNav {
   /** 路上要多少分钟（就在此处为 0） */
   dist: number;
   who?: NavWho;
+  /** 内部核对用（tests/zoubian.test.ts 的「说真话」），界面不逐条列出 */
   needs: NavNeed[];
+  /** 见闻簿上写的心里的盘算：缘故、时辰、还差什么，都是玩家自己知道的 */
+  memo: string[];
   state: NavState;
   /** 一句话的缘故：要等、卡住、未竟时写，横幅和见闻簿都用 */
   why: string;
@@ -97,7 +99,16 @@ function needsOf(st: QuestStage): NavNeed[] {
   });
 }
 
-const needLine = (n: NavNeed): string => n.lack ? `${n.text}（${n.lack}）` : n.text;
+/**
+ * 不剧透、不出戏（负责人 10-09：「只是方便玩家知道自己的进度，但不能剧透！更不能出戏地在那讲解！」）：
+ * - 见闻簿写的是主角自己心里有数的事，写成心里的盘算，不挂「能做、卡住」这类签，不打勾打叉；
+ * - 门槛只说玩家自己掂量得出的（钱、根基、侠义、火候、身上带的东西、时辰）；剧情上的门槛（旗标、任务、世事）一概不点破，
+ *   只说一句「还缺些眉目」；
+ * - 找的人，只有这一步的标题、盘算里已经点了名的，才写他什么时辰在哪；没点名的（还没查出来是谁）不提。
+ */
+const SAYABLE = new Set(['silver', 'attr', 'xia', 'eming', 'realm', 'item', 'noItem', 'hour', 'learned', 'gongxian', 'noSect', 'sect']);
+const sayable = (c: Cond): boolean => Object.keys(c).every(k => SAYABLE.has(k) || k === 'any') && (!c.any || c.any.every(sayable));
+const MEIMU = '这事还缺些眉目，再四处走走、打听打听。';
 
 /** 一件心事的导航；没开头、没这件事的为空 */
 export function questNav(id: string): QuestNav | null {
@@ -107,57 +118,61 @@ export function questNav(id: string): QuestNav | null {
   const stage = Math.min(S.quests[id], total - 1);
   const st = q.stages[stage];
   const base = { id, name: q.name, stage, total, past: q.stages.slice(0, stage).map(s => s.title), title: st.title, hint: st.hint };
-  if (stage === total - 1) return { ...base, dist: 0, needs: [], state: '了结', why: '' };
+  if (stage === total - 1) return { ...base, dist: 0, needs: [], memo: [], state: '了结', why: '' };
   const fail = [q.fail, st.fail].find(f => f && test(f.if));
   const needs = needsOf(st);
-  const who = st.who ? whoNav(st.who, st.to) : undefined;
+  // 找的人点没点过名：标题、盘算里写了他的名字，玩家才算知道是谁
+  const whoRaw = st.who ? whoNav(st.who, st.to) : undefined;
+  const who = whoRaw && `${st.title}${st.hint ?? ''}`.includes(whoRaw.name) ? whoRaw : undefined;
   const to = who?.now ?? st.to;
-  const nav: QuestNav = { ...base, to, toName: to ? room(to).name : undefined, dist: to && to !== S.loc ? travelMin(pathMin(S.loc, to)) : 0, who, needs, state: '能做', why: '' };
-  if (fail) return { ...nav, state: '未竟', why: fail.text };
-  const miss = (st.need ?? []).map((g, i) => ({ g, n: needs[i] })).filter(x => !x.n.ok);
-  const hard = miss.filter(x => !timeOnly(x.g));
-  if (hard.length) return { ...nav, state: '卡住', why: '差：' + hard.map(x => needLine(x.n)).join('；') };
-  if (miss.length) return { ...nav, state: '要等', why: miss.map(x => x.n.text).join('；') };
-  if (who && !who.now) {
-    const at = st.to ?? roomsOf(who.id)[0];
-    return who.when
-      ? { ...nav, state: '要等', why: `${who.name}${who.when}在${at ? room(at).name : ''}` }
-      : { ...nav, state: '卡住', why: `眼下哪儿都见不到${who.name}` };
+  const nav: QuestNav = { ...base, to, toName: to ? room(to).name : undefined, dist: to && to !== S.loc ? travelMin(pathMin(S.loc, to)) : 0, who, needs, memo: [], state: '能做', why: '' };
+  if (fail) return { ...nav, state: '未竟', why: fail.text, memo: [fail.text] };
+  const miss = (st.need ?? []).filter((_g, i) => !needs[i].ok);
+  const plot = miss.filter(g => !sayable(g.if));
+  const hard = miss.filter(g => sayable(g.if) && !timeOnly(g));
+  const wait = miss.filter(g => timeOnly(g));
+  const memo: string[] = [];
+  let state: NavState = '能做', why = '';
+  if (plot.length) { state = '卡住'; why = '还缺些眉目'; memo.push(MEIMU); }
+  if (hard.length) { state = '卡住'; why ||= `还差：${hard.map(g => g.text).join('、')}`; memo.push(`还差：${hard.map(g => g.text).join('、')}。`); }
+  if (wait.length && state === '能做') { state = '要等'; why = `${wait.map(g => g.text).join('、')}再去`; memo.push(`${why}。`); }
+  if (whoRaw && !whoRaw.now && state === '能做') {
+    state = whoRaw.when ? '要等' : '卡住';
+    const at = st.to ?? roomsOf(whoRaw.id)[0];
+    why = !who ? '眼下寻不着人' : whoRaw.when ? `${who.name}${whoRaw.when}在${at ? room(at).name : ''}` : `这几日不见${who.name}的人影`;
+    memo.push(`${why}。`);
   }
-  return nav;
+  return { ...nav, state, why, memo };
 }
 
 /** 记挂着的心事做不成了：放下横幅，动态里记一笔。界面每次重画时跑（ui/shell.ts 的 render） */
 export function dropFailedTrack(): void {
   const n = S.track ? questNav(S.track) : null;
   if (n?.state !== '未竟') return;
-  pushFeed('江湖', `「${n.name}」做不成了：${n.why}`);
+  pushFeed('江湖', `${n.why}「${n.name}」这件心事，只好放下了。`);
   S.track = '';
 }
 
 /* ---------- 师门：升下一个地位要什么（docs/paiban.md E04、E05） ---------- */
 
-/** 一个条件拆成见闻簿上的几道门槛；剧情上的条件（旗标、任务……）不剧透，合成一句「还有本门的规矩」 */
+/** 一个条件拆成几道门槛，写成不带数的心里话（「罗汉拳火候还不到」）；剧情上的条件合成一句「还有些本门的规矩没做到」 */
 function gatesOf(c: Cond): NavNeed[] {
   const out: NavNeed[] = [];
-  const one = (text: string, cond: Cond, lack?: string): void => {
-    const ok = test(cond);
-    out.push({ text, ok, lack: ok ? null : lack ?? lackOf(cond) });
-  };
-  if (c.realm) one(`${skillById(c.realm.skill)?.name ?? c.realm.skill}练到${REALMS[c.realm.atLeast ?? 0]}`, { realm: c.realm });
-  if (c.gongxian !== undefined) one(`本门贡献 ${c.gongxian}`, { gongxian: c.gongxian }, `眼下 ${gongxianOf(S)}`);
-  if (c.xia !== undefined) one(`侠义 ${c.xia}`, { xia: c.xia });
-  if (c.attr) one(`${c.attr.key} ${c.attr.atLeast}`, { attr: c.attr });
-  if (c.silver !== undefined) one(`${c.silver} 文`, { silver: c.silver });
-  if (c.learned) one(`学会${skillById(c.learned)?.name ?? c.learned}`, { learned: c.learned });
-  if (c.item) one(`带着${itemById(c.item.id)?.name ?? c.item.id}`, { item: c.item });
+  const one = (text: string, cond: Cond): void => { const ok = test(cond); out.push({ text, ok, lack: null }); };
+  if (c.realm) one(`${skillById(c.realm.skill)?.name ?? c.realm.skill}火候还不到`, { realm: c.realm });
+  if (c.gongxian !== undefined) one('替师门出的力还不够', { gongxian: c.gongxian });
+  if (c.xia !== undefined) one('侠义上还欠些', { xia: c.xia });
+  if (c.eming !== undefined) one('江湖上的名头还不够响', { eming: c.eming });
+  if (c.attr) one(`${c.attr.key}还欠些`, { attr: c.attr });
+  if (c.silver !== undefined) one('银钱不够', { silver: c.silver });
+  if (c.learned) one(`还没学会${skillById(c.learned)?.name ?? c.learned}`, { learned: c.learned });
+  if (c.item) one(`身上没带${itemById(c.item.id)?.name ?? c.item.id}`, { item: c.item });
   if (c.any) {
     const subs = c.any.map(x => gatesOf(x).map(n => n.text).join('、')).filter(Boolean);
-    const ok = c.any.some(x => test(x));
-    if (subs.length) out.push({ text: subs.join('，或者'), ok, lack: null });
+    if (subs.length) out.push({ text: subs.join('，或者'), ok: c.any.some(x => test(x)), lack: null });
   }
   const plot: Cond = { flag: c.flag, notFlag: c.notFlag, quest: c.quest, shi: c.shi, hour: c.hour, rel: c.rel };
-  if (Object.values(plot).some(v => v !== undefined) && !test(plot)) out.push({ text: '还有本门的规矩没做到，问问师父', ok: false, lack: null });
+  if (Object.values(plot).some(v => v !== undefined) && !test(plot)) out.push({ text: '还有些本门的规矩没做到', ok: false, lack: null });
   return out;
 }
 

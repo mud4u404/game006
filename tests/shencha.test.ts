@@ -215,7 +215,8 @@ describe('门派：辞别、叛门、师门导航（docs/paiban.md E04、E05）'
     const n = sectNav()!;
     expect(n.next).toBe('外门');
     expect(n.who).toBeTruthy();
-    expect(n.needs.map(x => x.text)).toEqual(expect.arrayContaining(['罗汉拳练到略有小成', '侠义 15']));
+    expect(n.needs.map(x => x.text)).toEqual(expect.arrayContaining(['罗汉拳火候还不到', '侠义上还欠些']));
+    expect(n.needs.map(x => x.text).join('')).not.toMatch(/\d/);
     expect(n.needs.some(x => !x.ok)).toBe(true);
   });
 });
