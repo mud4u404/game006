@@ -38,6 +38,14 @@ const FOE_DODGE = [(f: FoeDef) => `${f.name}侧身急退，堪堪避过。`, (f:
 const ME_DODGE = ['你足尖一点，身形斜飘，锋刃贴着衣角削过。', '你侧身一让，顺势一引，将来势卸开。'];
 const ME_PARRY = [(w: string) => `你${w}势一封，只震得虎口发麻。`, (w: string) => `你${w}上一搭一引，将这一招带偏了半尺。`];
 const ME_HIT = [(p: string) => `你闪避不及，${H(p)}已被扫中，鲜血迸流。`, (p: string) => `你急忙后跃，终究慢了半分，${H(p)}一阵剧痛。`, (p: string) => `你${H(p)}中招，踉跄退了两步。`];
+/** 点到为止的那几句另写（审查 F03、文字审查：拿正则把「鲜血迸流」换成「点到即收」，换出「左肩点到即收」这样的病句） */
+const FOE_HIT_SPAR = [
+  (f: FoeDef, p: string) => `${f.name}闪避不及，${H(p)}被你点中，你随即收了劲。`,
+  (f: FoeDef, p: string) => `你这一招在${f.name}${H(p)}上一沾即走。${f.name}点头道：「好！」`,
+  (f: FoeDef, p: string) => `${f.name}躲闪稍慢，${H(p)}被你拂中，退开一步。`,
+  (f: FoeDef, p: string) => `${f.name}${H(p)}被你点了一下，脚下一顿。`
+];
+const ME_HIT_SPAR = [(p: string) => `你闪避不及，${H(p)}被他指尖点中，一阵酸麻。`, (p: string) => `你急忙后跃，终究慢了半分，${H(p)}被他轻轻拂了一下。`, (p: string) => `你${H(p)}被点中，退了两步。`];
 const SAY: Record<RespKey, (f: FoeDef, sname: string) => string> = {
   block: (_f, n) => `你沉腰坐马，运起${M(n)}，硬接这一招！`,
   dodge: (_f, n) => `你足尖一点，${M(n)}，身形斜飘而起——`,
@@ -152,8 +160,9 @@ function fightHTML(c: Fight): string {
  * 点到为止（审查 F03）：切磋、考校、对手不是练家子（饿急了的孩子）时，战报不见血。
  * 长老刚说「只许点到，不许见血」，下一行就是「鲜血迸流」，出戏
  */
+/** 武功里写的出招、杀招句子是内容包给的，没法逐句另写：这几处见血的说法照旧换掉，换出来的要读得通 */
 const GENTLE: [RegExp, string][] = [
-  [/鲜血迸流/g, '点到即收'], [/受了重创/g, '被点中要处'], [/血流不止/g, '一阵发麻'], [/一阵剧痛/g, '一阵酸麻'],
+  [/，?鲜血迸流/g, ''], [/受了重创/g, '被点中要处'], [/血流不止/g, '一阵发麻'], [/一阵剧痛/g, '一阵酸麻'],
   [/受伤/g, '被点中'], [/结结实实打在/g, '轻轻点在'], [/破开护体真气，余劲震得/g, '压住了劲，震得']
 ];
 const gentle = (f: FoeDef): boolean => !!f.spar || (f.weak ?? 1) <= 0.2;
@@ -226,7 +235,7 @@ function narrate(evs: Ev[]): void {
           const t = `你使一招${M(mv.name)}，${mv.text}`;
           if (e.res === 'dodge') bubble('me', t + pick(FOE_DODGE)(f));
           else if (e.res === 'parry') bubble('me', t + pick(FOE_PARRY)(f));
-          else { bubble('me', t + pick(FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
+          else { bubble('me', t + pick(gentle(f) ? FOE_HIT_SPAR : FOE_HIT)(f, p) + (e.crit ? `<span class="note">${weaponWord(S)}势如虹</span>` : ''), e.dmg, 'out'); mark(p); }
         } else {
           // 花样是自成一句的（「一脚踢翻了粥桶」「刀光一闪」），前面不拼兵器名：拼了就成「尖刀一脚踹翻了箩筐」
           let t = `${f.name}一招${MO(pick(f.moves))}，${pick(f.flourish)}，直取你${p}！`;
@@ -234,7 +243,7 @@ function narrate(evs: Ev[]): void {
           else if (e.res === 'parry') bubble('foe', t + pick(ME_PARRY)(weaponWord(S)));
           else {
             if (e.charging) { cancelCharge(); t += '你正凝神运功，躲闪不及——'; }
-            bubble('foe', t + pick(ME_HIT)(p), e.dmg, 'in');
+            bubble('foe', t + pick(gentle(f) ? ME_HIT_SPAR : ME_HIT)(p), e.dmg, 'in');
             hurtFx(e.dmg);
           }
         }
@@ -621,7 +630,7 @@ function usePerform(i: number): void {
   bubble('me', fmt(x.text, { foe: c.f.name, part }));
   const evs = c.d.perform(i), e = evs.find(y => y.k === 'perform');
   if (e && e.k === 'perform') {
-    if (e.dmg > 0) { bubble('foe', `${c.f.name}${pick(['闷哼一声', '闪避不及', '回' + c.f.ws + '不及'])}，${H(part + '受伤')}。`, e.dmg, 'out'); mark(part); }
+    if (e.dmg > 0) { bubble('foe', gentle(c.f) ? `${c.f.name}回${c.f.ws}不及，${H(part)}被你点中。` : `${c.f.name}${pick(['闷哼一声', '闪避不及', '回' + c.f.ws + '不及'])}，${H(part + '受伤')}。`, e.dmg, 'out'); mark(part); }
     else if (x.hits) bubble('foe', `${c.f.name}拼着衣衫被划破，堪堪避过这一招。`);
     sayFx(e.fx);
   }

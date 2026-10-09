@@ -23,7 +23,7 @@ function wanted(id: string, name: string, start: Cond, text: { zaitao: [string, 
   return {
     id, name, region: 'yz', start, first: 'zaitao',
     steps: {
-      zaitao: { now: text.zaitao[0], news: text.zaitao[1], where: 'yz_fuya', next: { days: days[0], to: 'zuoan' } },
+      zaitao: { now: text.zaitao[0], news: text.zaitao[1], where: 'yz_zhaobi', next: { days: days[0], to: 'zuoan' } },
       zuoan: { now: text.zuoan[0], news: text.zuoan[1], next: { days: days[1], to: 'taozou' } },
       taozou: { now: text.taozou[0], news: text.taozou[1] },
       luowang: { now: text.luowang },
@@ -261,7 +261,7 @@ const NPCS: NpcDef[] = [
   },
   /* ---------- 府衙大牢：捕快押来的人犯，提审得出下一个人犯的下落 ---------- */
   {
-    id: 'lsm_laotou', name: '牢头', ini: '牢', tone: 'gray', brief: '晃着一串钥匙', night: true, at: { room: 'yz_fuya' },
+    id: 'lsm_laotou', name: '牢头', ini: '牢', tone: 'gray', brief: '晃着一串钥匙', night: true, at: { room: 'yz_fuya_lao' },
     look: '矮胖，一脸油汗，腰上的钥匙有二三十把，走起路来叮当乱响。大牢里的事，没有他不知道的。',
     verbs: ['交谈', '观察', { verb: '提审', if: { sect: LSM } }],
     actions: {

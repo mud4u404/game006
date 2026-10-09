@@ -9,7 +9,7 @@ import { tickShi } from './shishi';
 import { S, pushFeed, type GameState, type Yue, type Zhu } from '../core/state';
 import { cn } from '../core/util';
 import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
-import { NEWS, npc, room, skillById } from '../content';
+import { NEWS, jobById, npc, room, skillById } from '../content';
 import type { Effect, SkillId } from '../content/types';
 import { run, test } from './dsl';
 import { gainProf } from './growth';
@@ -166,6 +166,9 @@ export function jingxiu(s: GameState, days: number, rng: () => number = Math.ran
   return { days, used, gains, breaks, healed: jx.healed, gongli: jx.gongli, zouhuo, news, missed, lodging: zhu, cost, lusuDays };
 }
 
+/** 这个约是榜上揭的差事（JobDef.bang），或者交给一件物件的：误了期不算失信于人 */
+const bangYue = (y: Yue): boolean => y.id.startsWith('job_') && (!!jobById(y.id.slice(4))?.bang || !!npc(y.npc)?.obj);
+
 /** 过了约期还没了结的约：失约。执行失约的后果，生一层心魔。返回失约的说明 */
 export function checkYue(s: GameState): string[] {
   // 日子往前走了：轻伤过一日自己好（engine/shang.ts）
@@ -175,8 +178,8 @@ export function checkYue(s: GameState): string[] {
     s.yue = s.yue.filter(x => x !== y);
     const who = npcName(y.npc);
     if (y.miss) run(y.miss);
-    // 差事交给一块木榜的（悬赏榜），误了期是营生上的事，不是失信于人：不生心魔（审查 G18：对木榜心中有愧）
-    if (!(y.id.startsWith('job_') && npc(y.npc)?.obj)) addXinmo(s, 1, `失约于${who}`);
+    // 榜上揭的差事（JobDef.bang，府衙照壁的悬赏），误了期是营生上的事，不是失信于人：不生心魔（审查 G18：对木榜心中有愧）
+    if (!bangYue(y)) addXinmo(s, 1, `失约于${who}`);
     const line = `你没有赴${who}的约（${y.text}）。`;
     pushFeed('江湖', line);
     out.push(line);

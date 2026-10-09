@@ -10,7 +10,7 @@ const NPCS: NpcDef[] = [
   {
     id: 'bs_zhao', name: '钱老四', ini: '钱', tone: 'gray', brief: '端着茶盘',
     look: '三十来岁的汉子，围裙油亮，端茶的手稳当，眼神却总往官道两头瞟——被劫怕了。',
-    at: { room: 'yz_guandao' },
+    at: { room: 'yz_chapeng' },
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
@@ -26,14 +26,14 @@ const NPCS: NpcDef[] = [
   {
     id: 'bs_wu', name: '吴三', ini: '吴', tone: 'blue', brief: '擦着铁尺',
     look: '四十来岁的老汉，鬓角花白，腰间别着一根包铁的铁尺。行伍出身的人，站有站相，坐有坐相。',
-    at: { room: 'yz_guandao' },
+    at: { room: 'yz_chapeng' },
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
         { if: { flag: 'bs_wu_ok' },
           text: '「说好了的，断刀七敢出来，我这条铁尺就不是摆设。」吴三把铁尺别回腰间，「你只管去引他出来。」' },
         { if: { flag: 'jy_sun_chuan' },
-          text: '吴三看了你一眼：「东关街盐枭的事，我听说了。」他顿了顿，「有胆有识——行，断刀七的事，算我一份。我在官道上等他，你只管把他引到这儿来。」',
+          text: '吴三看了你一眼：「东关街盐枭的事，我听说了。」他顿了顿，「有胆有识——行，断刀七的事，算我一份。我在茶棚里等着，他敢在官道上露头，你只管动手，我从后头堵他。」',
           do: [{ type: 'flag', flag: 'bs_wu_ok' },
             { type: 'feed', tag: '江湖', text: '老捕快吴三答应出手，帮你对付断刀七。' }] },
         { if: { xia: 10 },
@@ -47,7 +47,7 @@ const NPCS: NpcDef[] = [
   {
     id: 'bs_zheng', name: '郑石', ini: '郑', tone: 'jade', brief: '擦着猎弓',
     look: '粗壮的汉子，肩宽背厚，腰间挂着猎弓和箭囊。手上全是茧子和旧伤，一看就是山林里讨生活的。',
-    at: { room: 'yz_guandao' },
+    at: { room: 'yz_chapeng' },
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [

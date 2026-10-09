@@ -11,7 +11,7 @@ import type { ContentPack, FoeDef, JobDef, NewsDef, NpcDef } from '../types';
 const JOBS: JobDef[] = [
   { id: 'smcs_gb_xin', sect: '丐帮', tier: 1, title: '替分舵往瓜洲送一封信', npc: 'smcs_gz_laohua', at: 'gz_town', days: 3, again: 3 },
   { id: 'smcs_gb_zhou', sect: '丐帮', tier: 1, k: 1.5, title: '夜里护着龙王庙的粥棚', npc: 'bs2_bao', at: 'bs2_longwang', days: 2, again: 4 },
-  { id: 'smcs_jw_xun', sect: '军伍', tier: 1, title: '夜里在官道上巡营', npc: 'bs2_han', at: 'yz_guandao', days: 2, again: 2 },
+  { id: 'smcs_jw_xun', sect: '军伍', tier: 1, title: '夜里在官道上巡营', npc: 'bs2_han', at: 'yz_mubing', days: 2, again: 2 },
   { id: 'smcs_jw_liang', sect: '军伍', tier: 1, k: 1.5, title: '押一车军粮去瓜洲码头', npc: 'smcs_liangguan', at: 'gz_pier', days: 3, again: 4 }
 ];
 

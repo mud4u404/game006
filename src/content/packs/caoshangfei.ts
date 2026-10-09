@@ -87,7 +87,7 @@ const NPCS: NpcDef[] = [
   },
   {
     id: 'zy_zhangfang', name: '牢里的账房', ini: '账', tone: 'gray', brief: '扒着牢门喊冤', night: true,
-    at: { room: 'yz_fuya', if: { quest: { id: Q, atLeast: 1 }, notFlag: 'csf_zhangfang_free' } },
+    at: { room: 'yz_fuya_lao', if: { quest: { id: Q, atLeast: 1 }, notFlag: 'csf_zhangfang_free' } },
     look: '五十来岁，瘦得颧骨突出，长衫皱成一团，袖口还沾着墨迹。他扒着后院牢门的木栅，嗓子已经喊哑了。',
     verbs: ['交谈', '观察'],
     actions: {

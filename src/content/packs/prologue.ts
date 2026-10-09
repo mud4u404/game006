@@ -32,7 +32,7 @@ const STORIES: StoryDef[] = [
       choices: [
         { label: '躲在暗处偷学', sub: '悟性 +2　寒江剑法熟练 +80', do: [{ type: 'attr', key: '悟性', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 80 }],
           result: '你记下了七八式，回去在床上比划了一夜。第二天江伯看你的眼神有些古怪，却什么也没说。' },
-        { label: '走出去，求他教你', sub: '胆魄 +2　寒江剑法熟练 +40', do: [{ type: 'attr', key: '胆魄', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 40 }, { type: 'flag', flag: 'mem3_ask' }],
+        { label: '走出去，求他教你', sub: '胆魄 +2　寒江剑法熟练 +80', do: [{ type: 'attr', key: '胆魄', delta: 2 }, { type: 'prof', skill: 'hanjiang', amount: 80 }, { type: 'flag', flag: 'mem3_ask' }],
           result: '江伯沉默了很久，才道：「这剑法，本不该由我来教你。」可从那以后，每个雨夜，他都会带你到江边。' },
         { label: '回屋彻夜难眠，学着他平日的吐纳打坐', sub: '根骨 +2　寒江心法熟练 +80', do: [{ type: 'attr', key: '根骨', delta: 2 }, { type: 'prof', skill: 'xinfa', amount: 80 }],
           result: '不知过了多久，你觉得小腹里升起一缕暖意，顺着脊背缓缓流转。天亮时，你一点也不觉得困。' }
@@ -43,6 +43,20 @@ const STORIES: StoryDef[] = [
     { tag: '序章 · 瓜洲夜雨', title: '三月初五 · 瓜洲渡',
       paras: ['你在瓜洲渡口长大，跟着江伯打鱼、撑船，偶尔替人送货过江。', '江伯这些日子咳得厉害，人也瘦了一圈。', '今天，天阴得很低。'],
       choices: [{ label: '去看看江伯', next: -1 }] }
+  ] },
+
+  // 跳过序章（docs/paiban.md A8）：也要取名，看一张三句话的前情，再去扬州
+  { id: 'p_skip', endChapter: { small: '第一回', big: '扬州' }, cards: [
+    { tag: '前情', title: '瓜洲夜雨',
+      paras: [
+        '你在瓜洲渡口长大，跟着江伯打鱼撑船，雨夜里偷看过他在江边练剑。',
+        '三月初五那一夜，一伙黑衣人闯进渡口小屋，江伯为护你挨了一刀，临去前塞给你半块玉佩、一页残谱，只说：「去扬州……大明寺……找了尘……」',
+        '黑衣人逃走时掉下一块铜牌，上面铸着一个「厂」字。你埋了江伯，搭上了去扬州的船。'
+      ],
+      choices: [{ label: '往下' }] },
+    { tag: '名字', title: '你叫什么名字', input: 'name',
+      paras: ['江伯说，你本姓沈。', '至于名字——'],
+      choices: [{ label: '就叫这个名字', next: -1 }] }
   ] },
 
   { id: 'p_night', cards: [
@@ -68,10 +82,10 @@ const STORIES: StoryDef[] = [
         '话音未落，那只手便垂了下去。'
       ],
       choices: [{ label: '江伯——' }] },
-    { tag: '获得', title: '江伯的遗物',
+    // 江伯刚咽气：不挂「获得」的标签（docs/paiban.md A15，依据「金庸」）
+    { tag: '序章', title: '江伯的遗物',
       paras: ['玉佩上刻着一个「沈」字，还有半个「寒」字，断口参差，另一半不知在何处。', '油布包里是一页剑谱，墨迹被水洇开了一半，只认得出「断水」二字，和一式剑招的起手。'],
       // 开局不给绝技（负责人 10-09：「开局就有绝技比较扯」）：残页只是一页残谱，断水要自己参悟（content/packs/core.ts 的 scroll）
-      gains: ['半块玉佩', '断水残页'],
       choices: [{ label: '掩埋江伯', do: [
         { type: 'item', id: 'jade', delta: 1 }, { type: 'item', id: 'scroll', delta: 1 }, { type: 'item', id: 'med', delta: -1 }
       ] }] },
@@ -82,7 +96,8 @@ const STORIES: StoryDef[] = [
         '黑衣首领逃走时，掉下了一块铜牌，上面铸着一个「厂」字。你把它和玉佩收在了一起。',
         '码头上，一条去扬州的船正要起锚。'
       ],
-      choices: [{ label: '登船 · 去扬州', next: -1, do: [
+      choices: [
+        { label: '登船 · 去扬州', next: -1, do: [
         { type: 'item', id: 'badge', delta: 1 },
         { type: 'quest', id: 'prologue', stage: 3 }, { type: 'chapter', value: 1 }, { type: 'shenfen', id: 'youxia' },
         { type: 'move', to: 'hu' }, { type: 'time', set: 9 * 60 + 20 }, { type: 'weather', value: '微雨' },
@@ -93,7 +108,10 @@ const STORIES: StoryDef[] = [
         { type: 'feed', tag: '传闻', text: '黑风寨劫了漕帮三船盐货，漕帮放出悬赏。' },
         { type: 'feed', tag: '主线', text: '江伯遗言：去扬州大明寺，找了尘大师。' },
         { type: 'quest', id: 'main1', stage: 0 }, { type: 'track', id: 'main1' }
-      ] }] }
+      ] },
+        { label: '在坟前再坐一会儿', if: { notFlag: 'p_fenqian' }, next: 2, do: [{ type: 'flag', flag: 'p_fenqian' }],
+          result: '你在坟前坐了很久。江上起了雾，又散了，来来往往的船，没有一条是江伯的。你想起他补网时总哼的那支调子，哼了两句，哼不下去了。' }
+      ] }
   ] }
 ];
 

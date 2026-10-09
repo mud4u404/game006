@@ -215,7 +215,45 @@ describe('门派：辞别、叛门、师门导航（docs/paiban.md E04、E05）'
     const n = sectNav()!;
     expect(n.next).toBe('外门');
     expect(n.who).toBeTruthy();
-    expect(n.needs.map(x => x.text)).toEqual(expect.arrayContaining(['罗汉拳练到略有小成', '侠义 15']));
+    expect(n.needs.map(x => x.text)).toEqual(expect.arrayContaining(['罗汉拳火候还不到', '侠义上还欠些']));
+    expect(n.needs.map(x => x.text).join('')).not.toMatch(/\d/);
     expect(n.needs.some(x => !x.ok)).toBe(true);
+  });
+});
+
+describe('文字（docs/wenfeng.md）', () => {
+  it('杀招的题字一律写「· 杀招」', async () => {
+    const { SKILLS } = await import('../src/content');
+    const bad = SKILLS.filter(k => k.ult?.title && !k.ult.title.endsWith(' · 杀招')).map(k => `${k.id}：${k.ult!.title}`);
+    expect(bad).toEqual([]);
+  });
+});
+
+describe('剧情选项写倾向，不写数（docs/paiban.md A9、A10、H16）', () => {
+  it('选之前：侠义、恶名、根基写成倾向，花钱照实写，历练和熟练不提', async () => {
+    const { leanText, gainTags } = await import('../src/ui/qingxiang');
+    expect(leanText('侠义 +2　恶名 −2')).toBe('侠义之举　洗些恶名');
+    expect(leanText('银两 −400 文，侠义 +5')).toBe('花四百文　侠义之举');
+    expect(leanText('悟性 +2　寒江剑法熟练 +80')).toBe('悟性见长');
+    // 根基五项（AttrKey）都认得，不漏一项
+    for (const k of ['体魄', '根骨', '身法', '悟性', '胆魄']) expect(leanText(`${k} +3`), k).toBe(`${k}见长`);
+    expect(leanText('恶名 +3　汪家告官')).toBe('会落恶名　汪家告官');
+    expect(leanText('历练 +20')).toBe('');
+    expect(gainTags('侠义 +2　恶名 −2')).toEqual(['侠义 +2', '恶名 −2']);
+  });
+  it('童年三忆：三条路给的一样多，「求江伯教你」不再只得一半', async () => {
+    const { storyById } = await import('../src/content');
+    const card = storyById('p_open')!.cards.find(c => c.choices.some(x => x.label.includes('求他教你')))!;
+    const amount = (k: number): number => card.choices[k].do!.filter(e => e.type === 'prof').reduce((a, e) => a + (e as { amount: number }).amount, 0);
+    expect(new Set([0, 1, 2].map(amount)).size).toBe(1);
+  });
+});
+
+describe('序章的默认路径（冒烟脚本和机器玩家都按「第一个选项」往前点）', () => {
+  it('「天明」那张卡的第一个选项是登船；「坟前再坐一会儿」只能排在后面', async () => {
+    const { storyById } = await import('../src/content');
+    const card = storyById('p_death')!.cards.find(c => c.title === '天明')!;
+    expect(card.choices[0].label).toContain('登船');
+    expect(card.choices.map(c => c.label)).toContain('在坟前再坐一会儿');
   });
 });

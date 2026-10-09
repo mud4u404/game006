@@ -445,7 +445,7 @@ export interface PerformDef {
 
 /** 绝技槽的「杀招」：怒气满时施展，全屏题字，震撼收场 */
 export interface UltDef {
-  /** 题字时显示的小字，例如「寒江剑法 · 绝招」 */
+  /** 题字时显示的小字，例如「寒江剑法 · 杀招」（一律写「· 杀招」，docs/wenfeng.md） */
   title: string;
   /** 演出文字，可用 {foe} {part} */
   text: string;
@@ -695,6 +695,11 @@ export interface JobDef {
   again?: number;
   /** 报酬的倍数（难办的差事多给些），不写为一 */
   k?: number;
+  /**
+   * 榜上揭的差事（府衙照壁的悬赏）：在登记的书办那里揭、那里交差。
+   * 误了期是营生上的事，不是失信于人：这一张白揭了，过几日才能再揭，不生心魔（审查 G18）
+   */
+  bang?: true;
 }
 
 /**

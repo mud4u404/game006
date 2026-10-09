@@ -51,7 +51,8 @@ export function questDone(s: GameState, q: QuestDef): number {
   const n = questLilian(q);
   addLilian(s, n);
   pushFeed('江湖', `「${q.name}」了结，历练 +${n}。`);
-  emit('toast', `历练 +${n}`);
+  // 序章了结在江伯坟前，紧接着题字「第一回」：不弹「历练 +」，动态里记着就够（docs/paiban.md A15）
+  if (q.id !== 'prologue') emit('toast', `历练 +${n}`);
   return n;
 }
 

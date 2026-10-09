@@ -69,37 +69,24 @@ function shiRow(r: ShiRow): string {
           ${where ? `<span class="qb-stage">${where}${r.round > 1 ? ` · 第${cn(r.round)}回` : ''}</span>` : ''}
           <p>${r.now}</p>
           ${r.stale ? '<small class="qb-to">这是你上回听说的，后来怎样，得再去打听。</small>' : ''}
-          ${r.missed ? `<small class="qb-why">这一回你没赶上。${r.again ? '这样的事，过些日子还会有。' : ''}</small>` : ''}
+          ${r.missed ? `<small class="qb-memo">这一回你没赶上。${r.again ? '这样的事，过些日子还会有。' : ''}</small>` : ''}
         </div>
       </div>`;
 }
 
-/** 导航的状态签：能做、要等、卡住、未竟（engine/daohang.ts） */
-const ST_TONE: Record<NavState, string> = { 能做: 'accent', 要等: 'warn', 卡住: 'danger', 未竟: '', 了结: '' };
-export const navTag = (s: NavState): string => `<span class="tag ${ST_TONE[s]}">${s}</span>`;
-
-/** 找的人在不在：在就写在哪，不在写什么时辰在 */
-function whoLine(n: QuestNav): string {
-  const w = n.who;
-  if (!w) return '';
-  const at = w.now ? `眼下在${room(w.now).name}` : w.when ? `${w.when}在${n.toName ?? ''}` : '眼下见不到';
-  return `<li>找${w.name}：${at}</li>`;
-}
-
-/** 师门：眼下什么地位，升下一级找谁、要什么（engine/daohang.ts 的 sectNav） */
+/** 师门：眼下什么地位，升下一级找谁、还欠什么（engine/daohang.ts 的 sectNav）。写成心里话，不列数 */
 function sectRow(): string {
   const n = sectNav();
   if (!n) return '';
+  const miss = n.needs.filter(x => !x.ok).map(x => x.text);
   const body = !n.next ? '<p>已是真传弟子。</p>'
-    : n.note ? `<p>想升${n.next}弟子。</p><small class="qb-why">${n.note}</small>`
-    : `<p>想升${n.next}弟子：找${n.who?.name ?? ''}「${n.verb}」。</p>
-      ${n.toName ? `<small class="qb-to">${n.who?.now ? `眼下在${n.toName}` : n.who?.when ? `${n.who.when}在${n.toName}` : n.toName}</small>` : ''}
-      ${n.needs.length ? `<ul class="qb-need">${n.needs.map(x => `<li class="${x.ok ? 'ok' : 'no'}">${x.ok ? '✓' : '×'} ${x.text}${x.lack ? `（${x.lack}）` : ''}</li>`).join('')}</ul>` : ''}`;
-  const state: NavState = !n.next ? '了结' : n.note ? '卡住' : n.needs.every(x => x.ok) ? '能做' : '卡住';
+    : n.note ? `<p>${n.note}</p>`
+    : `<p>想升${n.next}弟子，得过${n.who?.name ?? '师父'}这一关。</p>
+      <small class="qb-memo">${miss.length ? `${miss.join('；')}。` : `火候差不多了，去找${n.who?.name ?? '师父'}吧${n.toName ? `（${n.toName}）` : ''}。`}</small>`;
   return `
       <div class="qb-row active">
         <div class="qb-info">
-          <div class="qb-top"><b>师门 · ${n.school}</b>${state === '了结' ? '' : navTag(state)}</div>
+          <b>师门 · ${n.school}</b>
           <span class="qb-stage">${n.rank}弟子</span>
           ${body}
         </div>
@@ -107,7 +94,7 @@ function sectRow(): string {
 }
 
 /**
- * 一件心事：走到第几步、这一步去哪找谁怎么做、门槛逐条打勾、做不成了写为什么。
+ * 一件心事：走到第几步、这一步去哪、心里的盘算（不剧透、不讲解：engine/daohang.ts 的 questNav）。
  * 做过的步骤收在「前情」里，后面的步骤不剧透。
  */
 function questRow(n: QuestNav, trackId: string): string {
@@ -120,21 +107,15 @@ function questRow(n: QuestNav, trackId: string): string {
   const goBtn = live && n.to
     ? `<button class="qb-go${here ? ' dim' : ''}" data-act="qgo:${n.id}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button>` : '';
   const toLine = live && n.toName ? `<small class="qb-to">${n.toName} · ${here ? '就在此处' : '约' + minLabel(n.dist)}</small>` : '';
-  // 只因人不在而要等的，「找某某」那一行已经写了什么时辰在哪，不再重复
-  const why = n.why && !(n.who && !n.who.now && live) ? `<small class="qb-why ${n.state === '卡住' ? 'bad' : ''}">${n.why}</small>` : '';
-  const needs = live && n.needs.length
-    ? n.needs.map(x => `<li class="${x.ok ? 'ok' : 'no'}">${x.ok ? '✓' : '×'} ${x.text}${x.lack ? `（${x.lack}）` : ''}</li>`).join('') : '';
-  const detail = live ? `${n.hint ? `<p class="qb-hint">${n.hint}</p>` : ''}${whoLine(n) || needs ? `<ul class="qb-need">${whoLine(n)}${needs}</ul>` : ''}` : '';
+  const memo = [live ? n.hint : '', ...n.memo].filter(Boolean).map(x => `<small class="qb-memo">${x}</small>`).join('');
   const past = n.past.length
-    ? `<details class="qb-past"><summary>前情 · ${n.past.length} 步</summary><ul>${n.past.map(t => `<li>✓ ${t}</li>`).join('')}</ul></details>` : '';
-  const stageNum = n.state === '了结' ? `共 ${n.total - 1} 步` : `第 ${n.stage + 1} 步 · 共 ${n.total - 1} 步`;
+    ? `<details class="qb-past"><summary>前情</summary><ul>${n.past.map(t => `<li>${t}</li>`).join('')}</ul></details>` : '';
   return `
       <div class="qb-row ${live ? 'active' : 'done'} ${isTrack ? 'track' : ''}">
         <div class="qb-info">
-          <div class="qb-top"><b>${n.name}</b>${n.state === '了结' ? '' : navTag(n.state)}</div>
-          <span class="qb-stage">${stageNum}</span>
+          <b>${n.name}</b>
           <p>${n.title}</p>
-          ${why}${toLine}${detail}${past}
+          ${toLine}${memo}${past}
         </div>
         <div class="qb-acts">${action}${goBtn}</div>
       </div>`;
@@ -170,11 +151,11 @@ export function questbookSheetHtml(): string {
   const jy = job && S.yue.find(y => y.id === 'job_' + job.id);
   const jobHere = !!job && S.loc === job.at;
   const jw = job ? whoNav(job.npc, job.at) : null;
-  const jwLine = jw && !jw.now ? `<small class="qb-why">${jw.when ? `${jw.name}${jw.when}在${room(job!.at).name}` : `眼下见不到${jw.name}`}</small>` : '';
+  const jwLine = jw && !jw.now ? `<small class="qb-memo">${jw.when ? `${jw.name}${jw.when}在${room(job!.at).name}。` : `这几日不见${jw.name}的人影。`}</small>` : '';
   const jobHtml = job && jy ? `<h3 class="qb-sec">差事 · 1</h3>
       <div class="qb-row active">
         <div class="qb-info">
-          <div class="qb-top"><b>${job.title}</b>${navTag(jw && !jw.now ? (jw.when ? '要等' : '卡住') : '能做')}</div>
+          <b>${job.title}</b>
           <span class="qb-stage">${job.sect ? job.sect + '的差事' : '营生'}</span>
           <p>${yueText(S, jy)}</p>
           ${jwLine}
@@ -214,5 +195,5 @@ function missText(job: JobDef): string {
   if (job.sect) return '扣门派贡献';
   const free = S.shenfen.id === 'youxia' || S.shenfen.id === 'yumin';
   if (!free) return '地位降一级，降到底就被辞退';
-  return npc(job.npc)?.obj ? '这一张就白揭了，过几日才能再揭' : '失信于人，心里落一层心魔';
+  return job.bang || npc(job.npc)?.obj ? '这一张就白揭了，过几日才能再揭' : '失信于人，心里落一层心魔';
 }

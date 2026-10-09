@@ -99,8 +99,8 @@ const TH_JOIN: Effect[] = [
 /* ---------- 师门差事：医卜星相 ---------- */
 
 const JOBS: JobDef[] = [
-  { id: 'smth_job_yao', sect: '桃花岛', tier: 1, title: '把煎好的药送去六斤家', npc: 'smth_liujin', at: 'gz_town', days: 2, again: 2 },
-  { id: 'smth_job_fang', sect: '桃花岛', tier: 1, k: 1.5, title: '照方子去回春堂配药，配好带回来', npc: 'smth_liujin', at: 'gz_town', days: 2, again: 3 }
+  { id: 'smth_job_yao', sect: '桃花岛', tier: 1, title: '把煎好的药送去六斤家', npc: 'smth_liujin', at: 'gz_yushi', days: 2, again: 2 },
+  { id: 'smth_job_fang', sect: '桃花岛', tier: 1, k: 1.5, title: '照方子去回春堂配药，配好带回来', npc: 'smth_liujin', at: 'gz_yushi', days: 2, again: 3 }
 ];
 
 /* ---------- 人物 ---------- */
@@ -291,7 +291,7 @@ const NPCS: NpcDef[] = [
   },
   {
     id: 'smth_liujin', name: '六斤', ini: '六', tone: 'amber', brief: '拎着两条鱼',
-    at: { room: 'gz_town' },
+    at: { room: 'gz_yushi' },
     look: '十一二岁的渔家孩子，瘦得裤腰打卷，手里拎的两条鲫鱼还在弹。他娘咳了一冬，他隔三差五来小筑抓药——药钱，是用鱼抵的。',
     verbs: ['交谈', '观察',
       { verb: '交差', if: { any: [{ job: 'smth_job_yao' }, { job: 'smth_job_fang' }] } }],

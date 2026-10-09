@@ -1,6 +1,10 @@
 import type { Cond, ContentPack, FoeDef, JobDef, NpcDef, NewsDef } from '../types';
 
-/** 府衙悬赏榜（Issue #108）：游侠的营生。四张榜各是一个人的事。 */
+/**
+ * 府衙悬赏榜（Issue #108）：游侠的营生。四张榜各是一个人的事。
+ * 负责人 10-09：照壁上只留一块榜（packs/fuya.ts 的 fuya_gaoshi），悬赏一栏一律在照壁下的书办这里揭、这里交差，
+ * 书办是唯一的登记人；布庄掌柜、寡妇周氏、猎户老韩只是苦主和线人。运河河贼那张（packs/biaoju.ts）也归他登记。
+ */
 
 /** 还没补完、暂不挂出来的榜用它（没有地方写这个旗标） */
 const PENDING: Cond = { flag: 'xsb_pending_open' };
@@ -9,10 +13,10 @@ const NPCS: NpcDef[] = [
   {
     id: 'xsb_zhuren', name: '书办', ini: '书', tone: 'blue', brief: '抄着文书',
     look: '府衙的老书办，五十来岁，一笔馆阁体写得端正。管着海捕文书的张贴和撤换，也管登记领赏。',
-    at: { room: 'yz_fuya' },
+    at: { room: 'yz_zhaobi' },
     // 四张榜都还交不了差（线索、对手都没有入口，审查 B02、D01、F01）：补完以前不挂出来，交 zcode 补。
     // 补完一张，把那一张条件里的 PENDING 删掉
-    verbs: ['交谈', '观察', { verb: '揭寻人', if: { jobOpen: 'xsb_xunren', ...PENDING } }, { verb: '揭寻物', if: { jobOpen: 'xsb_xunwu', ...PENDING } }, { verb: '揭缉凶', if: { jobOpen: 'xsb_xiong', ...PENDING } }, { verb: '揭剿匪', if: { jobOpen: 'xsb_jiaofei', ...PENDING } }, { verb: '交寻人', if: { job: 'xsb_xunren', flag: 'xsb_xr_found' } }, { verb: '交寻物', if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' } }, { verb: '交缉凶', if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat' } }, { verb: '交剿匪', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' } }],
+    verbs: ['交谈', '观察', { verb: '揭寻人', if: { jobOpen: 'xsb_xunren', ...PENDING } }, { verb: '揭寻物', if: { jobOpen: 'xsb_xunwu', ...PENDING } }, { verb: '揭缉凶', if: { jobOpen: 'xsb_xiong', ...PENDING } }, { verb: '揭剿匪', if: { jobOpen: 'xsb_jiaofei', ...PENDING } }, { verb: '揭河贼', if: { jobOpen: 'xs_hezei' } }, { verb: '交寻人', if: { job: 'xsb_xunren', flag: 'xsb_xr_found' } }, { verb: '交寻物', if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' } }, { verb: '交缉凶', if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat' } }, { verb: '交剿匪', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' } }, { verb: '交河贼', if: { job: 'xs_hezei', flag: 'xs_hezei_caught' } }],
     actions: {
       交谈: [
         { if: { flag: 'xsb_xr_done' }, text: '书办翻了翻册子：「寻人的那桩，学徒找到了。他师父已经领人回去了——多亏公子帮着打听。」' },
@@ -23,12 +27,23 @@ const NPCS: NpcDef[] = [
     { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。' },
     { if: { flag: 'xsb_jf_sha' }, text: '黑风寨叫人一把火烧了。跑得慢的匪徒，烟熏死在了山洞里。' },
     { if: { flag: 'xsb_jf_done' }, text: '「剿匪的那桩，山寨也平了。」书办竖了个大拇指，「四张榜全叫你揭了——游侠里头，你算头一份。」' },
-        { text: '书办翻开底册：「寻人、寻物、缉凶、剿匪，府台那边还没批下来，榜还贴不出去。」他蘸了蘸墨，「悬赏榜上的那几桩，公子先去看看。」' },
+        { text: '书办翻开底册：「寻人、寻物、缉凶、剿匪，府台那边还没批下来，榜还贴不出去。」他蘸了蘸墨，「照壁上悬赏那一栏，眼下只有运河河贼一张。要揭，在我这儿登记；拿了人，也押到我这儿来验。」' },
       ],
       揭寻人: [{ do: [{ type: 'job', id: 'xsb_xunren' }] }],
       揭寻物: [{ do: [{ type: 'job', id: 'xsb_xunwu' }] }],
       揭缉凶: [{ do: [{ type: 'job', id: 'xsb_xiong' }] }],
       揭剿匪: [{ do: [{ type: 'job', id: 'xsb_jiaofei' }] }],
+      // 运河河贼（packs/biaoju.ts）：揭榜、领赏都在书办这里
+      揭河贼: [
+        { text: '书办揭下河贼那张榜，在簿子上记了你的名字：「三日之内拿人来领赏。那贼入夜才上岸，在渡口盐包后头出没。」',
+          do: [{ type: 'flag', flag: 'xs_hezei_caught', value: false }, { type: 'job', id: 'xs_hezei' }] }
+      ],
+      交河贼: [
+        { if: { job: 'xs_hezei', flag: 'xs_hezei_caught' },
+          text: '书办叫衙役把河贼押到条案前，对着画像验过，往簿子上画了个勾，从柜上点出一串铜钱：「赏银。照壁上再贴了榜，还来。」',
+          do: [{ type: 'flag', flag: 'xs_hezei_caught', value: false }, { type: 'jobDone', id: 'xs_hezei' }] },
+        { text: '「河贼还没拿到——人押来了再领赏。」' }
+      ],
       交寻人: [
         { if: { job: 'xsb_xunren', flag: 'xsb_xr_found' },
           text: '书办在册子上画了个勾：「学徒找到了。」他从柜里点出一串铜钱。',
@@ -74,7 +89,7 @@ const NPCS: NpcDef[] = [
   {
     id: 'xsb_shifu', name: '布庄掌柜', ini: '掌', tone: 'amber', brief: '愁着学徒',
     look: '布庄掌柜，五十来岁，袖口磨得起了毛边。学徒走了以后，店里连个跑腿的人都没有。',
-    at: { room: 'cheng', if: { job: 'xsb_xunren' } },
+    at: { room: 'yz_dongquan', if: { job: 'xsb_xunren' } },
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
@@ -86,7 +101,7 @@ const NPCS: NpcDef[] = [
   {
     id: 'xsb_gufu', name: '寡妇周氏', ini: '周', tone: 'purple', brief: '抹着眼泪',
     look: '一身素服的年轻寡妇，眼圈红肿。她丈夫上个月死在城里，凶手至今没有抓到。',
-    at: { room: 'yz_fuya', if: { job: 'xsb_xiong' } },
+    at: { room: 'yz_zhaobi', if: { job: 'xsb_xiong' } },
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
@@ -262,10 +277,11 @@ const JIAOFEI: FoeDef = {
 };
 
 const JOBS: JobDef[] = [
-  { id: 'xsb_xunren', shenfen: 'youxia', tier: 0, title: '帮布庄掌柜找回走失的学徒小栓', npc: 'xsb_shifu', at: 'cheng', days: 3 },
-  { id: 'xsb_xunwu', shenfen: 'youxia', tier: 1, title: '帮寡妇找回被偷的玉佩', npc: 'xsb_gufu', at: 'yz_fuya', days: 3, again: 5 },
-  { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手赵屠户', npc: 'xsb_gufu', at: 'yz_fuya', days: 5 },
-  { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_liehu', at: 'daming', days: 7, k: 1.5 }
+  // 榜上揭的差事：一律在照壁下的书办这里登记、交差（负责人 10-09）
+  { id: 'xsb_xunren', shenfen: 'youxia', tier: 0, title: '帮布庄掌柜找回走失的学徒小栓', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, bang: true },
+  { id: 'xsb_xunwu', shenfen: 'youxia', tier: 1, title: '帮寡妇找回被偷的玉佩', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, again: 5, bang: true },
+  { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手赵屠户', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 5, bang: true },
+  { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, k: 1.5, bang: true }
 ];
 
 const NEWS: NewsDef[] = [
@@ -285,34 +301,8 @@ const NEWS: NewsDef[] = [
     { if: { flag: 'jy_fei_shout' }, text: '汪家货栈夜里进了飞贼，有人喊跑了贼，汪老爷赏了二十文。' }
 ];
 
-const NPC_OBJ: NpcDef[] = [
-  {
-    id: 'xsb_bang', name: '海捕文书', obj: true, icon: 'stele', brief: '照壁一角的木榜',
-    look: '照壁一角钉着一块木榜，榜上贴着几张海捕文书，画着画像，写着案由和赏银，墨迹有新有旧。揭走了的，留下一块浆糊印。最底下一行小字：有能者揭榜，赴府衙登记。',
-    at: { room: 'yz_fuya' },
-    verbs: ['观察', '细看'],
-    actions: {
-      // 海捕文书上的人犯（packs/liushanmen.ts）：一个了结，下一个才贴出来
-      细看: [
-        { if: { shi: { id: 'lsm_qian', at: ['zaitao', 'zuoan'] } },
-          text: '最新的一张：「飞贼『鬼手』钱三，瘦长脸，左眉一颗黑痣，十指细长。窃汪家盐号盐引三十张。拿获者赏银八百文。」画像底下有人用炭笔添了一行小字：辕门桥。',
-          do: [{ type: 'shi', id: 'lsm_qian' }] },
-        { if: { shi: { id: 'lsm_bai', at: ['zaitao', 'zuoan'] } },
-          text: '最新的一张：「游方郎中『玉面』白七郎，面白无须，背药箱，善使银针。在淮安卖假药毒毙三命。拿获者赏银二两。」',
-          do: [{ type: 'shi', id: 'lsm_bai' }] },
-        { if: { shi: { id: 'lsm_xiong', at: ['zaitao', 'zuoan'] } },
-          text: '最新的一张：「边军逃兵熊大，身长八尺，右臂刺『忠勇』二字。杀本营百户，畏罪潜逃。拿获者赏银四两。」画像上的人眉头拧着，像是有话要说。',
-          do: [{ type: 'shi', id: 'lsm_xiong' }] },
-        { if: { shi: { id: 'lsm_xiong', at: ['taozou'] } }, text: '熊大的那张画像还贴着，边角卷了起来。书办说，人过江往北去了，这张榜撤不撤，府台还没发话。' },
-        { if: { shi: { id: 'lsm_xiong', at: ['luowang', 'fang', 'sha'] } }, text: '三张海捕文书都揭了，浆糊印一个挨一个。书办说，新的人犯，还没报上来。' },
-        { text: '榜上暂时没有新贴的海捕文书，只剩几块浆糊印。' }
-      ]
-    }
-  }
-];
-
 const pack: ContentPack = {
-  npcs: [...NPCS, ...NPC_OBJ],
+  npcs: NPCS,
   foes: [XUNREN, XIONGFAN, JIAOFEI],
   jobs: JOBS,
   news: NEWS

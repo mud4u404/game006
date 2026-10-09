@@ -68,6 +68,20 @@ describe('存档：更新游戏不丢档', () => {
     expect(p.loc).toBe(newGame().loc);
   });
 
+  it('退役的悬赏榜（xs_bang、xsb_bang，负责人 10-09 拆府衙）：手上的悬赏改到照壁下的书办那里交差，选中的榜不再选着', () => {
+    const old = {
+      ...skipToYangzhou(), loc: 'yz_fuya', sel: 'xsb_bang', reply: { id: 'xs_bang', text: '旧榜' },
+      job: { id: 'xs_hezei', due: 70 },
+      yue: [{ id: 'job_xs_hezei', npc: 'xs_bang', at: 'yz_fuya', due: 70, text: '拿运河渡口的河贼，押回府衙领赏', miss: [{ type: 'jobFail', id: 'xs_hezei' }] }]
+    };
+    const s = migrate(old);
+    expect(s.yue[0]).toMatchObject({ id: 'job_xs_hezei', npc: 'xsb_zhuren', at: 'yz_zhaobi', due: 70 });
+    expect(s.job).toEqual({ id: 'xs_hezei', due: 70 });
+    expect(s.sel).toBeNull();
+    expect(s.reply).toBeNull();
+    expect(s.loc, '府衙前堂沿用原来的 id').toBe('yz_fuya');
+  });
+
   it('搭配里指向没学会、已删除、放错位置的武功，或者不认识的位置名，就空出来，不崩', () => {
     const s = migrate({ ...skipToYangzhou(), loadout: { weapon: 'no_such_skill', fist: 'hanjiang', neigong: 'hanjiang', qinggong: 'taxue', main: 'hanjiang' } });
     expect(s.loadout).toEqual({ qinggong: 'taxue' });

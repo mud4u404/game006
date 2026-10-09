@@ -183,7 +183,7 @@ const SKILLS: SkillDef[] = [
     teach: '真传',
     requires: [{ skill: 'mr_canhe', realm: 4 }],
     ult: {
-      title: '斗转星移 · 绝招',
+      title: '斗转星移 · 杀招',
       text: '你不闪不避，引{foe}来势一转，还施彼身——{foe}的全力一击竟原路而回，加倍的劲力轰在其自身{part}；去势未竭，余劲更把{foe}周身劲力卸得七零八落，再也提不起一口真气！',
       dmg: [520, 600],
       fx: [{ kind: 'weaken', value: 15, rounds: 2 }]

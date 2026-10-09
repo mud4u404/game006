@@ -128,7 +128,7 @@ docs/                  设计文档
 - [ ] `npm run check` 通过，`npm run build` 通过（能跑浏览器的环境，再跑一下 `npm run smoke`）
 - [ ] 新内容在游戏里点得到：新人物出现在某个地点，新地点连上了出口，新任务有触发的入口
 - [ ] 每个可点的动作都有回应：分支列表的最后一项不带 `if`
-- [ ] 文字符合 [docs/content-guide.md](docs/content-guide.md) 的文风要求
+- [ ] 文字符合 [docs/wenfeng.md](docs/wenfeng.md) 的十二条和门派声口（摘要在 [docs/content-guide.md](docs/content-guide.md) 第一节）
 - [ ] PR 描述里写清：新增了哪些 id、玩家怎样触发、完整走一遍的文字演示
 - [ ] 对照第十一节「常见错误清单」逐条查过
 - [ ] 运行 `ZOUBIAN_PREFIX=<你的 id 前缀> npm run zoubian`，把输出贴进提交说明；机器玩家没走到的分支，逐条写一句玩家怎样才走得到

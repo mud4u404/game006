@@ -8,7 +8,7 @@
  * - 每天留一份备份，最多三份；重新开始前也先留一份。
  * - 内容里的 id 只增不删（tests/ids.test.ts 把关）；万一存档里的地点已经不存在，送回安全的地方。
  */
-import { ROOMS, SKILLS, itemById, shiById } from '../content';
+import { ROOMS, SKILLS, itemById, jobById, npc, shiById } from '../content';
 import { defaultLoadout, fits } from '../engine/wuxue';
 import { GEAR_KEYS, fitsGear } from '../engine/zhuangbei';
 import { syncBody } from '../engine/ren';
@@ -146,6 +146,15 @@ function repair(s: GameState): GameState {
   if (s.shi) for (const [id, st] of Object.entries(s.shi)) if (!shiById(id)?.steps[st?.at]) delete s.shi[id];
   // 地点没了，送回这一回的起点
   if (!ROOMS.some(r => r.id === s.loc)) s.loc = s.chapter === 0 ? newGame().loc : skipToYangzhou().loc;
+  // 差事的约：交差的人、交差的地方照当前的差事定义重写（负责人 10-09 拆府衙：悬赏改到照壁下的书办那里交差，
+  // 旧存档里还记着已经退役的悬赏榜 xs_bang；见 docs/decisions.md）
+  for (const y of s.yue ?? []) {
+    const j = y.id.startsWith('job_') ? jobById(y.id.slice(4)) : undefined;
+    if (j) { y.npc = j.npc; y.at = j.at; }
+  }
+  // 选中的、刚回过话的人物已经不在了（退役的物件），就不选
+  if (s.sel && !npc(s.sel)) s.sel = null;
+  if (s.reply && !npc(s.reply.id)) s.reply = null;
   // 搭配里指向没学会、或已经没有的武功，就空出来
   for (const [slot, id] of Object.entries(s.loadout) as [Slot, string][]) {
     const def = SKILLS.find(k => k.id === id);
