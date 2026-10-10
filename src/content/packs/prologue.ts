@@ -79,7 +79,7 @@ const DAWN: StoryCard[] = [
       '天亮时，雨停了。渡口那条船只剩一副焦黑的骨架。',
       '江伯不在船上，不在岸上，也不在江里。你沿着江滩找到日头偏西，只在芦苇丛里拾到他那顶旧斗笠。'
     ],
-    choices: [{ label: '把斗笠捡起来', do: [{ type: 'time', until: 17 * 60 + 30 }, { type: 'item', id: 'kp_douli', delta: 1 }, { type: 'toast', text: '得到 江伯的斗笠' }] }] },
+    choices: [{ label: '把斗笠捡起来', do: [{ type: 'time', until: 17 * 60 + 30 }, { type: 'item', id: 'kp_douli', delta: 1 }, { type: 'wear', id: 'kp_douli' }, { type: 'toast', text: '得到 江伯的斗笠' }] }] },
   { tag: '序章 · 天明', title: '油布',
     paras: [
       '船底的布包还在，剑没了，包里夹着一页油布，画着一个持剑的小人，墨迹被水洇了大半。',
@@ -89,37 +89,96 @@ const DAWN: StoryCard[] = [
     choices: [{ label: '收好油布', do: [{ type: 'item', id: 'scroll', delta: 1 }, { type: 'toast', text: '得到 断水残页' }] }] }
 ];
 
-/** 天亮后来传话的人，按第一夜的路各不相同；去路一样：扬州，大明寺，了尘 */
-const MSG_DU: StoryCard = { tag: '序章 · 天明', title: '去路',
-  paras: [
-    '你回到渡口时，那独臂人已经候在焦船边，半边脸被烟熏得漆黑。他没有看你，只盯着地上的灰烬。',
-    '「江前辈入雨之前，让我转告你。」他的声音哑得厉害，「扬州，大明寺，了尘。」',
-    '他顿了顿，用仅剩的那只手按住胸口：「在下褚七。我欠你一条命，往后，我来还。」'
-  ],
-  choices: [{ label: '记下了', do: [
-    { type: 'flag', flag: 'kp_chu_name' },
-    { type: 'rel', npc: 'kp_chu', value: '相谈甚欢', note: '欠你一条命' },
-    { type: 'rel', npc: 'kp_wei', value: '心存芥蒂', note: '你渡了他要找的人' }
-  ] }] };
+/** 一场打的三种收场 */
+type Ending = 'win' | 'lose' | 'flee';
 
-const MSG_WEN: StoryCard = { tag: '序章 · 天明', title: '去路',
-  paras: [
-    '你回到渡口时，卫衡坐在焦船边的石头上，剑横在膝上，左袖撕了一截，裹着臂上的伤。',
-    '「江前辈入雨之前，托我转告你：扬州，大明寺，了尘。」他站起身，「他叫你别追。他还说，你撑篙的样子，像他年轻的时候。」',
-    '他抱了抱拳，转身沿着江堤走了。他走出很远，才回了一次头。'
-  ],
-  choices: [{ label: '记下了', do: [
-    { type: 'rel', npc: 'kp_wei', value: '点头之交', note: '那夜你和他站在一边' },
-    { type: 'rel', npc: 'kp_chu', value: '心存芥蒂', note: '当着卫衡的面，你逼他认了旧账' }
-  ] }] };
+/**
+ * 天亮后来传话的人，按第一夜的路各不相同；去路一样：扬州，大明寺，了尘。
+ * 打赢、打输、逃开，说的话和记的人情也各不相同：逃开的人，不记人家的恩。
+ */
+const MSG_DU: Record<Ending, StoryCard> = {
+  win: { tag: '序章 · 天明', title: '去路',
+    paras: [
+      '你回到渡口时，那独臂人已经候在焦船边，半边脸被烟熏得漆黑。他没有看你，只盯着地上的灰烬。',
+      '「江前辈入雨之前，让我转告你。」他的声音哑得厉害，「扬州，大明寺，了尘。」',
+      '他顿了顿，用仅剩的那只手按住胸口：「在下褚七。我欠你一条命，往后，我来还。」'
+    ],
+    choices: [{ label: '记下了', do: [
+      { type: 'flag', flag: 'kp_chu_name' },
+      { type: 'rel', npc: 'kp_chu', value: '相谈甚欢', note: '欠你一条命' },
+      { type: 'rel', npc: 'kp_wei', value: '心存芥蒂', note: '你渡了他要找的人' }
+    ] }] },
+  lose: { tag: '序章 · 天明', title: '去路',
+    paras: [
+      '你回到渡口时，那独臂人已经候在焦船边，半边脸被烟熏得漆黑。他没有看你，只盯着地上的灰烬。',
+      '「江前辈入雨之前，让我转告你。」他的声音哑得厉害，「扬州，大明寺，了尘。」',
+      '他的目光落在你的肋下，停了一停，用仅剩的那只手按住胸口：「在下褚七。那一棍本是冲我来的，你替我挨了。这笔账，我来还。」'
+    ],
+    choices: [{ label: '记下了', do: [
+      { type: 'flag', flag: 'kp_chu_name' },
+      { type: 'rel', npc: 'kp_chu', value: '相谈甚欢', note: '你替他挨了一棍' },
+      { type: 'rel', npc: 'kp_wei', value: '心存芥蒂', note: '你渡了他要找的人' }
+    ] }] },
+  flee: { tag: '序章 · 天明', title: '去路',
+    paras: [
+      '你回到渡口时，那独臂人已经候在焦船边，半边脸被烟熏得漆黑。他没有看你，只盯着地上的灰烬。',
+      '「江前辈入雨之前，让我转告你。」他的声音哑得厉害，「扬州，大明寺，了尘。」',
+      '他顿了顿，用仅剩的那只手按住胸口：「在下褚七。那夜是江前辈出的手，我欠的是他。你肯撑船渡我，我也记着，只是这笔账，不记在你名下。」'
+    ],
+    choices: [{ label: '记下了', do: [
+      { type: 'flag', flag: 'kp_chu_name' },
+      { type: 'rel', npc: 'kp_chu', value: '点头之交', note: '那夜你躲进了舱里，是江伯救的他' },
+      { type: 'rel', npc: 'kp_wei', value: '心存芥蒂', note: '你渡了他要找的人' }
+    ] }] }
+};
 
-const MSG_BU: StoryCard = { tag: '序章 · 天明', title: '去路',
-  paras: [
-    '你回到渡口时，卞婆婆拄着拐，由人搀着，站在焦船边。她一夜没睡，眼皮肿着。',
-    '「老江那天把话托给了我这个老婆子，」她说，「他说，若有一日渡口出了事，叫我转告你：扬州，大明寺，了尘。」',
-    '她看了你一眼，没有再说别的，拄着拐，由人搀着慢慢走了。'
-  ],
-  choices: [{ label: '记下了', do: [{ type: 'rel', npc: 'kp_wei', value: '素不相识', note: '那夜没渡人的那个少年' }] }] };
+const MSG_WEN_HEAD = '你回到渡口时，卫衡坐在焦船边的石头上，剑横在膝上，左袖撕了一截，裹着臂上的伤。';
+const MSG_WEN: Record<Ending, StoryCard> = {
+  win: { tag: '序章 · 天明', title: '去路',
+    paras: [
+      MSG_WEN_HEAD,
+      '「江前辈入雨之前，托我转告你：扬州，大明寺，了尘。」他站起身，「他叫你别追。他还说，你撑篙的样子，像他年轻的时候。」',
+      '他抱了抱拳，转身沿着江堤走了。他走出很远，才回了一次头。'
+    ],
+    choices: [{ label: '记下了', do: [
+      { type: 'rel', npc: 'kp_wei', value: '点头之交', note: '那夜你和他站在一边' },
+      { type: 'rel', npc: 'kp_chu', value: '心存芥蒂', note: '当着卫衡的面，你逼他认了旧账' }
+    ] }] },
+  lose: { tag: '序章 · 天明', title: '去路',
+    paras: [
+      MSG_WEN_HEAD,
+      '「江前辈入雨之前，托我转告你：扬州，大明寺，了尘。」他站起身，「他叫你别追。他还说，你肋下那一叉，不必放在心上，他年轻时挨的比这重。」',
+      '他抱了抱拳，转身沿着江堤走了。他走出很远，才回了一次头。'
+    ],
+    choices: [{ label: '记下了', do: [
+      { type: 'rel', npc: 'kp_wei', value: '点头之交', note: '那夜船上你挨了一叉，是江伯出声收的场' },
+      { type: 'rel', npc: 'kp_chu', value: '心存芥蒂', note: '船上你验他的伤，他拿鱼叉抵着你，是江伯喝住的' }
+    ] }] },
+  flee: { tag: '序章 · 天明', title: '去路',
+    paras: [
+      MSG_WEN_HEAD,
+      '「江前辈入雨之前，托我转告你：扬州，大明寺，了尘。」他站起身，「他叫你别追。他还说，那夜你的手在抖，不丢人，他头一回见血，也抖过。」',
+      '他抱了抱拳，转身沿着江堤走了。他走出很远，才回了一次头。'
+    ],
+    choices: [{ label: '记下了', do: [
+      { type: 'rel', npc: 'kp_wei', value: '点头之交', note: '那夜船上你退到舱口，是江伯一句话收的场' },
+      { type: 'rel', npc: 'kp_chu', value: '心存芥蒂', note: '船上你验他的伤，他一叉过来，你退了，是江伯喝住的' }
+    ] }] }
+};
+
+const MSG_BU_HEAD = [
+  '你回到渡口时，卞婆婆拄着拐，由人搀着，站在焦船边。她一夜没睡，眼皮肿着。',
+  '「老江那天把话托给了我这个老婆子，」她说，「他说，若有一日渡口出了事，叫我转告你：扬州，大明寺，了尘。」',
+  '她看了你一眼，没有再说别的，拄着拐，由人搀着慢慢走了。'
+];
+/** 不渡：没有打的那两条小路（下水救他、留在船上）用 stay，打了的三种收场各记各的 */
+const MSG_BU: Record<Ending | 'stay', StoryCard> = Object.fromEntries(([
+  ['stay', '那夜没渡人的那个少年'],
+  ['win', '那夜没渡人，却在堤下把持刀的人逼退了'],
+  ['lose', '那夜没渡人，堤下的持刀汉子把你打倒在泥里'],
+  ['flee', '那夜没渡人，堤下的持刀汉子追来，你拔腿就跑']
+] as const).map(([k, note]) => [k, { tag: '序章 · 天明', title: '去路', paras: MSG_BU_HEAD,
+  choices: [{ label: '记下了', do: [{ type: 'rel', npc: 'kp_wei', value: '素不相识', note }] }] } satisfies StoryCard])) as Record<Ending | 'stay', StoryCard>;
 
 /** 登船：序章了结，题字「第一回 · 扬州」。idx 是这张卡在整段剧情里的序号，「再坐一会儿」回到这里 */
 const finalCard = (idx: number): StoryCard => ({ tag: '序章 · 天明', title: '登船',
@@ -179,13 +238,13 @@ const DU_AFTER: Record<'win' | 'lose' | 'flee', StoryCard[]> = {
       '你丢下竹篙，缩到舱里。划子的船头撞了上来，两个家丁抢上船帮，短棍高高扬起。',
       '码头上传来一声咳嗽。一根竹篙贴着水面飞来，削掉了划子的半边船舷，木屑溅了家丁一脸。江伯没有走近，仍站在缆桩边，手还没有放下。',
       '两个人愣在船上，再没有人敢动。卫衡在堤上又喝了一声，他们把划子划了回去。',
-      '船靠南岸。镖师爬上岸，回头看了你一眼，只说了一句：「这条命，记在你头上。」'
+      '船靠南岸。镖师爬上岸，回头看了看缆桩边那个人影，又看了你一眼，只说了一句：「这条命，是江前辈给的。」'
     ]), DU_MA]
 };
 const DU_HOU: StoryDef[] = [
-  hou('kp_du_hou', DU_AFTER.win, REVEAL_DU, MSG_DU),
-  hou('kp_du_hou_lose', DU_AFTER.lose, REVEAL_DU, MSG_DU),
-  hou('kp_du_hou_flee', DU_AFTER.flee, REVEAL_DU, MSG_DU)
+  hou('kp_du_hou', DU_AFTER.win, REVEAL_DU, MSG_DU.win),
+  hou('kp_du_hou_lose', DU_AFTER.lose, REVEAL_DU, MSG_DU.lose),
+  hou('kp_du_hou_flee', DU_AFTER.flee, REVEAL_DU, MSG_DU.flee)
 ];
 
 /* ---------- 请二位上船：卞婆婆、一个面子 ---------- */
@@ -214,18 +273,18 @@ const WEN_AFTER: Record<'win' | 'lose' | 'flee', StoryCard[]> = {
   lose: [ending('江伯收场', [
     '叉柄撞在你肋下，你踉跄着退到舱口。镖师又是一下递来，叉尖离你的喉头只剩一尺。',
     '竹篙在船板上轻轻一顿。江伯这才开口：「够了。」',
-    '镖师手一软，那家伙当啷落在船板上，人跟着坐倒，捂着脸，肩头一耸一耸。卫衡的手一直按在剑上，没有拔出来。'
+    '镖师手一软，那柄鱼叉当啷落在船板上，人跟着坐倒，捂着脸，肩头一耸一耸。卫衡的手一直按在剑上，没有拔出来。'
   ]), ...WEN_TAIL],
   flee: [ending('江伯收场', [
-    '你抽身退到舱口。镖师没有追，只缩在船尾，手里的家伙仍旧抖个不停。',
-    '江伯在灯下抬了抬眼：「够了。」只两个字，竹篙在船板上轻轻一顿，镖师的手便软了，那家伙当啷落在船板上。',
+    '你抽身退到舱口。镖师没有追，只缩在船尾，手里的鱼叉仍旧抖个不停。',
+    '江伯在灯下抬了抬眼：「够了。」只两个字，竹篙在船板上轻轻一顿，镖师的手便软了，那柄鱼叉当啷落在船板上。',
     '他软软坐倒，捂着脸，肩头一耸一耸。卫衡的手一直按在剑上，没有拔出来。'
   ]), ...WEN_TAIL]
 };
 const WEN_HOU: StoryDef[] = [
-  hou('kp_wen_hou', WEN_AFTER.win, REVEAL_WEN, MSG_WEN),
-  hou('kp_wen_hou_lose', WEN_AFTER.lose, REVEAL_WEN, MSG_WEN),
-  hou('kp_wen_hou_flee', WEN_AFTER.flee, REVEAL_WEN, MSG_WEN)
+  hou('kp_wen_hou', WEN_AFTER.win, REVEAL_WEN, MSG_WEN.win),
+  hou('kp_wen_hou_lose', WEN_AFTER.lose, REVEAL_WEN, MSG_WEN.lose),
+  hou('kp_wen_hou_flee', WEN_AFTER.flee, REVEAL_WEN, MSG_WEN.flee)
 ];
 
 /* ---------- 不渡：钱袋、江伯 ---------- */
@@ -259,10 +318,10 @@ const BU_AFTER: Record<'win' | 'lose' | 'flee', StoryCard[]> = {
   ]), ...BU_TAIL]
 };
 const BU_HOU: StoryDef[] = [
-  hou('kp_bu_hou', BU_TAIL, REVEAL_BU, MSG_BU),
-  hou('kp_bu_hou_win', BU_AFTER.win, REVEAL_BU, MSG_BU),
-  hou('kp_bu_hou_lose', BU_AFTER.lose, REVEAL_BU, MSG_BU),
-  hou('kp_bu_hou_flee', BU_AFTER.flee, REVEAL_BU, MSG_BU)
+  hou('kp_bu_hou', BU_TAIL, REVEAL_BU, MSG_BU.stay),
+  hou('kp_bu_hou_win', BU_AFTER.win, REVEAL_BU, MSG_BU.win),
+  hou('kp_bu_hou_lose', BU_AFTER.lose, REVEAL_BU, MSG_BU.lose),
+  hou('kp_bu_hou_flee', BU_AFTER.flee, REVEAL_BU, MSG_BU.flee)
 ];
 
 const STORIES: StoryDef[] = [
@@ -352,9 +411,9 @@ const STORIES: StoryDef[] = [
         '「船是你的。这个人，你渡不渡？」'
       ],
       choices: [
-        { label: '「渡。」', sub: '撑船离岸，听他说', do: [{ type: 'item', id: 'jade', delta: 1 }, { type: 'flag', flag: 'kp_du' }, { type: 'xia', delta: 2 }, { type: 'story', id: 'kp_du' }] },
-        { label: '「请二位上船，把话说清楚。」', sub: '拖住两边，查个明白', do: [{ type: 'item', id: 'jade', delta: 1 }, { type: 'flag', flag: 'kp_wen' }, { type: 'xia', delta: 2 }, { type: 'story', id: 'kp_wen' }] },
-        { label: '「不渡。」', sub: '把他留在岸上', do: [{ type: 'item', id: 'jade', delta: 1 }, { type: 'flag', flag: 'kp_bu' }, { type: 'story', id: 'kp_bu' }] }
+        { label: '「渡。」', sub: '撑船离岸，听他说', do: [{ type: 'item', id: 'jade', delta: 1 }, { type: 'wear', id: 'jade' }, { type: 'flag', flag: 'kp_du' }, { type: 'xia', delta: 2 }, { type: 'story', id: 'kp_du' }] },
+        { label: '「请二位上船，把话说清楚。」', sub: '拖住两边，查个明白', do: [{ type: 'item', id: 'jade', delta: 1 }, { type: 'wear', id: 'jade' }, { type: 'flag', flag: 'kp_wen' }, { type: 'xia', delta: 2 }, { type: 'story', id: 'kp_wen' }] },
+        { label: '「不渡。」', sub: '把他留在岸上', do: [{ type: 'item', id: 'jade', delta: 1 }, { type: 'wear', id: 'jade' }, { type: 'flag', flag: 'kp_bu' }, { type: 'story', id: 'kp_bu' }] }
       ] }
   ] },
 
@@ -656,7 +715,7 @@ const QUESTS: QuestDef[] = [
 ];
 
 const ITEMS: ItemDef[] = [
-  { id: 'kp_douli', name: '江伯的斗笠', kind: '信物', desc: '一顶旧斗笠，竹篾被江风吹得发白，沿口磨得起了毛。你戴上去，大了一圈。' },
+  { id: 'kp_douli', name: '江伯的斗笠', kind: '信物', equip: { slot: '冠' }, desc: '一顶旧斗笠，竹篾被江风吹得发白，沿口磨得起了毛。你戴上去，大了一圈。' },
   { id: 'kp_yaopai', name: '血染的腰牌', kind: '信物', desc: '独臂镖师的钱袋里掉出来的腰牌，被血浸透了，摸上去还是黏的。牌面阴刻「黑风」两个字，背面另有一行小字：水路，丙。' },
   // 新开局的兵器（docs/kaipian.md 第三稿第四条）：真兵刃要到扬州花钱买。兵器位的剑，寒江剑法照样使得出来；比青锋剑不值钱（青锋剑一千五百文，它二十文）
   { id: 'kp_mujian', name: '木剑', kind: '装备', price: 20, desc: '江伯削的白蜡木剑，剑脊上留着刨刀的纹路，剑柄被你攥得发亮。对着柳树比划尽够。',

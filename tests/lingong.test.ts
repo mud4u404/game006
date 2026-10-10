@@ -7,10 +7,12 @@ import { S, setState, skipToYangzhou } from '../src/core/state';
 import { advanceDays, dayNo, setNowMs, spanLabel } from '../src/core/time';
 import { NPCS, jobById, npc as npcDef } from '../src/content';
 import { run, test as cond } from '../src/engine/dsl';
+import { gigLead, leadsNear } from '../src/engine/daohang';
 import { jobGongxian, jobOpen, jobPay } from '../src/engine/shenfen';
 import { LODGING } from '../src/engine/shiguang';
-import { act, verbGain, verbsOf } from '../src/engine/world';
+import { act, dangerOf, roomNpcs, verbGain, verbsOf } from '../src/engine/world';
 import { cn } from '../src/core/util';
+import { tierNow } from '../src/engine/ren';
 
 beforeEach(() => {
   setNowMs(() => 1_000_000_000_000);
@@ -77,7 +79,8 @@ describe('书办的台词和实付对得上', () => {
     it(`${verb}：书办念的赏额就是实付`, () => {
       const pay = `${cn(jobPay(jobById(job)!))}文`;
       expect(act('xsb_zhuren', verb).text).toContain(pay);
-      expect(verbGain('xsb_zhuren', verb)).toBe(`赏${pay}`);
+      // 赏额在前，后头若加凶险的字样（见下面「榜上标凶险」），以「 · 」隔开
+      expect(verbGain('xsb_zhuren', verb)!.split(' · ')[0]).toBe(`赏${pay}`);
     });
   }
   it('交谈兜底和照壁的榜文如实介绍榜上几张，不再说「榜还贴不出去」', () => {
@@ -122,13 +125,13 @@ describe('零工：每处每个江湖日一回', () => {
       act(id, verb);
       expect(S.silver - s0).toBe(pay);
       expect(S.min - t0).toBe(min);
-      // 同一日第二回：不给钱，不费时，按钮上也不再标报酬
-      expect(verbGain(id, verb)).toBeNull();
+      // 同一日第二回：不给钱，不费时，按钮上不再标报酬，标「今日已做」
+      expect(verbGain(id, verb)).toBe('今日已做');
       at(hour);
       const [s1, t1] = [S.silver, S.min];
       act(id, verb);
       expect(S.silver).toBe(s1);
-      expect(S.min).toBe(t1 + 10); // 只是说了句话，按「没有列出的动作」的十分钟算
+      expect(S.min).toBe(t1); // 点了不耗时间
       // 只给工钱，不给历练
       expect(S.lilian).toBe(l0);
       // 隔日再来
@@ -142,8 +145,10 @@ describe('零工：每处每个江湖日一回', () => {
     it(`${verb}：过了时候没有活，不给钱、也不记作做过`, () => {
       at(id === 'ss_gengfu' ? 23 : 20, 30);
       const s = S.silver;
+      const t = S.min;
       act(id, verb);
       expect(S.silver).toBe(s);
+      expect(S.min, '窗口外点了不耗时间').toBe(t);
       expect(S.dayLog ?? {}).toEqual({});
     });
   }
@@ -154,6 +159,8 @@ describe('零工：每处每个江湖日一回', () => {
       expect(bs).toHaveLength(3);
       expect(bs[0].if).toEqual({ doneToday: expect.any(String) });
       expect(bs[2].if).toBeUndefined();
+      // 做过了、不在时候的回话，点了不耗时间（带一条加零的 time）
+      for (const b of [bs[0], bs[2]]) expect(b.do, `${id} 的回话不耗时间`).toEqual([{ type: 'time', add: 0 }]);
       const key = bs[0].if!.doneToday!;
       expect(bs[1].do![0]).toEqual({ type: 'today', id: key });
       expect(bs[1].do!.findIndex(e => e.type === 'today')).toBeLessThan(bs[1].do!.findIndex(e => e.type === 'time'));
@@ -189,12 +196,32 @@ describe('零工：每处每个江湖日一回', () => {
     expect(S.silver - 30).toBeGreaterThanOrEqual(LODGING.inn + 20);
   });
 
-  it('替更夫只在亥时头上开工，一更走完到不了半夜', () => {
-    at(21, 30);
-    const d = dayNo(S);
-    act('ss_gengfu', '替班');
-    expect(dayNo(S)).toBe(d);
-    expect(S.dayLog).toEqual({ lg_tibian: d });
+  it('替更夫二十点到二十二点之间都能开工，一更一个时辰，最晚二十三点多收工，不过半夜', () => {
+    for (const [h, m] of [[20, 0], [21, 30], [21, 59]] as const) {
+      setState(skipToYangzhou());
+      at(h, m);
+      expect(roomNpcs('cheng'), `${h}:${m} 更夫在街上`).toContain('ss_gengfu');
+      const d = dayNo(S), t = S.min;
+      const s = S.silver;
+      act('ss_gengfu', '替班');
+      expect(S.silver - s, `${h}:${m} 开得了工`).toBe(45);
+      expect(S.min - t).toBe(120);
+      expect(dayNo(S)).toBe(d);
+      expect(S.min).toBeLessThan(24 * 60);
+      expect(S.dayLog).toEqual({ lg_tibian: d });
+    }
+    // 二十二点以后：窗口外，不给钱、不耗时间
+    for (const h of [22, 23]) {
+      setState(skipToYangzhou());
+      at(h);
+      const [s, t] = [S.silver, S.min];
+      act('ss_gengfu', '替班');
+      expect([S.silver, S.min], `${h}点`).toEqual([s, t]);
+    }
+    // 十九点更夫还没出来
+    setState(skipToYangzhou());
+    at(19, 30);
+    expect(roomNpcs('cheng')).not.toContain('ss_gengfu');
   });
 
   it('干到过了半夜，也算开工那一日（today 排在 time 前头）', () => {
@@ -223,5 +250,73 @@ describe('一日一回的条件与效果（today / doneToday / notDoneToday）',
   });
   it('耗时的说法', () => {
     expect([60, 120, 180, 240].map(spanLabel)).toEqual(['半个时辰', '一个时辰', '一个半时辰', '两个时辰']);
+  });
+});
+
+describe('榜上标凶险：差事档次比你高，揭榜按钮在赏额后头标出来', () => {
+  it('木剑新人（不入流）：寻人没有字样，寻物、河贼稍险，缉凶凶险，剿匪极凶险', () => {
+    expect(tierNow(S).t).toBe(0);
+    expect(verbGain('xsb_zhuren', '揭寻人')).toBe(`赏${cn(250)}文`);
+    expect(verbGain('xsb_zhuren', '揭寻物')).toBe(`赏${cn(800)}文 · 稍险`);
+    expect(verbGain('xsb_zhuren', '揭河贼')).toBe(`赏${cn(800)}文 · 稍险`);
+    expect(verbGain('xsb_zhuren', '揭缉凶')).toBe(`赏${cn(1500)}文 · 凶险`);
+    expect(verbGain('xsb_zhuren', '揭剿匪')).toBe(`赏${cn(3380)}文 · 极凶险`);
+  });
+  it('档次一高，字样就退了：差事档次不高于你的，不标', () => {
+    expect([0, 1, 2, 3, 4].map(t => dangerOf(t))).toEqual([null, '稍险', '凶险', '极凶险', '极凶险']);
+    S.gongli = 3;
+    // 差事档次不高于玩家档次时不标
+    const t = tierNow(S).t;
+    expect(dangerOf(t)).toBeNull();
+    expect(dangerOf(t - 1)).toBeNull();
+  });
+  it('师门差事标贡献，不标凶险', () => {
+    S.sect = { school: '桃花岛', rank: '记名' };
+    expect(verbGain('smth_quheng', '讨差事')).not.toContain('险');
+  });
+});
+
+describe('第一屏指路：近处有事里添一条零工的去处', () => {
+  it('新到扬州、钱不足一百文、今日没做过零工：能看到运河渡口常把头招脚夫；只添一条，不挤掉差事', () => {
+    S.silver = 500;
+    at(8);
+    const base = leadsNear();
+    S.silver = 30;
+    const ls = leadsNear();
+    expect(ls.slice(0, -1), '差事的几行原样不动').toEqual(base);
+    const g = ls.at(-1)!;
+    expect(g.text).toContain('常把头');
+    expect(g.to).toBe('dukou');
+    expect(g.min).toBeGreaterThan(0);
+    expect(ls.length).toBe(base.length + 1);
+    expect(ls.filter(l => /招脚夫|缺人|替一更/.test(l.text)).length).toBe(1);
+  });
+  it('钱够一百文、做过零工了、不在开工的钟点、序章里：不添', () => {
+    at(8);
+    S.silver = 100;
+    expect(gigLead()).toBeNull();
+    S.silver = 99;
+    expect(gigLead()).not.toBeNull();
+    // 今日做过任何一处零工，不再指
+    act('lg_batou', '扛包');
+    at(8);
+    expect(gigLead()).toBeNull();
+    advanceDays(S, 1);
+    at(8);
+    S.silver = 99;
+    expect(gigLead()).not.toBeNull();
+    // 夜里二十三点：哪处零工都收了
+    at(23);
+    expect(gigLead()).toBeNull();
+    at(8);
+    S.chapter = 0;
+    expect(gigLead()).toBeNull();
+  });
+  it('夜里二十点：指向东关街的更夫', () => {
+    at(20);
+    S.silver = 30;
+    const g = gigLead();
+    expect(g?.text).toContain('更夫');
+    expect(g?.to).toBe('cheng');
   });
 });

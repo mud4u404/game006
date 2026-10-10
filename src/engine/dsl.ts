@@ -12,7 +12,8 @@ import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
-import { houtianOf } from './ren';
+import { houtianOf, syncGear } from './ren';
+import { keyOfSlot } from './zhuangbei';
 import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
 import { learnShi, moveShi } from './shishi';
 import { hearsay, inner } from './chuanwen';
@@ -206,6 +207,11 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         // 兵器当了、卖了，手里也就没了
         if (!S.items[e.id] && S.gear?.weapon === e.id) delete S.gear.weapon;
         break;
+      case 'wear': {
+        const it = itemById(e.id);
+        if (it?.equip && (S.items[e.id] ?? 0) > 0) { S.gear[keyOfSlot(it.equip.slot)] = e.id; syncGear(S); }
+        break;
+      }
       case 'rel': {
         const cur = S.rel[e.npc] ?? '素不相识';
         if (!e.from || e.from.includes(cur)) S.rel[e.npc] = e.value;

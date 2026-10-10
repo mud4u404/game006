@@ -209,7 +209,8 @@ describe('穿戴：六个装备位', () => {
     S.items.zb_douli = 1;
     expect(wear('body', 'zb_douli')).toContain('放不进');
     expect(wear('head', 'zb_pijia')).toContain('没有');
-    expect(S.gear).toEqual({ weapon: 'kp_mujian' });
+    // 失败的那几下没有动身上的东西（跳过序章的人，玉佩、斗笠本来就戴着）
+    expect(S.gear).toEqual({ weapon: 'kp_mujian', waist: 'jade', head: 'kp_douli' });
     expect(wear('head', 'zb_douli')).toBeNull();
     expect(GEAR_SLOT.head).toBe('冠');
   });

@@ -185,7 +185,8 @@ export function skipToYangzhou(): GameState {
     attr: { ...ATTR0 }, lilian: 355, encLog: {}, lastEnc: -1e9,
     // 断水不在开局：江伯留下的残页要自己参悟（负责人 10-09）
     skills: { hanjiang: { r: 0, p: 120 }, taxue: { r: 0, p: 50 }, xinfa: { r: 0, p: 80 } },
-    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'kp_mujian' },
+    // 玉佩挂在腰间、斗笠戴在头上：了尘、卫衡都当面说起，和走一遍一样
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'kp_mujian', waist: 'jade', head: 'kp_douli' },
     feed: [
       { t: '江湖', x: '你在扬州城外的破庙里歇了一夜，江伯教的那几招剑法，比划来比划去，总觉得差着火候。', n: 0 },
       { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮吃了哑巴亏。', n: 0 }

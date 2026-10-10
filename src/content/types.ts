@@ -125,6 +125,8 @@ export type Effect =
   | { type: 'toast'; text: string }
   | { type: 'silver'; delta: number }
   | { type: 'item'; id: string; delta: number }
+  /** 把行囊里这件装备穿上（放进它该在的位置，原来的挤回行囊）；行囊里没有、不是装备的，什么也不做 */
+  | { type: 'wear'; id: string }
   /** 设置关系；写了 from 时，只有当前关系在 from 里才改 */
   /** 改关系：value 只用关系阶梯里的词（engine/renqing.ts）；note 是人情备注，写为什么记得这个人 */
   | { type: 'rel'; npc: string; value: string; from?: string[]; note?: string }
