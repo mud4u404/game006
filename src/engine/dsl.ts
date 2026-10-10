@@ -4,7 +4,7 @@
  */
 import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
-import { advanceMin, dayNo } from '../core/time';
+import { absMin, advanceMin, dayNo } from '../core/time';
 import { liang } from '../core/util';
 import { itemById, jobById, questById, skillById } from '../content';
 import { REALMS, SECT_RANKS } from '../content/skills';
@@ -15,7 +15,7 @@ import { growAttr } from './gengu';
 import { houtianOf, syncGear } from './ren';
 import { keyOfSlot } from './zhuangbei';
 import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
-import { learnShi, moveShi } from './shishi';
+import { learnShi, moveShi, shiLeftHours } from './shishi';
 import { hearsay, inner } from './chuanwen';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
@@ -88,6 +88,18 @@ export function test(c?: Cond): boolean {
     const at = S.shi?.[c.shi.id]?.at;
     if (c.shi.at && !(at !== undefined && c.shi.at.includes(at))) return false;
     if (c.shi.not && at !== undefined && c.shi.not.includes(at)) return false;
+    // 走到这一步已经几个钟头
+    if (c.shi.age) {
+      const st = S.shi?.[c.shi.id];
+      if (!st) return false;
+      const h = (absMin(S) - st.since) / 60;
+      if ((c.shi.age.below !== undefined && h >= c.shi.age.below) || (c.shi.age.atLeast !== undefined && h < c.shi.age.atLeast)) return false;
+    }
+    // 离下一步还有几个钟头
+    if (c.shi.left) {
+      const h = shiLeftHours(c.shi.id);
+      if (h === undefined || (c.shi.left.below !== undefined && h >= c.shi.left.below) || (c.shi.left.atLeast !== undefined && h < c.shi.left.atLeast)) return false;
+    }
   }
   // 世界状态（engine/shijie.ts）：码头归谁、治安、物价、势力、人的处境
   if (c.w && !testWorld(c.w)) return false;
@@ -183,7 +195,27 @@ function dismiss(why: string): void {
   S.job = null;
 }
 
+/** 协议结算期间，世事等模块引出的 run 要作为后续链结算，不能绕过深度和条数限制。 */
+export interface RunHooks {
+  chain: (effects: Effect[] | undefined, out: Outcome) => Outcome;
+  learn: (e: Extract<Effect, { type: 'learn' }>, out: Outcome) => void;
+  notify: (text: string) => void;
+}
+let runHooks: RunHooks | undefined;
+export function withRunHooks<T>(hooks: RunHooks, fn: () => T): T {
+  const old = runHooks;
+  runHooks = hooks;
+  try { return fn(); } finally { runHooks = old; }
+}
+const notify = (text: string): void => { if (runHooks) runHooks.notify(text); else emit('toast', text); };
+
+/** 旧规则模块的兼容入口；界面通过行动协议提出请求。 */
 export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()): Outcome {
+  return runHooks ? runHooks.chain(effects, out) : runStep(effects, out);
+}
+
+/** 只供行动结算和旧规则入口内部执行；不作界面接口。 */
+export function runStep(effects: Effect[] | undefined, out: Outcome = newOutcome()): Outcome {
   for (const e of effects || []) {
     switch (e.type) {
       case 'flag': S.flags[e.flag] = e.value ?? true; break;
@@ -200,8 +232,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'shi': if (e.to) moveShi(e.id, e.to); else learnShi(e.id); break;
       case 'feed': pushFeed(e.tag, e.text); break;
       case 'feedReset': S.feed = []; break;
-      case 'toast': emit('toast', e.text); break;
-      case 'silver': S.silver = Math.max(0, S.silver + e.delta); break;
+      case 'toast': notify(e.text); break;
+      case 'silver':
+        if (!test(e.if)) break;
+        S.silver = Math.max(0, S.silver + e.delta);
+        if (e.note) pushFeed('江湖', e.note);
+        break;
       case 'item':
       {
         // max 只管加：手里本来就多于 max 的，不收走
@@ -224,8 +260,11 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         break;
       }
       case 'prof': out.breaks.push(...gainProf(e.skill, e.amount)); break;
-      case 'lilian': addLilian(S, e.amount); break;
-      case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0, e.lilian)); break;
+      case 'lilian': if (e.amount < 0) S.lilian += e.amount; else addLilian(S, e.amount); break;
+      case 'learn':
+        if (runHooks) runHooks.learn(e, out);
+        else out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0, e.lilian));
+        break;
       // 拜师或升地位，只升不降；身在别派时无效（要先离开）。叛出、被逐出过这一派的，拜不回去（docs/menpai.md 第七节）
       case 'sect': {
         if (S.sect) {
@@ -252,7 +291,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         break;
       case 'attr': growAttr(S, e.key, e.delta, S.chapter === 0 ? '少年往事' : '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;
-      case 'gongxian': if (S.sect) addGongxian(S.sect.school, e.delta); break;
+      case 'gongxian': {
+        // 协议算隐含学艺代价时带上门派，避免先扣后学时扣错派
+        const school = 'school' in e && typeof e.school === 'string' ? e.school : S.sect?.school;
+        if (school) addGongxian(school, e.delta);
+        break;
+      }
       case 'eming': {
         S.eming = Math.max(0, S.eming + e.delta);
         // 软肋：恶名到了这个身份容不下的地步，被辞退（六扇门收回腰牌）
@@ -354,12 +398,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
           const g = jobGongxian(j);
           addGongxian(j.sect, g);
           pushFeed('收获', `交了差：${j.title}，${j.sect}贡献 +${g}。`);
-          emit('toast', `交差 · ${j.sect}贡献 +${g}`);
+          notify(`交差 · ${j.sect}贡献 +${g}`);
         } else {
           const pay = jobPay(j);
           S.silver += pay;
           pushFeed('收获', `交了差：${j.title}，得银 ${pay} 文。`);
-          emit('toast', `交差 · 银两 +${pay} 文`);
+          notify(`交差 · 银两 +${pay} 文`);
         }
         break;
       }

@@ -1,9 +1,13 @@
 name: CI
 
-# 每次推送都跑检查。协作者只需要推送分支，不用自己建 PR：
-# 分支名形如 <工具名>/<Issue 编号>-<英文>，open-pr 会按 Issue 自动建 PR；
-# 只新增内容包的（或「修订」任务点名的内容包），检查全部通过后由 automerge 自动合并。
-# 分支上的检查测的是「合进最新 main 以后」的样子；自动合并后再把 main 重测一遍。规则见 docs/auto-review.md。
+# 每次推送都跑检查，一共大约八分钟（check 约五分钟、smoke 约三分钟，两个并行跑）。
+# 协作者只需要推送分支，不用自己建 PR：
+# 分支名形如 <工具名>/<Issue 编号>-<英文>，open-pr 会按 Issue 自动建 PR（Issue 已关闭或带「暂缓」就不建，在 Issue 下留言）；
+# 协作者往已有 PR 的分支推送，open-pr 顺手摘掉 PR 上的「要改」。
+# 检查结果出来以后的事（红了打「要改」、全绿且只动了内容就 squash 合并）在 automerge.yml，
+# 它由 workflow_run 触发，用的是 main 上的那份，所以分支上的工作流文件落后也不影响。规则见 docs/auto-review.md。
+# 分支上的检查测的是「合进最新 main 以后」的样子；自动合并后再把 main 重测一遍。
+# 冒烟测试失败会自动重试一次，所以不要推空提交「重跑 CI」：先看日志里是哪一步红。
 on:
   push:
     branches: ['**']
@@ -39,6 +43,7 @@ jobs:
   smoke:
     if: github.event.deleted != true
     runs-on: ubuntu-latest
+    timeout-minutes: 20   # 兜底：卡在装浏览器、拉代码上时别占满默认的六小时
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,11 +63,14 @@ jobs:
       - name: 机器上没有 Chrome 时才下载浏览器
         timeout-minutes: 10
         run: command -v google-chrome || npx playwright install --with-deps chromium
-      - name: 冒烟测试：从标题画面一路玩到首领战
-        timeout-minutes: 10
+      # 失败自动重试一次：无头浏览器偶尔抽风（超时、卡住），两次都红才算红，不用人手动重跑。
+      # 第一次失败的日志还在上面，真有毛病看得出来。
+      - name: 冒烟测试：从标题画面一路玩到首领战（失败自动重试一次）
+        timeout-minutes: 15
         env:
           SMOKE_CHANNEL: chrome
-        run: npm run smoke
+        run: |
+          npm run smoke || { echo "::warning::冒烟测试第一次没过（日志见上），自动重试一次，两次都没过才算红"; npm run smoke; }
       # 冒烟测试走认好的路，乱点测试随机点四百下，找没人走过的路：不报错、不卡死、不白屏。
       # 冒烟测试已经打过包，这里直接用 dist；失败时日志里有种子和最近二十次点击，本机 LUANDIAN_SEED=种子 npm run luandian 复现
       - name: 乱点测试：随机点四百下
@@ -72,6 +80,8 @@ jobs:
         run: node scripts/luandian.mjs
 
   # 协作者推送任务分支后，自动建 PR（已有就沿用）。维护者的 claude/ 分支不在此列。
+  # 判断顺序：分支名里有 Issue 编号 → 已有 PR 就摘掉「要改」并结束 →
+  #   没有 PR 时先看 Issue：不存在报错；已关闭或带「暂缓」不建，在 Issue 下留言（同一原因只留一次）→ 建 PR，把 Issue 上的「给:xxx」标签复制过去。
   open-pr:
     if: >-
       github.event.deleted != true &&
@@ -82,9 +92,6 @@ jobs:
       contents: read
       pull-requests: write
       issues: write
-    outputs:
-      pr: ${{ steps.pr.outputs.pr }}
-      issue: ${{ steps.pr.outputs.issue }}
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
@@ -101,30 +108,73 @@ jobs:
             echo "分支名里没有 Issue 编号（应为 <工具名>/<编号>-<英文>），不自动建 PR。"
             exit 0
           fi
-          echo "issue=$n" >> "$GITHUB_OUTPUT"
-          find_pr() { gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty'; }
-          pr=$(find_pr)
-          if [ -z "$pr" ]; then
-            title=$(gh issue view "$n" --repo "$REPO" --json title --jq .title | sed -E 's/^【[^】]*】//')
-            [ -n "$title" ] || title="$BRANCH"
-            {
-              echo "Closes #$n"
-              echo
-              echo "## 做了什么（取自提交说明）"
-              echo
-              git log --reverse --format='### %s%n%n%b' "origin/main..HEAD"
-              echo "## 自检"
-              echo
-              echo "类型检查、全部测试、打包、冒烟测试由 CI 代跑，结果见本页的检查。"
-              echo
-              echo "> 这个 PR 由 CI 按分支 \`$BRANCH\` 自动创建。"
-            } > body.md
-            if url=$(gh pr create --repo "$REPO" --base main --head "$BRANCH" --title "[#$n] $title" --body-file body.md 2> err.txt); then
-              pr=${url##*/}
-            else
-              cat err.txt
-              pr=$(find_pr)   # 也可能是协作者自己刚建好
+          find_pr() { gh pr list --repo "$REPO" --base main --head "$BRANCH" --state open --json number --jq '.[0].number // empty'; }
+          # 在 Issue 下留言，同一个原因只留一次（用隐藏标记认）
+          issue_note() {
+            mark="<!-- open-pr:$BRANCH:$1 -->"
+            if ! gh issue view "$n" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$mark"; then
+              gh issue comment "$n" --repo "$REPO" --body "$mark
+          $2"
             fi
+          }
+          # 工作流里用到的标签，仓库里没有就先建（已有会报错，忽略）
+          gh label create "要改" --repo "$REPO" --color d93f0b --description "维护者退回，原作者先改完再领新任务" 2> /dev/null || true
+          pr=$(find_pr)
+          if [ -n "$pr" ]; then
+            echo "分支已有 PR #$pr：协作者又推送了，摘掉「要改」（CI 再红会自动加回来）。"
+            gh pr edit "$pr" --repo "$REPO" --remove-label "要改" 2> /dev/null || true
+            echo "pr=$pr" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # 读 Issue：真 404（不存在）和临时错误（网络、限流）分开。临时错误重试一次，仍失败只警告，这次不建 PR
+          info=""
+          for try in 1 2; do
+            if info=$(gh api "repos/$REPO/issues/$n" 2> issue-err.txt); then break; fi
+            info=""
+            if grep -q 'HTTP 404' issue-err.txt; then break; fi
+            sleep 5
+          done
+          if [ -z "$info" ]; then
+            if grep -q 'HTTP 404' issue-err.txt; then
+              echo "::error::分支名里的 Issue #$n 不存在，不建 PR。分支名里的编号要写对。"
+              exit 1
+            fi
+            echo "::warning::读 Issue #$n 连续失败（$(head -c 200 issue-err.txt)），这次不建 PR；重新运行这次 CI 即可。"
+            exit 0
+          fi
+          if jq -e '.pull_request != null' <<< "$info" > /dev/null; then
+            echo "::error::分支名里的 #$n 是个 PR，不是 Issue，不建 PR。分支名里的编号要写成 Issue 的编号。"
+            exit 1
+          fi
+          if [ "$(jq -r .state <<< "$info")" != open ]; then
+            issue_note closed "分支 \`$BRANCH\` 对应的 Issue #$n 已经关闭，CI 不建 PR。如果任务确实要继续做，请在这里说一声，等维护者重新打开 Issue；否则可以删掉这个分支。"
+            echo "Issue #$n 已关闭，不建 PR。"
+            exit 0
+          fi
+          if jq -e 'any(.labels[]; .name == "暂缓")' <<< "$info" > /dev/null; then
+            issue_note hold "Issue #$n 带「暂缓」标签，现在不做，所以分支 \`$BRANCH\` 不建 PR。等维护者去掉「暂缓」后，再推送一次分支就会自动建 PR。"
+            echo "Issue #$n 带「暂缓」，不建 PR。"
+            exit 0
+          fi
+          title=$(jq -r .title <<< "$info" | sed -E 's/^【[^】]*】//')
+          [ -n "$title" ] || title="$BRANCH"
+          {
+            echo "Closes #$n"
+            echo
+            echo "## 做了什么（取自提交说明）"
+            echo
+            git log --reverse --format='### %s%n%n%b' "origin/main..HEAD"
+            echo "## 自检"
+            echo
+            echo "类型检查、全部测试、打包、冒烟测试由 CI 代跑，结果见本页的检查。"
+            echo
+            echo "> 这个 PR 由 CI 按分支 \`$BRANCH\` 自动创建。"
+          } > body.md
+          if url=$(gh pr create --repo "$REPO" --base main --head "$BRANCH" --title "[#$n] $title" --body-file body.md 2> err.txt); then
+            pr=${url##*/}
+          else
+            cat err.txt
+            pr=$(find_pr)   # 也可能是协作者自己刚建好
           fi
           if [ -z "$pr" ]; then
             if grep -qi 'no commits between' err.txt; then
@@ -136,72 +186,13 @@ jobs:
             else
               why="错误信息：$(head -c 300 err.txt)"
             fi
-            mark="<!-- open-pr:$BRANCH -->"
-            if ! gh issue view "$n" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$mark"; then
-              gh issue comment "$n" --repo "$REPO" --body "$mark
-          分支 \`$BRANCH\` 已推送，但 CI 没能自动创建 PR。$why 也可以点这里手动创建：https://github.com/$REPO/compare/main...$BRANCH?expand=1"
-            fi
+            issue_note create-failed "分支 \`$BRANCH\` 已推送，但 CI 没能自动创建 PR。$why 也可以点这里手动创建：https://github.com/$REPO/compare/main...$BRANCH?expand=1"
             exit 1
           fi
+          # Issue 上的「给:xxx」（指派给哪位协作者）复制到 PR 上，这样 PR 被退回时，wait-for-work 能把它交还原作者
+          while read -r label; do
+            [ -n "$label" ] || continue
+            gh pr edit "$pr" --repo "$REPO" --add-label "$label" || true
+          done < <(jq -r '.labels[].name | select(startswith("给:"))' <<< "$info")
           echo "pr=$pr" >> "$GITHUB_OUTPUT"
           echo "PR #$pr"
-
-  # 只新增内容包的 PR，检查全部通过后自动合并，不需要人或 Claude 介入。
-  # 改动了其他文件的 PR 不会自动合并，留给项目负责人。
-  automerge:
-    needs: [check, smoke, open-pr]
-    if: needs.open-pr.outputs.pr != ''
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-      actions: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      PR: ${{ needs.open-pr.outputs.pr }}
-      ISSUE: ${{ needs.open-pr.outputs.issue }}
-      REPO: ${{ github.repository }}
-      BRANCH: ${{ github.ref_name }}
-    steps:
-      - name: 判断是不是只动了内容
-        id: scope
-        run: |
-          held=$(gh pr view "$PR" --repo "$REPO" --json isDraft,labels --jq '.isDraft or any(.labels[]; .name == "暂缓合并")')
-          if [ "$held" = "true" ]; then echo "草稿或带「暂缓合并」标签，不自动合并。"; echo "content_only=false" >> "$GITHUB_OUTPUT"; exit 0; fi
-          # Issue 正文「## 允许修改的文件」（也认「## 允许改的文件」）里点名的内容包和文档，可以修改。
-          # 不限「修订」标签：内容任务也常要改已有的内容包（比如给已有武功补层级写法）
-          allowed=$(gh issue view "$ISSUE" --repo "$REPO" --json body --jq .body | sed -n '/^## 允许修\{0,1\}改的文件/,/^## [^允]/p' | grep -oE '(src/content/packs|docs)/[A-Za-z0-9_.-]+[.](ts|md)' | sort -u)
-          echo "允许修改：$allowed"
-          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | "\(.status) \(.deletions) \(.filename)"')
-          ok=true
-          [ -n "$files" ] || ok=false
-          while read -r status deletions file; do
-            [ -n "$file" ] || continue
-            case "$status:$file" in
-              added:src/content/packs/*.ts) ;;
-              modified:src/content/packs/*.ts|added:docs/*.md|modified:docs/*.md) grep -qxF "$file" <<< "$allowed" || ok=false ;;
-              modified:tests/forbidden-names.ts) [ "$deletions" = "0" ] || ok=false ;;
-              *) ok=false ;;
-            esac
-            echo "$status $file"
-          done <<< "$files"
-          echo "content_only=$ok" >> "$GITHUB_OUTPUT"
-          echo "只动了内容：$ok"
-      - name: 合并
-        if: steps.scope.outputs.content_only == 'true'
-        # 只合并检查过的这一个提交；期间又有推送，就留给下一轮 CI
-        run: gh pr merge "$PR" --repo "$REPO" --merge --match-head-commit "$GITHUB_SHA"
-      - name: 关闭对应的 Issue，删除分支
-        # 机器人合并时，GitHub 不会按「Closes #编号」自动关闭 Issue，这里补上。
-        # 不关的话，协作者的 wait-for-work 会把它当成还没做的任务；分支留着，也会被当成有人在做。
-        if: steps.scope.outputs.content_only == 'true'
-        run: |
-          gh issue close "$ISSUE" --repo "$REPO" --reason completed --comment "已由 #$PR 完成，检查通过后自动合并。" || true
-          gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" || true
-      - name: 部署试玩网址，并重测 main
-        # 用 GITHUB_TOKEN 合并不会触发 main 上的推送事件，这里手动启动部署和 main 的检查
-        if: steps.scope.outputs.content_only == 'true'
-        run: |
-          gh workflow run pages.yml --repo "$REPO" --ref main
-          gh workflow run ci.yml --repo "$REPO" --ref main

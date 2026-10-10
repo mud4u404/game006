@@ -16,9 +16,10 @@ import type { PersonSt, Range, RoomLife, WorldCond, WorldEffect } from '../conte
 import { S, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
 import { seedNews, spreadDay, type RumorInst } from './chuanwen';
+import { shiLeftHours } from './shishi';
 
 /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；until 是哪一日擦掉（江湖日） */
-export interface Mark { k: string; text: string; until: number }
+export interface Mark { k: string; text: string; until: number; /** 只在这个时段看得见（二十一点到二十三点） */ h?: [number, number]; /** 只在这件世事离下一步不足几个钟头时看得见 */ l?: [id: string, below: number] }
 export interface FacState {
   power: number; wealth: number; holds: string[];
   rel: Record<string, number>;
@@ -222,7 +223,11 @@ export function placedHere(roomId: string, obj: boolean, s: GameState = S): stri
 /** 这处地方眼下的痕迹：没到期的，新的在前，最多两行 */
 export function marksOf(place: string, s: GameState = S): string[] {
   const today = dayNo(s);
-  return (worldOf(s).place[place]?.marks ?? []).filter(m => m.until > today).slice(0, 2).map(m => m.text);
+  const hour = Math.floor(s.min / 60);
+  const inHours = (h?: [number, number]): boolean => !h || (h[0] <= h[1] ? hour >= h[0] && hour < h[1] : hour >= h[0] || hour < h[1]);
+  // 绑着世事的痕迹：那件世事离下一步还远，就不显示
+  const inLeft = (l: Mark['l'], st: GameState): boolean => { if (!l) return true; const h = shiLeftHours(l[0], st); return h !== undefined && h < l[1]; };
+  return (worldOf(s).place[place]?.marks ?? []).filter(m => m.until > today && inHours(m.h) && inLeft(m.l, s)).slice(0, 2).map(m => m.text);
 }
 
 const inRange = (v: number, r?: Range): boolean => !r || ((r.below === undefined || v < r.below) && (r.atLeast === undefined || v >= r.atLeast));
@@ -260,9 +265,9 @@ export function setOwner(w: WorldState, place: string, to: string | null): void 
 }
 
 /** 留一条痕迹：同一种只留最新的一条，每处最多两行（新的在前） */
-export function addMark(w: WorldState, place: string, k: string, text: string, until: number): void {
+export function addMark(w: WorldState, place: string, k: string, text: string, until: number, h?: [number, number], l?: [string, number]): void {
   const p = placeState(w, place);
-  p.marks = [{ k, text, until }, ...p.marks.filter(m => m.k !== k)].slice(0, 2);
+  p.marks = [{ k, text, until, ...(h ? { h } : {}), ...(l ? { l } : {}) }, ...p.marks.filter(m => m.k !== k)].slice(0, 2);
 }
 
 /** 人的痕迹用的种类键：一个人一条 */
@@ -292,7 +297,7 @@ export function applyWorld(w: WorldState, e: WorldEffect, today: number): void {
       if (f) f.you = r2(clamp(f.you + e.delta, -100, 100));
       break;
     }
-    case 'mark': addMark(w, e.place, e.k, e.text, today + e.days); break;
+    case 'mark': addMark(w, e.place, e.k, e.text, today + e.days, e.hour ? [e.hour.from, e.hour.to] : undefined, e.left ? [e.left.id, e.left.below] : undefined); break;
     case 'free': {
       // 放回来、伤好了：处境清掉，知道的传闻留着
       const p = w.ppl[e.npc];
