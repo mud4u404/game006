@@ -382,6 +382,7 @@
    "xsb_jiaofei",
    "xsb_xiongfan",
    "xsb_xunren",
+   "xun_weiheng",
    "zb_jie_daoke",
    "zb_jie_fei",
    "zy_csf"
@@ -599,7 +600,14 @@
    "p_skip",
    "ss_zei_gen",
    "sz_chuan_chaguan",
-   "sz_chuan_xiuniang"
+   "sz_chuan_xiuniang",
+   "xun_chu",
+   "xun_dui",
+   "xun_dui_flee",
+   "xun_dui_lose",
+   "xun_tiao",
+   "xun_tiao_win",
+   "xun_wei"
   ],
   "encounters": [
    "luyu_jiang_chabang",
@@ -636,6 +644,19 @@
    "luyu_yz_zouhai_b"
   ],
   "shi": [
+   "kp_xun",
+   "kp_xun.bangwei",
+   "kp_xun.cuo",
+   "kp_xun.dangmian",
+   "kp_xun.duimian",
+   "kp_xun.duye",
+   "kp_xun.fang",
+   "kp_xun.feng",
+   "kp_xun.hubai",
+   "kp_xun.pao",
+   "kp_xun.si",
+   "kp_xun.tiaoting",
+   "kp_xun.zou",
    "lsm_bai",
    "lsm_bai.fang",
    "lsm_bai.luowang",

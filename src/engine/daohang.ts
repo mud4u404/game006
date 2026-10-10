@@ -8,7 +8,7 @@
  * 纯函数，只读 S（试作息时临时改 S.min，算完还原）。见闻簿、江湖页横幅、地图都读它。
  */
 import { S, pushFeed } from '../core/state';
-import { shichen } from '../core/time';
+import { dayNo, shichen } from '../core/time';
 import { JOBS, NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
@@ -239,7 +239,40 @@ function giverOf(jobId: string): string | undefined {
   return giverCache.get(jobId);
 }
 
-/** 眼下能接的差事，按路近排，最多 n 件；派差的人眼下在哪就去哪，不在的写他常在的地方 */
+/** 零工的去处怎么说，按各处零工「今日做过」的记号（content/packs/lingong.ts、shishi-yangzhou.ts）排 */
+const GIG_TEXT: Record<string, string> = {
+  lg_kangbao: '运河渡口，常把头招脚夫扛盐包',
+  lg_chaoshu: '辕门桥，席先生缺人抄书',
+  lg_bangchu: '望江楼后厨，葛师傅缺人手',
+  lg_tibian: '东关街，更夫想找人替一更'
+};
+/** 钱少到这个数以下，「近处有事」里才添一条零工的去处 */
+const GIG_POOR = 100;
+
+/**
+ * 身上钱少、今日还没做过零工的人，给一条零工的去处（运河渡口常把头招脚夫之类）：派活的人眼下在、开工的钟点也对得上的，取路最近的一处。
+ * 没有零工可指的返回 null。试玩：新到扬州身上三十文，不知道到哪里挣第一笔钱
+ */
+export function gigLead(): Lead | null {
+  if (S.job || S.chapter === 0 || S.silver >= GIG_POOR) return null;
+  if (Object.keys(GIG_TEXT).some(k => S.dayLog?.[k] === dayNo(S))) return null;
+  let best: Lead | null = null;
+  for (const n of NPCS) for (const bs of Object.values(n.actions)) {
+    // 零工的写法：开工的那条分支里有一条 today 效果，记号在 GIG_TEXT 里
+    const work = bs?.find(b => b.do?.some(e => e.type === 'today' && e.id in GIG_TEXT));
+    if (!work || !test(work.if ?? {})) continue;
+    const at = whoNav(n.id).now;
+    if (!at || at === S.loc) continue;
+    const m = pathMin(S.loc, at);
+    if (!m) continue;
+    const key = (work.do!.find(e => e.type === 'today') as { id: string }).id;
+    const min = travelMin(m);
+    if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min };
+  }
+  return best;
+}
+
+/** 眼下能接的差事，按路近排，最多 n 件；派差的人眼下在哪就去哪，不在的写他常在的地方。身上钱少的，末尾另添一条零工的去处（不占差事的名额） */
 export function leadsNear(n = 3): Lead[] {
   if (S.job) return [];
   const out: Lead[] = [];
@@ -253,5 +286,7 @@ export function leadsNear(n = 3): Lead[] {
     if (!m) continue;
     out.push({ text: j.title, to: at, toName: room(at).name, min: travelMin(m) });
   }
-  return out.sort((a, b) => a.min - b.min).slice(0, n);
+  const jobs = out.sort((a, b) => a.min - b.min).slice(0, n);
+  const gig = gigLead();
+  return gig ? [...jobs, gig] : jobs;
 }

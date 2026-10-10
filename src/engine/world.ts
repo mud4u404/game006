@@ -5,6 +5,7 @@ import type { Branch, Cond, EyeDef, NpcDef, QuestStage, RoomDef, Verb } from '..
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
 import { advanceMin, dayNo, shichen, spanLabel } from '../core/time';
 import { attrEffects } from './gengu';
+import { tierNow } from './ren';
 import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
 import { seeShi } from './shishi';
@@ -197,6 +198,15 @@ export function verbPrice(id: string, verb: Verb): number | null {
 }
 
 /**
+ * 一件差事凶险不凶险：差事的档次比你眼下的档次高几档（engine/ren.ts 的 tierNow）。
+ * 高一档写「稍险」，高两档「凶险」，高三档以上「极凶险」；不高于你的不写。揭榜按钮标在赏额后头，木剑新人揭剿匪、河贼，点之前就看得出
+ */
+export function dangerOf(jobTier: number): string | null {
+  const gap = jobTier - tierNow(S).t;
+  return gap >= 3 ? '极凶险' : gap === 2 ? '凶险' : gap === 1 ? '稍险' : null;
+}
+
+/**
  * 这个动作能挣什么（按钮底下的副标，和 verbPrice 标价是一对）：
  * 接差事的（{type:'job'}）标这件差事的报酬——身份的差事标赏钱，师门差事标贡献；
  * 干活得钱的（银两为正）标得多少，耗时一个时辰以上的再标耗多久。看的也是「不算银两条件」时会走到的分支。没有可标的返回 null
@@ -204,6 +214,8 @@ export function verbPrice(id: string, verb: Verb): number | null {
 export function verbGain(id: string, verb: Verb): string | null {
   const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
   const b = bs?.find(x => { const { silver: _s, ...rest } = x.if ?? {}; return test(rest); });
+  // 一日一回的营生，今天做过了：按钮标出来，点了也不会再干（也不耗时间）
+  if (b?.if?.doneToday !== undefined) return '今日已做';
   if (!b?.do) return null;
   const parts: string[] = [];
   for (const e of b.do) {
@@ -211,7 +223,11 @@ export function verbGain(id: string, verb: Verb): string | null {
     const j = jobById(e.id);
     if (!j) continue;
     if (j.sect) parts.push(`贡献${cn(jobGongxian(j))}`);
-    else if (jobPay(j) > 0) parts.push(`赏${cn(jobPay(j))}文`);
+    else if (jobPay(j) > 0) {
+      const risk = dangerOf(j.tier);
+      parts.push(`赏${cn(jobPay(j))}文`);
+      if (risk) parts.push(risk);
+    }
   }
   const gain = b.do.reduce((sum, e) => (e.type === 'silver' && e.delta > 0 ? sum + e.delta : sum), 0);
   if (gain > 0) parts.push(`得${cn(gain)}文`);

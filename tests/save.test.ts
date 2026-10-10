@@ -96,7 +96,8 @@ describe('存档：更新游戏不丢档', () => {
   it('手里的兵器已经不在行囊里了，就空着手', () => {
     const t = skipToYangzhou();
     delete t.items.kp_mujian;
-    expect(migrate(t).gear).toEqual({});
+    // 玉佩、斗笠还在行囊里，戴着；只有木剑没了，手里就空着
+    expect(migrate(t).gear).toEqual({ waist: 'jade', head: 'kp_douli' });
   });
 
   it('纸娃娃：第四版的旧存档只有兵器一个装备位，照样读得出来，其余五个位置空着', () => {

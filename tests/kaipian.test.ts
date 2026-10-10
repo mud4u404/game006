@@ -160,12 +160,15 @@ describe('新开局：瓜洲夜雨', () => {
     expect(cond({ flag: 'kp_xin' })).toBe(false);
   });
 
-  it('默认路径（冒烟脚本、机器玩家都按「第一个选项」往前点）：每条路的最后一张卡，第一个选项是登船；「再坐一会儿」只能排在后面', () => {
+  it('默认路径（冒烟脚本、机器玩家都按「第一个选项」往前点）：每条路的最后一张卡，第一个选项是登船；「再坐一会儿」在天明那张卡上、只能排在后面', () => {
     for (const id of ['kp_du_hou', 'kp_wen_hou', 'kp_bu_hou']) {
       const def = storyById(id)!;
       const last = def.cards.at(-1)!;
       expect(last.choices[0].label, id).toContain('登船');
-      expect(last.choices.map(c => c.label)).toContain('在焦船边再坐一会儿');
+      // 第四稿：「再坐一会儿」在倒数第二张（天明）上，去路和登船并成了最后一张
+      const dawn = def.cards.at(-2)!;
+      expect(dawn.choices.map(c => c.label)).toContain('在焦船边再坐一会儿');
+      expect(dawn.choices[0].label, id).not.toContain('再坐');
       expect(def.endChapter).toEqual({ small: '第一回', big: '扬州' });
     }
   });
@@ -247,11 +250,16 @@ describe('新开局：瓜洲夜雨', () => {
 
 /** 玩到扬州：第一夜选哪条路（bu_jiu：不渡的路上下水救人；bu_liu：留在船上，没救） */
 function arrive(which: 'du' | 'wen' | 'bu_jiu' | 'bu_liu'): void {
-  setState(newGame());
-  const tr: Trace = { stories: [], fights: [], clicks: 0, results: {} };
   const at = { du: 0, wen: 1, bu_jiu: 2, bu_liu: 2 }[which];
-  walk('p_open', (t, ls) => t === '渡不渡' ? at : t === '落水的人' ? ls.findIndex(x => x.includes(which === 'bu_jiu' ? '下水救' : '留在船上')) : 0, SKILLED, 1, tr);
-  expect(S.chapter).toBe(1);
+  // 打赢的那一遍才算（赢、输、逃记的关系不同，这里的断言都按打赢写）：换个种子，打到赢为止
+  for (let seed = 1; seed <= 30; seed++) {
+    setState(newGame());
+    const tr: Trace = { stories: [], fights: [], clicks: 0, results: {} };
+    walk('p_open', (t, ls) => t === '渡不渡' ? at : t === '落水的人' ? ls.findIndex(x => x.includes(which === 'bu_jiu' ? '下水救' : '留在船上')) : 0, SKILLED, seed, tr);
+    expect(S.chapter).toBe(1);
+    if (Object.values(tr.results).every(r => r === 'win')) return;
+  }
+  throw new Error(`${which} 三十个种子都没打赢`);
 }
 const atHour = (h: number): void => { S.min = h * 60; };
 const lifeOf = (id: string) => NPCS.find(n => n.id === id)?.life;
@@ -371,14 +379,21 @@ describe('第三稿：三场打分胜负', () => {
     }
   });
 
-  it('逃开的那张卡不含「鱼叉」：江伯出手收场', () => {
+  it('逃开的那张卡：江伯出手收场，不写「脱手」（没有打赢）；打赢的那张，鱼叉才脱手', () => {
     for (const id of ['kp_du_hou_flee', 'kp_wen_hou_flee', 'kp_bu_hou_flee']) {
       const def = storyById(id)!;
-      expect(JSON.stringify(def), id).not.toContain('鱼叉');
       expect(JSON.stringify(def.cards[0]), id).toContain('江伯');
+      expect(JSON.stringify(def.cards[0]), id).not.toContain('脱手');
     }
-    // 打赢的那张，鱼叉才落地
-    expect(JSON.stringify(storyById('kp_wen_hou')!.cards[0])).toContain('鱼叉');
+    expect(JSON.stringify(storyById('kp_wen_hou')!.cards[0])).toContain('鱼叉脱手');
+  });
+
+  it('请二位上船输、逃两张卡明说鱼叉，不再写「那家伙」', () => {
+    for (const id of ['kp_wen_hou_lose', 'kp_wen_hou_flee']) {
+      const first = JSON.stringify(storyById(id)!.cards[0]);
+      expect(first, id).toContain('鱼叉当啷落在船板上');
+      expect(first, id).not.toContain('家伙');
+    }
   });
 
   it('对手的应对框和弱对手对得上：重招的判断句不写「快得惊人」「远在你之上」', () => {
@@ -465,7 +480,7 @@ describe('第三稿：见闻簿、了尘、木剑、跳过序章、闭关提示'
     expect(S.loadout.weapon).toBe('hanjiang');
     expect(weaponReady(S), '拿着木剑，寒江剑法使得出来').toBe(true);
     setState(skipToYangzhou());
-    expect(S.gear).toEqual({ weapon: 'kp_mujian' });
+    expect(S.gear).toEqual({ weapon: 'kp_mujian', waist: 'jade', head: 'kp_douli' });
     expect(weaponReady(S)).toBe(true);
     expect(S.items.qingfeng).toBeUndefined();
     // 童年三忆里交代了木剑的来历
@@ -515,5 +530,104 @@ describe('第三稿：见闻簿、了尘、木剑、跳过序章、闭关提示'
     // 序章里不提
     setState(newGame());
     expect(kpBiguanTip(S, 'rest')).toBeNull();
+  });
+});
+
+
+describe('第三稿补：序章打的胜负有后果', () => {
+  /** 一条路走完某一段「后文」（赢、输、逃各一段），读它记下的关系和备注 */
+  function after(id: string): { rel: Record<string, string>; note: Record<string, string> } {
+    setState(newGame());
+    walk(id, () => 0, SKILLED, 1, { stories: [], fights: [], clicks: 0, results: {} });
+    return { rel: { ...S.rel }, note: { ...(S.relNote ?? {}) } };
+  }
+  const trio = (_path: string, who: string, ids: string[]) => ids.map(id => { const r = after(id); return `${r.rel[who] ?? '无'}|${r.note[who] ?? '无'}`; });
+
+  it('渡：赢记「欠你一条命」，输记「替他挨了一棍」，逃开不记恩（关系降一档，备注如实）', () => {
+    const [win, lose, flee] = ['kp_du_hou', 'kp_du_hou_lose', 'kp_du_hou_flee'].map(after);
+    expect(win.rel.kp_chu).toBe('相谈甚欢');
+    expect(win.note.kp_chu).toBe('欠你一条命');
+    expect(lose.rel.kp_chu).toBe('相谈甚欢');
+    expect(lose.note.kp_chu).toBe('你替他挨了一棍');
+    expect(flee.rel.kp_chu).toBe('点头之交');
+    expect(flee.note.kp_chu).toBe('那夜你躲进了舱里，是江伯救的他');
+    expect(new Set(trio('du', 'kp_chu', ['kp_du_hou', 'kp_du_hou_lose', 'kp_du_hou_flee'])).size).toBe(3);
+    // 逃开的整段后文里，不说「欠你一条命」「记在你头上」
+    const t = JSON.stringify(storyById('kp_du_hou_flee'));
+    expect(t).not.toContain('欠你一条命');
+    expect(t).not.toContain('记在你头上');
+    expect(t).toContain('不记在你名下');
+  });
+
+  it('请二位上船：赢、输、逃对卫衡、褚七记的备注各不相同', () => {
+    const ids = ['kp_wen_hou', 'kp_wen_hou_lose', 'kp_wen_hou_flee'];
+    expect(new Set(trio('wen', 'kp_wei', ids)).size).toBe(3);
+    expect(new Set(trio('wen', 'kp_chu', ids)).size).toBe(3);
+    expect(after(ids[0]).note.kp_wei).toBe('那夜你和他站在一边');
+  });
+
+  it('不渡：堤下那一场赢、输、逃，记在卫衡那里的备注各不相同；只有赢了褚七才在扬州', () => {
+    const ids = ['kp_bu_hou_win', 'kp_bu_hou_lose', 'kp_bu_hou_flee'];
+    expect(new Set(trio('bu', 'kp_wei', ids)).size).toBe(3);
+    // 打赢的那条路，褚七的人情在打赢那一刻就记下了（foes 的 win 结算）；输、逃的结算不记
+    for (const id of ids.slice(1)) expect(after(id).rel.kp_chu, id).toBeUndefined();
+  });
+
+  it('渡、请二位上船两条路的六段后文，没有哪两段记下一样的关系和备注', () => {
+    const all = ['kp_du_hou', 'kp_du_hou_lose', 'kp_du_hou_flee', 'kp_wen_hou', 'kp_wen_hou_lose', 'kp_wen_hou_flee'];
+    const keys = all.map(id => JSON.stringify([after(id).rel.kp_chu, after(id).note.kp_chu, after(id).rel.kp_wei, after(id).note.kp_wei]));
+    expect(new Set(keys).size).toBe(all.length);
+  });
+});
+
+describe('第三稿补：玉佩、斗笠直接戴上', () => {
+  it('新档走完序章：玉佩挂在腰间（佩），斗笠戴在头上（冠），木剑仍在手里；三条路都一样', () => {
+    for (const which of ['du', 'wen', 'bu_jiu', 'bu_liu'] as const) {
+      arrive(which);
+      expect(S.gear, which).toEqual({ weapon: 'kp_mujian', waist: 'jade', head: 'kp_douli' });
+    }
+  });
+  it('跳过序章的和走完一遍一样；斗笠放得进「冠」位，没有数值', () => {
+    setState(skipToYangzhou());
+    expect(S.gear).toEqual({ weapon: 'kp_mujian', waist: 'jade', head: 'kp_douli' });
+    const d = itemById('kp_douli')!;
+    expect(d.equip).toEqual({ slot: '冠' });
+  });
+  it('旧存档不动：没有 kp_xin 的旧序章路径，玉佩只进行囊、不自动戴上', () => {
+    setState(newGame());
+    run(storyById('p_death')!.cards[1].choices[0].do);
+    expect(S.items.jade).toBe(1);
+    expect(S.gear.waist).toBeUndefined();
+  });
+  it('wear 效果：行囊里没有的、不是装备的，什么也不做', () => {
+    setState(newGame());
+    run([{ type: 'wear', id: 'jade' }, { type: 'wear', id: 'med' }, { type: 'wear', id: 'nobody' }]);
+    expect(S.gear).toEqual({ weapon: 'kp_mujian' });
+    run([{ type: 'item', id: 'jade', delta: 1 }, { type: 'wear', id: 'jade' }]);
+    expect(S.gear.waist).toBe('jade');
+  });
+});
+
+describe('第三稿补：主线心事标题、文字', () => {
+  it('和了尘谈完后，新档的心事标题仍以江伯为主；旧档不动', () => {
+    arrive('du');
+    S.loc = 'daming';
+    act('liaochen', '交谈');
+    expect(S.quests.main1).toBe(1);
+    const n = questNav('main1')!;
+    expect(n.title).toBe('江伯去了哪里：顺着那夜的线，去运河渡口截黑风寨的船');
+    setState(skipToYangzhou());
+    delete S.flags.kp_xin;
+    S.quests.main1 = 1;
+    expect(questNav('main1')!.title).toBe('前往运河渡口，截住黑风寨主');
+  });
+
+  it('卫衡：露天白日里说得通（不「就着灯」），渡路请你告诉他，不是「只当没看见」；腰牌那句不再说「追在你后头」', () => {
+    const wei = JSON.stringify(NPCS.find(n => n.id === 'kp_wei')!.actions);
+    expect(wei).not.toContain('就着灯');
+    expect(wei).not.toContain('白日里晚辈在城里访人');
+    expect(wei).not.toContain('只当没看见');
+    expect(wei).toContain('还请告诉晚辈一声');
+    expect(wei).not.toContain('追在你后头');
   });
 });

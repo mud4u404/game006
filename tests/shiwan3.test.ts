@@ -182,8 +182,9 @@ describe('地图与找事：看得见成本、有快捷、近处有事', () => {
     if (home && home.to !== S.loc) expect(viewDitu()).toContain('回师门');
   });
 
-  it('近处有事：最多三件，各带地点和耗时；序章里和已接着差事时不列', () => {
+  it('近处有事：差事最多三件，各带地点和耗时；序章里和已接着差事时不列', () => {
     S.loc = 'jc_yz_yuanmen';
+    S.silver = 500;
     const ls = leadsNear();
     expect(ls.length).toBeLessThanOrEqual(3);
     for (const l of ls) { expect(l.min).toBeGreaterThan(0); expect(l.toName.length).toBeGreaterThan(0); }

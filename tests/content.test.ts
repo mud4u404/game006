@@ -106,7 +106,7 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         (e.type === 'job' ? jobTaken : e.type === 'jobDone' ? jobDoneSet : new Set<string>()).add(e.id);
         break;
       case 'w': {
-        const pl = 'place' in e ? e.place : e.op === 'hurt' || e.op === 'jail' || e.op === 'gone' ? e.mark?.place : undefined;
+        const pl = 'place' in e ? e.place : e.op === 'hurt' || e.op === 'jail' || e.op === 'gone' || e.op === 'dead' ? e.mark?.place : undefined;
         if (pl !== undefined && !roomIds.has(pl)) errs.push(`${w}：地点「${pl}」不存在`);
         const f = 'fac' in e ? e.fac : e.op === 'owner' ? e.to : undefined;
         if (typeof f === 'string' && !facIds.has(f)) errs.push(`${w}：势力「${f}」不存在`);
