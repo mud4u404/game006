@@ -193,7 +193,7 @@ const NPCS: NpcDef[] = [
       打听: [
         { if: { noSect: true, notFlag: 'smhs_xin_given' },
           text: '「信不是老朽说写就写的，得捕头爷点头。他在前堂，白天都在；你替府衙办成过案子，他自然肯保。」' },
-        { text: '「老朽只管抄案卷。北固山那位柏先生的闲话，倒是听老书吏们讲过几回。」' }
+        { text: '「老朽只管抄案卷。北固山那位柏先生的闲话，倒是听老书吏们讲过几回。」', do: [{ type: 'news' }] }
       ],
       交谈: [
         { if: { flag: 'smhs_xin_given' },

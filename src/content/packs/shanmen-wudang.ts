@@ -177,7 +177,7 @@ const NPCS: NpcDef[] = [
       打听: [
         { if: { flag: 'smwd_asked', notFlag: 'smwd_zhuang' },
           text: '「要拜师，先过考校：想动手，找邢师兄接三十招；不想动手，就在我这儿站桩。观主在廊下看着呢。」' },
-        { text: '「观里的事，问观主，问邢师兄，都比问我强。我只会扫地和数树枝。」' }
+        { text: '「我只会扫地。观里的事，观主和邢师兄知道得全；我记性差，转头就忘了。」', do: [{ type: 'news' }] }
       ],
       交谈: [
         { if: { flag: 'smwd_zhuang' },
