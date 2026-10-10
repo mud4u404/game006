@@ -1,0 +1,640 @@
+diff --git a/docs/bihuan-1010.md b/docs/bihuan-1010.md
+new file mode 100644
+index 0000000..d4f4174
+--- /dev/null
++++ b/docs/bihuan-1010.md
+@@ -0,0 +1,64 @@
++# 摸底：事事有收场清单（10-10）
++
++来由：负责人 10-10：「目前已有的游戏内容，请摸底测试，要求剧情和任务都能跑通，每个事件都实现闭环，哪怕是多结局，总之不能悬而未决，每个任务让玩家都能有办法继续，良好的体验感。」（`docs/sheji-youhua-1010.md` 第一条）
++
++## 怎么摸的
++
++- **范围**：心事 15 件（`QuestDef`），差事 20 件（`JobDef`，含府衙悬赏 5 张），世事 16 件里扬州、瓜洲、镇江的 12 件（`ShiDef`）。
++- **每个阶段问三件事**：走到这里有没有下一步、玩家知不知道去哪；做砸了、错过了有没有退路或收场；结局有没有交代、见闻簿里写没写。
++- **机器**：`tests/xiansuo.test.ts`（线索不断，原有 11 条世事缺地名的登记已全部补完清空）、`tests/zoubian.test.ts`（机器玩家走遍）、新增 `tests/bihuan.test.ts`（见下）。
++- **人工**：逐件读了心事阶段、差事的接与交、世事每一步的 `now`、被心事和差事用到的 50 个对手的输赢结算。
++
++结论：**静态上没有死路**。每个心事阶段都有人能推到下一步，每件差事有人派、有人收、有期限（误了由引擎记一笔，见闻簿里写「差事办砸了」），每件世事每一步都走得到一个结局。真正悬着的是下面几类：数字对不上、收场只收了一半（放走的人留下一个无解的苦主）、线索写了却碰不上、只有一个出口的地方、界面上留着过期的东西、主线收尾后没有下一步。
++
++## 清单
++
++「已补」是这次提交里已经改好的；「留给协作者」是要写一段新剧情或动引擎的，没动。
++
++| # | 事 | 哪一步 | 悬着的是什么 | 怎么补 | 状态 |
++|---|---|---|---|---|---|
++| 1 | 六扇门 · 缉拿草上飞（`side_caoshangfei`）、府衙照壁榜 | 揭榜、交差 | 榜上写「劫银三百两」，赏银只有二两，两个数对不上，大盗成了小贼 | 劫银改为三十两（榜文、草上飞的自述、周捕头的文书三处，十两换米、二十两起获同改），赏银不动，二两对三十两合官府赏格的比例 | 已补 |
++| 2 | 同上 | 「放他走」（`csf_freed`）以后 | 放走草上飞，刘家账房先生永远关在府衙大牢，周捕头说「贼拿不着他就出不来」，没有任何办法再救他；传闻还一直说他关着 | 周捕头的「交差」加两支：身上有二两就能作保放人（出钱、放人、记一笔动态），没钱则提示「有人出二两作保倒另说」；传闻加上「账房未放」才说 | 已补 |
++| 3 | 渡口夜话 · 卫衡寻褚七（`kp_xun`）及所有「人走了」的回话 | 对话之后人离场 | 「说完就走了」那张卡一直挂在主界面，过了一夜、赶了路、走远了，第二天还在（`src/ui/views/jianghu.ts` 的 `gone`） | 回话记下说话时的江湖分钟（`S.reply.at`），隔了十五分钟以上就不再显示 | 已补 |
++| 4 | 海捕文书 · 鬼手钱三（`lsm_qian`） | 在逃、又作案 | 传闻只说他夜里偷镖银，玩家夜里去辕门桥怎么都碰不到；他其实只在辰时到申时出现，文书上也没写 | 画像下的炭笔字改为「辕门桥，日头高时」；又作案那一步写明「夜里没人见着他，倒有人说辕门桥白日里总有个瘦高个转悠」 | 已补 |
++| 5 | 丐帮 · 龙王庙（`bs2_longwang`） | 地点出口 | 只有一条出口（回运河渡口），去龙王庙、鲍四的差事、东关街来回都要绕一圈 | 加一条通东关街的出口（堤下小路），不加新地方 | 已补 |
++| 6 | 桃花岛 · 入门阵（`smth_zhen`） | 被曲蘅拒过一回，悟性够了再来 | 第二次叩门时曲蘅说「阵再走一回」，却没把心事记上，见闻簿里还是空的，要再点一次拜师才记 | 这一支同时写入心事第 1 阶段 | 已补 |
++| 7 | 卫衡寻褚七（`kp_xun`） | 第一步「卫衡在城里打听」 | 见闻簿没点出事情在哪儿闹 | 补上「运河渡口、广陵客栈一带问得最勤」 | 已补 |
++| 8 | 乱石阵困船（`smth_shi`） | 第一步 | 同上 | 补「听潮小筑前的江滩」 | 已补 |
++| 9 | 鲥鱼汛争江面（`ssgz_xun`） | 第一步「下网」 | 同上 | 补「瓜洲码头外的江口」 | 已补 |
++| 10 | 鲥鱼汛争江面（`ssgz_xun`） | 第二步「砍网」 | 同上 | 补「在瓜洲码头外砍了渔家的网」 | 已补 |
++| 11 | 客店的赌桌（`ssgz_du`） | 第二步「王二输红了眼」 | 同上 | 补「蹲在江口客店门口」 | 已补 |
++| 12 | 码头空出来以后（`ss_matou`） | 第二步「焦五占码头」 | 同上 | 补「运河渡口的码头北头」 | 已补 |
++| 13 | 码头空出来以后（`ss_matou`） | 第三步「动刀子」 | 同上 | 补「运河渡口的码头上」 | 已补 |
++| 14 | 渡船涨价（`sszj_du`） | 第二步「船被凿沉」 | 同上 | 补「在西津渡僵着」 | 已补 |
++| 15 | 道场拐孩子（`sszj_dao`） | 第二步「孩子走失」 | 同上 | 补「西津渡卖鱼的孙家」「在西津渡哭」 | 已补 |
++| 16 | 织造贡绢失窃（`sz_juan`） | 第二步「抵罪」 | 同上（苏州，眼下去不到，顺手补） | 补「枫桥码头」 | 已补 |
++| 17 | 山塘河画舫相争（`sz_hua`） | 第一步 | 同上（苏州，顺手补） | 补「星桥埠头」 | 已补 |
++| 18 | 主线 · 第一回 扬州（`main1`） | 第一回完，说书人那一句 | 「第一回完」三支结局都收了本回，却留着「石碑上的沈字」「江伯的下落」没有头绪，之后没有第二回：横幅消失，玩家不知道下一步做什么，主线悬着 | 先不加新章回。说书人、了尘大师在 `main1` 完结后各多一支话，把玩家指向眼下已有的东西（门派拜师、府衙榜、海捕文书、码头的世事），并写进见闻簿一行「接下来」；第二回的开篇要负责人定方向 | 留给协作者（话由 Qoder 或 Trae 写，方向由维护者定） |
++| 19 | 道场拐孩子（`sszj_dao`） | 结局 `zhuoren`（没人管） | 孩子被拐去北岸、孙家娘子哭病、寻人告示「没人揭」，之后渡口再没有任何交代，是个永远没人回头看的苦结局 | 孙家娘子（或渡口的告示）在这一结局之后的第七天起多一句话：有行商带来北岸的风声，孩子「是死是活，另有人在找」。不开新任务，只补收场 | 留给协作者（Trae：地方味的路人） |
++| 20 | 东关街夜里闹贼（`ss_zei`） | 结局 `zhuo`、`songguan` | 偷药的孩子挨了板子或被扭送，他娘的病「没人管」，故事到这儿就停了；只有「替他赔钱」一条路有交代 | 济生堂的郎中或周氏在这两个结局之后多一句：这家的药钱，街坊凑了一些，不够，也不再追。让苦结局有一句人情，不改成好结局 | 留给协作者（Qoder：旧白话人物） |
++
++合计 20 条：已补 17 条，留给协作者 3 条。
++
++## 说明几条「看着像悬、其实不是」的
++
++- **差事误了期**：引擎到期自动 `jobFail`，在见闻簿里写「差事办砸了：某某」，身份是镖师、衙门的另降一级地位，游侠和渔家没有。所以没有写「误期」支的差事不算悬着。
++- **输了一架**：被心事、差事用到的 50 个对手，输、逃、认输都有结算；会让差事砸掉的（钻天鹞、过江龙、盐号打手、断云虎……）都写了 `jobFail`，其余输了可以再来。屠千山输了会被船夫背回大明寺，`tu_bai` 只改回话，不锁挑战。
++- **世事无人插手**：十二件世事每一步都有 `next`，没人管就自己走到一个结局，不会兜圈子（`tests/bihuan.test.ts` 的 S4 查它）。
++- **有意留着的苦结局**：铁掌帮收街的 `gui_bang`、码头归了西舵的 `xiduo`、寒山寺钟没铸成的 `yaku` 等，是「没人插手的下场」，见闻簿和传闻都有交代，不改。
++
++## 机器检查（新增 `tests/bihuan.test.ts`）
++
++查机器看得出的那一半，进 CI，存量登记表现在是空的（上面能修的都修了），只许减、不许增：
++
++| 类 | 查什么 |
++|---|---|
++| Q1 | 每个没了结的心事阶段写了 `to`、`hint` |
++| Q2 | 每个没了结的心事阶段有下一步（某个人的动作、进门或路遇能把它往后推），或者写了 `fail` 收场 |
++| Q3 | 每条通向心事结局的路，推到最后一阶段的那个分支有话交代 |
++| Q4 | 心事的入口、差事派与收的人，从扬州走得到 |
++| J1、J2 | 差事有人派、有人收、都有一句话；有期限 |
++| J3 | 能把差事办砸的分支，说了发生什么 |
++| S1～S4 | 世事每一步都真有、见闻簿有话、有来路、顺着 `next` 能走到结局 |
++
++查不到的（要人读）：话好不好、有没有新的数字对不上。数字这一类另有 `tests/jiage.test.ts`（说的价和给的价）。
+diff --git a/src/content/packs/baishi.ts b/src/content/packs/baishi.ts
+index a5cc9c1..f065806 100644
+--- a/src/content/packs/baishi.ts
++++ b/src/content/packs/baishi.ts
+@@ -57,7 +57,8 @@ const ROOMS: RoomDef[] = [
+       { text: '运河堤下一座破庙，龙王爷的金身剥得只剩泥胎，供桌缺了一条腿，拿砖头垫着。殿里铺着稻草，十几个叫化子挤在一处烤火，豁了边的铁锅里煮着一锅稀粥。' }
+     ],
+     npcs: ['bs2_bao', 'bs2_xjh'],
+-    exits: [['西', 'dukou', '东']],
++    // 堤下另有一条小路，抄近道通东关街：庙不是死胡同（摸底 docs/bihuan-1010.md）
++    exits: [['西', 'dukou', '东'], ['南', 'cheng', '庙']],
+     road: '你出了渡口，沿运河堤往东走了一里来地，河风里飘来一股柴烟味……',
+     onEnter: [
+       { if: { notFlag: 'bs2_lw_seen' },
+diff --git a/src/content/packs/caoshangfei.ts b/src/content/packs/caoshangfei.ts
+index eecc165..56f0d5a 100644
+--- a/src/content/packs/caoshangfei.ts
++++ b/src/content/packs/caoshangfei.ts
+@@ -5,7 +5,7 @@ import type { Cond, ContentPack, Effect, FightResult, FoeDef, NewsDef, NpcDef, R
+  *
+  * 人物与动机：
+  * - 草上飞：当年给盐商刘家扛盐包，左手小指被压断，刘家一文没赔。今年运河发大水，茱萸湾断粮，
+- *   他夜入刘家劫银三百两，一百两换了米、悄悄塞进各家门槛底下，余下二百两藏在苇荡里，打算入冬再分。
++ *   他夜入刘家劫银三十两，十两换了米、悄悄塞进各家门槛底下，余下二十两藏在苇荡里，打算入冬再分。
+  * - 刘家账房：刘家咬定贼人熟门熟路，是账房里应外合，把他告进了府衙大牢。他是冤枉的。
+  * - 渔家老汉：村里受了草上飞的恩，对官差提防得紧；孙子在咳嗽。
+  * - 周捕头：要交差，也看得见案子里的人。
+@@ -107,13 +107,13 @@ const NPCS: NpcDef[] = [
+     actions: {
+       交谈: [
+         { if: { flag: 'csf_talked' }, text: '草上飞把飞爪往脚边一推：「要拿就拿，草上飞认了。只求你别去村里搜，那些米，是我欠他们的。」' },
+-        { text: '汉子盯着你看了半晌，忽然笑了：「府衙请来的？」他把干粮往船板上一放：「刘家那三百两，是我拿的。一百两换了米，塞进了这村子的门槛底下；剩下二百两，埋在苇荡里，原想入冬再分。」他伸出那只缺了小指的手：「这根指头，是五年前给刘家扛盐包压断的。刘老爷说，脚夫的指头不值钱。」',
++        { text: '汉子盯着你看了半晌，忽然笑了：「府衙请来的？」他把干粮往船板上一放：「刘家那三十两，是我拿的。十两换了米，塞进了这村子的门槛底下；剩下二十两，埋在苇荡里，原想入冬再分。」他伸出那只缺了小指的手：「这根指头，是五年前给刘家扛盐包压断的。刘老爷说，脚夫的指头不值钱。」',
+           do: [{ type: 'flag', flag: 'csf_talked' }] }
+       ],
+       动手: [{ text: '你按剑上前，舱里的油灯晃了一晃。', do: [{ type: 'fight', foe: 'zy_csf' }] }],
+       劝他自首: [
+         { if: PERSUADE,
+-          text: '你把牢里那位账房先生的话原原本本说了。草上飞的脸色一点点白下去：「……他替我坐牢？」他沉默了很久，久到油灯结了一朵灯花。然后他站起来，把飞爪留在船板上：「走吧。苇荡里的二百两，我带你们去挖。」',
++          text: '你把牢里那位账房先生的话原原本本说了。草上飞的脸色一点点白下去：「……他替我坐牢？」他沉默了很久，久到油灯结了一朵灯花。然后他站起来，把飞爪留在船板上：「走吧。苇荡里的二十两，我带你们去挖。」',
+           do: [{ type: 'flag', flag: 'csf_surrender' }, { type: 'quest', id: Q, stage: 2 },
+             { type: 'feed', tag: '江湖', text: '草上飞答应自首，跟你回扬州府衙。' }] },
+         { text: '你把账房先生的事说了。草上飞冷笑一声：「刘家的人，坐几天牢又怎样？」他盯着你：「你凭什么让我信你，信那府衙？」话不投机，他的手已经摸上了飞爪。' }
+@@ -161,7 +161,7 @@ const FOES: FoeDef[] = [
+ const NEWS: NewsDef[] = [
+   { if: { flag: 'csf_zhangfang_free', notFlag: 'csf_surrender' }, text: '府衙拿住了草上飞。刘家账房出狱那天，在府衙门口磕了三个头。茱萸湾的渔家，几天没人出船。', who: ['捕快', '衙役', 'guan', '渔家'] },
+   { if: { flag: 'csf_surrender' }, text: '听说草上飞是自己走进府衙的。周捕头递了文书，说他劫的银子大半济了茱萸湾的灾民。', who: ['捕快', '衙役', 'guan', '说书'] },
+-  { if: { flag: 'csf_freed' }, text: '刘家的账房先生还关在府衙大牢里。有人说，草上飞早出了扬州地界。', who: ['衙役', '捕快', '渔家', '书吏'] }
++  { if: { flag: 'csf_freed', notFlag: 'csf_zhangfang_free' }, text: '刘家的账房先生还关在府衙大牢里。有人说，草上飞早出了扬州地界。', who: ['衙役', '捕快', '渔家', '书吏'] }
+ ];
+ 
+ const pack: ContentPack = { rooms: ROOMS, npcs: NPCS, foes: FOES, news: NEWS };
+diff --git a/src/content/packs/fuya.ts b/src/content/packs/fuya.ts
+index 53e9d2c..04e9f30 100644
+--- a/src/content/packs/fuya.ts
++++ b/src/content/packs/fuya.ts
+@@ -68,12 +68,12 @@ const NPCS: NpcDef[] = [
+       ],
+       交差: [
+         { if: { quest: { id: 'side_caoshangfei', is: 2 }, flag: 'csf_surrender' },
+-          text: '草上飞跟在你身后走进前堂，自己跪下了。周捕头愣了半晌，转身去后院开了牢门，账房先生跌跌撞撞地跑出来，扑通一声给你磕了个头。周捕头铺开文书，一笔一笔地写：「劫银三百两，一百两济茱萸湾灾民，余银二百两起获归还。」他搁下笔：「府台那里，我替他说话。」又让书办点出二两赏银推给你：「榜上的赏银，一文不少。」',
++          text: '草上飞跟在你身后走进前堂，自己跪下了。周捕头愣了半晌，转身去后院开了牢门，账房先生跌跌撞撞地跑出来，扑通一声给你磕了个头。周捕头铺开文书，一笔一笔地写：「劫银三十两，十两济茱萸湾灾民，余银二十两起获归还。」他搁下笔：「府台那里，我替他说话。」又让书办点出二两赏银推给你：「榜上的赏银，一文不少。」',
+           do: [
+             { type: 'quest', id: 'side_caoshangfei', stage: 3 }, { type: 'flag', flag: 'csf_zhangfang_free' },
+             { type: 'silver', delta: 2000 }, { type: 'xia', delta: 15 },
+             { type: 'rel', npc: 'fuya_zhou', value: '相谈甚欢', from: ['素不相识', '点头之交'], note: '草上飞一案，你劝他自首，周捕头替他求情' },
+-            { type: 'feed', tag: '江湖', text: '草上飞自首，账房先生出狱。你领了二两赏银；周捕头在文书上写明了那一百两的去处，要在府台面前替他求情。' }
++            { type: 'feed', tag: '江湖', text: '草上飞自首，账房先生出狱。你领了二两赏银；周捕头在文书上写明了那十两的去处，要在府台面前替他求情。' }
+           ] },
+         { if: { quest: { id: 'side_caoshangfei', is: 2 } },
+           text: '周捕头一拍桌子站起来：「好！」他亲自给草上飞上了枷，又吩咐衙役去后院放人。账房先生出来时腿都软了，拉着你的袖子说不出话。周捕头让书办点出二两赏银推给你：「这是榜上的赏银，收好。」他看了一眼堂下的草上飞，没再说什么。',
+@@ -86,6 +86,13 @@ const NPCS: NpcDef[] = [
+         { if: { flag: 'csf_freed', notFlag: 'csf_reported' },
+           text: '你说草上飞从茱萸湾跑了。周捕头盯着你看了半晌，没有追问。他把那张画像慢慢卷起来，塞进卷宗最底下：「茱萸湾那几户人家，今年冬天倒是没饿死人。」他叹了口气，朝后院努了努嘴：「只是刘家咬定账房是内应。贼拿不着，他就出不来。」',
+           do: [{ type: 'flag', flag: 'csf_reported' }] },
++        // 放走了草上飞，账房先生还押着：有一条收场的路（花钱作保），不叫他白白烂在牢里（摸底 docs/bihuan-1010.md）
++        { if: { flag: 'csf_reported', notFlag: 'csf_zhangfang_free', silver: 2000 },
++          text: '你把二两银子押在案上，说愿给账房作保。周捕头看了你半晌，提笔写了保状：「刘家再要人，周某拿这张纸顶着。」账房先生放出来那天，在府衙门口一步一回头，没敢说话。',
++          do: [{ type: 'silver', delta: -2000 }, { type: 'flag', flag: 'csf_zhangfang_free' },
++            { type: 'feed', tag: '江湖', text: '你出了二两银子，替刘家的账房先生作保，周捕头把他放出了大牢。' }] },
++        { if: { flag: 'csf_reported', notFlag: 'csf_zhangfang_free' },
++          text: '周捕头摇摇头：「账房还押着。刘家咬着不放，周某手里没有凭据，不好放人。」他敲了敲案角，「要是有人肯出二两银子作保，倒另说。」' },
+         { text: '周捕头点点头：「草上飞的案子结了，少侠辛苦。」' }
+       ],
+       交谈: [
+@@ -179,7 +186,7 @@ const NPCS: NpcDef[] = [
+       看缉拿: [
+         { if: { flag: 'fuya_gaoshi_taken' },
+           text: '缉拿那一栏，草上飞的那张已叫人揭了，只剩四角浆糊印。旁边有人用炭笔添了一行小字：已有人接了。' },
+-        { text: '「缉拿江洋大盗草上飞。近来出没于小金山、茱萸湾一带，夜闯商铺三家，劫银三百两。悬赏白银二两正。有意揭榜者，进前堂见周捕头。扬州府衙 · 朱」画像上是个短打汉子，左手缺了小指。（获得线索一条）',
++        { text: '「缉拿江洋大盗草上飞。近来出没于小金山、茱萸湾一带，夜闯商铺三家，劫银三十两。悬赏白银二两正。有意揭榜者，进前堂见周捕头。扬州府衙 · 朱」画像上是个短打汉子，左手缺了小指。（获得线索一条）',
+           do: [{ type: 'flag', flag: 'gaoshi_read' }, { type: 'feed', tag: '江湖', text: '府衙照壁上缉拿江洋大盗「草上飞」，悬赏二两白银，线索指向小金山、茱萸湾；揭榜要进前堂见周捕头。' }] }
+       ],
+       看悬赏: [
+@@ -190,7 +197,7 @@ const NPCS: NpcDef[] = [
+       // 海捕文书上的人犯（packs/liushanmen.ts）：一个了结，下一个才贴出来。见到就拿，不必揭榜
+       看海捕: [
+         { if: { shi: { id: 'lsm_qian', at: ['zaitao', 'zuoan'] } },
+-          text: '海捕一栏最新的一张：「飞贼『鬼手』钱三，瘦长脸，左眉一颗黑痣，十指细长。窃汪家盐号盐引三十张。拿获者赏银八百文。」画像底下有人用炭笔添了一行小字：辕门桥。海捕人犯不必揭榜，见到就拿，扭送府衙领赏。',
++          text: '海捕一栏最新的一张：「飞贼『鬼手』钱三，瘦长脸，左眉一颗黑痣，十指细长。窃汪家盐号盐引三十张。拿获者赏银八百文。」画像底下有人用炭笔添了一行小字：辕门桥，日头高时。海捕人犯不必揭榜，见到就拿，扭送府衙领赏。',
+           do: [{ type: 'shi', id: 'lsm_qian' }] },
+         { if: { shi: { id: 'lsm_bai', at: ['zaitao', 'zuoan'] } },
+           text: '海捕一栏最新的一张：「游方郎中『玉面』白七郎，面白无须，背药箱，善使银针。在淮安卖假药毒毙三命。拿获者赏银二两。」海捕人犯不必揭榜，见到就拿，扭送府衙领赏。',
+diff --git a/src/content/packs/kp-guren.ts b/src/content/packs/kp-guren.ts
+index 35107fa..c8fc2b8 100644
+--- a/src/content/packs/kp-guren.ts
++++ b/src/content/packs/kp-guren.ts
+@@ -379,7 +379,7 @@ const SHI: ShiDef[] = [
+     place: 'dukou', subj: ['kp_wei', 'kp_chu'],
+     steps: {
+       fang: {
+-        now: '卫衡白日里在城里逢人打听，找的是一个独臂的汉子。',
++        now: '卫衡白日里在城里逢人打听，运河渡口、广陵客栈一带问得最勤，找的是一个独臂的汉子。',
+         news: '一个外乡后生在扬州城里逢人打听独臂汉子。',
+         news2: '城里来了个带剑的外乡人，到处问独臂的汉子。',
+         news3: '有个剑客满扬州找一个断了手的人，不知结了什么仇。',
+diff --git a/src/content/packs/liushanmen.ts b/src/content/packs/liushanmen.ts
+index 8eecf4b..c738221 100644
+--- a/src/content/packs/liushanmen.ts
++++ b/src/content/packs/liushanmen.ts
+@@ -37,7 +37,7 @@ const SHI: ShiDef[] = [
+   wanted('lsm_qian', '海捕文书 · 鬼手钱三', { quest: { id: 'prologue', atLeast: 3 } }, {
+     zaitao: ['府衙的海捕文书上新贴了一张：飞贼「鬼手」钱三，偷了汪家盐号三十张盐引，赏银八百文。画像上的人瘦长脸，左眉上一颗黑痣。',
+       '汪家盐号丢了三十张盐引，府衙贴出海捕文书，拿飞贼「鬼手」钱三。'],
+-    zuoan: ['钱三又出手了，这回偷的是威远镖局的一包镖银。有人说，辕门桥一带这几日白天总有个瘦高个转悠，拿着几张黄纸找人收。',
++    zuoan: ['钱三又出手了，这回夜里偷的是威远镖局的一包镖银。夜里没人见着他，倒有人说，辕门桥一带这几日白日里总有个瘦高个转悠，拿着几张黄纸找人收。',
+       '威远镖局夜里丢了一包镖银，都说又是「鬼手」钱三干的。'],
+     taozou: ['钱三带着盐引出了扬州，往苏州去了。海捕文书上他的画像，叫雨淋得看不清了。',
+       '「鬼手」钱三出了扬州，往苏州去了，海捕文书白贴了。'],
+diff --git a/src/content/packs/shanmen-taohua.ts b/src/content/packs/shanmen-taohua.ts
+index f41bcc5..ae8444e 100644
+--- a/src/content/packs/shanmen-taohua.ts
++++ b/src/content/packs/shanmen-taohua.ts
+@@ -28,7 +28,7 @@ const SHI_DEF: ShiDef[] = [
+     id: SHI, name: '乱石阵困船', region: 'gz', start: { flag: 'ssgz_seen' }, first: 'qi',
+     steps: {
+       qi: {
+-        now: '江滩上多了一片乱石阵，渔家的船进去就出不来，转半天又回到原处。石头摆的方位透着古怪——是有人按阵法摆的。',
++        now: '听潮小筑前的江滩上多了一片乱石阵，渔家的船进去就出不来，转半天又回到原处。石头摆的方位透着古怪——是有人按阵法摆的。',
+         news: '江滩上多了一片乱石阵，渔船进去就出不来，石头摆的方位透着古怪。',
+         next: { days: 2, to: 'huo' }
+       },
+@@ -188,7 +188,7 @@ const NPCS: NpcDef[] = [
+           do: [{ type: 'quest', id: 'smth_zhen', stage: 0 }, { type: 'flag', flag: 'smth_asked' }] },
+         { if: { noSect: true, attr: { key: '悟性', atLeast: 24 } },
+           text: '曲蘅看了看你：「上回说了不行，这回还来？」他把你上下打量了一遍，「……嗯。心窍比上回开了些。也罢，阵再走一回。」',
+-          do: [{ type: 'flag', flag: 'smth_refused', value: false }, { type: 'flag', flag: 'smth_asked' }] },
++          do: [{ type: 'flag', flag: 'smth_refused', value: false }, { type: 'flag', flag: 'smth_asked' }, { type: 'quest', id: 'smth_zhen', stage: 0 }] },
+         { if: { noSect: true },
+           text: '曲蘅摇了摇头，话很平，不刺人：「岛主的功夫，笨人学了是糟蹋——你现在的悟性，学了是害你。」他把一册手抄的药性赋推过来，「拿去。什么时候把这本读通了，什么时候心窍开了，再来叩门。这条路过两年也作数。」',
+           do: [{ type: 'flag', flag: 'smth_refused' }] },
+diff --git a/src/content/packs/shishi-guazhou.ts b/src/content/packs/shishi-guazhou.ts
+index 0373361..31b20d1 100644
+--- a/src/content/packs/shishi-guazhou.ts
++++ b/src/content/packs/shishi-guazhou.ts
+@@ -28,12 +28,12 @@ const SHI: ShiDef[] = [
+     again: 90,
+     steps: {
+       qi: {
+-        now: '鲥鱼汛到了，渔家的船在江口下了网。盐商的货船要道正压着渔场，两下里为江面争起来，网照下，船照开。',
++        now: '鲥鱼汛到了，渔家的船在瓜洲码头外的江口下了网。盐商的货船要道正压着渔场，两下里为江面争起来，网照下，船照开。',
+         news: '鲥鱼汛到了，渔家的网和盐商的货船在江口争起了地界。',
+         next: { days: 2, to: 'zheng' }
+       },
+       zheng: {
+-        now: '盐商雇的护船汉子砍了渔家的网，六叔的侄子叫人推搡着掉进了江里。渔家不敢下江，这一汛眼看要白过。',
++        now: '盐商雇的护船汉子在瓜洲码头外砍了渔家的网，六叔的侄子叫人推搡着掉进了江里。渔家不敢下江，这一汛眼看要白过。',
+         news: '盐商的护船汉子砍了渔家的网，六叔的侄子掉了江，渔家不敢下江了。',
+         where: 'gz_pier', next: { days: 3, to: 'yuwan' }
+       },
+@@ -66,7 +66,7 @@ const SHI: ShiDef[] = [
+         next: { days: 2, to: 'shu' }
+       },
+       shu: {
+-        now: '王屠户家的儿子王二输红了眼，把婆娘的银镯子押上了桌，一夜输了个精光。他蹲在客店门口，不敢回家。',
++        now: '王屠户家的儿子王二输红了眼，把婆娘的银镯子押上了桌，一夜输了个精光。他蹲在江口客店门口，不敢回家。',
+         news: '王屠户家的儿子把婆娘的银镯子押上了赌桌，输了个精光。',
+         where: 'jc_gz_kedian', next: { days: 3, to: 'pao' }
+       },
+diff --git a/src/content/packs/shishi-yangzhou.ts b/src/content/packs/shishi-yangzhou.ts
+index d45440a..cf54492 100644
+--- a/src/content/packs/shishi-yangzhou.ts
++++ b/src/content/packs/shishi-yangzhou.ts
+@@ -33,7 +33,7 @@ const SHI: ShiDef[] = [
+         do: [{ type: 'w', op: 'power', fac: 'hei', delta: -27 }]
+       },
+       duizhi: {
+-        now: '西舵的焦五带人占了码头北头，东舵的人守着南头，两边谁也不让，脚夫们都不敢上工。',
++        now: '西舵的焦五带人占了运河渡口的码头北头，东舵的人守着南头，两边谁也不让，脚夫们都不敢上工。',
+         news: '渡口上漕帮两舵对峙，脚夫们都不敢上工了。',
+         news2: '码头上两拨人顶上了牛，为争地盘，谁也不肯让谁。',
+         news3: '漕帮要散伙了，东西两舵分家，连船都要劈成两半。',
+@@ -41,7 +41,7 @@ const SHI: ShiDef[] = [
+         where: 'dukou', next: { days: 3, to: 'huobing' }
+       },
+       huobing: {
+-        now: '两舵在码头上动了刀子，东舵折了三个兄弟。西舵人多，再拖两天，码头就是焦五的了。',
++        now: '两舵在运河渡口的码头上动了刀子，东舵折了三个兄弟。西舵人多，再拖两天，码头就是焦五的了。',
+         news: '渡口夜里火并，见了血，东舵吃了亏。',
+         news2: '码头夜里动了刀子，抬出去好几个，也不知是哪一家的。',
+         news3: '渡口死了十几口人，运河水都红了，官府压着不让说。',
+diff --git a/src/content/packs/shishi-zhenjiang.ts b/src/content/packs/shishi-zhenjiang.ts
+index e958e29..ce0dec6 100644
+--- a/src/content/packs/shishi-zhenjiang.ts
++++ b/src/content/packs/shishi-zhenjiang.ts
+@@ -28,7 +28,7 @@ const SHI: ShiDef[] = [
+         next: { days: 2, to: 'dazhi' }
+       },
+       dazhi: {
+-        now: '本地船家推出摆了三代渡的陈老大讲理，沙船帮管事罗五把他的船凿沉了一只。两下里在渡口僵着，客商不敢上船。',
++        now: '本地船家推出摆了三代渡的陈老大讲理，沙船帮管事罗五把他的船凿沉了一只。两下里在西津渡僵着，客商不敢上船。',
+         news: '沙船帮凿沉了陈老大一只船，渡口两下里僵着，客商不敢上船。',
+         where: 'zj_xijin', next: { days: 3, to: 'zhangjia' }
+       },
+@@ -60,7 +60,7 @@ const SHI: ShiDef[] = [
+         next: { days: 2, to: 'diu' }
+       },
+       diu: {
+-        now: '香客堆里走失了两个孩子，一个自己摸回来了，另一个是渡口卖鱼的孙家的。孙家娘子在渡口哭，官府还没人管。',
++        now: '香客堆里走失了两个孩子，一个自己摸回来了，另一个是西津渡卖鱼的孙家的。孙家娘子在西津渡哭，官府还没人管。',
+         news: '道场香客堆里走失了孩子，渡口卖鱼的孙家娘子在渡口哭。',
+         where: 'zj_xijin', next: { days: 3, to: 'zhuoren' }
+       },
+diff --git a/src/content/packs/suzhou.ts b/src/content/packs/suzhou.ts
+index d3f6730..375a574 100644
+--- a/src/content/packs/suzhou.ts
++++ b/src/content/packs/suzhou.ts
+@@ -39,7 +39,7 @@ const SHI: ShiDef[] = [
+         next: { days: 2, to: 'yuan' }
+       },
+       yuan: {
+-        now: '府衙拿了船行的伙计抵罪，说他监守自盗。伙计在衙门口喊冤，喊得嗓子都哑了。夜里，码头有人悄悄往船上搬东西。',
++        now: '府衙拿了船行的伙计抵罪，说他监守自盗。伙计在衙门口喊冤，喊得嗓子都哑了。夜里，枫桥码头有人悄悄往船上搬东西。',
+         news: '码头失绢的案子定了罪，船行的伙计喊冤，没人听。',
+         where: 'sz_matou', next: { days: 3, to: 'yuanan' }
+       },
+@@ -66,7 +66,7 @@ const SHI: ShiDef[] = [
+     id: HUA, name: '山塘河画舫相争', region: 'sz', start: { flag: 'sz_seen' }, first: 'zheng',
+     steps: {
+       zheng: {
+-        now: '山塘河的夜市旺了，花家、秦家两家的画舫争起夜泊的埠头，河面上锣声对骂，游客两头不敢上船。',
++        now: '山塘河的夜市旺了，花家、秦家两家的画舫争起星桥埠头的夜泊，河面上锣声对骂，游客两头不敢上船。',
+         news: '山塘河两家画舫行争夜泊的埠头，锣声对骂，游客两头不敢上船。',
+         next: { days: 2, to: 'huo' }
+       },
+diff --git a/src/core/state.ts b/src/core/state.ts
+index 8aa6e05..5176148 100644
+--- a/src/core/state.ts
++++ b/src/core/state.ts
+@@ -134,7 +134,8 @@ export interface GameState {
+   /** 战后说书，供说书人复述 */
+   story: string;
+   sel: string | null;
+-  reply: { id: string; text: string } | null;
++  /** at：说这句话时的江湖分钟（core/time absMin）；人走了以后「说完就走了」那张卡只留一小会儿，不隔夜 */
++  reply: { id: string; text: string; at?: number } | null;
+   tab: Tab;
+ }
+ 
+diff --git a/src/ui/daoju.ts b/src/ui/daoju.ts
+index 3a3a10f..f0a87e2 100644
+--- a/src/ui/daoju.ts
++++ b/src/ui/daoju.ts
+@@ -3,6 +3,7 @@
+  * 规则在 engine/daoju.ts、engine/zhuangbei.ts；这里只画底板、接点击。
+  */
+ import { S, type GearKey } from '../core/state';
++import { absMin } from '../core/time';
+ import { itemById, npc } from '../content';
+ import type { ItemDef, Verb } from '../content/types';
+ import { act, npcName } from '../engine/world';
+@@ -94,7 +95,7 @@ function reply(verb: Verb, item: string): void {
+   const id = S.sel;
+   if (!id) return;
+   const { text, out } = act(id, verb, item);
+-  S.reply = text ? { id, text } : null;
++  S.reply = text ? { id, text, at: absMin(S) } : null;
+   afterOutcome(out);
+   document.querySelector('.reply')?.scrollIntoView({ block: 'nearest' });
+ }
+diff --git a/src/ui/explore.ts b/src/ui/explore.ts
+index 36676d2..09765fa 100644
+--- a/src/ui/explore.ts
++++ b/src/ui/explore.ts
+@@ -3,7 +3,7 @@
+  * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
+  */
+ import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
+-import { advanceDays, dateStr, minLabel } from '../core/time';
++import { absMin, advanceDays, dateStr, minLabel } from '../core/time';
+ import { $, cn, reduceMotion } from '../core/util';
+ import { room, skillById } from '../content';
+ import type { Slot, Verb } from '../content/types';
+@@ -135,7 +135,7 @@ function doAct(verb: Verb): void {
+   if (out.story || out.fight) { afterOutcome(out, text || undefined); return; }
+   // 根基之眼：观察时根基够了多看出的那一层，跟在描写后面（engine/yan.ts）
+   const seen = eyes.map(e => eyeLine(e)).join('');
+-  S.reply = text || seen ? { id, text: text + seen } : null;
++  S.reply = text || seen ? { id, text: text + seen, at: absMin(S) } : null;
+   render();
+   const rp = document.querySelector('.reply');
+   if (rp) rp.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+diff --git a/src/ui/views/jianghu.ts b/src/ui/views/jianghu.ts
+index 031b60a..be50abf 100644
+--- a/src/ui/views/jianghu.ts
++++ b/src/ui/views/jianghu.ts
+@@ -1,5 +1,5 @@
+ import { S, fullName } from '../../core/state';
+-import { dayNo, minLabel } from '../../core/time';
++import { absMin, dayNo, minLabel } from '../../core/time';
+ import { foeById, npc, room } from '../../content';
+ import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
+ import { IC } from '../icons';
+@@ -24,7 +24,8 @@ export function viewJianghu(): string {
+   const exits = openExits(S.loc);
+   if (!S.sel || !all.includes(S.sel)) S.sel = all[0] || null;
+   // 刚说完话人就走了（世事推着他离场、跳了河、回去报信）：话留着，不然玩家只看到动态里一行小字（审查 C03）
+-  const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id)
++  // 只留一小会儿：隔了一阵（歇脚、赶路、过夜）就收起，不让昨夜的话挂到第二天
++  const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id) && S.reply.at !== undefined && absMin(S) - S.reply.at <= 15
+     ? `<section class="card here-card"><div class="detail"><div class="d-h"><b>${npcName(S.reply.id)}</b><small>${npc(S.reply.id)!.obj ? '' : '说完就走了'}</small></div><div class="reply">${S.reply.text}</div></div></section>` : '';
+   // 横幅只挂记挂着、还没了结的心事（docs/huojianghu.md 第三节第四条）；要等、卡住的写一句缘故（engine/daohang.ts）
+   const nav = S.track ? questNav(S.track) : null;
+diff --git a/tests/bihuan.test.ts b/tests/bihuan.test.ts
+new file mode 100644
+index 0000000..8fd145d
+--- /dev/null
++++ b/tests/bihuan.test.ts
+@@ -0,0 +1,218 @@
++/**
++ * 事事有收场（docs/sheji-youhua-1010.md 第一条；摸底清单 docs/bihuan-1010.md）：
++ * 负责人 10-10：「要求剧情和任务都能跑通，每个事件都实现闭环，哪怕是多结局，总之不能悬而未决，每个任务让玩家都能有办法继续。」
++ *
++ * 这里查机器看得出的那一半：玩家走到任何一个阶段，至少有一条出路，了结的时候有话交代。
++ *   心事（QuestDef）
++ *     Q1 每个没了结的阶段，有写明去处和做法（to、hint）——玩家知道往哪走
++ *     Q2 每个没了结的阶段，有下一步：至少一个人的动作、一处进门、一次路遇能把它推到更后面；没有的，必须写了「做不成」（fail）收场
++ *     Q3 每条通向结局的路都有交代：推到最后一阶段的那个分支，有一句话说（分支的文字、剧情卡片、动态）
++ *   差事和悬赏（JobDef）
++ *     J1 有人能派（接下的动作存在，并有一句话说）
++ *     J2 有人能收（交差的动作存在，并有一句话说）；误了期限由引擎记一笔（days > 0）
++ *     J3 办砸了有说法：能 jobFail 的分支，说了发生什么
++ *   世事（ShiDef，只查扬州、瓜洲、镇江——玩家眼下到得了的地方）
++ *     S1 起头那一步、每一个 next / alt / route / here 指向的步，都真有这一步
++ *     S2 每一步都有见闻簿上的一句（now）；结局步（没有 next 的）不能空
++ *     S3 每一步都有来路（起头、别的步走过来、或谁的动作把它推过来），没有悬空的孤步
++ *     S4 顺着 next 一直走，总会走到一个结局，不会兜圈子
++ *
++ * 存量登记在 KNOWN：键 = 「类｜事 id｜步」，值是缺什么。只许减不许增：修好了对应的 it.fails 会先红，提醒把那一行删掉；
++ * 新写的事不在登记里，一律必须过。
++ */
++import { describe, expect, it } from 'vitest';
++import { ENCOUNTERS, JOBS, NPCS, QUESTS, ROOMS, SHI, foeById, storyById } from '../src/content';
++import type { Effect, JobDef, NpcAt, QuestDef, ShiDef } from '../src/content/types';
++import { S, setState, skipToYangzhou } from '../src/core/state';
++import { pathTo } from '../src/engine/world';
++
++/** 玩家眼下到得了的地区 */
++const REGIONS = new Set(['yz', 'gz', 'zj']);
++
++/** 已知没收场的存量：修好一条，删一行 */
++const KNOWN: Record<string, string> = {};
++
++/* ---------------------------------------------------------------------------------------------------
++ * 小工具：一个分支（人的动作、进门、路遇）里所有的效果，剧情卡片、开打的后续也算
++ * --------------------------------------------------------------------------------------------------- */
++
++const collect = (o: unknown): Effect[] => {
++  const out: Effect[] = [];
++  const walk = (x: unknown): void => {
++    if (Array.isArray(x)) { x.forEach(walk); return; }
++    if (!x || typeof x !== 'object') return;
++    const r = x as Record<string, unknown>;
++    if (typeof r.type === 'string') out.push(r as unknown as Effect);
++    Object.values(r).forEach(walk);
++  };
++  walk(o);
++  return out;
++};
++/** 开剧情、开打以后嵌着的效果，一层层往里找（剧情接剧情、开打再开剧情都算） */
++const nestCache = new Map<string, Effect[]>();
++function nested(e: Effect): Effect[] {
++  const key = e.type === 'story' ? 's:' + e.id : e.type === 'fight' ? 'f:' + e.foe : '';
++  if (!key) return [];
++  const hit = nestCache.get(key);
++  if (hit) return hit;
++  nestCache.set(key, []); // 先占位，剧情绕回自己时不死循环
++  const direct = collect(e.type === 'story' ? storyById(e.id) : foeById((e as { foe: string }).foe));
++  const all = [...direct, ...direct.flatMap(nested)];
++  nestCache.set(key, all);
++  return all;
++}
++const has = (dos: Effect[] | undefined, pred: (e: Effect) => boolean): boolean => (dos ?? []).some(e => pred(e) || nested(e).some(pred));
++
++/** 一个人（或物件）会在哪几处：房间的人物表，加上他自己的作息（at） */
++const placesOf = (id: string): string[] => {
++  const out = new Set<string>();
++  for (const r of ROOMS) if ([...(r.npcs ?? []), ...(r.objs ?? [])].some(x => (typeof x === 'string' ? x : x.id) === id)) out.add(r.id);
++  const n = NPCS.find(x => x.id === id);
++  for (const a of ([] as NpcAt[]).concat(n?.at ?? [])) if (a.room) out.add(a.room);
++  return [...out];
++};
++
++/** 一个能推动事情的分支：谁的哪个动作（或进门、路遇），有没有话说，效果是什么 */
++interface Prog { who: string; verb: string; talks: boolean; dos: Effect[]; places: string[] }
++function progressors(pred: (e: Effect) => boolean): Prog[] {
++  const out: Prog[] = [];
++  for (const n of NPCS) for (const [verb, bs] of Object.entries(n.actions)) for (const b of bs ?? []) {
++    if (has(b.do, pred)) out.push({ who: n.name, verb, places: placesOf(n.id), talks: !!b.text || has(b.do, e => e.type === 'story' || e.type === 'fight' || e.type === 'feed' || e.type === 'toast'), dos: b.do ?? [] });
++  }
++  for (const r of ROOMS) for (const b of r.onEnter ?? []) {
++    if (has(b.do, pred)) out.push({ who: r.name, verb: '走进', places: [r.id], talks: !!b.text || has(b.do, e => e.type === 'story' || e.type === 'feed'), dos: b.do ?? [] });
++  }
++  for (const en of ENCOUNTERS) {
++    if (has([{ type: 'story', id: en.story }], pred)) out.push({ who: '路遇 ' + en.id, verb: '赶路', places: [], talks: true, dos: [{ type: 'story', id: en.story }] });
++  }
++  return out;
++}
++
++/* ---------------------------------------------------------------------------------------------------
++ * 收集：每个检查一条记录
++ * --------------------------------------------------------------------------------------------------- */
++
++interface Item { key: string; label: string; ok: boolean; why: string }
++const items: Item[] = [];
++const add = (kind: string, id: string, step: string, label: string, ok: boolean, why: string): void => {
++  items.push({ key: `${kind}｜${id}｜${step}`, label, ok, why: ok ? '' : why });
++};
++
++/** 从府衙照壁走得到（章回当作进了扬州）：玩家眼下到得了这一处 */
++const reachable = (to: string): boolean => {
++  setState(skipToYangzhou());
++  S.chapter = Math.max(S.chapter, 1);
++  return to === 'yz_zhaobi' || pathTo('yz_zhaobi', to).length > 0;
++};
++
++/* ====================================================================================================
++ * 心事
++ * ==================================================================================================== */
++
++function checkQuest(q: QuestDef): void {
++  const last = q.stages.length - 1;
++  q.stages.forEach((st, i) => {
++    const step = `s${i + 1}`;
++    const name = `心事「${q.name}」第 ${i + 1} 步「${st.title}」`;
++    if (i < last) {
++      add('Q1', q.id, step, `${name} · 写明去处和做法`, !!st.to && !!st.hint, '这一步没写 to（去哪）或 hint（怎么做），玩家不知道往哪走');
++      const adv = progressors(e => e.type === 'quest' && e.id === q.id && e.stage > i);
++      const closed = !!q.fail || !!st.fail;
++      // 序章、第一回的头一步是开局给的，不靠谁推；它的下一步由别的动作推，照样要查「有下一步」
++      add('Q2', q.id, step, `${name} · 有下一步或收场`, adv.length > 0 || closed, '没有任何一个人的动作、进门或路遇能把它推到下一步，也没写 fail（做不成）收场');
++    }
++  });
++  // 玩家碰得到它的入口：头一个由动作推起来的阶段，推它的人（或那一处）从扬州走得到
++  const firstSet = q.stages.map((_, i) => progressors(e => e.type === 'quest' && e.id === q.id && e.stage === i)).find(p => p.length > 0);
++  if (firstSet) {
++    const ok = firstSet.some(p => p.verb === '赶路' || p.places.some(reachable));
++    add('Q4', q.id, 'entry', `心事「${q.name}」入口走得到`, ok, `起头的动作（${firstSet.map(p => p.who + '的「' + p.verb + '」').join('、')}）所在的地方从扬州都走不到`);
++  }
++  // 通向结局的每一条路都有话说
++  const end = progressors(e => e.type === 'quest' && e.id === q.id && e.stage === last);
++  add('Q3', q.id, 'end', `心事「${q.name}」结局有人推到`, end.length > 0 || q.stages.length === 1, '最后一阶段没有任何动作能走到，这件事了结不了');
++  for (const p of end) add('Q3', q.id, `end:${p.who}/${p.verb}`, `心事「${q.name}」结局（${p.who}的「${p.verb}」）有话交代`, p.talks, `${p.who}的「${p.verb}」把事了结了，却没有一句话（text、剧情或动态）交代`);
++}
++
++/* ====================================================================================================
++ * 差事和悬赏
++ * ==================================================================================================== */
++
++function checkJob(j: JobDef): void {
++  const name = `差事「${j.title}」`;
++  const take = progressors(e => e.type === 'job' && e.id === j.id);
++  const done = progressors(e => e.type === 'jobDone' && e.id === j.id);
++  const fail = progressors(e => e.type === 'jobFail' && e.id === j.id);
++  add('J1', j.id, 'take', `${name} · 有人派、有话说`, take.length > 0 && take.some(p => p.talks), '没有任何人的动作能接下它，或接下时一句话也没有');
++  add('J2', j.id, 'done', `${name} · 有人收、有话说`, done.length > 0 && done.some(p => p.talks), '没有任何人的动作能交差，或交差时一句话也没有');
++  add('J2', j.id, 'days', `${name} · 有期限（误了由引擎收场）`, j.days > 0, '没写期限 days，误了就没人管');
++  if (take.length) add('J4', j.id, 'take-reach', `${name} · 派差的人从扬州走得到`, take.some(p => p.places.some(reachable)), `派差的人（${take.map(p => p.who).join('、')}）所在的地方从扬州都走不到`);
++  if (done.length) add('J4', j.id, 'done-reach', `${name} · 收差的人从扬州走得到`, done.some(p => p.places.some(reachable)), `收差的人（${done.map(p => p.who).join('、')}）所在的地方从扬州都走不到`);
++  for (const p of fail) add('J3', j.id, `fail:${p.who}/${p.verb}`, `${name} · ${p.who}的「${p.verb}」办砸了有说法`, p.talks, '能把差事办砸，却一句话也没说发生了什么');
++}
++
++/* ====================================================================================================
++ * 世事
++ * ==================================================================================================== */
++
++function checkShi(d: ShiDef): void {
++  const name = `世事「${d.name}」`;
++  const steps = Object.keys(d.steps);
++  add('S1', d.id, 'first', `${name} · 起头那一步存在`, !!d.steps[d.first], `first「${d.first}」不在 steps 里`);
++  const reached = new Set<string>([d.first]);
++  for (const [id, s] of Object.entries(d.steps)) {
++    const to = s.next ? [s.next.to, ...(s.next.alt ? [s.next.alt.to] : []), ...(s.next.route ?? []).map(r => r.to), ...Object.values(s.next.here ?? {})] : [];
++    for (const t of to) { reached.add(t); add('S1', d.id, `${id}→${t}`, `${name}「${id}」走向「${t}」存在`, !!d.steps[t], `「${id}」指向的「${t}」不在 steps 里`); }
++    add('S2', d.id, id, `${name}「${id}」见闻簿有话`, !!s.now && s.now.length >= 6, '这一步 now 是空的，见闻簿上没有这一步的交代');
++  }
++  // 别处的动作把它推过来的（{ type: 'shi', id, to }）
++  const pushed = new Set<string>();
++  for (const p of progressors(e => e.type === 'shi' && e.id === d.id && !!e.to)) {
++    for (const e of [...p.dos, ...p.dos.flatMap(nested)]) if (e.type === 'shi' && e.id === d.id && e.to) pushed.add(e.to);
++  }
++  for (const id of steps) add('S3', d.id, id, `${name}「${id}」有来路`, reached.has(id) || pushed.has(id), '这一步没有任何来路（不是起头、没人指向、没有动作推过来），是孤步');
++  // 顺着 next 走，不兜圈子：每一步沿 next/alt 一直走，能走到没有 next 的一步
++  const ends = (start: string): boolean => {
++    const seen = new Set<string>();
++    const dfs = (id: string): boolean => {
++      const s = d.steps[id];
++      if (!s) return true;
++      if (!s.next) return true;
++      if (seen.has(id)) return false;
++      seen.add(id);
++      return [s.next.to, ...(s.next.alt ? [s.next.alt.to] : [])].some(dfs);
++    };
++    return dfs(start);
++  };
++  for (const id of steps) add('S4', d.id, id, `${name}「${id}」能走到结局`, ends(id), '顺着 next 走下去是个圈，走不到结局');
++}
++
++/* ====================================================================================================
++ * 跑一遍，生成用例
++ * ==================================================================================================== */
++
++describe('事事有收场：心事、差事、世事每个阶段都有出路（摸底 10-10）', () => {
++  for (const q of QUESTS) checkQuest(q);
++  for (const j of JOBS) checkJob(j);
++  for (const d of SHI.filter(x => REGIONS.has(x.region))) checkShi(d);
++
++  const dump = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env?.BIHUAN_DUMP;
++  if (dump) console.log('BIHUAN_JSON' + JSON.stringify({ n: items.length, bad: items.filter(i => !i.ok) }));
++
++  for (const it0 of items) {
++    const body = (): void => { expect(it0.ok, `${it0.label}：${it0.why}（登记键 ${it0.key}）`).toBe(true); };
++    if (it0.key in KNOWN) it.fails(`已知没收场：${it0.label}：${KNOWN[it0.key]}`, body);
++    else it(it0.label, body);
++  }
++
++  it('登记表里没有过期的键', () => {
++    const have = new Set(items.map(i => i.key));
++    expect(Object.keys(KNOWN).filter(k => !have.has(k))).toEqual([]);
++  });
++
++  it('查到了东西：心事、差事、世事都有被查的项', () => {
++    expect(items.filter(i => i.key.startsWith('Q')).length).toBeGreaterThan(30);
++    expect(items.filter(i => i.key.startsWith('J')).length).toBeGreaterThan(30);
++    expect(items.filter(i => i.key.startsWith('S')).length).toBeGreaterThan(50);
++  });
++});
+diff --git a/tests/xiansuo.test.ts b/tests/xiansuo.test.ts
+index 7f207a6..5d80d3c 100644
+--- a/tests/xiansuo.test.ts
++++ b/tests/xiansuo.test.ts
+@@ -62,17 +62,7 @@ const KNOWN_BROKEN: Record<string, string> = {
+   // 差事：放走凶手，差事就交不了了，见闻簿照旧写着去交差
+   // （#312 已补：xuanshang.ts 的 xsb_xiong.xian 添了 flag: 'xsb_xiong_gone' 那一支）
+   // 世事（维护者 10-10：写地方、不写找谁）：能插手的步，见闻簿那一行里没点出事情在哪儿闹
+-  'kp_xun|st_fang#缺地名|A': '缺地名：卫衡寻褚七没点出事情在哪儿闹（常见的去处：运河渡口、广陵客栈、瘦西湖畔）',
+-  'smth_shi|st_qi#缺地名|A': '缺地名：乱石阵困船没点出事情在哪儿闹（常见的去处：听潮小筑）',
+-  'ssgz_xun|st_qi#缺地名|A': '缺地名：鲥鱼汛争江面没点出事情在哪儿闹（常见的去处：瓜洲码头）',
+-  'ssgz_xun|st_zheng#缺地名|A': '缺地名：鲥鱼汛争江面没点出事情在哪儿闹（常见的去处：瓜洲码头）',
+-  'ssgz_du|st_shu#缺地名|A': '缺地名：客店的赌桌没点出事情在哪儿闹（常见的去处：江口客店）',
+-  'ss_matou|st_duizhi#缺地名|A': '缺地名：码头空出来以后没点出事情在哪儿闹（常见的去处：运河渡口、府衙前堂 · 六扇门）',
+-  'ss_matou|st_huobing#缺地名|A': '缺地名：码头空出来以后没点出事情在哪儿闹（常见的去处：运河渡口、府衙前堂 · 六扇门）',
+-  'sszj_du|st_dazhi#缺地名|A': '缺地名：渡船涨价没点出事情在哪儿闹（常见的去处：西津渡、待渡亭）',
+-  'sszj_dao|st_diu#缺地名|A': '缺地名：道场拐孩子没点出事情在哪儿闹（常见的去处：西津渡）',
+-  'sz_juan|st_yuan#缺地名|A': '缺地名：织造贡绢失窃没点出事情在哪儿闹（常见的去处：枫桥码头、星桥埠头、苏州府衙）',
+-  'sz_hua|st_zheng#缺地名|A': '缺地名：山塘河画舫相争没点出事情在哪儿闹（常见的去处：星桥埠头）'
++  // （10-10 摸底 docs/bihuan-1010.md 已全部补上地名，登记清空）
+ };
+ 
+ /* ---------------------------------------------------------------------------------------------------

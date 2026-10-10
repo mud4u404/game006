@@ -7,7 +7,19 @@
 
 ## 开着、要接着办的
 1. **PR #554**（我的分支）：七条设计稿、场景归并（46 处 area 归成 20 种、`room-alias.ts`、旧档映射、`tests/changjing.test.ts`）、自动合并放宽（点名的新测试文件、id 登记表只加行）、AGENTS 自动模式改「推完就接下一件，不等 CI」。CI 全绿就合。
-2. **七个 sonnet 工作流被中断**，要重开（各开 worktree，模型 sonnet）：
+2. **七个 sonnet 工作流被中断**。半成品已存成补丁，放在 `docs/jiaojie-wip/`（基准都是提交 `6ecd88c`，146 的基准是 `f0e7511`，都在远程）。新对话里每件开一个 sonnet（worktree）：从最新 main 开分支，`git apply --3way docs/jiaojie-wip/<名>.patch`，读补丁弄清做到哪，补完、跑相关测试、开 PR。**补丁只是交接用，合 #554 之前先把 `docs/jiaojie-wip/` 删掉**（或在打完补丁后的提交里删）。
+
+   | 补丁 | 是哪件 | 状态 |
+   |---|---|---|
+   | `youhua-ui.patch` | 主界面与地图改版 | 13 个文件，未提交的半成品 |
+   | `youhua-npc.patch` | NPC 迎面（含新包 `yingmian.ts`） | 10 个文件，半成品 |
+   | `youhua-bihuan.patch` | 闭环摸底并修 | 17 个文件，半成品 |
+   | `youhua-dating.patch` | 打听改成问这人知道的 | 已有两个提交；在我分支上直接打不上（`chuanwen.ts`，因含 #273 的合并），在最新 main 上用 `--3way` |
+   | `wushi.patch` | 巫师模式与一键反馈（`src/core/wushi.ts`） | 10 个文件，半成品 |
+   | `jieshou-146.patch` | 接手 #146：四派师门差事全部内容加文风整改 | 6 个文件，能直接打上；合后关 #146、关 PR #146，写明接手、保留 zcode 署名（`Co-Authored-By`） |
+
+   「按钮点不到」那件没有留下修复，只有临时脚本：**重开，最急**。要求：用 Playwright 在 390 宽下把每个界面、每个地点的每个按钮点一遍，记下点不动的，找根因修好，加防复发检查。先合它，再合界面改版。
+   原清单（备查）：
    - 主界面与地图改版（第二、三、六条和第七条的显示）；
    - NPC 迎面（第五条）；
    - 打听改成「问这人知道的」（先合了 #273）；
@@ -18,6 +30,10 @@
 3. 待审待合：#306（Qoder 返工）、#544（minimax 成衣铺）；CodeBuddy 的 #296、#317、#334 等作者改。
 4. 全合完：三个审查角色再试玩，对比「前十分钟想关掉几次」「第一次觉得变强在第几分钟」，再主动给负责人提下一阶段目标。
 5. 给负责人一页纸：Codex fenxi H1（世事重来、路遇再遇、导演）结合 `docs/zhishiku/sandbox-rimworld.md`，方向级，等点头。
+
+## 定时任务要重绑（重要）
+
+每小时巡检 `trig_01PcNZZMvCPRW1hCzEksCSKE` 和每日巡视 `trig_01MbWg8VDKpHuGEz8YZCPkJe` 都绑在旧会话上，新对话收不到。新对话第一件事：用 `create_trigger` 照 `docs/jiaojie-wip/xunjian.md` 的两段提示重建（绑到新会话，每小时那个 cron `22 * * * *`，每日那个 `CRON_TZ=Asia/Shanghai 52 8 * * *`），建好后 `delete_trigger` 删掉旧的两个。「江湖夜雨 · 每日一审」`trig_01HAobpY5WLkCHxPjh6A4hca` 是另一个会话的，不动。
 
 ## 人手现状
 - 停用：autoclaw（额度用尽，任务全给 minimax）、zcode（第二次机会没过，原来的活全给 minimax）、WorkBuddy（10-10 负责人定下线，20 件「给:workbuddy」全改「给:trae」）。

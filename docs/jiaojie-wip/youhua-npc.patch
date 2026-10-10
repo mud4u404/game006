@@ -1,0 +1,613 @@
+diff --git a/src/content/index.ts b/src/content/index.ts
+index 2ca0d90..a02dfc1 100644
+--- a/src/content/index.ts
++++ b/src/content/index.ts
+@@ -81,6 +81,13 @@ export function mergePacks(list: ContentPack[]): Registry {
+       if (target && !target.life) target.life = life;
+     }
+   }
++  // 迎面的话：给别的内容包里的人补上（人物自己写了 greet 的，以人物自己的为准）
++  for (const p of list) {
++    for (const [id, greet] of Object.entries(p.npcGreet ?? {})) {
++      const target = npcById.get(id);
++      if (target && !target.greet) target.greet = greet;
++    }
++  }
+   return reg;
+ }
+ 
+diff --git a/src/content/packs/yingmian.ts b/src/content/packs/yingmian.ts
+new file mode 100644
+index 0000000..01ed292
+--- /dev/null
++++ b/src/content/packs/yingmian.ts
+@@ -0,0 +1,169 @@
++import type { Cond, ContentPack, GreetDef } from '../types';
++
++/**
++ * 迎面的话（engine/yingmian.ts，docs/sheji-youhua-1010.md 第五条）：十个关键人物先开口。
++ * 每人二到四条，条件各不相同，一条都不成立就不开口；成立几条时，引擎按世界种子、日子、时辰段挑一条，不碰世界随机数。
++ * 话头点了以后走现有动作（缺省「交谈」），所以现有的分支、旗标、后果一概照旧，这里只管开口的那一句。
++ * 句式照 docs/wenfeng.md：先写说话人，再用「道」引出对白，不用插入式对白。
++ */
++
++const XUN = 'kp_xun';
++const MATOU = 'ss_matou';
++const ZEI = 'ss_zei';
++const at = (...steps: string[]): Cond => ({ shi: { id: XUN, at: steps } });
++
++const GREET: Record<string, GreetDef[]> = {
++  /* ---------- 了尘大师：看玩家近来做了什么、主线到哪一步 ---------- */
++  liaochen: [
++    { if: { quest: { id: 'main1', is: 0 } },
++      text: '了尘大师手里的扫帚停在半空，抬眼望过来，道：「施主腰间那件旧物，可否近前来，让老衲看一眼？」',
++      topic: '近前答话' },
++    { if: { quest: { id: 'main1', is: 1 }, flag: 'tu_bai', notFlag: 'lc_bai' },
++      text: '了尘大师端着一碗药走过来，搁在石桌上，道：「趁热喝了。船夫背你上山那夜的事，老衲有几句话说。」',
++      topic: '坐下喝药' },
++    { if: { flag: 'boss', notFlag: 'lc_tiaoxi' },
++      text: '了尘大师合十一礼，道：「渡口的事老衲听说了。施主那口气浮在胸口，进禅房坐一坐罢。」',
++      topic: '进禅房调息', go: '请教' },
++    { if: { quest: { id: 'main1', atLeast: 3 } },
++      text: '了尘大师扫完了阶前的落叶，望向湖畔的方向，道：「那块石碑上的字，施主可曾看仔细了？」',
++      topic: '问石碑的事' }
++  ],
++
++  /* ---------- 鲍四：丐帮弟子、非丐帮弟子各一种说法 ---------- */
++  bs2_bao: [
++    { if: { sect: { school: '丐帮' } },
++      text: '鲍四拿竹杖敲了敲地，冲你招手，道：「来得正好，火边坐。帮里的规矩，今日再对你说一遍。」',
++      topic: '火边坐下' },
++    { if: { sect: { school: '丐帮' } },
++      text: '鲍四翻了翻背上的麻布口袋，道：「分舵这两日缺人手，你腿脚利索，替帮里跑几趟。」',
++      topic: '问差事', go: '讨差事' },
++    { if: { noSect: true, notFlag: 'ly_xiaozei_dead' },
++      text: '鲍四烤着火，眼皮都不抬，道：「后生，站了半天，是看火，还是看人？想吃这碗饭，先学会讨。」',
++      topic: '问入帮的规矩', go: '拜师' },
++    { if: { notSect: '丐帮', flag: 'ly_ajiu' },
++      text: '鲍四朝你点了点头，道：「渡口扛盐包的阿九，提过你。有人给过他十文钱，没图他半句好话。」',
++      topic: '听他说阿九' }
++  ],
++
++  /* ---------- 焦五：码头那件世事走到哪一步 ---------- */
++  ss_jiaowu: [
++    { if: { shi: { id: MATOU, at: ['duizhi'] } },
++      text: '焦五抱着胳膊，横在跳板前，斜眼看你，道：「屠千山是你打跑的，码头可不是你一个人的。」',
++      topic: '回他的话' },
++    { if: { shi: { id: MATOU, at: ['huobing'] } },
++      text: '焦五拿布擦着短戟，戟刃上还有没擦净的血，道：「昨夜的事，你听说了没有？」',
++      topic: '问昨夜的事' },
++    { if: { shi: { id: MATOU, at: ['xiduo'] } },
++      text: '焦五把短戟往肩上一扛，冲你咧嘴一笑，道：「码头如今姓焦，往后过船，守西舵的规矩。」',
++      topic: '听他的规矩' }
++  ],
++
++  /* ---------- 阿七：东关街偷药那件世事 ---------- */
++  ss_aqi: [
++    { if: { shi: { id: ZEI, at: ['huanle'] } },
++      text: '阿七一溜烟跑到你跟前，仰着脸道：「恩公！我娘能下地了。城里这几日的事，我都替你记着呢。」',
++      topic: '问问城里的事', go: '打听' },
++    { if: { shi: { id: ZEI, at: ['zhuo'] } },
++      text: '阿七蹲在青石后头，抬头看见你，又把脸埋进了膝盖，肩头一耸一耸的。',
++      topic: '走近些' },
++    { if: { shi: { id: ZEI, at: ['songguan'] } },
++      text: '阿七背对着巷口站着，听见脚步，没有回头，只道：「你来做什么。」',
++      topic: '站住不走' }
++  ],
++
++  /* ---------- 阮娘子：夜里添灯，白日算账，见了伤客另有一句 ---------- */
++  jc_yz_ruanniang: [
++    { if: { hour: { from: 19, to: 5 } },
++      text: '阮娘子踮脚往门口的灯笼里添油，回过头来，道：「客官这么晚才靠岸，灯我给你留着。」',
++      topic: '谢她留灯' },
++    { if: { hour: { from: 5, to: 19 } },
++      text: '阮娘子拨着算盘，抬头见了你，道：「客官住店么？热水和早粥都是现成的。」',
++      topic: '问房钱' },
++    { if: { wounded: true },
++      text: '阮娘子放下账簿，上下打量你一回，道：「客官这身伤，在外头硬撑不得。楼上东头还空着一间。」',
++      topic: '要一间房', go: '住店' }
++  ],
++
++  /* ---------- 说书人：照玩家做过的事说 ---------- */
++  shuoshu: [
++    { if: { quest: { id: 'main1', is: 2 } },
++      text: '说书人手里的醒木往案上一搁，冲你拱手，道：「少侠来得巧，渡口那一回，小老儿正要从头说起。」',
++      topic: '听他说书' },
++    { if: { quest: { id: 'main1', atLeast: 3 }, flag: 'boss' },
++      text: '说书人冲你挤了挤眼，道：「少侠的段子，小老儿每日要讲三场，场场满座。」',
++      topic: '问讲到哪儿了' },
++    { if: { any: [{ flag: 'ly_xiaozei_dead' }, { shi: { id: ZEI, at: ['songguan'] } }] },
++      text: '说书人拿折扇遮了半边脸，朝你勾了勾手指，道：「东关街巷子里的闲话，少侠听说了没有？」',
++      topic: '赏几文听听', go: '打赏' },
++    { if: { notFlag: 'boss' },
++      text: '说书人醒木一拍，朝你这边扬了扬下巴，道：「这位客官，听段书罢？华山掌门之争，正说到紧要处。」',
++      topic: '听段书' }
++  ],
++
++  /* ---------- 卫衡：寻人那件世事走到哪一步 ---------- */
++  kp_wei: [
++    { if: { ...at('fang', 'feng', 'cuo'), notFlag: 'kp_wei_met' },
++      text: '卫衡远远抱了抱拳，手却仍按在剑柄上，道：「这位朋友，晚辈想打听个人，独臂的，四十来岁。」',
++      topic: '听他打听' },
++    { if: { ...at('fang', 'feng'), flag: 'kp_wei_met', notFlag: 'kp_wei_ans' },
++      text: '卫衡迎上两步，神色比先前更急，道：「这几日你可曾听到那人的消息？一句也好。」',
++      topic: '把话递给他', go: '递话' },
++    { if: { shi: { id: XUN, at: ['duimian'] }, flag: 'kp_wei_met' },
++      text: '卫衡把剑穗的结重新系紧，抬头看了看天色，道：「今夜晚辈要去运河渡口，你若有话，现在说。」',
++      topic: '问他今夜' },
++    { if: { shi: { id: XUN, at: ['pao', 'pao_see'], age: { below: 48 } } },
++      text: '卫衡站在店堂中央，茶也没有要，看见你，道：「渡口那一夜，晚辈到时，铺盖还是温的。」',
++      topic: '听他说渡口' }
++  ],
++
++  /* ---------- 褚七：同一件世事，从躲到不躲 ---------- */
++  kp_chu: [
++    { if: { shi: { id: XUN, at: ['fang', 'feng', 'cuo'] }, flag: 'kp_chu_met', notFlag: 'kp_chu_warned' },
++      text: '褚七把盐包撂在垛上，看着你，道：「小哥，有句话我一直想找人商量。」',
++      topic: '劝他几句', go: '劝告' },
++    { if: { shi: { id: XUN, at: ['duimian'] }, flag: 'kp_chu_met' },
++      text: '褚七没有扛包，站在缆桩边，左手按着桩头，道：「小哥，今夜你不必陪我。」',
++      topic: '陪他站站' },
++    { if: { shi: { id: XUN, at: ['tiaoting'] } },
++      text: '褚七肩头直了许多，朝你点了点头，道：「话说出口，夜里倒睡得着了。」',
++      topic: '问他近况' },
++    { if: { flag: 'kp_du', notFlag: 'kp_chu_met' },
++      text: '独臂人把一包盐扛上肩，回头看见你，用那一只手抱了抱拳，道：「小哥，又见面了。」',
++      topic: '上前叙话' }
++  ],
++
++  /* ---------- 周捕头 ---------- */
++  fuya_zhou: [
++    { if: { flag: 'boss', notFlag: 'fuya_met_name' },
++      text: '周捕头从卷宗上抬起眼，把你腰间兵刃看了两眼，道：「渡口那一剑，是你出的？」',
++      topic: '上前搭话' },
++    { if: { shi: { id: MATOU, at: ['qi', 'duizhi', 'huobing'] } },
++      text: '周捕头合上卷宗，道：「运河渡口这几日不太平，你从那边过来，可看见什么？」',
++      topic: '报官', go: '报官' },
++    { if: { quest: { id: 'side_caoshangfei', is: 2 } },
++      text: '周捕头搁下笔，朝你抬了抬下巴，道：「草上飞的案子，你有话要交代？」',
++      topic: '交差', go: '交差' },
++    { if: { flag: 'caoshangfei_hint1', quest: { id: 'side_caoshangfei', below: 2 } },
++      text: '周捕头翻着卷宗，头也不抬，道：「小金山、茱萸湾，两处可有眉目了？」',
++      topic: '回他的话' }
++  ],
++
++  /* ---------- 书办：有新榜文时开口 ---------- */
++  xsb_zhuren: [
++    { if: { jobOpen: 'xsb_xunren' },
++      text: '书办提起笔，朝照壁指了指，道：「新贴了一张寻人的榜，布庄走了学徒，赏钱不多，却是实打实的。」',
++      topic: '看寻人榜' },
++    { if: { jobOpen: 'xsb_xunwu' },
++      text: '书办翻开底册，点了点其中一行，道：「绣娘丢了玉佩，托衙门贴了榜，赏八百文。」',
++      topic: '看寻物榜' },
++    { if: { any: [{ jobOpen: 'xsb_xiong', notFlag: 'xsb_xiong_done' }, { jobOpen: 'xsb_jiaofei' }] },
++      text: '书办把笔往砚台上一搁，道：「今日又添了两张重榜，一张缉凶，一张剿匪，揭得下的人不多。」',
++      topic: '问重榜' },
++    { if: { jobOpen: 'xs_hezei' },
++      text: '书办在册子上圈了一笔，道：「运河上的河贼夜里又上了岸，官府出了榜文，赏八百文。」',
++      topic: '问河贼榜' }
++  ]
++};
++
++const pack: ContentPack = { npcGreet: GREET };
++export default pack;
+diff --git a/src/content/types.ts b/src/content/types.ts
+index 5936ea6..10b3e71 100644
+--- a/src/content/types.ts
++++ b/src/content/types.ts
+@@ -324,6 +324,22 @@ export interface NpcDef {
+   actions: Partial<Record<Verb, Branch[]>>;
+   /** 人的活气（engine/chuanwen.ts）：有事的人才写。别的内容包里的人，用 ContentPack.npcLife 补，不必改别人的文件 */
+   life?: NpcLife;
++  /** 迎面（engine/yingmian.ts）：玩家走进来或在场景里过了时辰，满足条件的人可能先开口。别的内容包里的人，用 ContentPack.npcGreet 补 */
++  greet?: GreetDef[];
++}
++
++/**
++ * 迎面的一条（docs/sheji-youhua-1010.md 第五条）：条件成立才会开口，同一个人写几条，条件各不相同。
++ * 一个人一个江湖日最多主动一次；同一场景一次只有一个人开口。
++ */
++export interface GreetDef {
++  if?: Cond;
++  /** 开口的话，整句写好，带人名和神态，如「了尘大师抬起头：『施主，……』」 */
++  text: string;
++  /** 话头按钮上的字，三四个字 */
++  topic: string;
++  /** 点了话头以后对这个人做的动作，缺省是「交谈」（走现有动作，所以机器玩家本来就走得到） */
++  go?: Verb;
+ }
+ 
+ /**
+@@ -924,4 +940,6 @@ export interface ContentPack {
+   roomLife?: Record<string, RoomLife>;
+   /** 给别的内容包里的人补上活气：人物 id → NpcLife（合并时挂到 NpcDef.life 上） */
+   npcLife?: Record<string, NpcLife>;
++  /** 给别的内容包里的人补上迎面的话：人物 id → GreetDef[]（合并时挂到 NpcDef.greet 上） */
++  npcGreet?: Record<string, GreetDef[]>;
+ }
+diff --git a/src/core/state.ts b/src/core/state.ts
+index 8aa6e05..87c46b1 100644
+--- a/src/core/state.ts
++++ b/src/core/state.ts
+@@ -118,6 +118,12 @@ export interface GameState {
+   gongxian?: Record<string, number>;
+   /** 打听：每个人今天问过没有（江湖日） */
+   asked?: Record<string, number>;
++  /** 迎面（engine/yingmian.ts）：每个人最近一次主动开口是哪一日（江湖日）；过了日子的自动清掉。旧档可缺省 */
++  greeted?: Record<string, number>;
++  /** 场景里眼下的迎面：key 是「地点|日|时辰段」，同一个 key 不再挑第二个人；id 是开口的人，i 是第几条，used 表示话头已经点过。旧档可缺省 */
++  greet?: { key: string; id?: string; i?: number; used?: true };
++  /** 最近一次对谁做了动作（江湖日），迎面挑人时「刚做过与他有关的事」排前头。旧档可缺省 */
++  lastWith?: { id: string; day: number };
+   /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts） */
+   away?: Record<string, number>;
+   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */
+diff --git a/src/engine/yingmian.ts b/src/engine/yingmian.ts
+new file mode 100644
+index 0000000..3267f14
+--- /dev/null
++++ b/src/engine/yingmian.ts
+@@ -0,0 +1,89 @@
++/**
++ * 迎面：人有活气，不只是等你来问（docs/sheji-youhua-1010.md 第五条，负责人 10-10：「NPC 活人感太弱」）。
++ * 玩家走进一处场景，或在场景里过了时辰，场景里的人可能先开口，带一个话头；点了话头，就是对他做一个现有的动作（通常是交谈）。
++ * 要适当：
++ * - 一个人一个江湖日最多主动一次（S.greeted）；
++ * - 同一场景同一个时辰段（两个钟头）只挑一个人（S.greet.key）；
++ * - 只挑有一条迎面（NpcDef.greet）条件成立的人；
++ * - 挑人的先后：刚和他有过来往的，再看关系好坏，最后按场景里的排序。
++ * 随机：不碰世界的随机数（worldRng）——世事靠它往前走，开场白一动就会把世事挪位。
++ * 一个人几条都成立时挑哪条，用 mulberry32(seedOf(...))，同一个世界、同一日、同一时辰段，挑出来的一样。
++ * 挑人由 refreshGreet 在每次重画之前进行（ui/shell.ts 的 render），自己不推进时间；界面只读 greetNow。
++ */
++import { S } from '../core/state';
++import { dayNo } from '../core/time';
++import { npc } from '../content';
++import type { GreetDef, Verb } from '../content/types';
++import { test } from './dsl';
++import { mulberry32, seedOf } from './rng';
++import { worldOf } from './shijie';
++import { npcName, roomNpcs, verbsOf } from './world';
++
++/** 一个时辰段两个钟头 */
++const SLOT_MIN = 120;
++/** 关系由生疏到亲近；表外的（仇怨之类）排在最后 */
++const REL_RANK = ['素不相识', '点头之交', '相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'];
++
++export interface Greeting { id: string; name: string; text: string; topic: string; go: Verb }
++
++const slotKey = (): string => `${S.loc}|${dayNo(S)}|${Math.floor(S.min / SLOT_MIN)}`;
++
++/** 他此刻能说的迎面话（条件成立的） */
++const ready = (id: string): number[] => {
++  const g = npc(id)?.greet;
++  return g ? g.flatMap((d, i) => (test(d.if) ? [i] : [])) : [];
++};
++
++/** 关系好坏：越亲近越靠前 */
++const relRank = (id: string): number => REL_RANK.indexOf(S.rel[id] ?? '素不相识');
++
++/** 挑谁开口：没有人有话可说就是 undefined */
++function choose(): { id: string; i: number } | undefined {
++  const today = dayNo(S), greeted = S.greeted ?? {};
++  const recent = S.lastWith && S.lastWith.day === today ? S.lastWith.id : '';
++  const folks = roomNpcs(S.loc).filter(id => !npc(id)?.obj && greeted[id] !== today && ready(id).length);
++  if (!folks.length) return undefined;
++  const order = folks.map((id, k) => ({ id, k, recent: id === recent ? 1 : 0, rel: relRank(id) }));
++  order.sort((a, b) => b.recent - a.recent || b.rel - a.rel || a.k - b.k);
++  const id = order[0].id, opts = ready(id);
++  const r = mulberry32(seedOf(worldOf().seed, 'greet', id, today, Math.floor(S.min / SLOT_MIN)))();
++  return { id, i: opts[Math.floor(r * opts.length)] };
++}
++
++/**
++ * 画场景之前问一回：这个时辰段还没挑过，就挑一个人，记进存档（S.greet、S.greeted）；挑过的不再挑，重画不会换人。
++ * 会改存档，所以放在 ui/shell.ts 的 render 里（和世界的慢变一起），不放在只读的界面函数里
++ */
++export function refreshGreet(): void {
++  if (S.chapter === 0) return;
++  const key = slotKey();
++  if (S.greet?.key === key) return;
++  const pick = choose();
++  S.greet = pick ? { key, id: pick.id, i: pick.i } : { key };
++  if (!pick) return;
++  const g = (S.greeted ||= {});
++  for (const k of Object.keys(g)) if (g[k] !== dayNo(S)) delete g[k];
++  g[pick.id] = dayNo(S);
++}
++
++/**
++ * 此刻场景里开口的人和他的话（只读）。没有人开口、话头点过了、开口的人走开了，都是 undefined
++ */
++export function greetNow(): Greeting | undefined {
++  const cur = S.greet;
++  if (!cur || cur.key !== slotKey() || !cur.id || cur.used || cur.i === undefined) return undefined;
++  const def: GreetDef | undefined = npc(cur.id)?.greet?.[cur.i];
++  if (!def || !roomNpcs(S.loc).includes(cur.id)) return undefined;
++  return { id: cur.id, name: npcName(cur.id), text: def.text, topic: def.topic, go: def.go ?? '交谈' };
++}
++
++/** 点了话头：返回要对谁做什么动作（没有可点的返回 undefined）；卡片收起 */
++export function takeTopic(): { id: string; verb: Verb } | undefined {
++  const g = greetNow();
++  if (!g || !S.greet) return undefined;
++  S.greet.used = true;
++  const n = npc(g.id);
++  // 动作此刻不在他的动作表里（条件变了）就退回「交谈」
++  const verb = n && verbsOf(n).includes(g.go) ? g.go : '交谈';
++  return { id: g.id, verb };
++}
+diff --git a/src/styles/app.css b/src/styles/app.css
+index 2131217..204c257 100644
+--- a/src/styles/app.css
++++ b/src/styles/app.css
+@@ -148,6 +148,11 @@ svg{display:block}
+ .act.spar{background:var(--accent-soft);color:var(--accent);font-weight:700}
+ .reply{padding:10px 12px;border-radius:12px;background:var(--bg);font-family:var(--f-serif);font-size:14.5px;line-height:1.8;white-space:pre-line;animation:fin .3s ease-out}
+ 
++/* 迎面：场景里有人先开口（engine/yingmian.ts） */
++.greet{display:flex;flex-direction:column;gap:10px;animation:fin .3s ease-out}
++.greet .gt{font-family:var(--f-serif);font-size:14.5px;line-height:1.8}
++.greet .greet-btn{align-self:flex-start;padding:0 18px;background:var(--accent-soft);color:var(--accent);font-weight:700}
++
+ .go{display:flex;flex-direction:column;gap:8px;padding-top:4px}
+ .go h2{font-size:15px;font-weight:700}
+ .exits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+diff --git a/src/ui/explore.ts b/src/ui/explore.ts
+index 36676d2..e6ac842 100644
+--- a/src/ui/explore.ts
++++ b/src/ui/explore.ts
+@@ -3,7 +3,7 @@
+  * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
+  */
+ import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
+-import { advanceDays, dateStr, minLabel } from '../core/time';
++import { advanceDays, dateStr, dayNo, minLabel } from '../core/time';
+ import { $, cn, reduceMotion } from '../core/util';
+ import { room, skillById } from '../content';
+ import type { Slot, Verb } from '../content/types';
+@@ -25,6 +25,7 @@ import { setMapRegion } from './views/ditu';
+ import { showTitle } from './story';
+ import { eyeLine } from './views/jianghu';
+ import { pickItemFirst } from './daoju';
++import { takeTopic } from '../engine/yingmian';
+ 
+ let traveling = false;
+ /** 赶路途中点了「停下」：走完这一段就停 */
+@@ -131,6 +132,8 @@ function doAct(verb: Verb): void {
+   // 赠礼、典当：先从行囊里挑一件（ui/daoju.ts）
+   if (pickItemFirst(id, verb)) return;
+   const { text, out, eyes } = act(id, verb);
++  // 迎面挑人用：刚和谁有过来往（engine/yingmian.ts）
++  S.lastWith = { id, day: dayNo(S) };
+   lateYue();
+   if (out.story || out.fight) { afterOutcome(out, text || undefined); return; }
+   // 根基之眼：观察时根基够了多看出的那一层，跟在描写后面（engine/yan.ts）
+@@ -201,6 +204,13 @@ registerHandlers({
+   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
+   sel: v => { S.sel = v; S.reply = null; render(); },
+   do: v => doAct(v as Verb),
++  // 迎面的话头：选中开口的人，做对应的动作（engine/yingmian.ts）
++  greet: () => {
++    const t = takeTopic();
++    if (!t) return;
++    S.sel = t.id; S.reply = null;
++    doAct(t.verb);
++  },
+   travel: v => travelTo(v),
+   travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
+   quest: () => {
+diff --git a/src/ui/shell.ts b/src/ui/shell.ts
+index db4e82e..b34bb32 100644
+--- a/src/ui/shell.ts
++++ b/src/ui/shell.ts
+@@ -18,6 +18,7 @@ import { checkYue } from '../engine/shiguang';
+ import { tierCheck, tupoPending, tupoTake } from '../engine/tupo';
+ import { tupoCardHTML } from './tupo';
+ import { tickShi } from '../engine/shishi';
++import { refreshGreet } from '../engine/yingmian';
+ import { tickWorld } from '../engine/shijie';
+ import { dropFailedTrack } from '../engine/daohang';
+ import { isPreview } from '../core/preview';
+@@ -189,6 +190,8 @@ export function render(): void {
+   // 江湖自己往前走：世界的慢变逐日补到今天（engine/shijie.ts）；世事该起头的起头，到日子的往下走（engine/shishi.ts）
+   tickWorld();
+   tickShi();
++  // 迎面：场景里有人先开口（engine/yingmian.ts）；这个时辰段挑过的不再挑
++  refreshGreet();
+   // 记挂着的心事做不成了：放下横幅，动态里记一笔（engine/daohang.ts）
+   dropFailedTrack();
+   const main = $('#main'), tabs = $('#tabs');
+diff --git a/src/ui/views/jianghu.ts b/src/ui/views/jianghu.ts
+index 031b60a..7e5ef26 100644
+--- a/src/ui/views/jianghu.ts
++++ b/src/ui/views/jianghu.ts
+@@ -16,6 +16,7 @@ import { shenfenOf } from '../../engine/shenfen';
+ import { verbChufa } from '../../engine/chufa';
+ import { refuseOf, wantOf } from '../../engine/shijie';
+ import { test, textVars } from '../../engine/dsl';
++import { greetNow } from '../../engine/yingmian';
+ 
+ const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
+ 
+@@ -56,6 +57,7 @@ export function viewJianghu(): string {
+   ${questBar}
+   ${yueBar}
+   ${leadsCard()}
++  ${greetCard()}
+   <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
+   ${gone}
+   ${all.length ? `<section class="card here-card">
+@@ -67,6 +69,14 @@ export function viewJianghu(): string {
+   ${xiejiaoHTML()}`;
+ }
+ 
++/** 迎面（engine/yingmian.ts）：场景里有人先开口，一句话加一个话头，点了就对他做对应的动作 */
++function greetCard(): string {
++  if (S.chapter === 0) return '';
++  const g = greetNow();
++  if (!g) return '';
++  return `<section class="card greet"><p class="gt">${fmt(g.text, textVars())}</p><button class="act greet-btn" data-act="greet">${g.topic}</button></section>`;
++}
++
+ /** 近处有事：眼下接得到的差事，派差的人在哪、约多久（差事最多三行，另可添一条零工；点了先看耗时再走）。不推你去做，只是告诉你哪里有事 */
+ function leadsCard(): string {
+   if (S.chapter === 0) return '';
+diff --git a/tests/yingmian.test.ts b/tests/yingmian.test.ts
+new file mode 100644
+index 0000000..91f1dfb
+--- /dev/null
++++ b/tests/yingmian.test.ts
+@@ -0,0 +1,152 @@
++/**
++ * 迎面（engine/yingmian.ts，docs/sheji-youhua-1010.md 第五条）：进场景有人先开口，要适当。
++ * 一人一日一次、同场景一次一个人、条件不成立不开口、不动世界的随机数。
++ */
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++import { S, setState, skipToYangzhou } from '../src/core/state';
++import { advanceDays, advanceMin, dayNo, setNowMs } from '../src/core/time';
++import { NPCS, npc } from '../src/content';
++import type { GreetDef } from '../src/content/types';
++import { greetNow, refreshGreet, takeTopic } from '../src/engine/yingmian';
++import { act } from '../src/engine/world';
++import { worldRng } from '../src/engine/shijie';
++import { viewJianghu } from '../src/ui/views/jianghu';
++
++/** 画一回场景之前的挑人，再看谁开口（ui/shell.ts 的 render 就是这个顺序） */
++const look = (): ReturnType<typeof greetNow> => { refreshGreet(); return greetNow(); };
++
++beforeEach(() => {
++  setNowMs(() => 1_000_000_000_000);
++  setState(skipToYangzhou());
++  S.loc = 'daming'; S.min = 9 * 60;
++});
++afterEach(() => { setNowMs(() => Date.now()); });
++
++describe('迎面', () => {
++  it('进场景有人开口，江湖页场景区最上面有这张卡', () => {
++    const g = look();
++    expect(g?.id).toBe('liaochen');
++    expect(g?.topic.length).toBeGreaterThan(0);
++    const html = viewJianghu();
++    expect(html).toContain('class="card greet"');
++    expect(html).toContain('data-act="greet"');
++    expect(html.indexOf('card greet')).toBeLessThan(html.indexOf('card scene'));
++  });
++
++  it('界面只读：画江湖页不改存档', () => {
++    refreshGreet();
++    S.sel = 'liaochen';
++    const before = structuredClone(S);
++    viewJianghu();
++    expect(S).toEqual(before);
++  });
++
++  it('重画不换人；点了话头走现有动作（交谈），卡片收起', () => {
++    const a = look();
++    expect(look()).toEqual(a);
++    const t = takeTopic();
++    expect(t).toEqual({ id: 'liaochen', verb: '交谈' });
++    expect(act(t!.id, t!.verb).text).toContain('了尘大师');
++    expect(look()).toBeUndefined();
++  });
++
++  it('话头可以指定别的动作', () => {
++    // 渡口事了、没调息过、主线还在第二步：只有邀进禅房这一条成立，点话头走「请教」
++    S.flags.boss = true; S.quests.main1 = 2;
++    expect(look()?.go).toBe('请教');
++    expect(takeTopic()).toEqual({ id: 'liaochen', verb: '请教' });
++  });
++
++  it('同一个人一个江湖日最多主动一次，换了日子再开口', () => {
++    expect(look()?.id).toBe('liaochen');
++    takeTopic();
++    advanceMin(S, 180);
++    expect(look()).toBeUndefined();
++    advanceMin(S, 180);
++    expect(look()).toBeUndefined();
++    advanceDays(S, 1);
++    S.min = 9 * 60;
++    expect(look()?.id).toBe('liaochen');
++  });
++
++  it('同场景一次只一个人开口：先看刚来往过的，下一个时辰段再轮到另一位', () => {
++    const lines: GreetDef[] = [{ text: '知客僧合十道：「施主请用茶。」', topic: '领茶' }];
++    const zhike = npc('zhike')!;
++    zhike.greet = lines;
++    try {
++      S.lastWith = { id: 'zhike', day: dayNo(S) };
++      const first = look();
++      expect(first?.id).toBe('zhike');
++      // 同一个时辰段里不再挑第二个人
++      expect(look()?.id).toBe('zhike');
++      takeTopic();
++      expect(look()).toBeUndefined();
++      // 过了一个时辰段，没开过口的了尘开口；知客僧今日已招呼，不再开
++      advanceMin(S, 130);
++      expect(look()?.id).toBe('liaochen');
++    } finally { delete zhike.greet; }
++  });
++
++  it('条件不满足就不开口', () => {
++    S.quests.main1 = 2;
++    expect(look()).toBeUndefined();
++    expect(viewJianghu()).not.toContain('card greet');
++    // 没有迎面的人也不开口
++    S.loc = 'hu';
++    expect(look()?.id).not.toBe('liaochen');
++  });
++
++  it('不动世界的随机数：开口前后世界状态、随机序列一字不差', () => {
++    const w = structuredClone(S.w);
++    const probe = (): number => { const c = structuredClone(S.w); const r = worldRng(); S.w = c; return r; };
++    const before = probe();
++    look(); takeTopic(); advanceMin(S, 130); look();
++    expect(S.w.rn).toBe(w.rn);
++    expect(S.w.seed).toBe(w.seed);
++    expect(probe()).toBe(before);
++  });
++
++  it('同一个世界、同一日、同一时辰段，挑出同一条', () => {
++    S.flags.boss = true; S.quests.main1 = 3;
++    const a = look();
++    S.greet = undefined; S.greeted = {};
++    expect(look()).toEqual(a);
++  });
++
++  it('旧档没有这些字段也能读：缺省即可', () => {
++    delete S.greeted; delete S.greet; delete S.lastWith;
++    expect(() => look()).not.toThrow();
++    expect(look()?.id).toBe('liaochen');
++  });
++
++  it('序章里不开口（卡片只在江湖里）', () => {
++    S.chapter = 0;
++    expect(viewJianghu()).not.toContain('card greet');
++  });
++});
++
++describe('迎面的内容', () => {
++  const TEN: Record<string, number[]> = {
++    liaochen: [2, 4], bs2_bao: [2, 4], ss_jiaowu: [2, 4], ss_aqi: [2, 4], jc_yz_ruanniang: [2, 4],
++    shuoshu: [2, 4], kp_wei: [2, 4], kp_chu: [2, 4], fuya_zhou: [2, 4], xsb_zhuren: [2, 4]
++  };
++  it('十个人各二到四条', () => {
++    for (const [id, [lo, hi]] of Object.entries(TEN)) {
++      const n = npc(id)?.greet?.length ?? 0;
++      expect(n, id).toBeGreaterThanOrEqual(lo);
++      expect(n, id).toBeLessThanOrEqual(hi);
++    }
++  });
++  it('每条都有话有话头，动作是这个人的动作（交谈、打听之类现有的）', () => {
++    for (const n of NPCS) {
++      for (const g of n.greet ?? []) {
++        expect(g.text.length, n.id).toBeGreaterThan(10);
++        expect(g.topic.length, n.id).toBeLessThanOrEqual(8);
++        if (g.go) {
++          const verbs = n.verbs.map(v => (typeof v === 'string' ? v : v.verb));
++          expect(verbs.includes(g.go) || (g.go === '打听' && verbs.includes('交谈')), `${n.id}:${g.go}`).toBe(true);
++        }
++      }
++    }
++  });
++});

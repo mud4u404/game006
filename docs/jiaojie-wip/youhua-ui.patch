@@ -1,0 +1,1121 @@
+diff --git a/src/core/state.ts b/src/core/state.ts
+index 8aa6e05..87451ba 100644
+--- a/src/core/state.ts
++++ b/src/core/state.ts
+@@ -136,6 +136,11 @@ export interface GameState {
+   sel: string | null;
+   reply: { id: string; text: string } | null;
+   tab: Tab;
++  /**
++   * 界面记的小账（engine/jiemian.ts），可缺省，旧档没有也读得出来：
++   * power 上次在江湖页角色卡上显示的战力；from 变了以后的旧值（卡上显示「旧 → 新」，离开江湖页就清）；went 到过的地点
++   */
++  ui?: { power?: number; from?: number; went?: string[] };
+ }
+ 
+ /** 跳过序章时的根基：和走完童年三忆的样子相当（常人各二十） */
+diff --git a/src/engine/daohang.ts b/src/engine/daohang.ts
+index dc1cf18..89ad32d 100644
+--- a/src/engine/daohang.ts
++++ b/src/engine/daohang.ts
+@@ -203,7 +203,7 @@ export function sectNav(): SectNav | null {
+ 
+ 
+ /** 近处有事：此刻你接得到的差事，派差事的人在哪、要走多久（江湖页「近处有事」卡，试玩：到处乱逛没有目标） */
+-export interface Lead { text: string; to: string; toName: string; min: number }
++export interface Lead { text: string; to: string; toName: string; min: number; /** 是零工不是差事 */ gig?: true }
+ 
+ let giverCache: Map<string, string> | null = null;
+ /** 每件差事由哪个人（或榜上的书办）发：扫人物的动作里写了「job」效果的那一个 */
+@@ -245,7 +245,7 @@ export function gigLead(): Lead | null {
+     if (!m) continue;
+     const key = (work.do!.find(e => e.type === 'today') as { id: string }).id;
+     const min = travelMin(m);
+-    if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min };
++    if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min, gig: true };
+   }
+   return best;
+ }
+diff --git a/src/engine/jiemian.ts b/src/engine/jiemian.ts
+new file mode 100644
+index 0000000..0765ab5
+--- /dev/null
++++ b/src/engine/jiemian.ts
+@@ -0,0 +1,260 @@
++/**
++ * 主界面的几样东西（负责人 10-10 七条，docs/sheji-youhua-1010.md 第二、三、六、七条）。纯函数，只读 S，界面和测试共用：
++ * - 角色卡：战力、称号、评语，战力变了记下旧值，卡上写一回「旧 → 新」；
++ * - 眼下要紧：永远只有一件，写成动宾句；主线卡住了写缘故，再给一件帮得上忙的事；往下最多两条「也可以」；
++ * - 地点说明：地图上点一处，看那里有什么人、什么事、要走多久；
++ * - 变强的路：闭关的预估、切磋、学艺、门派练功，各写代价。
++ * 战力、评语、闭关、导航都是现成的（engine/zhanli.ts、lilian.ts、daohang.ts），这里只拼，不另造公式。
++ */
++import { S } from '../core/state';
++import { NPCS, REALMS, REALM_NEED, npc, room, skillById } from '../content';
++import type { Verb } from '../content/types';
++import { RETREAT, retreatPlan } from './lilian';
++import { LODGING, allowance, retreatBlock, skillName, yueText, zhuOf } from './shiguang';
++import { type Lead, leadsNear, questNav, sectHome, sectNav } from './daohang';
++import { test } from './dsl';
++import { profMul } from './gengu';
++import { personOf, tierNow } from './ren';
++import { realmCap } from './shicheng';
++import { marksOf } from './shijie';
++import { npcName, pathMin, roomNpcs, travelMin, tripCost, verbsOf, whereAt } from './world';
++import { pingyuOf, zhanliShu } from './zhanli';
++import { shenfenOf } from './shenfen';
++import type { Tab } from '../core/state';
++
++/* ---------- 角色卡 ---------- */
++
++export const powerNow = (): number => zhanliShu(personOf(S));
++
++/**
++ * 记战力：在江湖页上画角色卡时调（ui/shell.ts 的 render）。
++ * 和上次显示的不同，旧值记在 from，卡上写「旧 → 新」；离开江湖页（画别的页）就清掉，只显示这一回。
++ */
++export function trackPower(onJianghu: boolean): void {
++  const ui = (S.ui ??= {});
++  const p = powerNow();
++  if (!onJianghu) { if (ui.from !== undefined) delete ui.from; return; }
++  if (ui.power === undefined) { ui.power = p; return; }
++  if (ui.power !== p) { ui.from = ui.power; ui.power = p; }
++}
++
++/** 称号：有名号用名号，没有就写身份（序章里是渔家少年） */
++export function chenghao(): string {
++  return S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : shenfenOf(S).name + ' · ' + tierNow(S).name;
++}
++
++export interface JueseKa { name: string; title: string; power: number; from?: number; pingyu: string; line: string }
++
++export function jueseKa(): JueseKa {
++  const power = powerNow();
++  const from = S.ui?.from !== undefined && S.ui.from !== power ? S.ui.from : undefined;
++  return {
++    name: '沈' + S.name, title: chenghao(), power, from, pingyu: pingyuOf(S),
++    line: `气血 ${S.hp}/${S.hpMax} · 内力 ${S.mp}/${S.mpMax} · 银两 ${S.silver} 文`
++  };
++}
++
++/* ---------- 到过的地方 ---------- */
++
++/** 记下到过的地点（每次画界面时记所在地；只记 ui.went） */
++export function markWent(id: string): void {
++  const ui = (S.ui ??= {});
++  const w = (ui.went ??= []);
++  if (!w.includes(id)) w.push(id);
++}
++export const wentSet = (): Set<string> => new Set([...(S.ui?.went ?? []), S.loc]);
++
++/* ---------- 眼下要紧 ---------- */
++
++export interface Also { text: string; to: string; toName: string; min: number }
++export interface YaoJin {
++  /** 标签：序章、主线、支线、差事、零工、四处走走 */
++  tag: string;
++  /** 动宾句，永远只有这一件 */
++  text: string;
++  /** 点了去哪（赶路）；空则看 tab */
++  to?: string;
++  toName?: string;
++  /** 点了切到哪一页 */
++  tab?: Tab;
++  /** 点了走的是主线的 quest（到地方高亮人和动作） */
++  main?: boolean;
++  /** 已经在目标地点 */
++  here: boolean;
++  /** 主线卡住时的缘故（心里话） */
++  why?: string;
++  /** 到了地点要高亮：人、推进这一步的动作 */
++  hot?: { npc: string; verb?: Verb };
++  also: Also[];
++}
++
++/** 这个人身上哪个动作能把这件心事往下推一步（分支里写了 quest 效果、阶段更靠后）；找不到为空 */
++export function advanceVerb(npcId: string, questId: string, stage: number): Verb | undefined {
++  const n = npc(npcId);
++  if (!n) return undefined;
++  let any: Verb | undefined;
++  for (const [verb, bs] of Object.entries(n.actions) as [Verb, { if?: Parameters<typeof test>[0]; do?: { type: string; id?: string; stage?: number }[] }[]][]) {
++    for (const b of bs ?? []) {
++      if (!b.do?.some(e => e.type === 'quest' && e.id === questId && (e.stage ?? 0) > stage)) continue;
++      if (test(b.if ?? {})) return verb;
++      any ??= verb;
++    }
++  }
++  return any;
++}
++
++const NEAR = 90;
++
++/** 差事、零工写成动宾句 */
++const leadText = (l: Lead): string => (l.gig ? `去${l.toName}，找点零工做` : `去${l.toName}，接差事「${l.text}」`);
++
++/** 卡住、要等的时候，能帮上忙的一件事 */
++function helpOf(wait: boolean, ls: Lead[]): Pick<YaoJin, 'text' | 'to' | 'toName' | 'tab' | 'tag'> {
++  if (!wait && S.chapter > 0 && (S.lilian ?? 0) > 0) return { tag: '帮得上', text: `去闭关，把历练 ${S.lilian} 化成功夫`, tab: 'wugong' };
++  const l = ls[0];
++  if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName };
++  return { tag: '帮得上', text: '打开地图，四处走走打听', tab: 'ditu' };
++}
++
++export function yaoJin(): YaoJin {
++  const nav = S.track ? questNav(S.track) : null;
++  const ls = S.chapter === 0 ? [] : leadsNear(3);
++  const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
++  const alsoOf = (skip?: Lead): Also[] => ls.filter(l => l !== skip && l.min <= NEAR).slice(0, 2).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }));
++  // 主线有下一步：就是它
++  if (nav && nav.state === '能做') {
++    const here = !nav.to || nav.to === S.loc;
++    const who = nav.who;
++    const text = who ? (here ? `找${who.name}` : `去${nav.toName}，找${who.name}`) : here ? `办「${nav.title}」` : `去${nav.toName}，办「${nav.title}」`;
++    const hot = here && who && roomNpcs(S.loc).includes(who.id) ? { npc: who.id, verb: advanceVerb(who.id, nav.id, nav.stage) } : undefined;
++    return { tag: kind, text, to: nav.to, toName: nav.toName, main: true, here, hot, also: alsoOf() };
++  }
++  // 主线卡住或要等：写缘故，再给一件帮得上的事
++  if (nav && (nav.state === '要等' || nav.state === '卡住')) {
++    const h = helpOf(nav.state === '要等', ls);
++    const used = ls.find(l => l.to === h.to && leadText(l) === h.text);
++    return { ...h, here: false, why: nav.why, also: alsoOf(used) };
++  }
++  // 没有主线可走：近处的差事、零工
++  const l = ls[0];
++  if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName, here: false, also: alsoOf(l) };
++  return { tag: '走走', text: '打开地图，四处走走看看', tab: 'ditu', here: false, also: [] };
++}
++
++/* ---------- 地点说明 ---------- */
++
++export interface RoomBrief { name: string; area: string; folks: string[]; things: string[]; min?: number; hops?: number; fee?: number; here: boolean }
++
++/** 一处地方此刻有什么人、什么事（地图上点一处弹出来） */
++export function roomBrief(id: string): RoomBrief {
++  const r = room(id);
++  const folks = roomNpcs(id).map(npcName);
++  const things: string[] = [];
++  const nav = S.track ? questNav(S.track) : null;
++  if (nav && nav.state !== '未竟' && nav.state !== '了结' && nav.to === id) things.push(`记挂着的事：${nav.title}`);
++  for (const l of leadsNear(8)) if (l.to === id) things.push(l.gig ? `零工：${l.text}` : `差事：${l.text}`);
++  for (const y of S.yue) if (y.at === id) things.push(`有约：${yueText(S, y)}`);
++  things.push(...marksOf(id).slice(0, 2));
++  const c = id === S.loc ? null : tripCost(id);
++  return { name: r.name, area: r.area, folks, things, min: c?.min, hops: c?.hops, fee: c?.fee, here: id === S.loc };
++}
++
++/** 有事的地点（地图上标出来）：主线要去的、差事派人的、约好的 */
++export function busyRooms(): Set<string> {
++  const out = new Set<string>();
++  if (S.chapter > 0) for (const l of leadsNear(8)) out.add(l.to);
++  for (const y of S.yue) if (y.at) out.add(y.at);
++  return out;
++}
++
++/* ---------- 变强的路 ---------- */
++
++export interface RetreatPreview { days: number; used: number; gain?: [string, number]; power0: number; power1: number; grow: number }
++
++/**
++ * 闭关 days 日大约长多少：用 retreatPlan 算熟练的进账，再照境界的门槛推一推战力（不碰存档，不触发突破的提示）。
++ * 内功瓶颈、住处打折这些细处不算，所以写「约」
++ */
++export function retreatPreview(days: number): RetreatPreview {
++  const grow = Math.min(days, allowance(S));
++  const plan = grow > 0 ? retreatPlan(S, grow) : { used: 0, gains: [] as [string, number][] };
++  const power0 = powerNow();
++  // 推一推：熟练加上去，够了门槛就升一重（上限同 engine/growth.ts 的 settle）
++  const skills = Object.fromEntries(Object.entries(S.skills).map(([k, v]) => [k, { ...v! }]));
++  for (const [id, n] of plan.gains) {
++    const sk = skillById(id), s = skills[id];
++    if (!sk || !s) continue;
++    s.p += Math.max(0, Math.round(n * profMul(S, sk)));
++    const cap = Math.min(REALMS.length - 1, realmCap(S, sk));
++    while (s.r < cap && s.p >= REALM_NEED[s.r]) { s.p -= REALM_NEED[s.r]; s.r++; }
++  }
++  const p1 = zhanliShu(personOf({ ...S, skills }));
++  const top = plan.gains[0];
++  return { days, used: plan.used, gain: top ? [skillName(top[0]), top[1]] : undefined, power0, power1: p1, grow };
++}
++
++/** 闭关按钮上的预估：「闭关一日：寒江剑法熟练 +9，战力约 +1」 */
++export function retreatLabel(days: number, name: string): string {
++  const p = retreatPreview(days);
++  if (!p.gain) return `闭关${name}`;
++  const d = p.power1 - p.power0;
++  return `闭关${name}：${p.gain[0]}熟练 +${p.gain[1]}，${d > 0 ? `战力约 +${d}` : '战力暂不见涨'}`;
++}
++
++/** 够闭关一日的历练：提示「可去闭关」 */
++export const canRetreat = (): boolean => S.chapter > 0 && (S.lilian ?? 0) >= RETREAT[1].cap;
++
++export interface StrongPath { name: string; say: string; cost: string; go?: { act: string; label: string } }
++
++/** 眼下走得通的变强的路，每条写代价 */
++export function strongPaths(): StrongPath[] {
++  const out: StrongPath[] = [];
++  if (S.chapter === 0) return out;
++  // 闭关
++  const block = retreatBlock(S);
++  const zhu = zhuOf(S);
++  const lodge = zhu === 'inn' ? `住店一日 ${LODGING.inn} 文` : zhu === 'home' ? '回师门住，不花钱' : '露宿不花钱，打坐参悟打八折';
++  out.push({
++    name: '闭关', say: block ?? `${retreatLabel(1, '一日')}。历练 ${S.lilian ?? 0}，一日最多消化 ${RETREAT[1].cap}。`,
++    cost: `搭上一日光阴；${lodge}`, go: block ? undefined : { act: 'retreat:1', label: '闭关一日' }
++  });
++  // 学艺：拿历练换新武功
++  out.push({
++    name: '学艺', say: '拜师、请教、读秘籍，拿历练换一门新武功；有的要先有前置，有的要银两、贡献。',
++    cost: `历练 ${S.lilian ?? 0} 可用，学成了历练要扣`
++  });
++  // 切磋：此处有、或最近的有人可切磋的
++  const sp = sparNear();
++  if (sp) out.push({
++    name: '切磋', say: `${sp.here ? `此处的${sp.name}` : `${sp.at}的${sp.name}`}肯指点。点到为止，打赢涨熟练，打输不伤命。`,
++    cost: sp.here ? '一场切磋的工夫；熟练每日有额度' : `路上约${sp.min}分钟；熟练每日有额度`,
++    go: sp.here ? undefined : { act: `travel:${sp.to}`, label: `去${sp.at}` }
++  });
++  // 门派练功
++  const home = S.sect ? sectHome() : null;
++  if (S.sect && home) {
++    const nx = sectNav();
++    out.push({
++      name: '门派练功', say: `回${S.sect.school}：${nx?.who ? `${nx.who.name}管升${nx.next ?? ''}的事` : '向师长请益'}，替师门出力攒贡献，换本门的武功。`,
++      cost: '替师门办差，路上与办差的工夫',
++      go: home.to === S.loc ? undefined : { act: `travel:${home.to}`, label: `回${home.name}` }
++    });
++  }
++  return out;
++}
++
++/** 眼下最近的、可以切磋的人（先看此处，再看全江湖里眼下在场、路最近的） */
++function sparNear(): { name: string; at: string; to: string; here: boolean; min: number } | null {
++  let best: { name: string; at: string; to: string; here: boolean; min: number } | null = null;
++  for (const n of NPCS) {
++    if (n.obj || !verbsOf(n).includes('切磋')) continue;
++    const at = whereAt(n.id);
++    if (!at) continue;
++    if (at === S.loc) return { name: npcName(n.id), at: room(at).name, to: at, here: true, min: 0 };
++    const m = pathMin(S.loc, at);
++    if (!m) continue;
++    const min = travelMin(m);
++    if (!best || min < best.min) best = { name: npcName(n.id), at: room(at).name, to: at, here: false, min };
++  }
++  return best;
++}
+diff --git a/src/styles/app.css b/src/styles/app.css
+index 2131217..d3cdbed 100644
+--- a/src/styles/app.css
++++ b/src/styles/app.css
+@@ -208,19 +208,37 @@ svg{display:block}
+ .moves,.grades{display:flex;flex-wrap:wrap;gap:6px}
+ .btnrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ 
+-.map{position:relative;height:330px;border-radius:16px;background:var(--card);overflow:hidden}
++.map{position:relative;height:330px;border-radius:16px;background:var(--card);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line);background-image:radial-gradient(var(--line) 1px,transparent 1.2px);background-size:18px 18px}
+ .map-lines{position:absolute;inset:0;width:100%;height:100%}
+-.map-lines line{stroke:var(--line);stroke-width:2;vector-effect:non-scaling-stroke}
+-.node{position:absolute;transform:translate(-50%,-50%);min-height:44px;padding:0 14px;border-radius:22px;background:var(--chip);font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
+-.node.here{background:var(--accent);color:var(--on-accent);font-weight:700}
+-.node .qdot,.mleaf .qdot{width:8px;height:8px;border-radius:50%;background:var(--info)}
+-.node .nbadge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--card);color:var(--muted);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
++/* 陆路：实线；水路：蓝色虚线（两头有一头是船、渡） */
++.map-lines line{stroke:var(--muted);stroke-opacity:.45;stroke-width:2;stroke-linecap:round;vector-effect:non-scaling-stroke}
++.map-lines line.wet{stroke:var(--info);stroke-opacity:.85;stroke-dasharray:7 5}
++.node{position:absolute;transform:translate(-50%,-50%);min-height:44px;padding:0 12px;border-radius:22px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line),0 1px 3px rgba(0,0,0,.08);font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
++/* 圆点有三层：外圈（当前所在、主线目标、有事各一种）、实心点（去过）、空心点（没去过） */
++.pt{flex:0 0 10px;width:10px;height:10px;border-radius:50%;box-sizing:border-box;border:2px solid var(--muted);background:transparent;display:inline-block}
++.went>.pt,.pt.went{background:var(--muted);border-color:var(--muted)}
++.busy>.pt,.pt.busy{border-color:var(--warn-dot);background:var(--warn-dot);box-shadow:0 0 0 3px var(--warn-soft)}
++.zhu>.pt,.pt.zhu{border-color:var(--info);background:var(--info);box-shadow:0 0 0 3px var(--info-soft),0 0 0 5px var(--info)}
++.here>.pt,.pt.here{border-color:var(--on-accent);background:var(--on-accent)}
++.node.zhu{box-shadow:inset 0 0 0 1.5px var(--info),0 1px 3px rgba(0,0,0,.08)}
++.node.busy:not(.zhu){box-shadow:inset 0 0 0 1.5px var(--warn-line),0 1px 3px rgba(0,0,0,.08)}
++.node.here{background:var(--accent);color:var(--on-accent);font-weight:700;box-shadow:0 0 0 3px var(--accent-soft),0 0 0 5px var(--accent);z-index:2}
++.node .nbadge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--chip);color:var(--muted);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+ .node.here .nbadge{background:var(--on-accent);color:var(--accent)}
++.pt.here{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),0 0 0 5px var(--accent)}
++.legend .pt{margin:0 3px}
++.legend svg{display:block}
++.legend line{stroke-width:2;stroke-linecap:round}
++.legend line.land{stroke:var(--muted);stroke-opacity:.6}
++.legend line.wet{stroke:var(--info);stroke-dasharray:5 3}
++.mhint{margin:0}
+ .mhub{display:flex;flex-direction:column;gap:6px}
+ .mhub h3{font-size:13px;font-weight:700;color:var(--muted);margin:0}
+ .mleaves{display:flex;flex-wrap:wrap;gap:6px}
+ .mleaf{min-height:44px;padding:0 12px;border-radius:20px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:14px;display:inline-flex;align-items:center;gap:6px}
+ .mleaf.here{background:var(--accent);color:var(--on-accent);font-weight:700;box-shadow:none}
++.mleaf.zhu{box-shadow:inset 0 0 0 1.5px var(--info)}
++.mleaf.busy:not(.zhu){box-shadow:inset 0 0 0 1.5px var(--warn-line)}
+ .mtabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+ .mtabs::-webkit-scrollbar{display:none}
+ .mtabs button{flex:0 0 auto;min-height:44px;padding:0 14px;border-radius:18px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);font-size:13px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+@@ -240,7 +258,6 @@ svg{display:block}
+ .mchips b{font-size:14px;font-weight:600}
+ .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
+ .legend span{display:inline-flex;align-items:center;gap:6px}
+-.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+ 
+ .travel{position:absolute;left:16px;right:16px;bottom:72px;z-index:15;padding:12px 14px;border-radius:14px;background:var(--fg);color:var(--bg);display:flex;align-items:center;gap:12px;box-shadow:var(--lift);animation:fin .2s ease-out;pointer-events:none}
+ .travel .tinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+@@ -605,3 +622,46 @@ html.preview #app{height:calc(100% - var(--pv-h))}
+ .b.me.d-hua.crit{box-shadow:inset 0 0 0 1.5px var(--accent)}
+ .b.me.d-hua .mv{color:var(--fg);font-weight:700;letter-spacing:.24em}
+ .b.me.d-hua .dmg,.b.me.d-hua .note{letter-spacing:0}
++
++/* ---------- 优化改良（负责人 10-10，docs/sheji-youhua-1010.md） ---------- */
++/* 角色卡 */
++.juese{display:flex;flex-direction:column;gap:6px;padding:12px 14px}
++.juese .jh{display:flex;align-items:center;gap:12px}
++.juese .who{flex:1;min-width:0}
++.juese .who b{font-size:17px}
++.juese .jp{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;line-height:1.2}
++.juese .jp small{font-size:11px;color:var(--muted)}
++.juese .jp b{font-size:26px;font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
++.juese .jup{font-style:normal;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:0 6px;animation:fin .3s ease-out}
++.juese .jy{font-family:var(--f-serif);font-size:14.5px;line-height:1.7}
++.juese .jl{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
++/* 眼下要紧 */
++.quest.yj{box-shadow:inset 0 0 0 1.5px var(--accent)}
++.quest.yj .qk{display:block;font-size:11px;font-weight:700;color:var(--accent);margin-bottom:1px}
++.quest .qs{display:block;margin-top:2px;font-size:12px;font-weight:400;color:var(--muted)}
++.also{display:flex;flex-direction:column;padding:0 4px}
++.also>small{font-size:12px;color:var(--muted);padding:2px 0}
++.also .lead{width:100%;min-height:44px;padding:6px 0;display:flex;align-items:center;gap:10px;text-align:left;color:var(--fg);border-top:1px solid var(--line)}
++.also .lt{flex:1;min-width:0;font-size:13.5px}
++.also .ld{font-size:12px;color:var(--muted);white-space:nowrap}
++/* 到了地方，要找的人和要做的动作高亮 */
++.avab.hot .ava{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--info)}
++.avab.hot .nm{color:var(--info);font-weight:700}
++.act.hot{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--info);font-weight:700}
++/* 去处缩成一行 */
++.goline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
++.goline .exit.solo{grid-column:auto}
++.goline .exit.solo:only-child{grid-column:1 / -1}
++.mapbtn .dir{background:var(--info-soft);color:var(--info)}
++/* 地图点地名的说明 */
++.mbrief div{align-items:flex-start}
++.mbrief .tag{flex-shrink:0;margin-top:3px}
++/* 变强的路 */
++.acts.col{grid-template-columns:1fr}
++.acts.col .act{height:auto;min-height:44px;padding:8px 12px;line-height:1.4;text-align:left}
++.bq .bqrow{padding:10px 0;border-top:1px solid var(--line)}
++.bq .bqh{display:flex;align-items:center;justify-content:space-between;gap:10px}
++.bq .bqh b{font-size:15px}
++.bq .bqh .act{height:36px;padding:0 14px;flex-shrink:0}
++.bq .cost{display:block;margin-top:2px;font-size:12px;color:var(--warn)}
++.bq .tip{margin:0 0 4px;padding:8px 12px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700}
+diff --git a/src/ui/chuguan.ts b/src/ui/chuguan.ts
+index 5784ca2..b2a36c3 100644
+--- a/src/ui/chuguan.ts
++++ b/src/ui/chuguan.ts
+@@ -12,6 +12,7 @@ import { gongliCeiling } from '../engine/lilian';
+ import { TIELV_TEXT, nextYue, settleAway, skillName, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
+ import { tierCheck, tupoAdd, tupoTake } from '../engine/tupo';
+ import { inFight } from './fight';
++import { canRetreat, powerNow } from '../engine/jiemian';
+ import { openSheet, render } from './shell';
+ import { tupoBlockHTML } from './tupo';
+ 
+@@ -22,7 +23,7 @@ const hoursText = (h: number): string => {
+ };
+ 
+ /** 邸报的正文；head 是开头的一句 */
+-export function chuguanHTML(r: RestReport, head: string, title: string, stop?: string): string {
++export function chuguanHTML(r: RestReport, head: string, title: string, stop?: string, power0?: number): string {
+   // 这一回出关长的境界、档次、新学的武功，攒在 engine/tupo.ts 里，合成最上面的一块「突破」；
+   // 这里取走，出关后就不会再另外弹一张卡
+   tierCheck();
+@@ -30,8 +31,11 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
+   const tupo = tupoBlockHTML(tupoTake());
+   const healTxt = Object.entries(r.healed).map(([z, n]) => `${ZONE_NAME[z as 'hand']}伤好了${liang(n as number)}级`).join('、');
+   const chips = [
+-    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `消化历练 ${r.used}` : r.grow === 0 ? '这几日修为没有长进，伤照样养' : '没有历练可消化，闭门造车'}</span>`,
++    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `历练 ${S.lilian + r.used} → ${S.lilian}` : r.grow === 0 ? '这几日修为没有长进，伤照样养' : '没有历练可消化，闭门造车'}</span>`,
+     ...r.gains.map(([k, v]) => `<span class="tag accent">${skillName(k)} +${v}</span>`),
++    // 战力变了写「旧 → 新」（engine/jiemian.ts），没变不写
++    power0 !== undefined && power0 !== powerNow() ? `<span class="tag accent">战力 ${power0} → ${powerNow()}</span>` : '',
++    canRetreat() ? '<span class="tag">历练还够，可再去闭关</span>' : '',
+     // 写长了多少：原来三回出关都写「功力深到三年」，看着像一点没长（审查 G12）
+     r.gongli > 0 ? `<span class="tag accent">功力深了${r.gongli >= 1 ? gongliText(r.gongli) : `${cn(Math.max(1, Math.round(r.gongli * 12)))}个月`}（如今${gongliText(S.gongli)}）</span>`
+       // 功力熬到了这一重内功的顶：写明白，别让人以为白闭关了（审查 G11）
+@@ -69,13 +73,14 @@ export function awayHead(r: RestReport & { hours: number }): string {
+ /** 下线回来（从标题画面继续、切回这个页面）：离开的时辰算成静修，出一页邸报。正在打、正在看剧情、开着别的页时不算 */
+ export function welcomeBack(): boolean {
+   if (inFight() || !$('#storyLayer')?.hidden || !$('#titleLayer')?.hidden || !$('#sheetLayer')?.hidden) return false;
++  const power0 = powerNow();
+   const rep = settleAway(S);
+   if (!rep) { save(); return false; }
+   // 约的内容下面「有约」那一行会写，这里不再重复（审查 G27）
+   const stop = rep.why === 'yue' && rep.yue ? '约期到了，今日一早出关。' : rep.why === 'tielv' ? (rep.grow ? `其中${liang(rep.grow)}日修为有长进；余下的日子，${TIELV_TEXT}` : TIELV_TEXT) : undefined;
+   pushFeed('出关', `静修${liang(rep.days)}日${rep.used ? `，消化历练 ${rep.used}` : ''}${rep.gongli > 0 ? `，功力深到${gongliText(S.gongli)}` : ''}。`);
+   // 先拼邸报（取走这回的突破），再画页面：不然 render 先把突破弹成另一张卡
+-  const html = chuguanHTML(rep, awayHead(rep), `静修${liang(rep.days)}日`, stop);
++  const html = chuguanHTML(rep, awayHead(rep), `静修${liang(rep.days)}日`, stop, power0);
+   save();
+   render();
+   openSheet(html);
+diff --git a/src/ui/explore.ts b/src/ui/explore.ts
+index 36676d2..0a2c3c1 100644
+--- a/src/ui/explore.ts
++++ b/src/ui/explore.ts
+@@ -3,7 +3,7 @@
+  * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
+  */
+ import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
+-import { advanceDays, dateStr, minLabel } from '../core/time';
++import { advanceDays, dateStr } from '../core/time';
+ import { $, cn, reduceMotion } from '../core/util';
+ import { room, skillById } from '../content';
+ import type { Slot, Verb } from '../content/types';
+@@ -13,15 +13,15 @@ import { gongliText } from '../engine/ren';
+ import { TIELV_TEXT, XIEJIAO, checkYue, restLine, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
+ import { chuguanHTML } from './chuguan';
+ import { questNav } from '../engine/daohang';
+-import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
++import { act, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
+ import { act as settleAction, effectReq } from '../engine/xingdong';
+-import { FAR_MIN, chufaLine } from '../engine/chufa';
+ import { markEncounter, rollEncounter } from '../engine/encounter';
+ import { TRAVEL_BUSY, afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
+ import { openQuestbook, trackQuest } from './views/questbook';
+ import { kpBiguanTip } from '../engine/kaipian';
+ import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
+-import { setMapRegion } from './views/ditu';
++import { mapSheet, setMapRegion } from './views/ditu';
++import { powerNow, yaoJin } from '../engine/jiemian';
+ import { showTitle } from './story';
+ import { eyeLine } from './views/jianghu';
+ import { pickItemFirst } from './daoju';
+@@ -110,6 +110,15 @@ export function travelTo(dest: string, onArrive?: () => void): void {
+   step();
+ }
+ 
++/** 到了主线要去的地方：把要找的人选中，滚到他的动作那里（高亮在 ui/views/jianghu.ts，由 engine/jiemian.ts 的 yaoJin 定） */
++function focusQuest(): void {
++  const hot = yaoJin().hot;
++  if (!hot) return;
++  S.sel = hot.npc; S.reply = null;
++  render();
++  document.querySelector('.detail')?.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
++}
++
+ /** 同一个人、同一个动作，连点两下只算一下（原来双击「交谈」会说两遍、花两份时辰） */
+ let lastAct = { key: '', t: 0 };
+ let armed = { key: '', t: 0 };
+@@ -157,12 +166,13 @@ function retreat(want: number): void {
+   b.style.transition = `width ${reduceMotion ? 50 : 1200}ms linear`;
+   b.style.width = '100%';
+   window.setTimeout(() => {
++    const power0 = powerNow();
+     const rep = jingxiu(S, r.days, undefined, r.grow);
+     const how = rep.used ? `消化历练 ${rep.used}` : rep.grow === 0 ? TIELV_TEXT.replace(/。$/, '') : '没有历练可消化，闭门造车，进境有限';
+     pushFeed('出关', `闭关${label}，${how}${rep.gains[0] ? `，「${skillName(rep.gains[0][0])}」熟练 +${rep.gains[0][1]}` : ''}${rep.gongli > 0 ? `；功力深到${gongliText(S.gongli)}` : ''}。`);
+     const stop = r.why === 'yue' && r.yue ? `想闭关${cn(want)}日，可约期到了，只好提前出关：${yueText(S, r.yue)}。` : r.why === 'tielv' ? (r.grow ? `闭关${label}，其中${cn(r.grow)}日修为有长进；余下的日子，${TIELV_TEXT}` : TIELV_TEXT) : undefined;
+     const panel = document.querySelector('#sheetLayer .panel');
+-    if (panel) panel.innerHTML = chuguanHTML(rep, `闭关${label}，今日是${dateStr(S)}。`, `闭关${label}`, stop);
++    if (panel) panel.innerHTML = chuguanHTML(rep, `闭关${label}，今日是${dateStr(S)}。`, `闭关${label}`, stop, power0);
+     save();
+   }, reduceMotion ? 150 : 1300);
+ }
+@@ -186,16 +196,8 @@ registerHandlers({
+   // 地图点地名：先写明这趟路要多久、花多少钱，再由玩家决定走不走（地图审查第一条）
+   travelAsk: v => {
+     if (!v) return;
+-    if (v === S.loc) { toast('你就在这里'); return; }
+-    const c = tripCost(v);
+-    if (!c) { toast('从这里去不了那儿'); return; }
+-    const short = c.fee > S.silver;
+-    // 出远门（赶路超过一个时辰）：带伤、气血、内力、过夜的店钱，点之前说一声（engine/chufa.ts）。船钱不够的另有一句，不重复
+-    const warn = c.min > FAR_MIN ? chufaLine(S, short ? undefined : c) : null;
+-    openSheet(`<h2>去${room(v).name}</h2>
+-      <p>路上约 <b>${minLabel(c.min)}</b>，经过 ${cn(c.hops)} 处${c.fee ? `；船钱和过路钱共 <b>${cn(c.fee)} 文</b>` : '；一路不花钱'}。</p>
+-      ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}${warn ? `<p class="muted chufa">${warn}</p>` : ''}
+-      <div class="acts"><button class="btn" data-act="travelGo:${v}">出发</button><button class="btn ghost" data-act="sheetClose">再看看</button></div>`, true);
++    // 地图上点一处：先看那里有什么人、什么事、要走多久、花多少钱，再点「去」直接赶路（ui/views/ditu.ts 的 mapSheet）
++    openSheet(mapSheet(v), true);
+   },
+   travelGo: v => { closeSheet(); travelTo(v); },
+   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
+@@ -204,10 +206,11 @@ registerHandlers({
+   travel: v => travelTo(v),
+   travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
+   quest: () => {
+-    // 卡住的也照去：差的那一步多半就在那儿办（缘故横幅上已经写着）
++    // 卡住的也照去：差的那一步多半就在那儿办（缘故卡上已经写着）。到了地方，把要找的人选中、动作高亮（engine/jiemian.ts），不再只弹一句「就在此处」
+     const q = S.track ? questNav(S.track) : null;
+-    if (q?.to && q.to !== S.loc) travelTo(q.to);
+-    else toast(q && q.state !== '能做' ? q.why : '就在此处');
++    if (q?.to && q.to !== S.loc) travelTo(q.to, focusQuest);
++    else if (q?.to) focusQuest();
++    else toast(q && q.state !== '能做' ? q.why : '眼下没有要去的地方');
+   },
+   questbook: () => { openQuestbook(); },
+   // 离开师门：先看后果卡，再点一次才算（ui/views/renwu.ts 的 sectLeaveSheet）
+diff --git a/src/ui/fight.ts b/src/ui/fight.ts
+index b6da9f8..adb1313 100644
+--- a/src/ui/fight.ts
++++ b/src/ui/fight.ts
+@@ -20,6 +20,7 @@ import { SHENFEN, jobGongxian, jobPay } from '../engine/shenfen';
+ import { brace, fateOpts, loseFacts, loseNote, settle, takeWounds } from '../engine/jiesuan';
+ import { checkYue } from '../engine/shiguang';
+ import { foeRepeats } from '../engine/lilian';
++import { canRetreat } from '../engine/jiemian';
+ import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, kanren, weaponWord, type FightKit } from '../engine/zhaoshi';
+ import { woundNote } from '../engine/shang';
+ import { IC } from './icons';
+@@ -918,9 +919,11 @@ function composeStory(c: Fight): string {
+ /** 由结算效果自动生成奖励标签 */
+ function rewardChips(effects: Effect[] | undefined, hpEnd = 0): string[] {
+   const chips: string[] = [];
++  // 历练合成一条「旧 → 新」（结算已经加进 S.lilian）；够闭关一日了，提一句可去闭关
++  const lil = (effects || []).reduce((a, e) => a + (e.type === 'lilian' ? e.amount : 0), 0);
++  if (lil > 0) chips.push(`<span class="tag accent">历练 ${S.lilian - lil} → ${S.lilian}</span>${canRetreat() ? '<span class="tag">可去闭关</span>' : ''}`);
+   for (const e of effects || []) {
+     if (e.type === 'prof') chips.push(`<span class="tag accent">${skillById(e.skill)?.name} 熟练 +${e.amount}</span>`);
+-    else if (e.type === 'lilian') chips.push(`<span class="tag accent">历练 +${e.amount}</span>`);
+     else if (e.type === 'learn') chips.push(`<span class="tag accent">习得 ${skillById(e.skill)?.name}</span>`);
+     // 正负分开写：原来降恶名也写成「恶名 +-2」、还用红色（审查 H18）
+     else if (e.type === 'xia') chips.push(e.delta >= 0 ? `<span class="tag accent">侠义 +${e.delta}</span>` : `<span class="tag danger">侠义 −${-e.delta}</span>`);
+diff --git a/src/ui/maplayout.ts b/src/ui/maplayout.ts
+index c9bf029..8f71e4b 100644
+--- a/src/ui/maplayout.ts
++++ b/src/ui/maplayout.ts
+@@ -8,7 +8,7 @@ import type { RoomDef } from '../content/types';
+ /** 一处地方挂着几处只通它的去处，就收进它里面 */
+ export const HUB_MIN = 4;
+ /** 地名按钮：高、左右内边距、一个字宽（和 styles/app.css 的 .node 对得上）、两个按钮之间至少留的缝 */
+-const NODE_H = 44, NODE_PAD = 28, CHAR_W = 14, BADGE_W = 24, DOT_W = 14, GAP = 4;
++const NODE_H = 44, NODE_PAD = 40, CHAR_W = 14, BADGE_W = 24, GAP = 4;
+ /** 地图的高：默认、最高 */
+ export const MAP_H = 330, MAP_H_MAX = 600;
+ 
+@@ -45,19 +45,18 @@ export function hubsOf(rooms: RoomDef[]): Map<string, string[]> {
+   return by;
+ }
+ 
+-/** 地名按钮的宽：任务小点（.qdot 八像素加间距）也要算进去，不然带点的地名比算的宽，压住旁边的 */
+-const nodeW = (name: string, badge: boolean, dot: boolean): number => NODE_PAD + CHAR_W * [...name].length + (badge ? BADGE_W : 0) + (dot ? DOT_W : 0);
++/** 地名按钮的宽：左右内边距各十二、圆点十、点与字之间六，共 NODE_PAD；圆点人人都有（标记靠颜色和圈，不占宽） */
++const nodeW = (name: string, badge: boolean): number => NODE_PAD + CHAR_W * [...name].length + (badge ? BADGE_W : 0);
+ 
+-/** 摆一个地区的地图：w 是地图的宽（像素）；mark 是挂任务小点的地点（收进街里的，点挂在那条街上） */
+-export function layoutRegion(rooms: RoomDef[], w: number, mark?: string): MapLayout {
++/** 摆一个地区的地图：w 是地图的宽（像素）。mark 旧时是挂任务小点的地点，现在标记不占宽，留着参数是为了调用处不用改 */
++export function layoutRegion(rooms: RoomDef[], w: number, _mark?: string): MapLayout {
+   const hubs = hubsOf(rooms);
+   const hidden = new Set([...hubs.values()].flat());
+-  const markAt = mark && hidden.has(mark) ? [...hubs].find(([, l]) => l.includes(mark))?.[0] : mark;
+   const shown = rooms.filter(r => !hidden.has(r.id));
+   for (let h = MAP_H; ; h = Math.min(MAP_H_MAX, h + 40)) {
+     const nodes = shown.map(r => {
+       const leaves = hubs.get(r.id) ?? [];
+-      const nw = Math.min(w, nodeW(r.name, leaves.length > 0, r.id === markAt));
++      const nw = Math.min(w, nodeW(r.name, leaves.length > 0));
+       return { id: r.id, name: r.name, x: (r.map[0] / 100) * w, y: (r.map[1] / 100) * h, w: nw, h: NODE_H, leaves };
+     });
+     const ok = relax(nodes, w, h);
+diff --git a/src/ui/shell.ts b/src/ui/shell.ts
+index db4e82e..5329e14 100644
+--- a/src/ui/shell.ts
++++ b/src/ui/shell.ts
+@@ -21,6 +21,7 @@ import { tickShi } from '../engine/shishi';
+ import { tickWorld } from '../engine/shijie';
+ import { dropFailedTrack } from '../engine/daohang';
+ import { isPreview } from '../core/preview';
++import { markWent, trackPower } from '../engine/jiemian';
+ 
+ type Handler = (v: string, el: HTMLElement) => void;
+ const handlers: Record<string, Handler> = {};
+@@ -194,6 +195,8 @@ export function render(): void {
+   const main = $('#main'), tabs = $('#tabs');
+   if (!main || !tabs) return;
+   renderBar();
++  markWent(S.loc);
++  trackPower(S.tab === 'jianghu');
+   main.innerHTML = (VIEWS[S.tab] || viewJianghu)();
+   tabs.innerHTML = TABS.map(([k, l]) => `<button class="tab" data-act="tab:${k}"${S.tab === k ? ' aria-current="page"' : ''}>${IC[k]}${l}</button>`).join('');
+   saveSoon();
+diff --git a/src/ui/views/ditu.ts b/src/ui/views/ditu.ts
+index bc1eef6..6d21e5a 100644
+--- a/src/ui/views/ditu.ts
++++ b/src/ui/views/ditu.ts
+@@ -1,6 +1,11 @@
+ import { S } from '../../core/state';
+ import { REGIONS, ROOMS, room } from '../../content';
+ import { questNav, sectHome } from '../../engine/daohang';
++import { busyRooms, roomBrief, wentSet } from '../../engine/jiemian';
++import { tripCost } from '../../engine/world';
++import { FAR_MIN, chufaLine } from '../../engine/chufa';
++import { minLabel } from '../../core/time';
++import { cn } from '../../core/util';
+ import { layoutRegion } from '../maplayout';
+ 
+ /** 正在看的地区；不设时看所在的地区。走到别的地区时自动回到所在地区 */
+@@ -39,19 +44,26 @@ export function viewDitu(): string {
+       if (a === b || seen.has(key)) continue;
+       seen.add(key);
+       const [x1, y1] = pct(pos.get(a)!), [x2, y2] = pct(pos.get(b)!);
+-      lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`);
++      // 水路：两头有一头是要付船钱的船、渡（RoomDef.fare）；其余是陆路
++      const wet = room(r.id).fare !== undefined || room(to).fare !== undefined;
++      lines.push(`<line${wet ? ' class="wet"' : ''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`);
+     }
+   }
++  // 标记：当前所在（高亮圈）、主线目标、有事、去过（engine/jiemian.ts）；没到过的画成空心点
++  const busy = busyRooms(), went = wentSet();
++  const mark = (id: string, leaves: string[] = []): string => {
++    const ids = [id, ...leaves];
++    return [shownAs(S.loc) === id ? 'here' : '', q && ids.includes(q) && shownAs(S.loc) !== id ? 'zhu' : '', ids.some(x => busy.has(x)) ? 'busy' : '', ids.some(x => went.has(x)) ? 'went' : ''].filter(Boolean).join(' ');
++  };
+   const nodes = lay.nodes.map(n => {
+     const at = shownAs(S.loc) === n.id;
+-    const marked = q && !at && shownAs(q) === n.id;
+     const [x, y] = pct(n);
+-    return `<button class="node${at ? ' here' : ''}" style="left:${x}%;top:${y}%" data-act="travelAsk:${n.id}"${at ? ' aria-current="location"' : ''}>${marked ? '<span class="qdot"></span>' : ''}${n.name}${n.leaves.length ? `<span class="nbadge">${n.leaves.length}</span>` : ''}</button>`;
++    return `<button class="node ${mark(n.id, n.leaves)}" style="left:${x}%;top:${y}%" data-act="travelAsk:${n.id}"${at ? ' aria-current="location"' : ''}><i class="pt"></i><span class="nm">${n.name}</span>${n.leaves.length ? `<span class="nbadge">${n.leaves.length}</span>` : ''}</button>`;
+   }).join('');
+   // 收进街里的去处：列在地图下面，点了照样赶路
+   const hubs = lay.nodes.filter(n => n.leaves.length).map(n => `<section class="mhub"><h3>${n.name}一带</h3><div class="mleaves">${n.leaves.map(id => {
+     const at = S.loc === id;
+-    return `<button class="mleaf${at ? ' here' : ''}" data-act="travelAsk:${id}"${at ? ' aria-current="location"' : ''}>${q === id && !at ? '<span class="qdot"></span>' : ''}${room(id).name}</button>`;
++    return `<button class="mleaf ${mark(id)}${at ? ' here' : ''}" data-act="travelAsk:${id}"${at ? ' aria-current="location"' : ''}><i class="pt"></i>${room(id).name}</button>`;
+   }).join('')}</div></section>`).join('');
+   // 快捷：回师门、去记挂着的事、赴约（都是现成的数据，点了先看耗时再走）
+   const chips: { label: string; to: string; name: string }[] = [];
+@@ -69,6 +81,29 @@ export function viewDitu(): string {
+       ${nodes}</section>
+     ${hubs}
+     ${out.length ? `<div class="mout">${out.map(o => `<button data-act="travelAsk:${o.to}"><small>${room(o.from).name}</small><b>往${REGIONS[room(o.to).region]?.name ?? ''} · ${room(o.to).name}</b></button>`).join('')}</div>` : ''}
+-    <div class="legend"><span><i style="background:var(--accent)"></i>你在这里</span><span><i style="background:var(--info)"></i>记挂着的事</span><span>点地名，先看要多久、花多少钱</span></div>
++    <div class="legend"><span><i class="pt here"></i>你在这里</span><span><i class="pt zhu"></i>主线目标</span><span><i class="pt busy"></i>有事</span><span><i class="pt went"></i>去过</span><span><i class="pt"></i>没去过</span>
++      <span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" class="land"/></svg>陆路</span><span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" class="wet"/></svg>水路</span></div>
++    <p class="muted mhint">点地名，看那里有什么人、什么事、要走多久，再点「去」赶路。</p>
+     ${info ? `<section class="card"><p class="muted">${info.note}</p></section>` : ''}`;
+ }
++
++
++/** 地图上点一处弹出的说明：有什么人、什么事、要走多久、花多少钱；再放一个「去」，点了直接赶路（explore.ts 的 travelAsk） */
++export function mapSheet(id: string): string {
++  const b = roomBrief(id);
++  const c = b.here ? null : tripCost(id);
++  const tag = b.here ? '<span class="tag accent">你在这里</span>' : `<span class="tag">${REGIONS[room(id).region]?.name ?? ''}</span>`;
++  const rows = [
++    ['人', b.folks.length ? b.folks.join('、') : '眼下不见人影'],
++    ['事', b.things.length ? b.things.join('<br>') : '眼下没听说有什么事'],
++    ['路', b.here ? '就在这里' : c ? `约 <b>${minLabel(c.min)}</b>，经过 ${cn(c.hops)} 处${c.fee ? `；船钱和过路钱共 <b>${cn(c.fee)} 文</b>` : '；一路不花钱'}` : '从这里去不了那儿']
++  ].map(([k, v]) => `<div><span class="tag">${k}</span><span>${v}</span></div>`).join('');
++  const short = !!c && c.fee > S.silver;
++  // 出远门（赶路超过一个时辰）：带伤、气血、内力、过夜的店钱，点之前说一声（engine/chufa.ts）。船钱不够的另有一句，不重复
++  const warn = c && c.min > FAR_MIN ? chufaLine(S, short ? undefined : c) : null;
++  return `<div class="r-h">${tag}<h2>${b.name}</h2></div>
++    <p class="muted">${b.area}</p>
++    <div class="news mbrief">${rows}</div>
++    ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}${warn ? `<p class="muted chufa">${warn}</p>` : ''}
++    <div class="acts">${c ? `<button class="btn" data-act="travelGo:${id}">去</button>` : ''}<button class="btn ghost" data-act="sheetClose">${c ? '再看看' : '知道了'}</button></div>`;
++}
+diff --git a/src/ui/views/jianghu.ts b/src/ui/views/jianghu.ts
+index 031b60a..fa2ea06 100644
+--- a/src/ui/views/jianghu.ts
++++ b/src/ui/views/jianghu.ts
+@@ -1,18 +1,17 @@
+-import { S, fullName } from '../../core/state';
++import { S } from '../../core/state';
+ import { dayNo, minLabel } from '../../core/time';
+ import { foeById, npc, room } from '../../content';
+-import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
++import { npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
+ import { IC } from '../icons';
+-import { FEED_TONE, mb } from '../widgets';
+-import { tierNow } from '../../engine/ren';
+-import { leadsNear, questNav } from '../../engine/daohang';
++import { FEED_TONE } from '../widgets';
++import { questNav } from '../../engine/daohang';
++import { jueseKa, yaoJin, type YaoJin } from '../../engine/jiemian';
+ import { kanren } from '../../engine/zhaoshi';
+ import { recordDiao } from '../../engine/zhanli';
+ import { eyesOn } from '../../engine/yan';
+ import type { EyeDef, Verb } from '../../content/types';
+ import { cn, fmt } from '../../core/util';
+ import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine/shiguang';
+-import { shenfenOf } from '../../engine/shenfen';
+ import { verbChufa } from '../../engine/chufa';
+ import { refuseOf, wantOf } from '../../engine/shijie';
+ import { test, textVars } from '../../engine/dsl';
+@@ -21,58 +20,74 @@ const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 
+ 
+ export function viewJianghu(): string {
+   const all = roomNpcs(S.loc).concat(roomObjs(S.loc));
+-  const exits = openExits(S.loc);
+   if (!S.sel || !all.includes(S.sel)) S.sel = all[0] || null;
+   // 刚说完话人就走了（世事推着他离场、跳了河、回去报信）：话留着，不然玩家只看到动态里一行小字（审查 C03）
+   const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id)
+     ? `<section class="card here-card"><div class="detail"><div class="d-h"><b>${npcName(S.reply.id)}</b><small>${npc(S.reply.id)!.obj ? '' : '说完就走了'}</small></div><div class="reply">${S.reply.text}</div></div></section>` : '';
+-  // 横幅只挂记挂着、还没了结的心事（docs/huojianghu.md 第三节第四条）；要等、卡住的写一句缘故（engine/daohang.ts）
++  // 眼下要紧：永远只有一件，写成动宾句；点了先赶路，到了把人和动作高亮（engine/jiemian.ts）
+   const nav = S.track ? questNav(S.track) : null;
+   const q = nav && (nav.state === '能做' || nav.state === '要等' || nav.state === '卡住') ? nav : null;
++  const yj = yaoJin();
+   const feed = S.feed.slice(0, 2).map(e =>
+     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
+-  // 横幅标签按任务种类：序章、主线（main 开头）、其余都是支线
+-  const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
+-  // 眼下去不成的缘故另起一行，写成心里话（engine/daohang.ts：不剧透、不讲解）
+-  const why = q && q.state !== '能做' ? `<small class="qs">${q.why}</small>` : '';
+-  const dist = q?.to && q.state === '能做' ? `<span class="qd">${q.dist === 0 ? '就在此处' : '约' + minLabel(q.dist)}</span>` : '';
+-  const quest = !q ? '' : q.to
+-    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}${why}</span>${dist}${IC.chev}</button>`
+-    : `<button class="card quest" data-act="questbook"><span class="tag accent">${kind}</span><span class="qt">${q.title}${why}</span></button>`;
+-  const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button></div>`;
+   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
+   const y = nextYue(S);
+   // 点了就赶去约定的地方
+   const yueBar = !y || y.due - dayNo(S) > 3 ? '' : S.loc === y.at
+     ? `<div class="card quest"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">就在此处</span></div>`
+     : `<button class="card quest" data-act="travel:${y.at}"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">约${minLabel(travelMin(pathMin(S.loc, y.at)))}</span>${IC.chev}</button>`;
+-  const who = S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : shenfenOf(S).name + ' · ' + tierNow(S).name;
+   return `
+-  <section class="card status">
+-    <span class="ava t-accent">沈</span>
+-    <div class="who"><b>${fullName()}</b><small>${who}</small></div>
+-    <div class="minibars">${mb('气血', S.hp, S.hpMax, 'hp')}${mb('内力', S.mp, S.mpMax, 'mp')}</div>
+-  </section>
+-  ${questBar}
++  ${jueseHTML()}
++  ${yaoJinHTML(yj)}
+   ${yueBar}
+-  ${leadsCard()}
+-  <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
++  <section class="card scene">${greetCard()}<p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
+   ${gone}
+   ${all.length ? `<section class="card here-card">
+     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
+-    <div class="avas">${all.map(avaBtn).join('')}</div>
+-    ${S.sel ? detail(S.sel) : ''}
++    <div class="avas">${all.map(id => avaBtn(id, yj.hot)).join('')}</div>
++    ${S.sel ? detail(S.sel, yj.hot) : ''}
+   </section>` : ''}
+-  <section class="go"><h2>去处</h2><div class="exits">${exits.map(([d, id]) => exitBtn(d, id, exits.length === 1, q?.to)).join('')}</div></section>
++  ${goHTML(q?.to)}
+   ${xiejiaoHTML()}`;
+ }
+ 
+-/** 近处有事：眼下接得到的差事，派差的人在哪、约多久（差事最多三行，另可添一条零工；点了先看耗时再走）。不推你去做，只是告诉你哪里有事 */
+-function leadsCard(): string {
+-  if (S.chapter === 0) return '';
+-  const ls = leadsNear();
+-  if (!ls.length) return '';
+-  return `<section class="card leads"><div class="sec-h"><h2>近处有事</h2></div>${ls.map(l => `<button class="lead" data-act="travelAsk:${l.to}"><span class="lt">${l.text}</span><span class="ld">${l.toName} · 约${minLabel(l.min)}</span>${IC.chev}</button>`).join('')}</section>`;
++/**
++ * 迎面：场景里的人物先开口（另一路在做，规则好了接到这里）。
++ * 位置在场景描写的最上面；没有人开口就返回空字符串
++ */
++export function greetCard(): string {
++  return '';
++}
++
++/** 角色卡：名字、称号、战力（变了写「旧 → 新」）、一句武学评价、气血内力银两（engine/jiemian.ts） */
++function jueseHTML(): string {
++  const k = jueseKa();
++  return `<section class="card juese" aria-label="角色卡">
++    <div class="jh"><span class="ava t-accent">沈</span>
++      <div class="who"><b>${k.name}</b><small>${k.title}</small></div>
++      <div class="jp"><small>战力</small><b>${k.power}</b>${k.from !== undefined ? `<i class="jup" aria-label="战力变了">${k.from} → ${k.power}</i>` : ''}</div></div>
++    <p class="jy">${k.pingyu}</p>
++    <p class="jl">${k.line}</p>
++  </section>`;
++}
++
++/** 眼下要紧：一件事，动宾句；主线卡住的写缘故；往下最多两条「也可以」 */
++function yaoJinHTML(yj: YaoJin): string {
++  const other = yj.to ? `travel:${yj.to}` : yj.tab ? `tab:${yj.tab}` : '';
++  const act = yj.main || other;
++  const sub = yj.here ? '就在此处' : yj.to ? `约${minLabel(travelMin(pathMin(S.loc, yj.to)))}` : '';
++  const body = `<span class="tag ${yj.main ? 'info' : 'accent'}">${yj.tag}</span><span class="qt"><small class="qk">眼下要紧</small>${yj.text}${yj.why ? `<small class="qs">${yj.why}</small>` : ''}</span>${sub ? `<span class="qd">${sub}</span>` : ''}${act ? IC.chev : ''}`;
++  const main = act ? `<button class="card quest yj" data-act="${yj.main ? 'quest' : other}">${body}</button>` : `<div class="card quest yj">${body}</div>`;
++  const book = `<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button>`;
++  const also = yj.also.length ? `<div class="also"><small>也可以</small>${yj.also.map(a => `<button class="lead" data-act="travel:${a.to}"><span class="lt">${a.text}</span><span class="ld">约${minLabel(a.min)}</span>${IC.chev}</button>`).join('')}</div>` : '';
++  return `<div class="quest-row">${main}${book}</div>${also}`;
++}
++
++/** 去处缩成一行：主线要去的那一处，加「打开地图」；其余去处都到地图上点 */
++function goHTML(questTo?: string): string {
++  const to = questTo && questTo !== S.loc ? questTo : '';
++  const target = to ? `<button class="exit solo" data-act="travel:${to}"><span class="dir">往</span><span class="en"><b>${room(to).name}</b><small>${minLabel(travelMin(pathMin(S.loc, to)))}</small></span><span class="tag info">主线</span></button>` : '';
++  return `<section class="go"><h2>去处</h2><div class="goline">${target}<button class="exit${target ? '' : ' solo'} mapbtn" data-act="tab:ditu"><span class="dir">图</span><span class="en"><b>打开地图</b><small>其余去处在地图上点</small></span></button></div></section>`;
+ }
+ 
+ /** 歇脚：等到天亮、晌午、傍晚、入夜（人有作息，有的人、有的事只在夜里）。序章里不歇 */
+@@ -85,16 +100,16 @@ function xiejiaoHTML(): string {
+     `<button class="act" data-act="${late(h) ? 'xiejiaoAsk' : 'xiejiao'}:${h}">到${h * 60 <= S.min ? '明日' : ''}${l}</button>`).join('')}</div>${XIEJIAO.some(([h]) => late(h)) ? `<p class="muted">${warn}歇过半夜就误了。</p>` : ''}</section>`;
+ }
+ 
+-function avaBtn(id: string): string {
++function avaBtn(id: string, hot?: YaoJin['hot']): string {
+   const n = npc(id);
+   if (!n) return '';
+   const inner = n.obj
+     ? `<span class="ava sq t-gray">${IC[n.icon || 'stele']}</span>`
+     : `<span class="ava t-${n.tone || 'gray'}">${n.ini || n.name[0]}${n.count ? `<span class="badge">${n.count}</span>` : ''}</span>`;
+-  return `<button class="avab" data-act="sel:${id}" aria-pressed="${S.sel === id}">${inner}<span class="nm">${npcName(id)}</span></button>`;
++  return `<button class="avab${hot?.npc === id ? ' hot' : ''}" data-act="sel:${id}" aria-pressed="${S.sel === id}">${inner}<span class="nm">${npcName(id)}</span></button>`;
+ }
+ 
+-function detail(id: string): string {
++function detail(id: string, hot?: YaoJin['hot']): string {
+   const n = npc(id);
+   if (!n) return '';
+   const rel = n.obj ? '物品' : (S.rel[id] || '素不相识');
+@@ -114,11 +129,11 @@ function detail(id: string): string {
+   const want = !n.obj && ['相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'].includes(rel) ? wantOf(id) : undefined;
+   const wanting = want ? `<p class="muted">他眼下想${want.text}。</p>` : '';
+   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
+-    ${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
++    ${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id, hot?.npc === id ? hot.verb : undefined)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
+ }
+ 
+ /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
+-const verbBtn = (id: string) => (v: Verb): string => {
++const verbBtn = (id: string, hotVerb?: Verb) => (v: Verb): string => {
+   const price = verbPrice(id, v);
+   const p = verbPlan(id, v);
+   const poor = !p.ok;
+@@ -127,12 +142,8 @@ const verbBtn = (id: string) => (v: Verb): string => {
+   const specificWhy = poor && p.why && (p.why === refuseOf(id, v) || p.why === '他手里没有');
+   const sub = specificWhy ? `${p.why}${price !== null ? ` · ${cn(price)}文` : ''}`
+     : price !== null ? `${poor && S.silver < price ? '囊中不足，要' : ''}${cn(price)}文` : poor ? p.why : gain;
+-  return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;
++  return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}${hotVerb === v ? ' hot' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;
+ };
+ 
+-function exitBtn(d: string, id: string, solo: boolean, questTo?: string): string {
+-  return `<button class="exit${solo ? ' solo' : ''}" data-act="travel:${id}"><span class="dir">${d}</span><span class="en"><b>${room(id).name}</b><small>${minLabel(travelMin(hopMin(S.loc, id)))}</small></span>${questTo === id ? '<span class="tag info">主线</span>' : ''}</button>`;
+-}
+-
+ /** 根基之眼的一行：根基名做标签，后面是看出来的东西（engine/yan.ts） */
+ export const eyeLine = (e: EyeDef): string => `<p class="eye"><span class="tag eye-${e.attr}">${e.attr}</span><span>${fmt(e.text, textVars())}</span></p>`;
+diff --git a/src/ui/views/wugong.ts b/src/ui/views/wugong.ts
+index eb4ce99..eabf020 100644
+--- a/src/ui/views/wugong.ts
++++ b/src/ui/views/wugong.ts
+@@ -11,13 +11,16 @@ import { FOE_FX_TAG, passivesNow } from '../../engine/zhaoshi';
+ import { RETREAT, gongliCeiling } from '../../engine/lilian';
+ import { LODGING, ZHU_NAME, allowance, retreatBlock, zhuOf } from '../../engine/shiguang';
+ import type { Zhu } from '../../core/state';
++import { canRetreat, retreatLabel, strongPaths } from '../../engine/jiemian';
+ 
+ const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
+ 
+ export function viewWugong(): string {
+-  const opts: [string, string][] = [['1', '一日'], ['7', '七日'], ['30', '一月']];
++  // 按钮上直接写预估：「闭关一日：寒江剑法熟练 +9，战力约 +1」（engine/jiemian.ts 的 retreatLabel）
++  const opts: [string, string][] = [['1', retreatLabel(1, '一日')], ['7', retreatLabel(7, '七日')], ['30', retreatLabel(30, '一月')]];
+   const learned = SKILLS.filter(k => S.skills[k.id]);
+   return `
++  ${strongCard()}
+   ${loadoutCard()}
+   <section class="card here-card"><div class="sec-h"><h2>闭关修炼</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
+     <p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多消化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练，闭门造车，进境有限。</p>
+@@ -29,7 +32,7 @@ export function viewWugong(): string {
+         const block = retreatBlock(S);
+         const al = allowance(S);
+         return `<p class="muted">${block ?? `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。下线就是静修，回来先读出关邸报。`}</p>
+-        <div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
++        <div class="acts col">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
+       })()}
+   </section>
+   <section class="card here-card"><div class="sec-h"><h2>见招拆招</h2></div>
+@@ -170,3 +173,13 @@ function skillCard(k: SkillDef): string {
+     ${resps.map(r => `<div class="d-h"><span class="tag accent">见招拆招 · ${r.act}</span><small>造诣 ${huohou(S, r.k)}</small></div>`).join('')}
+   </section>`;
+ }
++
++
++/** 变强的路：眼下走得通的几条（闭关、学艺、切磋、门派练功），各写代价；历练够闭关一日了，提一句「可去闭关」 */
++function strongCard(): string {
++  const ps = strongPaths();
++  if (!ps.length) return '';
++  const rows = ps.map(p => `<div class="bqrow"><div class="bqh"><b>${p.name}</b>${p.go ? `<button class="act spar" data-act="${p.go.act}">${p.go.label}</button>` : ''}</div><p class="muted">${p.say}</p><small class="cost">代价：${p.cost}</small></div>`).join('');
++  return `<section class="card here-card bq"><div class="sec-h"><h2>变强的路</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
++    ${canRetreat() ? '<p class="tip">历练够闭关一日了，可去闭关。</p>' : ''}${rows}</section>`;
++}
+diff --git a/tests/youhua.test.ts b/tests/youhua.test.ts
+new file mode 100644
+index 0000000..cd92001
+--- /dev/null
++++ b/tests/youhua.test.ts
+@@ -0,0 +1,174 @@
++/**
++ * 优化改良（负责人 10-10 七条，docs/sheji-youhua-1010.md）：角色卡、眼下要紧、地图当主力、变强的路。
++ * 点按检查（tests/dianji.test.ts）照旧管「每个按钮都有人接」。
++ */
++import { beforeEach, describe, expect, it } from 'vitest';
++import { QUESTS, ROOMS } from '../src/content';
++import { S, setState, skipToYangzhou } from '../src/core/state';
++import { setNowMs } from '../src/core/time';
++import { jueseKa, powerNow, retreatLabel, strongPaths, trackPower, yaoJin } from '../src/engine/jiemian';
++import { viewJianghu } from '../src/ui/views/jianghu';
++import { mapSheet, viewDitu } from '../src/ui/views/ditu';
++import { viewWugong } from '../src/ui/views/wugong';
++
++beforeEach(() => {
++  setNowMs(() => 1_000_000_000_000);
++  setState(skipToYangzhou());
++  S.min = 14 * 60;
++});
++
++/** 动宾句：以动词起头 */
++const DONGBIN = /^(去|找|办|打开|等|会|拜|赴)/;
++
++describe('角色卡', () => {
++  it('江湖页最上面是角色卡：显示名字、称号（没有名号显示身份）和战力', () => {
++    const html = viewJianghu();
++    expect(html.indexOf('class="card juese"')).toBeGreaterThanOrEqual(0);
++    expect(html.indexOf('class="card juese"')).toBeLessThan(html.indexOf('眼下要紧'));
++    expect(html).toContain(`<b>${powerNow()}</b>`);
++    expect(html).toContain('沈孤舟');
++    expect(html).toContain('游侠');
++    S.title = '渡口一剑';
++    expect(viewJianghu()).toContain('「渡口一剑」');
++  });
++
++  it('评语是一句话，气血、内力、银两在一行小字里', () => {
++    const k = jueseKa();
++    expect(k.pingyu.length).toBeGreaterThan(5);
++    expect(k.line).toMatch(/气血 \d+\/\d+ · 内力 \d+\/\d+ · 银两 \d+ 文/);
++  });
++
++  it('战力变了：卡上写一回「旧 → 新」，离开江湖页就清掉', () => {
++    trackPower(true);
++    expect(jueseKa().from).toBeUndefined();
++    const was = powerNow();
++    S.skills.xinfa!.r += 2;
++    S.skills.hanjiang!.r += 2;
++    expect(powerNow()).toBeGreaterThan(was);
++    trackPower(true);
++    expect(jueseKa().from).toBe(was);
++    expect(viewJianghu()).toContain(`${was} → ${powerNow()}`);
++    trackPower(false);
++    expect(viewJianghu()).not.toContain(`${was} → `);
++  });
++
++  it('旧档没有界面字段也读得出来', () => {
++    delete S.ui;
++    expect(() => viewJianghu()).not.toThrow();
++  });
++});
++
++describe('眼下要紧', () => {
++  it('永远只有一件，写成动宾句；往下的「也可以」最多两条', () => {
++    const html = viewJianghu();
++    expect(html.split('眼下要紧').length - 1).toBe(1);
++    const y = yaoJin();
++    expect(y.text, y.text).toMatch(DONGBIN);
++    expect(y.also.length).toBeLessThanOrEqual(2);
++  });
++
++  it('每件心事的每一步，都只出一件动宾句', () => {
++    const bad: string[] = [];
++    for (const q of QUESTS) {
++      for (let i = 0; i < q.stages.length; i++) {
++        S.quests = { [q.id]: i };
++        S.track = q.id;
++        const y = yaoJin();
++        if (!DONGBIN.test(y.text) || y.also.length > 2) bad.push(`${q.id}#${i}：${y.text}`);
++        expect(viewJianghu().split('眼下要紧').length - 1, `${q.id}#${i}`).toBe(1);
++      }
++    }
++    expect(bad).toEqual([]);
++  });
++
++  it('没有记挂的事：给近处的差事，没有就请你去地图上走走', () => {
++    S.track = '';
++    const y = yaoJin();
++    expect(y.text).toMatch(DONGBIN);
++    expect(y.tag).not.toBe('主线');
++  });
++
++  it('到了主线要找的人那里：人高亮，不再弹「就在此处」', () => {
++    S.quests = { main1: 0 };
++    S.track = 'main1';
++    const y = yaoJin();
++    if (y.to) S.loc = y.to;
++    const here = yaoJin();
++    if (here.hot) expect(viewJianghu()).toContain('avab hot');
++  });
++
++  it('去处缩成一行：只有主线要去的那一处和「打开地图」，其余去处不列', () => {
++    const html = viewJianghu();
++    expect(html).toContain('打开地图');
++    expect(html).toContain('data-act="tab:ditu"');
++    expect(html).not.toContain('class="exits"');
++    expect(html).not.toContain('近处有事');
++  });
++});
++
++describe('地图当主力', () => {
++  it('点地点：说明里有人、事、路，还有一个「去」，点了直接赶路', () => {
++    const to = ROOMS.find(r => r.id !== S.loc && r.region === ROOMS.find(x => x.id === S.loc)!.region)!;
++    const html = mapSheet(to.id);
++    expect(html).toContain(to.name);
++    expect(html).toContain(`data-act="travelGo:${to.id}">去</button>`);
++    expect(html).toMatch(/<span class="tag">人<\/span>/);
++    expect(html).toMatch(/<span class="tag">事<\/span>/);
++    expect(html).toMatch(/<span class="tag">路<\/span>/);
++  });
++
++  it('点自己所在的地方：看得到说明，没有「去」', () => {
++    const html = mapSheet(S.loc);
++    expect(html).not.toContain('travelGo:');
++    expect(html).toContain('你在这里');
++  });
++
++  it('地图上有当前所在的高亮、水路旱路两种线、图例', () => {
++    const html = viewDitu();
++    expect(html).toContain('class="node here');
++    expect(html).toContain('aria-current="location"');
++    expect(html).toContain('水路');
++    expect(html).toContain('陆路');
++    expect(html).toContain('data-act="travelAsk:');
++    expect(html).not.toContain('data-act="travel:');
++  });
++
++  it('有船、渡的地区画出水路', () => {
++    S.loc = 'gz_town';
++    S.chapter = 1;
++    const html = viewDitu();
++    expect(html).toContain('<line class="wet"');
++  });
++});
++
++describe('变强看得见', () => {
++  it('武学页最上面是「变强的路」，每条写代价', () => {
++    const html = viewWugong();
++    expect(html.indexOf('变强的路')).toBeGreaterThanOrEqual(0);
++    expect(html.indexOf('变强的路')).toBeLessThan(html.indexOf('搭配'));
++    const ps = strongPaths();
++    expect(ps.map(p => p.name)).toEqual(expect.arrayContaining(['闭关', '学艺']));
++    for (const p of ps) expect(p.cost.length, p.name).toBeGreaterThan(3);
++  });
++
++  it('闭关按钮上写预估：熟练加多少、战力约加多少', () => {
++    S.lilian = 300;
++    const t = retreatLabel(1, '一日');
++    expect(t).toMatch(/^闭关一日：.+熟练 \+\d+，(战力约 \+\d+|战力暂不见涨)$/);
++    expect(viewWugong()).toContain(t);
++  });
++
++  it('历练够闭关一日：提示「可去闭关」', () => {
++    S.lilian = 300;
++    expect(viewWugong()).toContain('可去闭关');
++    S.lilian = 0;
++    expect(viewWugong()).not.toContain('可去闭关');
++  });
++
++  it('预估不改存档', () => {
++    S.lilian = 300;
++    const before = JSON.stringify(S);
++    retreatLabel(30, '一月');
++    expect(JSON.stringify(S)).toBe(before);
++  });
++});
