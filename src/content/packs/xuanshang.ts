@@ -365,18 +365,20 @@ const JOBS: JobDef[] = [
   { id: 'xsb_xunren', shenfen: 'youxia', tier: 0, title: '帮布庄掌柜找回走失的学徒小栓', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, bang: true,
     xian: [
       { npc: 'xsb_shifu', if: { notFlag: 'xsb_xr_clue1' }, text: '布庄掌柜知道小栓走失前后的事，先去问问他。' },
-      { npc: 'xsb_jiuju', at: 'cheng_tavern', if: { flag: 'xsb_xr_clue1', notFlag: 'xsb_xr_clue2' }, text: '小栓的舅舅常在望江楼饮酒，得问问孩子的下落。' },
+      { npc: 'xsb_jiuju', at: 'cheng_tavern', if: { flag: 'xsb_xr_clue1', notFlag: 'xsb_xr_clue2' }, text: '小栓的舅舅常在望江楼饮酒，得问问孩子的下落。那汉子嘴硬，说到孩子眼睛就躲；悟性不够看不穿他，胆魄不够也当面问不倒他。' },
       { npc: 'xsb_xiaoshuan', at: 'sz_matou', if: { flag: 'xsb_xr_clue2', notFlag: 'xsb_xr_found' }, text: '舅舅说小栓被押在苏州枫桥码头的货栈里，去寻他。' }
     ] },
   { id: 'xsb_xunwu', shenfen: 'youxia', tier: 1, title: '帮绣娘阿蕙追回被偷的玉佩', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, again: 5, bang: true,
     xian: [
       { npc: 'xsb_xiuniang', if: { notFlag: 'xsb_xw_clue' }, text: '绣娘阿蕙还在照壁下守着绣摊，玉佩怎么丢的，只有她清楚。' },
-      { npc: 'xsb_chensan', at: 'zj_shi', if: { flag: 'xsb_xw_clue', notFlag: 'xsb_xw_found' }, text: '收旧货的陈三过了江，在镇江大市口摆着担子。' }
+      { npc: 'xsb_chensan', at: 'zj_shi', if: { flag: 'xsb_xw_clue', notFlag: 'xsb_xw_found' }, text: '收旧货的陈三过了江，在镇江大市口摆着担子。那贩子嘴上抵死不认，担子底下却压着东西；悟性不够分辨不出，胆魄不够也没敢当面去掀。' }
     ] },
   { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手郝屠户', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 5, bang: true,
     xian: [
       { npc: 'xsb_gufu', if: { notFlag: 'xsb_xiong_clue' }, text: '寡妇周氏在照壁下等着回话，死者身上的刀伤，她记得最清楚。' },
-      { npc: 'xsb_zhao', at: 'cheng', if: { flag: 'xsb_xiong_clue', notFlag: 'xsb_xiong_beat' }, text: '郝屠户换了名字在东关街的肉铺帮工，天不亮就上案板。' }
+      { npc: 'xsb_zhao', at: 'cheng', if: { flag: 'xsb_xiong_clue', notFlag: 'xsb_xiong_beat' }, text: '郝屠户换了名字在东关街的肉铺帮工，天不亮就上案板。' },
+      // 放走了人，差事就交不了：见闻簿要改口，否则还照旧催人去府衙交差
+      { npc: 'xsb_zhuren', at: 'yz_zhaobi', if: { flag: 'xsb_xiong_gone' }, text: '人是自己放走的，榜上的赏银，书办那里是不会认了。' }
     ] },
   { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, again: 30, k: 1.5, bang: true,
     xian: [
