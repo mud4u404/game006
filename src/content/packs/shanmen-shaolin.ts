@@ -25,7 +25,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, NewsDef, N
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smsl_jinshan', name: '金山寺', area: '镇江 · 金山', region: 'zj', t: 15, map: [26, 8],
+    id: 'smsl_jinshan', name: '金山寺', area: '镇江 · 金山寺', region: 'zj', t: 15, map: [26, 8],
     desc: [
       { if: { flag: 'smsl_in' },
         text: '金山立在江心，寺在山上，黄墙碧瓦，江风里全是香火气。你上山不用看知客僧的脸色——殿前的知客僧远远看见你，板着的脸松了松，侧身让你进去了。' },
@@ -68,7 +68,10 @@ const NPCS: NpcDef[] = [
     look: '七十上下，眉白如霜，一领僧衣洗得发白却浆得笔挺。抄经的手稳得出奇，一笔一画都收着劲。左膝盘坐时，总要先用手垫一下。',
     verbs: ['交谈', '观察',
       { verb: '拜师', if: { notFlag: 'smsl_in' } },
-      { verb: '领考', if: { flag: 'smsl_asked', notFlag: 'smsl_shui', noSect: true } },
+      // Issue #173 第 5 条：手上有人命的长老不收，原先只在「拜师」拦着，「领考」能绕过去
+      // （领考考完就直接记名弟子）。两处一起拦。
+      { verb: '领考', if: { flag: 'smsl_asked', notFlag: 'smsl_shui', noSect: true,
+        any: [{ notFlag: 'huafang_guard_dead' }, { notFlag: 'jy_sun_sha' }, { notFlag: 'cw_sha' }] } },
       { verb: '请教', if: { sect: SMSL } },
       { verb: '考校', if: { sect: SMSL, notFlag: 'smsl_wai' } }],
     actions: {
@@ -93,7 +96,7 @@ const NPCS: NpcDef[] = [
         { if: { pastSect: { school: '少林' } },
           text: '长老睁开了眼：「山门出去容易，回来难。戒律上写着：叛出山门的，要跪着进来。你先想清楚，再来叩这扇门。」' },
         { if: { any: [{ flag: 'huafang_guard_dead' }, { flag: 'jy_sun_sha' }, { flag: 'cw_sha' }] },
-          text: '长老的目光落在你的手上，看了半晌：「老衲在江湖上走了一遭，看得出来——你手上，有过人命。」他合十低眉，「我佛慈悲。戒杀是本门第一戒。冤孽未清，这扇门就不开。回去多行善事——不为进这扇门，为你自己。」',
+          text: '长老的目光落在你的手上，看了半晌：「老衲在江湖上走了一遭，看得出来——你手上，有过人命。」他合十低眉，「我佛慈悲。戒杀是本门第一戒。这扇门，今日不会为你开。回去多行善事——不为进这扇门，为你自己。」',
           do: [{ type: 'flag', flag: 'smsl_ju' }] },
         { if: { eming: 12 },
           text: '长老摇了摇头：「俗家弟子出门在外，报的是少林的名。你这个名，少林担不起。先把这些事了一了。」' },

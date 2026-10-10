@@ -8,7 +8,7 @@ import type { RoomDef } from '../content/types';
 /** 一处地方挂着几处只通它的去处，就收进它里面 */
 export const HUB_MIN = 4;
 /** 地名按钮：高、左右内边距、一个字宽（和 styles/app.css 的 .node 对得上）、两个按钮之间至少留的缝 */
-const NODE_H = 44, NODE_PAD = 28, CHAR_W = 14, BADGE_W = 24, DOT_W = 14, GAP = 4;
+const NODE_H = 44, NODE_PAD = 40, CHAR_W = 14, BADGE_W = 24, GAP = 4;
 /** 地图的高：默认、最高 */
 export const MAP_H = 330, MAP_H_MAX = 600;
 
@@ -45,19 +45,18 @@ export function hubsOf(rooms: RoomDef[]): Map<string, string[]> {
   return by;
 }
 
-/** 地名按钮的宽：任务小点（.qdot 八像素加间距）也要算进去，不然带点的地名比算的宽，压住旁边的 */
-const nodeW = (name: string, badge: boolean, dot: boolean): number => NODE_PAD + CHAR_W * [...name].length + (badge ? BADGE_W : 0) + (dot ? DOT_W : 0);
+/** 地名按钮的宽：左右内边距各十二、圆点十、点与字之间六，共 NODE_PAD；圆点人人都有（标记靠颜色和圈，不占宽） */
+const nodeW = (name: string, badge: boolean): number => NODE_PAD + CHAR_W * [...name].length + (badge ? BADGE_W : 0);
 
-/** 摆一个地区的地图：w 是地图的宽（像素）；mark 是挂任务小点的地点（收进街里的，点挂在那条街上） */
-export function layoutRegion(rooms: RoomDef[], w: number, mark?: string): MapLayout {
+/** 摆一个地区的地图：w 是地图的宽（像素）。mark 旧时是挂任务小点的地点，现在标记不占宽，留着参数是为了调用处不用改 */
+export function layoutRegion(rooms: RoomDef[], w: number, _mark?: string): MapLayout {
   const hubs = hubsOf(rooms);
   const hidden = new Set([...hubs.values()].flat());
-  const markAt = mark && hidden.has(mark) ? [...hubs].find(([, l]) => l.includes(mark))?.[0] : mark;
   const shown = rooms.filter(r => !hidden.has(r.id));
   for (let h = MAP_H; ; h = Math.min(MAP_H_MAX, h + 40)) {
     const nodes = shown.map(r => {
       const leaves = hubs.get(r.id) ?? [];
-      const nw = Math.min(w, nodeW(r.name, leaves.length > 0, r.id === markAt));
+      const nw = Math.min(w, nodeW(r.name, leaves.length > 0));
       return { id: r.id, name: r.name, x: (r.map[0] / 100) * w, y: (r.map[1] / 100) * h, w: nw, h: NODE_H, leaves };
     });
     const ok = relax(nodes, w, h);

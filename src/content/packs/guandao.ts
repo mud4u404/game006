@@ -8,7 +8,7 @@ import type { ContentPack, NpcDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_guandao', name: '蜀冈官道', area: '扬州 · 城北', region: 'yz', t: 25, map: [18, 14], nightQuiet: true,
+    id: 'yz_guandao', name: '蜀冈官道', area: '扬州 · 蜀冈官道', region: 'yz', t: 25, map: [18, 14], nightQuiet: true,
     desc: [
       { if: { hour: { from: 5, to: 18 }, notFlag: 'bs_done' },
         text: '官道沿蜀冈西麓向北而去，直通淮安、京城。道旁一座驿亭，驿卒牵着马换公文。路边一块大青石上坐着个精瘦汉子，就着石头磨一把断刀，过路的客商都绕着他走。' },
@@ -29,7 +29,7 @@ const ROOMS: RoomDef[] = [
     ]
   },
   {
-    id: 'yz_chapeng', name: '官道茶棚', area: '扬州 · 城北', region: 'yz', t: 5, map: [8, 30], nightQuiet: true,
+    id: 'yz_chapeng', name: '官道茶棚', area: '扬州 · 蜀冈官道', region: 'yz', t: 5, map: [8, 30], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '茶棚的芦席帘子放下来了，条凳倒扣在桌上，炭炉里只剩一点余烬。官道上黑沉沉的，远处驿亭那盏气死风灯一晃一晃。' },
@@ -42,7 +42,7 @@ const ROOMS: RoomDef[] = [
     road: '你顺着官道走到拐弯处，茶香混着炭烟飘了过来……'
   },
   {
-    id: 'yz_mubing', name: '募兵帐', area: '扬州 · 城北', region: 'yz', t: 10, map: [32, 6], nightQuiet: true,
+    id: 'yz_mubing', name: '募兵帐', area: '扬州 · 蜀冈官道', region: 'yz', t: 10, map: [32, 6], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '募兵帐前冷冷清清，旗子卷了起来，只有帐门口一盏风灯。帐后的粮车蒙着油布，偶尔有马在暗处打个响鼻。' },
@@ -58,8 +58,15 @@ const NPCS: NpcDef[] = [
   {
     id: 'gd_feng', name: '募兵校尉', ini: '冯', tone: 'blue', brief: '点着名册',
     look: '皂衣旧得发白，腰牌上的字磨平了。点名册的手指粗大，指甲缝里全是黄土——不是扬州的土。',
-    verbs: ['交谈', '观察', '报名'],
+    verbs: ['交谈', '观察', '报名', '打听'],
     actions: {
+      打听: [
+        { if: { noSect: true, notFlag: 'jw_mingce' },
+          text: '「要投军，在我这儿报名画押。考校在募兵营，韩什长掌着，他白天都在。」' },
+        { if: { any: [{ job: 'smcs_jw_xun' }, { job: 'smcs_jw_liang' }] },
+          text: '「军伍的差事：巡夜交令找官道驿亭的哨兵，押粮找码头粮官。口令对了，木牌上划道才算数。」' },
+        { text: '「我这儿只管募兵。投了军，营里的事多，慢慢就熟了。」', do: [{ type: 'news' }] }
+      ],
       交谈: [
         { if: { flag: 'jw_mingce' },
           text: '冯校尉朝你一抱拳：「名册上有你的名字了。往后官府有征调，少侠莫要推脱——军中，说话算话。」' },

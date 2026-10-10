@@ -25,7 +25,7 @@ const ZA: Cond = { shi: { id: SHI, at: ['za'] } };
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smtz_fenzhang', name: '铁掌分舵', area: '苏州 · 山塘街西', region: 'sz', t: 10, map: [38, 38],
+    id: 'smtz_fenzhang', name: '铁掌分舵', area: '苏州 · 山塘街', region: 'sz', t: 10, map: [38, 38],
     desc: [
       { if: { hour: { from: 21, to: 6 } },
         text: '夜里分舵的灯还亮着一半，收账的帮众三五成群地出门，腰里都别着家伙。门口的石狮子叫人摸得发亮——进出的帮众都习惯摸一把，讨个彩头。' },

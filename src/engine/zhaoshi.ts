@@ -9,7 +9,7 @@ import type { FoeDef, FxKind, PerformDef, PrepDef, SkillDef, UltDef } from '../c
 import { Duel, SKILLED, simulate, type AllySpec, type FoeSpec, type HeroSpec, type RespKey } from './duel';
 import { mulberry32 } from './rng';
 import { standard, type Person } from './person';
-import { personOf } from './ren';
+import { personOf, tierNow } from './ren';
 import { canPerform } from './shicheng';
 import { activeOuter, counterBonus, reachBonus, slotSkill, weaponReady, wielded } from './wuxue';
 
@@ -130,7 +130,25 @@ export const FX_SAY: Partial<Record<FxKind, (foe: string) => string>> = {
  */
 /** 掂斤两的说法：主语写清是谁强（原来「稍逊一筹」「略胜一筹」一字之差、意思相反，扫一眼就看反，审查 H23） */
 const KANREN: [number, string][] = [[0.95, '他不堪一击'], [0.75, '他远不如你'], [0.55, '你胜面大些'], [0.45, '旗鼓相当'], [0.25, '他略强于你'], [0.05, '他远在你之上'], [-1, '深浅看不透']];
-export function kanren(s: GameState, f: FoeDef, n = 40, now = false): { p: number; say: string; hurt: string } {
+
+/**
+ * 掂斤两按档次说话（Issue #546：10-10 试玩「不入流被主线推去打屠千山，交战前说势均力敌，
+ * 12 合就败，败后才说对手是三流」）。胜率只当同一档里的话：
+ * - 高一档以上：「他高你一档，你多半要输」——差着档次就别拿百分比糊弄人；
+ * - 低一档：「他不如你」；
+ * - 同档：照旧按胜率说。
+ * 对手是几个人（龙王庙那四个打手是一条 foes 记着的「四个人」）时，人多就按总的掂量算：
+ * 每人弱，加起来未必弱。人群交给 Duel 的 crowd 真打，不在这里另算一套。
+ */
+function kanrenSay(s: GameState, f: FoeDef, p: number, heads: number): string {
+  const gap = f.rank - tierNow(s).t;          // 差几档；0 是同档
+  const 谁 = heads > 1 ? `他们${heads}个` : '他';
+  if (gap >= 1) return `${谁}高你${gap >= 2 ? ` ${Math.floor(gap)} 档` : '一档'}，你多半要输`;
+  if (gap <= -1) return `${谁}不如你`;
+  return KANREN.find(([lo]) => p >= lo)![1];
+}
+
+export function kanren(s: GameState, f: FoeDef, n = 40, now = false, heads = 1): { p: number; say: string; hurt: string } {
   const prep = activePrep(f);
   // 掂斤两比的是实力：按玩家满状态（气血、内力回满，伤全好）来算，带着伤不会让「远不如你」变成「远在你之上」；
   // 此刻的吃亏另用 hurt 一句话说。now 为真时按此刻的状态算（开打前给落伤封顶用，engine/shang.ts）
@@ -138,11 +156,13 @@ export function kanren(s: GameState, f: FoeDef, n = 40, now = false): { p: numbe
   const kit = fightKit(hero);
   let w = 0;
   for (let i = 0; i < n; i++) {
-    const d = new Duel(heroSpec(hero, kit, f), foeSpec(f, prep), { rng: mulberry32(9001 + i * 7919), allies: alliesOf(prep) });
+    // heads 几个人就按几个人打（Duel 的 crowd）；maxAtk 限着同时上手的，人多不是一拥而上
+    const crowd = heads > 1 ? { n: heads, maxAtk: Math.min(heads, 3) } : undefined;
+    const d = new Duel(heroSpec(hero, kit, f), foeSpec(f, prep), { rng: mulberry32(9001 + i * 7919), allies: alliesOf(prep), crowd });
     if (simulate(d, SKILLED).res === 'win') w++;
   }
   const p = w / n;
-  return { p, say: KANREN.find(([lo]) => p >= lo)![1], hurt: kanrenHurt(s) };
+  return { p, say: kanrenSay(s, f, p, heads), hurt: kanrenHurt(s) };
 }
 
 /** 带着伤的提醒：气血掉到九成以下，或手、足、内息任何一处有伤，就多说一句（掂斤两按满状态，此刻吃亏要让玩家知道） */
