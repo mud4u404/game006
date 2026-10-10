@@ -46,6 +46,8 @@ const NIGHT = { from: 21, to: 5 };
  * 对面是起头后九个半钟头再往后第一个二十三时，起头钟点不同，结算可能落在第二夜；只看「夜里」会让前一夜就看见、插得上手
  */
 const TONIGHT: Cond = { shi: { id: XUN, at: ['duimian'], left: { below: 3 } } };
+/** 对面那一步，可离当夜结算还有三个钟头以上：这一夜还差着，只能说「挑个夜里」「过一两日」 */
+const MORE_THAN_NIGHT: Cond = { shi: { id: XUN, at: ['duimian'], left: { atLeast: 3 } } };
 /** 卫衡还在寻、对面还没到的几步：安排（提醒、劝当面、告诉、指错）只谈得上在这几步里 */
 const BEFORE = ['fang', 'feng', 'cuo'];
 /** 风声以后（褚七知道卫衡在找他）：他还在渡口的几步 */
@@ -259,21 +261,18 @@ const NPCS: NpcDef[] = [
         { if: { shi: { id: XUN, at: ENDS, age: { atLeast: 240 } } },
           text: '卫衡朝你点了点头：「那件事，晚辈已不愿再提。」他看着街那头，「眼下只管走一步，看一步。」' },
         // 卫衡寻褚七（第四稿）：事情走到哪一步，他说哪一步的话。告诉过他的，对面提前到次夜，他说一回，再问只答一句
-        // 对面那一步，离当夜结算不到三个钟头（TONIGHT）才是「今夜」；下午就告诉了他、离结算还有一日多，仍说「挑个夜里」
-        { if: { flag: 'kp_wei_told', notFlag: 'kp_wei_told_said', ...TONIGHT },
-          text: '卫衡朝你拱了拱手：「运河渡口，夜里扛包。晚辈记下了。」他望了一眼窗外渐暗的天色，「今夜就去，不惊动旁人。」',
-          do: [{ type: 'flag', flag: 'kp_wei_told_said' }] },
-        { if: { flag: 'kp_wei_told', notFlag: 'kp_wei_told_said', ...at('duimian') },
+        // 对面那一步离当夜结算不到三个钟头（TONIGHT）才说「今夜」；下午就告诉了他、离结算还有一日多，仍说「挑个夜里」
+        { if: { flag: 'kp_wei_told', notFlag: 'kp_wei_told_said', ...MORE_THAN_NIGHT },
           text: '卫衡朝你拱了拱手：「运河渡口，夜里扛包。晚辈记下了。」他把剑往肩上一正，「晚辈挑个夜里去看一看，不惊动旁人。」',
           do: [{ type: 'flag', flag: 'kp_wei_told_said' }] },
-        { if: { flag: 'kp_wei_told', ...at('duimian') },
+        { if: { flag: 'kp_wei_told', ...MORE_THAN_NIGHT },
           text: '卫衡点了点头：「晚辈已经问明白了，你不必再费心。」' },
         { if: { flag: 'kp_wei_lied', ...at('fang', 'feng') },
           text: '卫衡朝你点了点头：「龙王庙后头。晚辈这就去访。」' },
         { if: at('feng'),
           text: '卫衡把一张折了又折的字条收进袖里：「有人说，运河渡口夜里扛包的人里，有个独臂的。晚辈过一两日，总要去看一看。」' },
         { if: { ...TONIGHT },
-          text: '卫衡的手按在剑柄上，目光落在码头那头：「晚辈等了二十年，不差这一夜。」' },
+          text: '卫衡的手按在剑柄上，又望了一眼窗外渐暗的天色，道：「晚辈等了二十年，今夜这一关总要过。」' },
         // 以后每回：他还在找人
         { if: { flag: 'kp_du' },
           text: '卫衡的目光越过你，望向码头那头的船桅：「晚辈在找一个独臂的人。扬州码头多，夜里扛包的人更多，一时还找不着。」他收回目光，「你若看见他，还请告诉晚辈一声。」' },
@@ -381,7 +380,7 @@ const SHI: ShiDef[] = [
     place: 'dukou', subj: ['kp_wei', 'kp_chu'],
     steps: {
       fang: {
-        now: '卫衡白日里在城里逢人打听，找的是一个独臂的汉子。',
+        now: '卫衡白日里在城里逢人打听，一路问到了运河渡口一带，找的是一个独臂的汉子。',
         news: '一个外乡后生在扬州城里逢人打听独臂汉子。',
         news2: '城里来了个带剑的外乡人，到处问独臂的汉子。',
         news3: '有个剑客满扬州找一个断了手的人，不知结了什么仇。',
