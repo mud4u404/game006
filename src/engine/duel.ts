@@ -22,7 +22,7 @@
  * 引擎只出「事件」，不写文字、不碰界面；文字由界面按内容去写（ui/fight.ts）。种子固定，结果可以重放。
  */
 import type { FxDef, FxKind } from '../content/types';
-import { MP_FLOOR } from './combat';
+import { MP_FLOOR } from './beidong';
 import { NO_PASSIVE, type PassiveSum } from './beidong';
 import type { Rng } from './rng';
 import { COMMON, SCALE, dmgMul, dodgeOf, hpMaxOf, huohouOf, mpMaxOf, tierCont, type BaseResp, type Person } from './person';

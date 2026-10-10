@@ -23,7 +23,7 @@ import { brace, fateOpts, settle, takeWounds } from '../src/engine/jiesuan';
 import { XIEJIAO, checkYue, jingxiu, nextYue, waitMin } from '../src/engine/shiguang';
 import { mulberry32 } from '../src/engine/rng';
 import { tierNow } from '../src/engine/ren';
-import { isEnding, tickShi } from '../src/engine/shishi';
+import { isEnding, shiLeftHours, tickShi } from '../src/engine/shishi';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const VERBOSE = !!env.ZOUBIAN;
@@ -34,7 +34,14 @@ const PREFIX = env.ZOUBIAN_PREFIX ?? '';
 interface Run {
   start: 'new' | 'skip'; steps: number; seed: number; focus?: string; shi?: string;
   /** 盯世事的局里，玩家袖手旁观：不去找插手的人，只管自己的日子，看这件事自己走到哪一步（世事里「不管它」那条路） */
-  watch?: boolean
+  watch?: boolean;
+  /**
+   * 盯世事的局里，玩家在「对面」这类夜里结算的步守在渡口、不出手：离结算还剩不到三个钟头，人就在那里，只等着看。
+   * 「在场看着」的结局（*_see）要玩家恰好在那一夜、那个钟点、在渡口，又没有出手；乱走撞不上，要定向去
+   */
+  guard?: boolean;
+  /** 卫衡寻褚七：玩家早先已经做过的安排（meet 劝过褚七当面了结，要和他相谈甚欢；warned 提醒过他）。乱走很难碰巧凑齐交情和先后，定向给 */
+  arrange?: 'meet' | 'warned'
 }
 /** 当前这一局：补跑盯任务时更常打输（有的事要先输一场才开头，例如画舫输了，盐号的事才来） */
 let cur: Run | undefined;
@@ -42,6 +49,13 @@ const RUNS: Run[] = Array.from({ length: 10 }, (_, i) => i + 1).flatMap(i => [
   { start: 'new' as const, steps: 5000, seed: i },
   { start: 'skip' as const, steps: 5000, seed: 100 + i }
 ]);
+
+/** 守渡口的局，此刻该守着：盯着的世事在「对面」这一步，离当夜结算还有不到三个钟头 */
+function guarding(): boolean {
+  if (!cur?.guard || !cur.shi) return false;
+  const left = shiLeftHours(cur.shi);
+  return S.shi?.[cur.shi]?.at === 'duimian' && left !== undefined && left > 0 && left < 3;
+}
 
 /** 全部局下来的覆盖 */
 const cov = {
@@ -94,7 +108,7 @@ function playStory(id: string, depth: number): void {
   err(`剧情「${id}」走了两百张卡片还没完，可能死循环`);
 }
 
-function fight(fid: string, depth: number): void {
+function fight(fid: string, depth: number, policy?: Policy): DuelRes | undefined {
   const f = foeById(fid);
   if (!f) { err(`对手「${fid}」不存在`); return; }
   // 开打前掂斤两（engine/shang.ts）：打赢了比自己弱的，落的伤封顶。机器玩家少掂几回，省时间
@@ -104,12 +118,12 @@ function fight(fid: string, depth: number): void {
   const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, prep), { rng, allies: alliesOf(prep) });
   // 玩家各有各的打法：大多照「以己之长」应对，也有乱点的、不出招干挨打的、打不过就跑（认输）的
   const style = rng();
-  if (style < 0.08 && !f.script) {
+  if (!policy && style < 0.08 && !f.script) {
     for (let t = 0; t < 30 && !d.over; t++) d.tick(), f.spar ? d.yieldUp() : d.flee();
   }
   // 盯任务时更常打输（有的事要先输一场才开头）；盯世事时认真打（插手多半要打赢）
   const idle = cur?.focus ? 0.4 : cur?.shi ? 0.03 : 0.18;
-  if (!d.over) simulate(d, style < idle ? IDLE : style < idle + 0.27 ? RANDOM : SKILLED);
+  if (!d.over) simulate(d, policy ?? (style < idle ? IDLE : style < idle + 0.27 ? RANDOM : SKILLED));
   S.hp = Math.max(0, Math.round(d.hp));
   S.mp = Math.max(0, Math.round(d.mp));
   const res = d.res!;
@@ -127,11 +141,20 @@ function fight(fid: string, depth: number): void {
   if (st.out.fight || st.out.story) err(`对手「${fid}」的「${res}」结算：do 里的开打、开剧情不会生效，要写在 then 里`);
   if (S.hp <= 0) warn(`对手「${fid}」打「${res}」以后气血是零，结算没有回血`);
   if (st.r?.then) handle(run(st.r.then), depth);
+  return res;
 }
 
-/** 这些效果把盯着的世事推到还没走过的一步 */
+/**
+ * 这些效果把盯着的世事推到还没走过的一步：直接推（shi 效果），或者写下一个旗标做安排，
+ * 世事到日子读它改走另一步（ShiStep.next.route，卫衡寻褚七的提醒、劝当面了结）
+ */
 function pushesNew(list: Effect[] | undefined): boolean {
-  return !!cur?.shi && (list ?? []).some(e => e.type === 'shi' && e.id === cur!.shi && !!e.to && !cov.shi.has(`${e.id}.${e.to}`));
+  if (!cur?.shi) return false;
+  const id = cur.shi;
+  const routed = Object.values(shiById(id)!.steps).flatMap(st => (st.next?.route ?? []).flatMap(r => flagsIn(r.if).map(f => [f, r.to] as const)));
+  return (list ?? []).some(e =>
+    (e.type === 'shi' && e.id === id && !!e.to && !cov.shi.has(`${e.id}.${e.to}`))
+    || (e.type === 'flag' && e.value !== false && routed.some(([f, to]) => f === e.flag && !cov.shi.has(`${id}.${to}`))));
 }
 
 /** 不出招、不应对，干挨打：打输了的那些结局也得有人走到 */
@@ -305,7 +328,8 @@ function pusherAtHour(id: string): number | null {
 /** 挑一件事做：没做过的优先，跟着任务走的其次；伤重了去闭关 */
 function choose(all: Act[], seen: Set<string>): Act {
   // 袖手旁观的局：不碰能推动这件世事的人，也不特意往那里去（碰上了就是玩家自己的选择，这里只管不主动）
-  const list = cur?.watch ? all.filter(a => !(a.k === 'act' && SHI_NPC.get(cur!.shi!)!.has(a.id)) && !(a.k === 'go' && a.push)) : all;
+  // 守渡口：人在渡口，只歇脚等着，不动手也不走开
+  const list = guarding() ? all.filter(a => a.k === 'wait') : cur?.watch ? all.filter(a => !(a.k === 'act' && SHI_NPC.get(cur!.shi!)!.has(a.id)) && !(a.k === 'go' && a.push)) : all;
   const w = list.map(a => {
     // 重伤闭关养不好（engine/shang.ts），找郎中、买药去；只有气血见底才闭关
     // 袖手旁观的局：事情要自己走上好几天（码头那件，西舵占了码头要七天），玩家多歇歇、过自己的日子
@@ -368,7 +392,7 @@ function step(seen: Set<string>): void {
   // 好奇的玩家听说夜里有人出没，会等到夜里去看看：等到那个钟点，就有没点过的动作冒出来
   else if (a.k === 'wait') {
     const h = rng() < 0.7 ? (cur?.shi ? pusherAtHour(cur.shi) : null) ?? newAtHour() : null;
-    advanceMin(S, h !== null ? waitMin(S, h) : rng() < 0.5 ? 120 : waitMin(S, pickOne(XIEJIAO)[0]));
+    advanceMin(S, guarding() ? 30 : h !== null ? waitMin(S, h) : rng() < 0.5 ? 120 : waitMin(S, pickOne(XIEJIAO)[0]));
   }
   else {
     // 闭关碰到约期，那天一早就出关（engine/shiguang.ts 的 restDays；修为额度跟现实时间走，机器玩家不受它管，jingxiu 的 grow 传满 days）
@@ -417,6 +441,13 @@ function play(r: Run): void {
     if (r.shi === 'kp_xun' && r.seed % 3 === 0) S.flags.kp_qiantan = true;
     // 对卫衡递话（告诉、指错路）要先在夜里的渡口见过褚七：机器玩家乱走很少碰巧夜里去渡口，另三分之一的局当作见过，走一走递话这条路
     if (r.shi === 'kp_xun' && r.seed % 3 === 1) S.flags.kp_chu_met = true;
+    // 早先劝过褚七当面了结（和褚七相谈甚欢，约在对面那夜），那夜又守在渡口看着：走「在一旁听着」（dangmian_see）；
+    // 早先提醒过他，那夜人不在：走「他躲开了」（zou）。要靠乱走碰巧同时有交情、先后和那夜恰在渡口，几十局也不一定有一回
+    if (r.arrange) {
+      S.flags.kp_chu_met = true;
+      S.flags[r.arrange === 'meet' ? 'kp_chu_meet' : 'kp_chu_warned'] = true;
+      if (r.arrange === 'meet') S.rel.kp_chu = '相谈甚欢';
+    }
   }
   // 盯一件心事的局，跳过序章开局的人是「已经办过几件侠义事」的：有的心事要名声够了才肯开口
   // （华山的引荐信，申伯那里侠义到二十五才写；这是有意的代价，不是机器玩家该靠乱走撞出来的）
@@ -430,6 +461,8 @@ function play(r: Run): void {
     // 照 ui/shell.ts 的 render：失约、江湖往前走
     // 导航说真话（engine/daohang.ts）：推进一步的那一刻，见闻簿上这一步写的门槛（时辰除外：路上就到了）都该打勾、也没写着做不成
     const pre = Object.keys(S.quests).map(id => ({ id, n: questNav(id) }));
+    // 守渡口的局：离对面那一夜的结算不到三个钟头了，人到渡口去（玩家会提早到）
+    if (guarding() && S.loc !== 'dukou') { S.loc = 'dukou'; S.sel = null; S.reply = null; cov.room.add('dukou'); try { handle(enter('dukou'), 0); } catch (e) { err(`${where}报错：${(e as Error).message}`); } }
     try { step(seen); checkYue(S); tickShi(); } catch (e) { err(`${where}报错：${(e as Error).message}`); }
     for (const { id, n } of pre) {
       if (!n || (S.quests[id] ?? -1) <= n.stage) continue;
@@ -444,7 +477,13 @@ function play(r: Run): void {
     // 袖手旁观的局，等到它自己走到结局就收场（这条路只有一个结局）
     if (r.shi) {
       const d = shiById(r.shi)!, at = S.shi?.[r.shi]?.at;
-      if (at && isEnding(d, at)) { if (r.watch) break; run([{ type: 'shi', id: r.shi, to: d.first }]); }
+      if (at && isEnding(d, at)) {
+        if (r.watch) break;
+        // 重来一回：上一回做的安排（next.route 读的旗标）和走了的人都清掉，玩家不会在同一件事里把同一个安排做两回
+        for (const st of Object.values(d.steps)) for (const rt of st.next?.route ?? []) for (const f of flagsIn(rt.if)) delete S.flags[f];
+        for (const id of d.subj ?? []) if (npc(id)) run([{ type: 'w', op: 'free', npc: id }]);
+        run([{ type: 'shi', id: r.shi, to: d.first }]);
+      }
     }
     // 过了约期的约不该还挂着（界面上会一直写「今日」）
     if (S.yue.some(y => y.due < dayNo(S))) err('过了约期的约还挂着');
@@ -452,6 +491,48 @@ function play(r: Run): void {
   }
   for (const [k, n] of Object.entries(S.quests)) cov.quest.set(k, Math.max(cov.quest.get(k) ?? -1, n));
   if (VERBOSE) console.log(`第 ${r.seed} 局：${tierNow(S).name}，银两 ${S.silver}，功力 ${S.gongli}，${Object.entries(S.skills).map(([k, v]) => k + (v?.r ?? 0)).join(' ')}，任务 ${JSON.stringify(S.quests)}，旗标 ${Object.keys(S.flags).length} 个${S.flags.boss ? '，打赢了屠千山' : ''}`);
+}
+
+/**
+ * 明确选择拦人、又打不过的一局（#333）：不练六个月，不靠百分之三的不出手策略碰巧抽中。
+ * 只定玩家的选择和应对；在场、动作、战果、输后剧情和世界结果都由真实规则判。
+ */
+function playXunLoss(): void {
+  cur = { start: 'skip', steps: 0, seed: 4000, shi: 'kp_xun' };
+  rng = mulberry32(cur.seed);
+  setState(skipToYangzhou());
+  cov.room.add(S.loc);
+  run([{ type: 'shi', id: 'kp_xun', to: shiById('kp_xun')!.first }]);
+  const path = pathTo(S.loc, 'dukou');
+  expect(path.length, '战败定向局能走到渡口').toBeGreaterThan(0);
+  for (const next of path) travel(next);
+  // 每半个钟头等待一次，等事情走到对面那夜；不到场的动作不伪造。
+  for (let i = 0; i < 14 * 48; i++) {
+    tickShi();
+    const left = shiLeftHours('kp_xun');
+    if (S.shi?.kp_xun.at === 'duimian' && left !== undefined && left > 0 && left < 3 && roomNpcs(S.loc).includes('kp_wei') && verbsOf(npc('kp_wei')!).includes('插手')) break;
+    advanceMin(S, 30);
+    checkYue(S);
+  }
+  expect(S.loc).toBe('dukou');
+  expect(roomNpcs(S.loc), '对面那夜卫衡真的在渡口').toContain('kp_wei');
+  expect(verbsOf(npc('kp_wei')!), '此刻确实可以插手').toContain('插手');
+  cov.branch.add(branchKey('kp_wei', '插手'));
+  const opened = act('kp_wei', '插手').out;
+  expect(opened.story).toBe('xun_dui');
+  const story = storyById(opened.story!)!;
+  const index = story.cards[0].choices.findIndex(c => c.label.includes('拦在褚七') && test(c.if));
+  expect(index, '玩家可以选择拦在褚七前头').toBeGreaterThanOrEqual(0);
+  cov.choice.add(`${story.id}#0#${index}`);
+  const out = run(story.cards[0].choices[index].do);
+  expect(out.fight).toBe('xun_weiheng');
+  expect(fight(out.fight!, 0, IDLE), '用真实不出手策略实际输掉').toBe('lose');
+  // fight 复用现有结算/剧情处理，站起来的选择也从真实输后卡片点；不直接写结局。
+  expect(cov.choice.has('xun_dui_lose#0#0')).toBe(true);
+  expect(S.shi?.kp_xun.at).toBe('hubai');
+  cov.shi.add(`kp_xun.${S.shi!.kp_xun.at}`);
+  check('战败定向局收尾');
+  if (VERBOSE) console.log('定向战败：种子 4000，渡口插手 → 拦在褚七前头 → 真实战败 → 站起来 → kp_xun.hubai');
 }
 
 describe('机器玩家走遍江湖', () => {
@@ -466,6 +547,10 @@ describe('机器玩家走遍江湖', () => {
   // 起头用 run 直接推到头一步，不受 tickShi「没到过这一带就停在起头」的规则管：推动的人当场就听说了，世事照常往下走
   const shiLeft = (id: string): boolean => Object.keys(shiById(id)!.steps).some(k => !cov.shi.has(`${id}.${k}`));
   for (const d of SHI) for (let k = 0; k < 24 && shiLeft(d.id); k++) play({ start: 'skip', steps: 3000, seed: 2000 + k, shi: d.id, watch: k % 2 === 1 });
+  // 卫衡寻褚七里夜里结算、要玩家守在渡口看着的那几步（*_see），和事先做过安排的结局，乱走撞不上：上面的局没走全，再补几局定向的
+  const XUN_PLAN: Partial<Run>[] = [{ guard: true, arrange: 'meet' }, { guard: true, watch: true }, { arrange: 'warned' }];
+  for (let j = 0; j < 12 && shiLeft('kp_xun'); j++) play({ start: 'skip', steps: 3000, seed: 3000 + j, shi: 'kp_xun', ...XUN_PLAN[j % 3] });
+  playXunLoss();
   const ms = Date.now() - t0;
 
   // 覆盖报告

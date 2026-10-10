@@ -100,7 +100,13 @@ const VOICELESS: string[] = NPCS
   .filter(n => !n.life && !n.obj && roomsOf(n.id).some(r => room(r)?.region === 'yz'))
   .slice(0, 3)
   .map(n => n.id);
-const forgetAll = (): void => { for (const id of VOICELESS) delete S.w.ppl[id]?.know; };
+/** 第四个人：「三条换完了」那几条用例要的。一样按 lifeOf 为空现挑，但必须是另外三个之外的，
+ *  否则第四个人就是第三个人，去重那条的结论就不成立。棋痴从 #279 起有了声口，不能再写死他的名字。 */
+const VOICELESS4: string = NPCS
+  .filter(n => !n.life && !n.obj && roomsOf(n.id).some(r => room(r)?.region === 'yz'))
+  .map(n => n.id)
+  .find(id => !VOICELESS.includes(id))!;
+const forgetAll = (): void => { for (const id of [...VOICELESS, VOICELESS4]) delete S.w.ppl[id]?.know; };
 
 describe('同一日同一条老话只给一个人说', () => {
   it('连着问三个没声口的人，三句老话互不相同', () => {
@@ -119,7 +125,7 @@ describe('同一日同一条老话只给一个人说', () => {
     for (const r of said) expect(r.src, `${r.text}`).toBe('old');
     expect(new Set(said.map(r => r.text.replace(/^.*「|」$/g, ''))).size).toBe(3);
     // 扬州只有三条传闻可听，问完第四个人就说没得说了
-    const last = ask('qichi', { force: true });
+    const last = ask(VOICELESS4, { force: true });
     expect(last.src).toBe('none');
     expect(last.text).toContain('这几日太平得很');
   });
@@ -128,10 +134,10 @@ describe('同一日同一条老话只给一个人说', () => {
     fresh([['ss_matou', 'qi'], ['ss_matou', 'duizhi'], ['ss_zei', 'qi']]);
     forgetAll();
     // 打听说过的，记在 S.asked 的「旧话:」前缀键下
-    ask('qichi', { force: true });
+    ask(VOICELESS4, { force: true });
     const saidKeys = Object.keys(S.asked ?? {}).filter(k => k.startsWith('旧话:'));
     expect(saidKeys.length).toBe(1);
-    expect(saidKeys[0]).not.toBe('qichi');
+    expect(saidKeys[0]).not.toBe(VOICELESS4);
     // hearsay 本身不替这一路做主：把见闻清掉，三条老话它照样一条不落地发得出去
     S.heard = [];
     const all = [hearsay(), hearsay(), hearsay()];
@@ -145,20 +151,20 @@ describe('同一日同一条老话只给一个人说', () => {
     (S.asked ??= {})['旧话:隔天的老账'] = 0;
     expect(S.asked!['旧话:隔天的老账']).toBe(0);
     // 不用 force：清理就走玩家平时那条路
-    ask('qichi');
+    ask(VOICELESS4);
     expect(Object.keys(S.asked ?? {})).not.toContain('旧话:隔天的老账');
   });
 
   it('隔天再说，前一天说过的老话又能拿回来', () => {
     fresh([['ss_matou', 'qi'], ['ss_matou', 'duizhi'], ['ss_zei', 'qi']]);
     forgetAll();
-    const a = ask('qichi', { force: true });
+    const a = ask(VOICELESS4, { force: true });
     expect(a.src).toBe('old');
     S.day += 1;
     // 听过就不再说（S.heard 不按日清），这里要验的是「旧话:」那把按日清的键没把老话压住
     S.heard = [];
     forgetAll();
-    const b = ask('qichi', { force: true });
+    const b = ask(VOICELESS4, { force: true });
     expect(b.src).toBe('old');
     expect(b.text.replace(/^.*「|」$/g, '')).toBe(a.text.replace(/^.*「|」$/g, ''));
   });

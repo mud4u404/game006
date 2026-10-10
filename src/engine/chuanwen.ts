@@ -12,14 +12,14 @@
  *
  * 注意：本文件和 engine/shijie.ts、core/state.ts 互相引用，顶层只放字面量常量，别的模块的东西只在函数里用。
  */
-import { S, pushFeed, type GameState } from '../core/state';
+import { S, markSeen, pushFeed, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
 import { NEWS, NPCS, ROOMS, npc, room, shiById } from '../content';
 import type { NpcLife, ShiDef, ShiStep } from '../content/types';
 import { pickBranch, test } from './dsl';
-import { seedOf } from './rng';
+import { mulberry32, seedOf } from './rng';
 import { learnShi } from './shishi';
-import { worldOf, worldPick, worldRng, type Know, type WorldState } from './shijie';
+import { worldOf, worldRng, type Know, type WorldState } from './shijie';
 import { npcName, roomNpcs } from './world';
 
 /** 一条传闻（存档里）：出自哪件事的哪一步、哪日、在哪、多耸动、牵涉谁 */
@@ -224,13 +224,9 @@ const drift = (lv: number, p: number): number => Math.min(2, lv + (worldRng() < 
 
 /* ---------- 生 ---------- */
 
-/** 某个钟点在这处的人（不算物件）：临时把时辰拨过去，看完拨回来 */
+/** 某个钟点在这处的人（不算物件）；不拨动游戏时钟。 */
 function presentAt(place: string, min: number): string[] {
-  const m0 = S.min;
-  try {
-    S.min = min;
-    return roomNpcs(place).filter(id => !npc(id)?.obj);
-  } finally { S.min = m0; }
+  return roomNpcs(place, min).filter(id => !npc(id)?.obj);
 }
 
 /**
@@ -314,7 +310,7 @@ function forget(w: WorldState, day: number): void {
     p.know = p.know.filter(k => { const r = w.rumor[k[0]]; return !!r && day - k[2] < 8 + r.juice * 30; });
     if (p.know.length) { for (const k of p.know) known.add(k[0]); continue; }
     delete p.know;
-    if (!p.st && !p.at) delete w.ppl[id];
+    if (!p.st && !p.at && !p.has) delete w.ppl[id];
   }
   // 传闻池的不清：一条留一个底，免得条件一直成立时反复生
   for (const [id, r] of Object.entries(w.rumor)) if (!isNews(r) && !known.has(id) && day - r.day > RUMOR_KEEP) delete w.rumor[id];
@@ -377,14 +373,10 @@ function network(w: WorldState, day: number): void {
  */
 export function spreadDay(w: WorldState, day: number): void {
   forget(w, day);
-  const slots: { night: boolean; rooms: string[][] }[] = [];
-  const m0 = S.min;
-  try {
-    for (const sl of SLOTS) {
-      S.min = sl.min;
-      slots.push({ night: sl.k === 'night', rooms: lifeRooms().map(r => roomNpcs(r).filter(id => !npc(id)?.obj)) });
-    }
-  } finally { S.min = m0; }
+  const slots = SLOTS.map(sl => ({
+    night: sl.k === 'night',
+    rooms: lifeRooms().map(r => presentAt(r, sl.min))
+  }));
   for (const sl of slots) {
     for (const ids of sl.rooms) {
       if (ids.length < 2) continue;
@@ -410,7 +402,7 @@ function tellYou(r: RumorInst, text: string): void {
     else {
       const rp = stepRank(d, r.ph);
       // 比眼下这一步还靠后的，是上一回的旧事，不拿它改见闻簿
-      if (rp <= stepRank(d, st.at) && (st.seen === undefined || stepRank(d, st.seen) < rp)) st.seen = r.ph;
+      if (rp <= stepRank(d, st.at) && (st.seen === undefined || stepRank(d, st.seen) < rp)) markSeen(st, r.ph);
     }
   }
   // 当事人说的「我」话，记进见闻簿时改回旁人的说法，不然读起来像玩家自己的话
@@ -455,6 +447,15 @@ export interface AskResult {
 }
 
 /**
+ * 开场白的挑法：只由（世界种子、人、日子）算出，不取世界的随机数（worldRng）。
+ * 纯文字的挑选动了世界随机流，世界里别的随机跟着挪位（世事的时点、传闻的走样），同一个种子就不一字不差了；
+ * 给谁补上声口、改了几句开场白，都不该改变江湖的走向
+ */
+function leadPick<T>(arr: readonly T[], npcId: string): T {
+  return arr[Math.floor(mulberry32(seedOf(worldOf().seed, 'lead', npcId, dayNo(S)))() * arr.length)];
+}
+
+/**
  * 打听：问这个人知道什么（engine/world.ts 的「打听」，人人都有）。一个人一天只问一回（force 不管，也不管关系）。
  * 写了声口的人：{名}{开口前的样子}，道：「{说法}」，听来的再接一句（听某某说的）；什么都没有就说他自己的日子。
  * 没写声口的人：先说他自己知道的，再说这一带传开的，都没有说「太平得很」
@@ -469,7 +470,10 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
     asked[npcId] = today;
   }
   const life = lifeOf(npcId);
-  const open = (): string => (life ? `${who}${worldPick(life.voice.lead)}，道：` : `${who}${worldPick(DATING_LEAD[gangOf(npcId)])}：`);
+  // 取法都用 leadPick：只由（世界种子、人、日子）算出，不抽世界随机数（main 的 8180335）。
+  // 分组是 Issue #263 的那层：没写声口的人按身份落进自己那一组，动作不跟市井混在一起。
+  const open = (): string => (life ? `${who}${leadPick(life.voice.lead, npcId)}，道：` : `${who}${leadPick(DATING_LEAD[gangOf(npcId)], npcId)}：`);
+
   const got = pickFor(npcId, !!opt.force);
   if (got) {
     tellYou(got.r, got.text);

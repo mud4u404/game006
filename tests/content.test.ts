@@ -45,6 +45,8 @@ function checkCond(c: Cond | undefined, where: string, errs: string[]): void {
     const d = SHI.find(x => x.id === c.shi!.id);
     if (!d) errs.push(`${where}：条件里的世事「${c.shi.id}」不存在`);
     else for (const k of [...(c.shi.at ?? []), ...(c.shi.not ?? [])]) if (!d.steps[k]) errs.push(`${where}：世事「${d.id}」没有「${k}」这一步`);
+    // left（离下一步还有几个钟头）：只有写了 next 的步才有答案，条件里的 at 都得是这样的步，不然永远不成立
+    else if (c.shi.left) for (const k of c.shi.at ?? []) if (d.steps[k] && !d.steps[k].next) errs.push(`${where}：条件写了 shi.left，可世事「${d.id}」的「${k}」没有下一步，条件永远不成立`);
   }
   // 世界状态（engine/shijie.ts）：地方、势力、人都要存在
   if (c.w) {
@@ -112,6 +114,7 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         if (typeof f === 'string' && !facIds.has(f)) errs.push(`${w}：势力「${f}」不存在`);
         if ('npc' in e && !npcIds.has(e.npc)) errs.push(`${w}：人物「${e.npc}」不存在`);
         if (e.op === 'mark' && !(e.days >= 1 && e.text)) errs.push(`${w}：痕迹要写 text 和一日以上的 days`);
+        if (e.op === 'mark' && e.left && !SHI.some(x => x.id === e.left!.id)) errs.push(`${w}：痕迹绑的世事「${e.left.id}」不存在`);
         break;
       }
       default: break;

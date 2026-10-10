@@ -61,12 +61,26 @@ describe('世事写得对', () => {
         const alt = d.steps[k].next?.alt?.to;
         if (alt) auto.add(alt);
       }
-      const by = pushed.get(d.id) ?? new Set<string>();
+      // 玩家在场亲眼看着（next.here，键是原本要去的）：自己走到的结局换成在场的说法，也是自己走到的
+      for (const k of [...auto]) for (const [from, to] of Object.entries(d.steps[k].next?.here ?? {})) if (auto.has(from)) auto.add(to);
+      // 玩家事先安排的（next.route：写个旗标，到日子改走那一步）：走得到，但不算「没人管时」的结局
+      const routed = new Set<string>();
+      for (const st of Object.values(d.steps)) for (const r of st.next?.route ?? []) {
+        routed.add(r.to);
+        const h = st.next?.here?.[r.to];
+        if (h) routed.add(h);
+      }
+      const by = new Set<string>([...(pushed.get(d.id) ?? []), ...routed]);
       for (const [k, st] of Object.entries(d.steps)) {
         const ws = `${w} 的「${k}」`;
         if (!st.now) errs.push(`${ws}：要写 now（见闻簿上的一句）`);
         if (st.next && !d.steps[st.next.to]) errs.push(`${ws}：next 指向不存在的「${st.next.to}」`);
         if (st.next && !(st.next.days > 0)) errs.push(`${ws}：next.days 要大于零`);
+        // 第五稿的三样：clock 是零到二十三的钟点；route、here 指向的步要有；here 的键是这一步本来会去的
+        if (st.next?.clock !== undefined && !(Number.isInteger(st.next.clock) && st.next.clock >= 0 && st.next.clock < 24)) errs.push(`${ws}：next.clock 要写零到二十三的钟点`);
+        for (const to of [...(st.next?.route ?? []).map(r => r.to), ...Object.values(st.next?.here ?? {})]) if (!d.steps[to]) errs.push(`${ws}：route、here 指向不存在的「${to}」`);
+        const goes = new Set([st.next?.to, st.next?.alt?.to, ...(st.next?.route ?? []).map(r => r.to)]);
+        for (const from of Object.keys(st.next?.here ?? {})) if (!goes.has(from)) errs.push(`${ws}：here 的键「${from}」不是这一步会去的地方`);
         if (st.where) {
           const r = ROOMS.find(x => x.id === st.where);
           if (!r) errs.push(`${ws}：where 指向不存在的地点「${st.where}」`);
@@ -85,7 +99,7 @@ describe('世事写得对', () => {
       const left = endings.filter(k => auto.has(k));
       const mine = endings.filter(k => !auto.has(k));
       // 没人管时的结局：一个（有岔路的，是岔路各通往一个，都算）
-      const forks = Object.values(d.steps).filter(x => x.next?.alt).length;
+      const forks = Object.values(d.steps).reduce((n, x) => n + (x.next?.alt ? 1 : 0) + Object.keys(x.next?.here ?? {}).filter(k => k === x.next?.to || k === x.next?.alt?.to).length, 0);
       if (left.length < 1 || left.length > 1 + forks) errs.push(`${w}：没人管时要有一个结局（现在 ${left.length} 个）`);
       if (mine.length < 2) errs.push(`${w}：插手的结局至少两个（帮这边、帮那边、报官……），现在 ${mine.length} 个`);
       for (const k of endings) if (!read.get(d.id)?.has(k)) errs.push(`${w} 的结局「${k}」：没有任何地方读（地点描写、人物的话、传闻的条件写上 { shi: { id: '${d.id}', at: ['${k}'] } }），玩家看不出世界变了`);

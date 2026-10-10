@@ -2,9 +2,9 @@
  * 内容数据里的条件（Cond）与效果（Effect）在这里统一解释执行。
  * 开打和开剧情这两种需要界面配合的效果不在这里处理，而是记在 Outcome 里交给调用方。
  */
-import { S, fullName, pushFeed } from '../core/state';
+import { S, fullName, pushFeed, type GameState } from '../core/state';
 import { emit } from '../core/bus';
-import { advanceMin, dayNo } from '../core/time';
+import { absMin, advanceMin, dayNo } from '../core/time';
 import { liang } from '../core/util';
 import { itemById, jobById, questById, skillById } from '../content';
 import { REALMS, SECT_RANKS } from '../content/skills';
@@ -15,7 +15,7 @@ import { growAttr } from './gengu';
 import { houtianOf, syncGear } from './ren';
 import { keyOfSlot } from './zhuangbei';
 import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
-import { learnShi, moveShi } from './shishi';
+import { learnShi, moveShi, shiLeftHours } from './shishi';
 import { hearsay, inner } from './chuanwen';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
@@ -24,7 +24,7 @@ import { runWorld, testWorld } from './shijie';
 
 /** 三处伤，最重的先治；一样重时先内息，再手、足（和静修养伤同一个次序，engine/lilian.ts） */
 const ZONES: Zone[] = ['inner', 'hand', 'foot'];
-const isWounded = (): boolean => ZONES.some(z => S.wounds[z] > 0);
+const isWounded = (s: GameState = S): boolean => ZONES.some(z => s.wounds[z] > 0);
 
 /** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；zones 只治这几处。返回每处治好了几级 */
 function cureWounds(levels = Infinity, zones: Zone[] = ZONES): Partial<Record<Zone, number>> {
@@ -40,72 +40,85 @@ function cureWounds(levels = Infinity, zones: Zone[] = ZONES): Partial<Record<Zo
   return got;
 }
 
-export function test(c?: Cond): boolean {
+/** 条件只读传入的状态；指定钟点的作息查询传查询视图，普通动作沿用 S。 */
+export function test(c?: Cond, s: GameState = S): boolean {
   if (!c) return true;
-  if (c.flag && !S.flags[c.flag]) return false;
-  if (c.notFlag && S.flags[c.notFlag]) return false;
+  if (c.flag && !s.flags[c.flag]) return false;
+  if (c.notFlag && s.flags[c.notFlag]) return false;
   if (c.quest) {
-    const v = S.quests[c.quest.id] ?? -1;
+    const v = s.quests[c.quest.id] ?? -1;
     if (c.quest.is !== undefined && v !== c.quest.is) return false;
     if (c.quest.atLeast !== undefined && v < c.quest.atLeast) return false;
     if (c.quest.below !== undefined && v >= c.quest.below) return false;
   }
-  if (c.chapter !== undefined && S.chapter !== c.chapter) return false;
-  if (c.silver !== undefined && S.silver < c.silver) return false;
-  if (c.item && (S.items[c.item.id] || 0) < (c.item.atLeast ?? 1)) return false;
-  if (c.noItem && (S.items[c.noItem] || 0) > 0) return false;
-  if (c.wounded !== undefined && isWounded() !== c.wounded) return false;
-  if (c.tired !== undefined && (S.hp < S.hpMax || S.mp < S.mpMax) !== c.tired) return false;
+  if (c.chapter !== undefined && s.chapter !== c.chapter) return false;
+  if (c.silver !== undefined && s.silver < c.silver) return false;
+  if (c.item && (s.items[c.item.id] || 0) < (c.item.atLeast ?? 1)) return false;
+  if (c.noItem && (s.items[c.noItem] || 0) > 0) return false;
+  if (c.wounded !== undefined && isWounded(s) !== c.wounded) return false;
+  if (c.tired !== undefined && (s.hp < s.hpMax || s.mp < s.mpMax) !== c.tired) return false;
   if (c.rel) {
-    const r = S.rel[c.rel.npc] ?? '素不相识';
+    const r = s.rel[c.rel.npc] ?? '素不相识';
     if (c.rel.is && !c.rel.is.includes(r)) return false;
     if (c.rel.not && c.rel.not.includes(r)) return false;
   }
-  if (c.learned && !S.skills[c.learned]) return false;
-  if (c.notLearned && S.skills[c.notLearned]) return false;
+  if (c.learned && !s.skills[c.learned]) return false;
+  if (c.notLearned && s.skills[c.notLearned]) return false;
   if (c.realm) {
-    const r = S.skills[c.realm.skill]?.r ?? -1;
+    const r = s.skills[c.realm.skill]?.r ?? -1;
     if (c.realm.atLeast !== undefined && r < c.realm.atLeast) return false;
     if (c.realm.below !== undefined && r >= c.realm.below) return false;
   }
   // 根基的条件看后天：武功练深了，眼力、胆气跟着长（engine/ren.ts）
-  if (c.attr && houtianOf(S)[c.attr.key] < c.attr.atLeast) return false;
-  if (c.xia !== undefined && S.xia < c.xia) return false;
-  if (c.eming !== undefined && S.eming < c.eming) return false;
+  if (c.attr && houtianOf(s)[c.attr.key] < c.attr.atLeast) return false;
+  if (c.xia !== undefined && s.xia < c.xia) return false;
+  if (c.eming !== undefined && s.eming < c.eming) return false;
   // 约：今天是约期，约还没了结（engine/shiguang.ts）
-  if (c.yue !== undefined && !S.yue.some(y => y.id === c.yue && y.due === dayNo(S))) return false;
-  if (c.yueAhead !== undefined && !S.yue.some(y => y.id === c.yueAhead && y.due > dayNo(S))) return false;
+  if (c.yue !== undefined && !s.yue.some(y => y.id === c.yue && y.due === dayNo(s))) return false;
+  if (c.yueAhead !== undefined && !s.yue.some(y => y.id === c.yueAhead && y.due > dayNo(s))) return false;
   // 身份与差事（engine/shenfen.ts）
-  if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
-  if (c.job !== undefined && S.job?.id !== c.job) return false;
-  if (c.jobOpen !== undefined && !jobOpen(S, c.jobOpen)) return false;
+  if (c.shenfen !== undefined && !(s.shenfen.id === c.shenfen && s.shenfen.standing >= 1)) return false;
+  if (c.job !== undefined && s.job?.id !== c.job) return false;
+  if (c.jobOpen !== undefined && !jobOpen(s, c.jobOpen)) return false;
   // 一日一回的营生（效果 today）
-  if (c.doneToday !== undefined && S.dayLog?.[c.doneToday] !== dayNo(S)) return false;
-  if (c.notDoneToday !== undefined && S.dayLog?.[c.notDoneToday] === dayNo(S)) return false;
-  if (c.gongxian !== undefined && gongxianOf(S) < c.gongxian) return false;
+  if (c.doneToday !== undefined && s.dayLog?.[c.doneToday] !== dayNo(s)) return false;
+  if (c.notDoneToday !== undefined && s.dayLog?.[c.notDoneToday] === dayNo(s)) return false;
+  if (c.gongxian !== undefined && gongxianOf(s) < c.gongxian) return false;
   // 世事（engine/shishi.ts）：眼下在哪一步；还没起头的，哪一步都不在
   if (c.shi) {
-    const at = S.shi?.[c.shi.id]?.at;
+    const at = s.shi?.[c.shi.id]?.at;
     if (c.shi.at && !(at !== undefined && c.shi.at.includes(at))) return false;
     if (c.shi.not && at !== undefined && c.shi.not.includes(at)) return false;
+    // 走到这一步已经几个钟头
+    if (c.shi.age) {
+      const st = S.shi?.[c.shi.id];
+      if (!st) return false;
+      const h = (absMin(S) - st.since) / 60;
+      if ((c.shi.age.below !== undefined && h >= c.shi.age.below) || (c.shi.age.atLeast !== undefined && h < c.shi.age.atLeast)) return false;
+    }
+    // 离下一步还有几个钟头
+    if (c.shi.left) {
+      const h = shiLeftHours(c.shi.id);
+      if (h === undefined || (c.shi.left.below !== undefined && h >= c.shi.left.below) || (c.shi.left.atLeast !== undefined && h < c.shi.left.atLeast)) return false;
+    }
   }
   // 世界状态（engine/shijie.ts）：码头归谁、治安、物价、势力、人的处境
-  if (c.w && !testWorld(c.w)) return false;
+  if (c.w && !testWorld(c.w, s)) return false;
   if (c.hour) {
-    const h = Math.floor(S.min / 60);
+    const h = Math.floor(s.min / 60);
     const { from, to } = c.hour;
     const inside = from <= to ? h >= from && h < to : h >= from || h < to;
     if (!inside) return false;
   }
   if (c.canLearn) {
     const d = skillById(c.canLearn);
-    if (!d || !canLearn(S, d).ok) return false;
+    if (!d || !canLearn(s, d).ok) return false;
   }
-  if (c.notSect !== undefined && S.sect?.school === c.notSect) return false;
-  if (c.sect && (S.sect?.school !== c.sect.school || (c.sect.rank && SECT_RANKS.indexOf(S.sect.rank) < SECT_RANKS.indexOf(c.sect.rank)))) return false;
-  if (c.noSect && S.sect) return false;
-  if (c.pastSect && !pastSectsOf(S).some(x => x.school === c.pastSect!.school && (!c.pastSect!.how || x.how === c.pastSect!.how))) return false;
-  if (c.any && !c.any.some(x => test(x))) return false;
+  if (c.notSect !== undefined && s.sect?.school === c.notSect) return false;
+  if (c.sect && (s.sect?.school !== c.sect.school || (c.sect.rank && SECT_RANKS.indexOf(s.sect.rank) < SECT_RANKS.indexOf(c.sect.rank)))) return false;
+  if (c.noSect && s.sect) return false;
+  if (c.pastSect && !pastSectsOf(s).some(x => x.school === c.pastSect!.school && (!c.pastSect!.how || x.how === c.pastSect!.how))) return false;
+  if (c.any && !c.any.some(x => test(x, s))) return false;
   return true;
 }
 
@@ -183,7 +196,27 @@ function dismiss(why: string): void {
   S.job = null;
 }
 
+/** 协议结算期间，世事等模块引出的 run 要作为后续链结算，不能绕过深度和条数限制。 */
+export interface RunHooks {
+  chain: (effects: Effect[] | undefined, out: Outcome) => Outcome;
+  learn: (e: Extract<Effect, { type: 'learn' }>, out: Outcome) => void;
+  notify: (text: string) => void;
+}
+let runHooks: RunHooks | undefined;
+export function withRunHooks<T>(hooks: RunHooks, fn: () => T): T {
+  const old = runHooks;
+  runHooks = hooks;
+  try { return fn(); } finally { runHooks = old; }
+}
+const notify = (text: string): void => { if (runHooks) runHooks.notify(text); else emit('toast', text); };
+
+/** 旧规则模块的兼容入口；界面通过行动协议提出请求。 */
 export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()): Outcome {
+  return runHooks ? runHooks.chain(effects, out) : runStep(effects, out);
+}
+
+/** 只供行动结算和旧规则入口内部执行；不作界面接口。 */
+export function runStep(effects: Effect[] | undefined, out: Outcome = newOutcome()): Outcome {
   for (const e of effects || []) {
     switch (e.type) {
       case 'flag': S.flags[e.flag] = e.value ?? true; break;
@@ -200,7 +233,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'shi': if (e.to) moveShi(e.id, e.to); else learnShi(e.id); break;
       case 'feed': pushFeed(e.tag, e.text); break;
       case 'feedReset': S.feed = []; break;
-      case 'toast': emit('toast', e.text); break;
+      case 'toast': notify(e.text); break;
       case 'silver':
         if (!test(e.if)) break;
         S.silver = Math.max(0, S.silver + e.delta);
@@ -228,8 +261,11 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         break;
       }
       case 'prof': out.breaks.push(...gainProf(e.skill, e.amount)); break;
-      case 'lilian': addLilian(S, e.amount); break;
-      case 'learn': out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0, e.lilian)); break;
+      case 'lilian': if (e.amount < 0) S.lilian += e.amount; else addLilian(S, e.amount); break;
+      case 'learn':
+        if (runHooks) runHooks.learn(e, out);
+        else out.breaks.push(...learnSkill(e.skill, e.realm ?? 0, e.prof ?? 0, e.lilian));
+        break;
       // 拜师或升地位，只升不降；身在别派时无效（要先离开）。叛出、被逐出过这一派的，拜不回去（docs/menpai.md 第七节）
       case 'sect': {
         if (S.sect) {
@@ -256,7 +292,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         break;
       case 'attr': growAttr(S, e.key, e.delta, S.chapter === 0 ? '少年往事' : '江湖经历'); break;
       case 'xia': S.xia += e.delta; break;
-      case 'gongxian': if (S.sect) addGongxian(S.sect.school, e.delta); break;
+      case 'gongxian': {
+        // 协议算隐含学艺代价时带上门派，避免先扣后学时扣错派
+        const school = 'school' in e && typeof e.school === 'string' ? e.school : S.sect?.school;
+        if (school) addGongxian(school, e.delta);
+        break;
+      }
       case 'eming': {
         S.eming = Math.max(0, S.eming + e.delta);
         // 软肋：恶名到了这个身份容不下的地步，被辞退（六扇门收回腰牌）
@@ -358,12 +399,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
           const g = jobGongxian(j);
           addGongxian(j.sect, g);
           pushFeed('收获', `交了差：${j.title}，${j.sect}贡献 +${g}。`);
-          emit('toast', `交差 · ${j.sect}贡献 +${g}`);
+          notify(`交差 · ${j.sect}贡献 +${g}`);
         } else {
           const pay = jobPay(j);
           S.silver += pay;
           pushFeed('收获', `交了差：${j.title}，得银 ${pay} 文。`);
-          emit('toast', `交差 · 银两 +${pay} 文`);
+          notify(`交差 · 银两 +${pay} 文`);
         }
         break;
       }
