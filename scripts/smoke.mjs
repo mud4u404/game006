@@ -223,12 +223,17 @@ async function goQuest(dest) {
   for (let k = 0; k < 5; k++) {
     // 上一段路尾巴上弹出的路遇，出在脚本走开的那一刻（时机，不是运气）会盖住横幅：先处理掉；点不动就再处理一遍
     await settle();
-    try { await p.waitForSelector('[data-act="quest"]', { timeout: 8000 }); await p.click('[data-act="quest"]', { timeout: 4000 }); }
-    catch { await settle(); continue; }
+    if (await p.$('[data-act="tab:jianghu"]') && !(await p.$('[data-act="quest"]'))) await p.click('[data-act="tab:jianghu"]').catch(() => {});
+    // 主线打不过时，「眼下要紧」改指「先变强」，主线排到「也可以」（#601）：有写着目的地的那一条就走它
+    const alt = p.locator(`.also .lead:has-text("${dest}")`).first();
+    try {
+      if (await alt.count()) await alt.click({ timeout: 4000 });
+      else { await p.waitForSelector('[data-act="quest"]', { timeout: 8000 }); await p.click('[data-act="quest"]', { timeout: 4000 }); }
+    } catch { await settle(); continue; }
     await settle();
     if ((await p.textContent('#appbar h1')).includes(dest)) return;
   }
-  throw new Error('走不到' + dest);
+  throw new Error('走不到' + dest + '｜界面：' + (await p.textContent('#main').catch(() => '')).replace(/\s+/g, ' ').slice(0, 400));
 }
 
 log('卫家家丁', await fight('04-fight1'));

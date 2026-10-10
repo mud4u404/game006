@@ -43,7 +43,7 @@ jobs:
   smoke:
     if: github.event.deleted != true
     runs-on: ubuntu-latest
-    timeout-minutes: 20   # 兜底：卡在装浏览器、拉代码上时别占满默认的六小时
+    timeout-minutes: 35   # 兜底：卡在装浏览器、拉代码上时别占满默认的六小时
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,6 +78,14 @@ jobs:
         env:
           SMOKE_CHANNEL: chrome
         run: node scripts/luandian.mjs
+      # 点动全查（390 宽）：每个地点 × 每个主界面，每个按钮点得中自己（没被盖住、没挤出屏幕、够大）；
+      # 江湖页和战斗里的真点一遍，点了没反应也算红。快速档，只真点江湖页和打一场架；完整版本机跑 npm run diandong（约十五分钟）
+      - name: 点动全查：各地点各界面的按钮都点得到
+        timeout-minutes: 15
+        env:
+          SMOKE_CHANNEL: chrome
+          DIANDONG_FAST: "1"
+        run: node scripts/diandong.mjs
 
   # 协作者推送任务分支后，自动建 PR（已有就沿用）。维护者的 claude/ 分支不在此列。
   # 判断顺序：分支名里有 Issue 编号 → 已有 PR 就摘掉「要改」并结束 →
