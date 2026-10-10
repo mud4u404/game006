@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<title>江湖夜雨 开发看板</title>
+<style>
+:root{
+  --bg:#f4f1ea; --card:#ffffff; --ink:#1f2328; --sub:#667085; --line:#e4dfd3;
+  --ok:#1a7f37; --okbg:#dcf3e1; --warn:#9a6700; --warnbg:#fff1c2; --bad:#c62828; --badbg:#fde0dd;
+  --run:#0b5fc5; --runbg:#dbeafe; --gray:#8a8f98; --graybg:#ececec; --acc:#8c3b2a;
+  --bar-done:#2e9e55; --bar-doing:#e0a526; --bar-todo:#cfcabd;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161a; --card:#1e2127; --ink:#e8e8ea; --sub:#9aa1ad; --line:#2f333b;
+    --ok:#5fd486; --okbg:#173823; --warn:#f0c040; --warnbg:#3b3012; --bad:#ff8a80; --badbg:#401c19;
+    --run:#7db3ff; --runbg:#16304f; --gray:#9aa1ad; --graybg:#2a2d33; --acc:#e8a08c;
+    --bar-done:#3fb86b; --bar-doing:#d8a21f; --bar-todo:#3b3f47;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161a; --card:#1e2127; --ink:#e8e8ea; --sub:#9aa1ad; --line:#2f333b;
+  --ok:#5fd486; --okbg:#173823; --warn:#f0c040; --warnbg:#3b3012; --bad:#ff8a80; --badbg:#401c19;
+  --run:#7db3ff; --runbg:#16304f; --gray:#9aa1ad; --graybg:#2a2d33; --acc:#e8a08c;
+  --bar-done:#3fb86b; --bar-doing:#d8a21f; --bar-todo:#3b3f47;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;overflow-x:hidden}
+main{max-width:760px;margin:0 auto;padding:12px 16px 48px}
+a{color:inherit}
+.meta{color:var(--sub);font-size:12px;overflow-wrap:anywhere}
+button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px;min-height:44px;min-width:44px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}
+.banner{margin:6px 0;padding:10px 12px;border-radius:10px;font-size:13px;background:var(--warnbg);color:var(--warn)}
+.banner.bad{background:var(--badbg);color:var(--bad)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 10px;min-width:0}
+.ms{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ms b{font-size:16px;min-width:0;overflow-wrap:anywhere}
+.ms span{color:var(--acc);font-weight:600;white-space:nowrap}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--bar-todo);margin:8px 0 6px}
+.bar i{display:block;height:100%;background:var(--bar-done)}
+.sub{color:var(--sub);font-size:12px}
+.chip{display:inline-block;font-size:12px;line-height:1.4;padding:1px 8px;border-radius:999px;background:var(--graybg);color:var(--sub);margin:2px 4px 2px 0;max-width:100%;overflow-wrap:anywhere}
+.chip.ok{background:var(--okbg);color:var(--ok)}
+.chip.warn{background:var(--warnbg);color:var(--warn)}
+.chip.bad{background:var(--badbg);color:var(--bad)}
+.chip.run{background:var(--runbg);color:var(--run)}
+.chip.acc{background:transparent;border:1px solid var(--acc);color:var(--acc)}
+.ais{padding:0 14px}
+.ai{border-top:1px solid var(--line)}
+.ai:first-child{border-top:0}
+.ai>summary{display:grid;grid-template-columns:84px 10px minmax(0,1fr) 60px;align-items:center;gap:6px;min-height:44px;cursor:pointer;list-style:none;font-size:14px}
+.ai>summary::-webkit-details-marker{display:none}
+.ai .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lamp{width:10px;height:10px;border-radius:50%;background:var(--gray)}
+.lamp.g{background:var(--bar-done)}
+.lamp.y{background:var(--bar-doing)}
+.lamp.r{background:var(--bad)}
+.ai .tk{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ai .tk.none{color:var(--sub)}
+.ai .tm{font-size:12px;color:var(--sub);text-align:right;white-space:nowrap}
+.ai .tm.late{color:var(--bad);font-weight:600}
+.detail{padding:0 0 8px 0}
+.detail h4{margin:6px 0 0;font-size:12px;font-weight:400;color:var(--sub)}
+.row{display:block;text-decoration:none;padding:8px 0;border-top:1px solid var(--line);min-width:0;min-height:44px}
+.row:first-of-type{border-top:0}
+.row .t{display:block;overflow-wrap:anywhere}
+.row .s{display:block;font-size:12px;color:var(--sub);overflow-wrap:anywhere}
+.n{color:var(--acc);font-weight:600;margin-right:6px}
+.fold{padding:0 14px}
+.fold>summary,.sfold>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;list-style:none}
+.fold>summary::-webkit-details-marker,.sfold>summary::-webkit-details-marker,.ai>summary::-webkit-details-marker{display:none}
+.fold>summary::after,.sfold>summary::after{content:"＋";color:var(--sub)}
+.fold[open]>summary::after,.sfold[open]>summary::after{content:"－"}
+.fold>summary small,.sfold>summary small{color:var(--sub);font-size:12px;margin-left:auto;margin-right:6px}
+.fold>.body{padding-bottom:8px}
+.sfold{border-top:1px solid var(--line)}
+.sfold>summary{font-size:13px}
+.jd{font-size:13px;padding:6px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.jd:first-of-type{border-top:0}
+.jd .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--bar-todo)}
+.jd.done .dot{background:var(--bar-done)}
+.jd.doing .dot{background:var(--bar-doing)}
+.empty{color:var(--sub);font-size:13px;padding:4px 0}
+.err{color:var(--bad);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="meta" id="meta">加载中……</div>
+    <button id="refresh" type="button">刷新</button>
+  </div>
+  <div id="banners"></div>
+  <div id="root"><div class="card empty">正在向 GitHub 取数据……</div></div>
+</main>
+<script>
+(function(){
+'use strict';
+var REPO='mud4u404/game006';
+var API='https://api.github.com/repos/'+REPO;
+var TTL=5*60*1000;          // 数据缓存五分钟
+var CKEY='kanban-cache-v1', KKEY='kanban-checks-v1';
+var AIS=[
+ {k:'codex',n:'Codex'},{k:'codebuddy',n:'CodeBuddy'},{k:'qoder',n:'Qoder'},{k:'minimax',n:'MiniMax'},
+ {k:'zcode',n:'zcode',tag:'整改观察'},{k:'trae',n:'Trae'},{k:'autoclaw',n:'autoclaw'},{k:'step5',n:'step5'},
+ {k:'claude',n:'维护者（Claude）',boss:true}
+];
+var HOUR=3600*1000;
+
+/* ---------- 小工具 ---------- */
+function lsGet(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function el(tag,attrs,kids){
+  var e=document.createElement(tag);
+  if(attrs){for(var a in attrs){
+    if(a==='class')e.className=attrs[a];
+    else if(a==='text')e.textContent=attrs[a];
+    else e.setAttribute(a,attrs[a]);
+  }}
+  (kids||[]).forEach(function(c){ if(c==null)return; e.appendChild(typeof c==='string'?document.createTextNode(c):c); });
+  return e;
+}
+function chip(text,cls){return el('span',{class:'chip'+(cls?' '+cls:''),text:text})}
+function ago(t){
+  if(!t)return '未知';
+  var s=Math.max(0,(Date.now()-t)/1000);
+  if(s<90)return '刚刚';
+  if(s<3600)return Math.round(s/60)+' 分钟前';
+  if(s<86400)return (s/3600).toFixed(s<36000?1:0).replace(/\.0$/,'')+' 小时前';
+  return Math.round(s/86400)+' 天前';
+}
+function prefixOf(ref){var i=(ref||'').indexOf('/');return i>0?ref.slice(0,i):''}
+function aiOf(ref){var p=prefixOf(ref);for(var i=0;i<AIS.length;i++)if(AIS[i].k===p)return AIS[i];return null}
+function nameOfRef(ref){var a=aiOf(ref);return a?a.n:(prefixOf(ref)||'其他')}
+function has(labels,x){return labels.indexOf(x)>=0}
+function giveOf(labels){
+  for(var i=0;i<labels.length;i++){var m=/^给[:：](.+)$/.exec(labels[i]);if(m)return m[1].trim().toLowerCase()}
+  return '';
+}
+
+/* ---------- 取数 ---------- */
+var rl={remaining:null,reset:null};   // 限流信息，来自响应头
+function gh(path){
+  return fetch(API+path,{headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
+    var rem=r.headers.get('x-ratelimit-remaining'),rs=r.headers.get('x-ratelimit-reset');
+    if(rem!=null){rl.remaining=+rem;rl.reset=rs?+rs*1000:null}
+    if(r.status===403||r.status===429){
+      var e=new Error('limit');e.limit=true;
+      var ra=r.headers.get('retry-after');
+      if(ra&&!rl.reset)rl.reset=Date.now()+(+ra)*1000;
+      throw e;
+    }
+    if(!r.ok){var e2=new Error('HTTP '+r.status);throw e2}
+    return r.json();
+  });
+}
+function fetchJindu(){
+  return fetch('jindu.json?t='+Math.floor(Date.now()/60000)).then(function(r){
+    if(!r.ok)throw new Error('jindu '+r.status);return r.json();
+  });
+}
+function slimIssue(x){
+  var labels=(x.labels||[]).map(function(l){return l.name});
+  var dep='';
+  var m=/依赖[：:]\s*([^\n\r]*)/.exec(x.body||'');
+  if(m)dep=(m[1].match(/#\d+/g)||[]).join(' ');
+  return {n:x.number,title:x.title,labels:labels,created:Date.parse(x.created_at),dep:dep};
+}
+function slimPull(x){
+  return {n:x.number,title:x.title,ref:x.head&&x.head.ref,sha:x.head&&x.head.sha,
+    labels:(x.labels||[]).map(function(l){return l.name}),updated:Date.parse(x.updated_at),draft:!!x.draft};
+}
+function loadAll(){
+  // 五个接口：开着的 Issue（含 PR，要剔掉）、开着的 PR、已关的 PR、仓库事件两页（推送时间）
+  return Promise.all([
+    gh('/issues?state=open&per_page=100'),
+    gh('/pulls?state=open&per_page=50'),
+    gh('/pulls?state=closed&sort=updated&direction=desc&per_page=100'),
+    gh('/events?per_page=100'),
+    gh('/events?per_page=100&page=2')
+  ]).then(function(r){
+    var ev=r[3].concat(r[4]);
+    var data={t:Date.now()};
+    data.issues=r[0].filter(function(x){return !x.pull_request}).map(slimIssue);
+    data.pulls=r[1].map(slimPull);
+    data.closedFull=r[2].length>=100;
+    data.closedOldest=r[2].length?Date.parse(r[2][r[2].length-1].updated_at):0;
+    data.merged=r[2].filter(function(x){return x.merged_at}).map(function(x){
+      return {n:x.number,title:x.title,ref:x.head&&x.head.ref,at:Date.parse(x.merged_at)};
+    }).sort(function(a,b){return b.at-a.at});
+    data.pushes=ev.filter(function(e){return e.type==='PushEvent'&&e.payload&&e.payload.ref})
+      .map(function(e){return {ref:e.payload.ref.replace('refs/heads/',''),t:Date.parse(e.created_at)}});
+    data.evOldest=ev.length?Date.parse(ev[ev.length-1].created_at):Date.now();
+    data.evFull=ev.length>=100;
+    return data;
+  });
+}
+/* 检查结果：只对开着的 PR 的最新提交查，结果按提交缓存（跑完的永久有效，没跑完的五分钟） */
+function sumRuns(runs){
+  var out={};
+  ['check','smoke'].forEach(function(nm){
+    var best=null;
+    runs.forEach(function(r){ if(r.name===nm&&(!best||r.id>best.id))best=r; });
+    if(!best){out[nm]='none';return}
+    if(best.status!=='completed'){out[nm]='run';return}
+    out[nm]=(best.conclusion==='success'||best.conclusion==='neutral'||best.conclusion==='skipped')?'ok':'fail';
+  });
+  return out;
+}
+function loadChecks(pulls){
+  var cache=lsGet(KKEY)||{};
+  var now=Date.now(),todo=[];
+  pulls.forEach(function(p){
+    var c=cache[p.sha];
+    var fresh=c&&(c.done||now-c.t<TTL);
+    if(!fresh)todo.push(p);
+  });
+  // 限流紧的时候少查：剩余不足 12 次就不查检查结果
+  if(rl.remaining!=null&&rl.remaining<12)todo=[];
+  todo=todo.sort(function(a,b){return b.updated-a.updated}).slice(0,10);
+  return Promise.all(todo.map(function(p){
+    return gh('/commits/'+p.sha+'/check-runs?per_page=30').then(function(j){
+      var res=sumRuns(j.check_runs||[]);
+      var done=res.check!=='run'&&res.smoke!=='run'&&res.check!=='none'&&res.smoke!=='none';
+      cache[p.sha]={t:Date.now(),done:done,res:res};
+    }).catch(function(e){ if(e&&e.limit)throw e; });
+  })).catch(function(e){/* 限流：用已有的 */ }).then(function(){
+    // 只保留还在用的提交，免得缓存越积越大
+    var keep={};pulls.forEach(function(p){if(cache[p.sha])keep[p.sha]=cache[p.sha]});
+    lsSet(KKEY,keep);
+    return keep;
+  });
+}
+
+/* ---------- 渲染 ---------- */
+var state={data:null,jindu:null,checks:{},err:null,limitMsg:'',fromCache:false};
+
+function prState(res){
+  if(!res)return {cls:'',txt:'未查'};
+  var v=[res.check,res.smoke];
+  if(v.indexOf('fail')>=0)return {cls:'bad',txt:'红'};
+  if(v.indexOf('run')>=0)return {cls:'run',txt:'在跑'};
+  if(v[0]==='ok'&&v[1]==='ok')return {cls:'ok',txt:'绿'};
+  if(v.indexOf('none')>=0&&v.indexOf('ok')>=0)return {cls:'run',txt:'未跑全'};
+  return {cls:'',txt:'无结果'};
+}
+function prChips(res){
+  var box=[];
+  var names={ok:'✓',fail:'✗',run:'…',none:'–'};
+  var cls={ok:'ok',fail:'bad',run:'run',none:''};
+  if(!res){box.push(chip('检查未查'));return box}
+  ['check','smoke'].forEach(function(nm){box.push(chip(nm+' '+names[res[nm]],cls[res[nm]]))});
+  return box;
+}
+
+/* 折叠块：开合状态在重新渲染后保留 */
+var openKeys={};
+function fold(key,cls,title,count,kids){
+  var sm=el('summary',{},[title,count==null?null:el('small',{text:String(count)})]);
+  var d=el('details',{class:cls},[sm,el('div',{class:'body'},kids)]);
+  if(openKeys[key])d.open=true;
+  d.addEventListener('toggle',function(){openKeys[key]=d.open});
+  return d;
+}
+/* 短标题：去掉 [#N] 前缀，取第一个冒号/逗号前的一段，最多 12 字 */
+function shortTitle(t){
+  t=(t||'').replace(/^\s*\[#?\d+\]\s*/,'');
+  var m=/^(.{2,}?)[：:，,（(]/.exec(t);
+  if(m)t=m[1];
+  var a=Array.from(t);
+  return a.length>12?a.slice(0,12).join('')+'…':t;
+}
+function taskNo(p){var m=/\[#(\d+)/.exec(p.title||'');return m?m[1]:String(p.n)}
+var SEV={r:3,y:2,g:1};
+function prLamp(p){
+  var st=prState(state.checks[p.sha]&&state.checks[p.sha].res);
+  if(st.cls==='bad')return 'r';
+  if(has(p.labels,'要改'))return 'y';
+  return 'g';
+}
+
+function render(){
+  var root=document.getElementById('root');
+  root.textContent='';
+  var d=state.data;
+  if(!d){
+    root.appendChild(el('div',{class:'card err',text:state.limitMsg||state.err||'没有数据'}));
+    return;
+  }
+  var now=Date.now();
+  var pulls=d.pulls,issues=d.issues;
+  var prNums={};   // 已经有 PR 在做的 Issue 编号
+  pulls.forEach(function(p){var m=/\[#(\d+)/.exec(p.title);if(m)prNums[m[1]]=p.n});
+  var isTask=function(i){return has(i.labels,'内容')||has(i.labels,'功能')};
+
+  /* —— 第一屏之一：里程碑 + 进度条 —— */
+  var J=state.jindu;
+  var m24=d.merged.filter(function(m){return now-m.at<24*HOUR}).length;
+  // 接口一次最多给 100 件已关的 PR；若最老的一件还在窗口里，说明窗口没取全，数字只是下限
+  var sat24=d.closedFull&&now-d.closedOldest<24*HOUR;
+  var mtxt='近 24 小时合了 '+(sat24?'至少 ':'')+m24+' 件';
+  var ms=el('div',{class:'card'});
+  if(J&&J.items&&J.milestone){
+    var done=J.items.filter(function(i){return i.status==='done'}).length,tot=J.items.length||1;
+    var rem=(J.milestone.remaining||[]).length;
+    ms.appendChild(el('div',{class:'ms'},[
+      el('b',{text:String(J.milestone.name||'').replace(/（[^）]*）\s*$/,'')}),
+      el('span',{text:rem?'还差 '+rem+' 件':'已做完'})
+    ]));
+    var bar=el('div',{class:'bar'});var bi=el('i');bi.style.width=(done/tot*100)+'%';bar.appendChild(bi);
+    ms.appendChild(bar);
+    ms.appendChild(el('div',{class:'sub',text:'做完 '+done+'/'+tot+' · '+mtxt}));
+  }else{
+    ms.appendChild(el('div',{class:'err',text:'读不到 jindu.json'}));
+    ms.appendChild(el('div',{class:'sub',text:mtxt}));
+  }
+  root.appendChild(ms);
+
+  /* —— 第一屏之二：九家 AI，每家一行 —— */
+  var mergedRef={};d.merged.forEach(function(m){if(m.ref)mergedRef[m.ref]=1});
+  var issueByN={};issues.forEach(function(i){issueByN[i.n]=i});
+  var list=el('div',{class:'card ais'});
+  AIS.forEach(function(ai){
+    var myIssues=ai.boss?[]:issues.filter(function(i){return giveOf(i.labels)===ai.k&&isTask(i)&&!has(i.labels,'暂缓')});
+    var waiting=myIssues.filter(function(i){return !prNums[i.n]});
+    var myPulls=pulls.filter(function(p){return prefixOf(p.ref)===ai.k});
+    var recent=d.pushes.filter(function(p){return prefixOf(p.ref)===ai.k});
+    var lastPush=recent.reduce(function(a,p){return Math.max(a,p.t)},0);
+    var last=Math.max(lastPush,myPulls.reduce(function(a,p){return Math.max(a,p.updated)},0));
+    // 已领的任务分支：24 小时内有推送、还没有 PR、也没合并的分支
+    var openRef={};myPulls.forEach(function(p){openRef[p.ref]=1});
+    var claimed=[];
+    recent.forEach(function(p){
+      if(now-p.t<24*HOUR&&!openRef[p.ref]&&!mergedRef[p.ref]&&claimed.indexOf(p.ref)<0)claimed.push(p.ref);
+    });
+
+    var lamp='',txt='',none=false;
+    if(myPulls.length){
+      var ranked=myPulls.slice().sort(function(a,b){return SEV[prLamp(b)]-SEV[prLamp(a)]||b.updated-a.updated});
+      lamp=prLamp(ranked[0]);
+      txt='#'+taskNo(ranked[0])+' '+shortTitle(ranked[0].title);
+    }else if(claimed.length){
+      lamp='g';
+      var tail=claimed[0].slice(claimed[0].indexOf('/')+1),mm=/^(\d+)/.exec(tail);
+      var is=mm&&issueByN[mm[1]];
+      txt=mm?('#'+mm[1]+' '+(is?shortTitle(is.title):tail.replace(/^\d+-/,''))):tail;
+    }else{
+      if(waiting.length){var w0=waiting.slice().sort(function(a,b){return a.n-b.n})[0];txt='#'+w0.n+' '+shortTitle(w0.title)+' · 没开工';}else{txt='没活';none=true;}
+    }
+    var late=last&&now-last>6*HOUR;
+    var tm=last?ago(last):(d.evFull?'>'+Math.round((now-d.evOldest)/HOUR)+' 小时':'—');
+    if(!last&&d.evFull&&now-d.evOldest>6*HOUR)late=true;
+
+    var sum=el('summary',{},[
+      el('span',{class:'nm',text:ai.boss?'维护者':ai.n}),
+      el('span',{class:'lamp'+(lamp?' '+lamp:'')}),
+      el('span',{class:'tk'+(none?' none':''),text:txt}),
+      el('span',{class:'tm'+(late?' late':''),text:tm})
+    ]);
+
+    /* 展开后的细节：PR 带检查结果、排着的 Issue */
+    var body=el('div',{class:'detail'});
+    if(ai.tag)body.appendChild(el('div',{},[chip(ai.tag,'acc')]));
+    if(claimed.length)body.appendChild(el('div',{class:'sub',text:'已领分支：'+claimed.map(function(b){return b.slice(b.indexOf('/')+1)}).join('、')}));
+    body.appendChild(el('h4',{text:'开着的 PR（'+myPulls.length+'）'}));
+    myPulls.slice().sort(function(a,b){return b.updated-a.updated}).forEach(function(p){
+      var kids=prChips(state.checks[p.sha]&&state.checks[p.sha].res);
+      if(has(p.labels,'要改'))kids.push(chip('要改','bad'));
+      if(p.draft)kids.push(chip('草稿'));
+      kids.push(el('span',{class:'s',text:' '+ago(p.updated)+'更新'}));
+      body.appendChild(el('a',{class:'row',href:'https://github.com/'+REPO+'/pull/'+p.n,target:'_blank',rel:'noopener'},[
+        el('span',{class:'t'},[el('span',{class:'n',text:'#'+p.n}),p.title]),
+        el('span',{class:'s'},kids)
+      ]));
+    });
+    if(!myPulls.length)body.appendChild(el('div',{class:'empty',text:'没有'}));
+    if(!ai.boss){
+      body.appendChild(el('h4',{text:'排着的 Issue（'+waiting.length+'）'}));
+      waiting.forEach(function(i){
+        body.appendChild(el('a',{class:'row',href:'https://github.com/'+REPO+'/issues/'+i.n,target:'_blank',rel:'noopener'},[
+          el('span',{class:'t'},[el('span',{class:'n',text:'#'+i.n}),i.title]),
+          el('span',{class:'s',text:(i.dep?'依赖 '+i.dep+' · ':'')+ago(i.created)+'开'})
+        ]));
+      });
+      if(!waiting.length)body.appendChild(el('div',{class:'empty',text:'没有'}));
+    }
+    var merged48=d.merged.filter(function(m){return prefixOf(m.ref)===ai.k&&now-m.at<48*HOUR}).length;
+    body.appendChild(el('div',{class:'sub',text:'48 小时合了 '+merged48+' 件'}));
+
+    var det=el('details',{class:'ai'},[sum,body]);
+    if(openKeys['ai-'+ai.k])det.open=true;
+    det.addEventListener('toggle',function(){openKeys['ai-'+ai.k]=det.open});
+    list.appendChild(det);
+  });
+  root.appendChild(list);
+
+  /* —— 折叠区：开着的 PR、待领任务池、最近合并、一百任务明细 —— */
+  var link=function(kind,n,title,sub){
+    return el('a',{class:'row',href:'https://github.com/'+REPO+'/'+kind+'/'+n,target:'_blank',rel:'noopener'},[
+      el('span',{class:'t'},[el('span',{class:'n',text:'#'+n}),title]),
+      el('span',{class:'s'},typeof sub==='string'?[sub]:sub)
+    ]);
+  };
+  // 开着的 PR
+  var pk=[];
+  pulls.slice().sort(function(a,b){return b.updated-a.updated}).forEach(function(p){
+    var kids=prChips(state.checks[p.sha]&&state.checks[p.sha].res);
+    if(has(p.labels,'要改'))kids.push(chip('要改','bad'));
+    if(p.draft)kids.push(chip('草稿'));
+    kids.push(el('span',{class:'s',text:' '+(p.ref||'')+' · '+ago(p.updated)+'更新'}));
+    pk.push(link('pull',p.n,p.title,kids));
+  });
+  if(!pk.length)pk.push(el('div',{class:'empty',text:'没有开着的 PR'}));
+  root.appendChild(fold('f-pr','card fold','开着的 PR',pulls.length,pk));
+
+  // 待领任务池
+  var groups=[['可领',[]],['暂缓',[]],['其他',[]]];
+  issues.slice().sort(function(a,b){return b.created-a.created}).forEach(function(i){
+    if(isTask(i)&&has(i.labels,'暂缓'))groups[1][1].push(i);
+    else if(isTask(i))groups[0][1].push(i);
+    else groups[2][1].push(i);
+  });
+  var gk=groups.map(function(g,gi){
+    var box=g[1].map(function(i){
+      var who=giveOf(i.labels),meta=[who?('给：'+who):'没指定给谁'];
+      if(i.dep)meta.push('依赖 '+i.dep);
+      if(prNums[i.n])meta.push('已有 PR #'+prNums[i.n]);
+      meta.push(ago(i.created)+'开');
+      return link('issues',i.n,i.title,meta.join(' · '));
+    });
+    if(!box.length)box.push(el('div',{class:'empty',text:'没有'}));
+    return fold('g-'+gi,'sfold',g[0],g[1].length,box);
+  });
+  root.appendChild(fold('f-pool','card fold','待领任务池',issues.length,gk));
+
+  // 最近合并
+  var mk=d.merged.slice(0,20).map(function(m){return link('pull',m.n,m.title,nameOfRef(m.ref)+' · '+ago(m.at))});
+  if(!mk.length)mk.push(el('div',{class:'empty',text:'没有数据'}));
+  root.appendChild(fold('f-merged','card fold','最近合并',Math.min(20,d.merged.length),mk));
+
+  // 一百任务明细（按批次）
+  if(J&&J.items){
+    var batches=[],bmap={};
+    J.items.forEach(function(i){
+      if(!bmap[i.batch]){bmap[i.batch]={name:i.batch,list:[]};batches.push(bmap[i.batch])}
+      bmap[i.batch].list.push(i);
+    });
+    var bk=batches.map(function(b,bi){
+      var nd=b.list.filter(function(i){return i.status==='done'}).length;
+      var rows=b.list.map(function(i){
+        var r=el('div',{class:'jd '+i.status},[el('span',{class:'dot'}),el('span',{class:'n',text:String(i.id).padStart(3,'0')}),i.title]);
+        if(i.note)r.appendChild(el('div',{class:'sub',text:i.note}));
+        return r;
+      });
+      return fold('b-'+bi,'sfold',b.name,nd+'/'+b.list.length,rows);
+    });
+    root.appendChild(fold('f-100','card fold','一百任务明细',J.items.length,bk));
+  }
+}
+
+function renderMeta(){
+  var parts=[];
+  if(state.data)parts.push('取自 '+ago(state.data.t)+(state.fromCache?'（缓存）':''));
+  if(rl.remaining!=null)parts.push('额度 '+rl.remaining+'/60');
+  document.getElementById('meta').textContent=parts.join(' · ')||'加载中……';
+  var b=document.getElementById('banners');b.textContent='';
+  if(state.limitMsg)b.appendChild(el('div',{class:'banner bad',text:state.limitMsg}));
+  else if(state.err)b.appendChild(el('div',{class:'banner',text:state.err}));
+}
+
+var busy=false;
+function load(force){
+  if(busy)return;
+  var cached=lsGet(CKEY);
+  var fresh=cached&&cached.data&&Date.now()-cached.data.t<(force?60*1000:TTL);
+  state.limitMsg='';state.err=null;
+  var jp=fetchJindu().then(function(j){state.jindu=j},function(){state.jindu=null});
+  if(fresh){
+    state.data=cached.data;state.checks=lsGet(KKEY)||{};state.fromCache=true;
+    return jp.then(function(){render();renderMeta()});
+  }
+  busy=true;
+  var btn=document.getElementById('refresh');btn.disabled=true;btn.textContent='刷新中';
+  if(cached&&cached.data){state.data=cached.data;state.checks=lsGet(KKEY)||{};state.fromCache=true;render();renderMeta()}
+  return loadAll().then(function(data){
+    state.data=data;state.fromCache=false;
+    lsSet(CKEY,{data:data});
+    return loadChecks(data.pulls).then(function(chk){state.checks=chk});
+  }).catch(function(e){
+    if(e&&e.limit){
+      var mins=rl.reset?Math.max(1,Math.ceil((rl.reset-Date.now())/60000)):null;
+      state.limitMsg='GitHub 限流，'+(mins?mins+' 分钟后':'稍后')+'再刷新'+(state.data?'；下面是上次缓存的数据':'');
+    }else{
+      state.err='读 GitHub 失败（'+(e&&e.message||'网络')+'）'+(state.data?'；下面是上次缓存的数据':'');
+    }
+    if(!state.data&&cached&&cached.data){state.data=cached.data;state.fromCache=true}
+  }).then(function(){return jp}).then(function(){
+    busy=false;btn.disabled=false;btn.textContent='刷新';
+    render();renderMeta();
+  });
+}
+document.getElementById('refresh').addEventListener('click',function(){load(true)});
+// 页面开着时每五分钟自动看一次（缓存没过期就不会真的调接口）；切走时不刷
+setInterval(function(){if(!document.hidden)load(false)},TTL+5000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)load(false)});
+load(false);
+})();
+</script>
+</body>
+</html>

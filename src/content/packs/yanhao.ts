@@ -170,7 +170,8 @@ const NPCS: NpcDef[] = [
   {
     id: 'yh_qixia', name: '契匣', obj: true, icon: 'door', brief: '黄铜锁',
     look: '柜上一口黑漆契匣，黄铜锁擦得锃亮。听说汪家卖出去的身契，都锁在这匣子里。',
-    verbs: ['观察', '细看', '撬锁'],
+    // 撬锁要先有这回事：云娘被带走了、身契还没取出来；之前、之后摆着按钮，点了只得一句闲话，是死按钮
+    verbs: ['观察', '细看', { verb: '撬锁', if: { flag: 'huafang_taken', notFlag: 'yh_freed' } }],
     actions: {
       细看: [
         { if: { flag: 'huafang_taken', notFlag: 'yh_freed' },

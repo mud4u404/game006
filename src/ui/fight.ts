@@ -16,7 +16,7 @@ import { respSkill } from '../engine/wuxue';
 import { DUAN_CLS, lvPool, respPool } from '../engine/cengji';
 import { npcName } from '../engine/world';
 import { SHENFEN, jobGongxian, jobPay } from '../engine/shenfen';
-import { brace, fateOpts, settle, takeWounds } from '../engine/jiesuan';
+import { brace, fateOpts, loseFacts, loseNote, settle, takeWounds } from '../engine/jiesuan';
 import { checkYue } from '../engine/shiguang';
 import { foeRepeats } from '../engine/lilian';
 import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, kanren, weaponWord, type FightKit } from '../engine/zhaoshi';
@@ -98,7 +98,7 @@ export function startFight(fid: string, lead?: string): void {
   const prep = activePrep(f);
   const kit = fightKit(S);
   // 开打前掂一掂斤两：打赢了比你弱的人，不该落一身伤（负责人 10-09）
-  const odds = f.spar || f.script ? undefined : kanren(S, f, 24).p;
+  const odds = f.spar || f.script ? undefined : kanren(S, f, 24, true).p;
   brace(f);
   const d = new Duel(heroSpec(S, kit, f), foeSpec(f, prep), { rng: Math.random, allies: alliesOf(prep) });
   C = {
@@ -950,7 +950,7 @@ function showResult(): void {
   if (!c || !c.res) return;
   // 结算：历练、结算效果、备战的后果、胜负以后那条路的后果（engine/jiesuan.ts）
   const pk = c.pick;
-  const { r, ll, out, effects } = settle(c.f, c.res, c.prep, pk);
+  const { r, ll, effects } = settle(c.f, c.res, c.prep, pk);
   if (!r) { closeFight(); return; }
   if (r.silent) {
     closeFight();
@@ -966,11 +966,14 @@ function showResult(): void {
   const hurt = Object.entries(c.hurt ?? {}) as [keyof Wounds, number][];
   const WHAT: Record<keyof Wounds, string> = { hand: '拆招、抢攻差一截，出手轻一成', foot: '闪避差一截', inner: '硬接差一截，内力回得慢' };
   const hurtLine = hurt.length ? `<div class="r-sub">落下的伤</div><div class="news">${hurt.map(([z]) => `<div><span class="tag ${S.wounds[z] >= 2 ? 'danger' : 'warn'}">${ZONE_NAME[z]}伤 ${liang(S.wounds[z])}级</span><span>${WHAT[z]}。${woundNote(S.wounds[z])}。</span></div>`).join('')}</div>` : '';
-  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])], c.d.hp).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
+  // 输了：写明败在哪里、下回怎么补（engine/jiesuan.ts 的 loseNote）。剧本战是被人救下的，不写
+  const note = c.res === 'lose' && !c.f.script ? loseNote(loseFacts(c.d, c.f, c.prep)) : null;
+  const loseLine = note ? `<div class="r-sub">败在哪里</div><div class="news"><div><span class="tag warn">缘故</span><span>${note.why}</span></div><div><span class="tag">下回</span><span>${note.mend}</span></div></div>` : '';
+  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])], c.d.hp);
   c.then = r.then;
   save();
   openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${pk?.title ?? (r.title || '')}</h2></div>
-    ${r.story === '@compose' && !pk?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${alliesHTML(c)}${hurtLine}${statline}
+    ${r.story === '@compose' && !pk?.story ? '<div class="r-sub">战后说书</div>' : ''}<p class="story">${story}</p>${fateLine}${alliesHTML(c)}${hurtLine}${loseLine}${statline}
     ${chips.length ? `<div class="rewards">${chips.join('')}</div>` : ''}${r.growth ? growthHTML() : ''}
     <button class="btn" data-act="fResult">${pk && r.button === '定他的下场' ? '了结此事' : r.button || '继续'}</button>`);
   swapped();

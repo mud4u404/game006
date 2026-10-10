@@ -337,10 +337,19 @@ FOES.push({
 });
 
 const JOBS: JobDef[] = [
-  { id: 'bj_gz', shenfen: 'biaoshi', tier: 1, title: '护一车药材去瓜洲镇回春堂', npc: 'bj_cai_gz', at: 'gz_town', days: 2 },
-  { id: 'bj_zj', shenfen: 'biaoshi', tier: 2, title: '押一箱银子过江，交到镇江大市口', npc: 'bj_cai_zj', at: 'zj_shi', days: 3, again: 5 },
+  { id: 'bj_gz', shenfen: 'biaoshi', tier: 1, title: '护一车药材去瓜洲镇回春堂', npc: 'bj_cai_gz', at: 'gz_town', days: 2,
+    xian: [
+      { npc: 'bj_cai_gz', at: 'gz_town', if: { job: 'bj_gz' }, text: '老蔡押着镖车走官道，在瓜洲镇回春堂门口等着会齐。' }
+    ] },
+  { id: 'bj_zj', shenfen: 'biaoshi', tier: 2, title: '押一箱银子过江，交到镇江大市口', npc: 'bj_cai_zj', at: 'zj_shi', days: 3, again: 5,
+    xian: [
+      { npc: 'bj_cai_zj', at: 'zj_shi', if: { job: 'bj_zj' }, text: '老蔡跟着镖车过江，银子要当面交到镇江大市口。' }
+    ] },
   // 榜上揭的：在照壁下的书办那里揭、那里交差（负责人 10-09：书办是唯一的登记人）；周捕头不管这张榜
-  { id: 'xs_hezei', shenfen: 'youxia', tier: 1, title: '拿运河渡口的河贼，押回府衙领赏', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, bang: true }
+  { id: 'xs_hezei', shenfen: 'youxia', tier: 1, title: '拿运河渡口的河贼，押回府衙领赏', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, bang: true,
+    xian: [
+      { npc: 'xs_hezei', at: 'dukou', if: { job: 'xs_hezei', notFlag: 'xs_hezei_caught' }, text: '那贼入夜才上岸，在运河渡口的盐包后头出没。' }
+    ] }
 ];
 
 const NEWS: NewsDef[] = [
