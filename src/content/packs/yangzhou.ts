@@ -167,7 +167,7 @@ const NPCS: NpcDef[] = [
     look: '须眉皆白，扫地时步子不疾不徐，落叶却都自己往簸箕里飘。',
     gift: '了尘大师合十一笑：「阿弥陀佛，拈花一笑，施主有心了。」',
     likes: ['flower'],
-    verbs: ['交谈', '观察', '打听', '请教', '赠礼'],
+    verbs: ['交谈', '观察', '打听', '请教', '赠礼', { verb: '抄经', if: { eming: 1 } }],
     actions: {
       打听: [
         { if: { shi: { id: 'kp_xun', at: ['fang', 'feng'] } },
@@ -221,6 +221,31 @@ const NPCS: NpcDef[] = [
           do: [{ type: 'flag', flag: 'lc_tiaoxi' }, { type: 'prof', skill: 'xinfa', amount: 120 }, { type: 'time', add: 60 },
             { type: 'rel', npc: 'liaochen', value: '相谈甚欢', from: ['点头之交'] }, { type: 'toast', text: '寒江心法熟练 +120' }] },
         { text: '「对敌之时，莫问他用的是什么招，要问自己练成了什么。轻功好，便避其锋芒；内力足，便硬碰硬；剑法精，便以巧破拙。修为到了，自然看得出哪一条路最稳。」' }
+      ],
+      抄经: [
+        { if: { doneToday: 'lc_chaoying' },
+          text: '了尘大师把灯往你这边推了推，看了一眼你抄了大半的纸：「一日一卷，字里没有心，抄多少也是纸。明日再来罢。」' },
+        { if: { silver: 10, any: [{ flag: 'huafang_guard_dead' }, { flag: 'jy_sun_sha' }, { flag: 'cw_sha' }] },
+          text: '了尘大师铺好纸，研了墨，把灯挑亮，看着你一笔一笔抄。灯花落了一朵，他才开口：「施主这笔债，经能抄平心，抄不回人命。老衲只当陪你坐一坐。」一卷抄完，他添了一回灯油。（银两 −10 文，耗两个时辰，恶名 −2）',
+          do: [
+            { type: 'today', id: 'lc_chaoying' },
+            { type: 'silver', delta: -10 },
+            { type: 'time', add: 240 },
+            { type: 'eming', delta: -2 },
+            { type: 'feed', tag: '江湖', text: '你在大明寺抄了一卷经。了尘大师说，经能抄平心，抄不回人命。' },
+            { type: 'toast', text: '恶名 −2' }
+          ] },
+        { if: { silver: 10 },
+          text: '了尘大师铺好纸，研了墨，把灯挑亮，看着你一笔一笔抄。一卷抄完，他起身添了一回灯油，才道：「字倒是稳了些。」（银两 −10 文，耗两个时辰，恶名 −2）',
+          do: [
+            { type: 'today', id: 'lc_chaoying' },
+            { type: 'silver', delta: -10 },
+            { type: 'time', add: 240 },
+            { type: 'eming', delta: -2 },
+            { type: 'feed', tag: '江湖', text: '你在大明寺抄了一卷经，心静了几分。' },
+            { type: 'toast', text: '恶名 −2' }
+          ] },
+        { text: '你摸了摸钱袋，凑不出十文纸墨钱。了尘大师把笔收回袖里，合十道：「纸墨是寺里的，不能白费。施主去挣了再来，老衲给你留着灯。」' }
       ]
     } },
   { id: 'zhike', name: '知客僧', ini: '僧', tone: 'gray', brief: '双手合十',
