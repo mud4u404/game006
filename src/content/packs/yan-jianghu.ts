@@ -15,11 +15,11 @@ const TAKEN: Cond = { flag: 'huafang_taken' };
 const EYES: EyeDef[] = [
   /* ---------- 瘦西湖 · 画舫 ---------- */
   { npc: 'yunnian', attr: '体魄', atLeast: 25,
-    text: '她左手中指裹着一圈蓝布，布底下是按弦按出来的厚茧；虎口和腕子上另有一层硬茧——唱曲的手，在冷水里泡过，也在硬东西上磨过。' },
+    text: '她左手中指裹着一圈蓝布，布底下是按弦按出来的厚茧；虎口和腕子上另有一层硬茧，唱曲的手，在冷水里泡过，也在硬东西上磨过。' },
   { npc: 'yunnian', attr: '悟性', atLeast: 33,
     text: '她跟你说身世的时候，眼睛总往船头瞟；护院换班的脚步声一响，她就收了声，脸上换成笑。' },
   { npc: 'wangshao', attr: '根骨', atLeast: 25,
-    text: '他折扇转得花哨，腕子却是软的——站着的时候重心吊在胯上，没站一会儿就要换腿。' },
+    text: '他折扇转得花哨，腕子却是软的；站着的时候重心吊在胯上，没站一会儿就要换腿。' },
   { npc: 'wangshao', attr: '胆魄', atLeast: 29,
     text: '他话说得横，折扇磕得一声比一声响；你往前走一步，他的眼睛就躲开你腰间的兵刃。' },
   { room: 'huafang', attr: '身法', atLeast: 25,
@@ -33,7 +33,7 @@ const EYES: EyeDef[] = [
   { npc: 'cangjing_mingxin', attr: '胆魄', atLeast: 29,
     text: '你盯着他的时候他不敢抬头，手里的扫帚却一下也没停。' },
   { npc: 'cangjing_fakong', attr: '体魄', atLeast: 25,
-    text: '他那右手抖起来，先从肘上发紧，跟老人手抖两样——袖口那点新鲜泥还是潮的。',
+    text: '他那右手抖起来，先从肘上发紧，跟老人手抖两样。袖口那点新鲜泥还是潮的。',
     do: [{ type: 'flag', flag: 'yjh_fakong_bi' }] },
   { npc: 'cangjing_fakong', attr: '根骨', atLeast: 29,
     text: '他在柜旁立了半晌，六十多岁的人，呼吸细得听不见，胸口几乎不起伏。' },
@@ -51,7 +51,7 @@ const EYES: EyeDef[] = [
     text: '他手腕上的勒痕旧得发白，肩头压出两道深沟，右边那道比左边深。',
     do: [{ type: 'flag', flag: 'yjh_mo_liu_ya' }] },
   { room: 'yz_chuanwu', attr: '身法', atLeast: 25,
-    text: '船坞深处的破桅杆斜在水面上，桅杆和桥墩之间搭着几块朽板——板面泡得发虚。' },
+    text: '船坞深处的破桅杆斜在水面上，桅杆和桥墩之间搭着几块朽板，板面泡得发虚。' },
   { room: 'yz_chuanwu', attr: '悟性', atLeast: 33,
     text: '桥底第三根桩子的水线上头，青苔磨出一圈白茬，桩身上另有几道抓痕。' },
 
@@ -91,7 +91,7 @@ const EYES: EyeDef[] = [
 
   /* ---------- 汪家盐号（示范写过毕掌柜，这里补其余的人） ---------- */
   { npc: 'yh_wanglaoye', attr: '胆魄', atLeast: 25,
-    text: '他笑的时候看着你的眼睛，手里的佛珠却捻得飞快——珠子一颗碰着一颗。',
+    text: '他笑的时候看着你的眼睛，手里的佛珠却捻得飞快，珠子一颗碰着一颗。',
     do: [{ type: 'flag', flag: 'yjh_wang_zhu' }] },
   { npc: 'yh_wanglaoye', attr: '体魄', atLeast: 29,
     text: '他起身送客起得太急，手在柜台沿上按了一下才站稳，跟着又喘了两口气。' },
@@ -110,7 +110,7 @@ const EYES: EyeDef[] = [
   { npc: 'zj_shuli', attr: '悟性', atLeast: 29,
     text: '他嘴上说着规矩，眼睛早把你的兵刃、衣裳、靴底各扫了一遍。' },
   { npc: 'zj_bing', attr: '根骨', atLeast: 25,
-    text: '腰刀是真家伙，按刀的手位却不对——五指摊着，虎口朝前，是挑担背刀的手势。' },
+    text: '腰刀是真家伙，按刀的手位却不对，五指摊着，虎口朝前，是挑担背刀的手势。' },
   { npc: 'zj_bing', attr: '胆魄', atLeast: 25,
     text: '他白拿摊上的东西，专挑不敢吱声的那几家。方才有个挑夫多看了他两眼，他的手就先按上了刀柄。' },
   { npc: 'zj_you', attr: '体魄', atLeast: 25,
@@ -118,13 +118,13 @@ const EYES: EyeDef[] = [
   { npc: 'zj_you', attr: '胆魄', atLeast: 29,
     text: '他守着坛口的那双手满是醋渍咬出来的裂口，人却站得笔直。' },
   { npc: 'zj_shushu', attr: '身法', atLeast: 25,
-    text: '醒木一拍，满座都静了；那一拍用的是巧劲——腕子一抖，声音又脆又传得远。' },
+    text: '醒木一拍，满座都静了；那一拍用的是巧劲，腕子一抖，声音又脆又传得远。' },
   { npc: 'zj_shushu', attr: '悟性', atLeast: 29,
     text: '说到「江心荒洲」，他把扇子收了，话头一转，说起旁的事来。' },
 
   /* ---------- 瓜洲 ---------- */
   { npc: 'shaogong', attr: '身法', atLeast: 25,
-    text: '他蹲在船头补网，船身随浪一起一伏——人蹲在上头，晃也不晃。' },
+    text: '他蹲在船头补网，船身随浪一起一伏，人蹲在上头，晃也不晃。' },
   { npc: 'shaogong', attr: '根骨', atLeast: 29,
     text: '他蹲了大半晌，起身时活动两下就利索，腿不麻，腰不酸。' },
   { npc: 'shengchuan', attr: '体魄', atLeast: 25,
@@ -145,20 +145,20 @@ const EYES: EyeDef[] = [
 
   /* ---------- 扬州城 · 打得着的对手 ---------- */
   { npc: 'jy_sunbiao', attr: '体魄', atLeast: 25,
-    text: '他右肩比左肩沉，抬臂的时候先耸一下；肩头一道掀开的旧疤，收口潦草——天一冷就发亮。你往他右边一抢，他抬臂就慢半分。',
+    text: '他右肩比左肩沉，抬臂的时候先耸一下；肩头一道掀开的旧疤，收口潦草，天一冷就发亮。你往他右边一抢，他抬臂就慢半分。',
     do: [{ type: 'flag', flag: 'yjh_sun_jian' }] },
   { npc: 'jy_sunbiao', attr: '根骨', atLeast: 29,
     text: '拳上的老茧一层压着一层，虎口那道白疤却结得潦草，疤口还泛着红。' },
   { npc: 'jy_sunbiao', attr: '胆魄', atLeast: 25,
     text: '他收份子钱，先在自己腿上拍两下，才伸手去拍人家的柜台，拍得不重。' },
   { npc: 'jy_limazi', attr: '体魄', atLeast: 25,
-    text: '他把大刀往背上一拍，腰眼先缩了一下——背上垫的那层「肉」底下，压着旧伤。' },
+    text: '他把大刀往背上一拍，腰眼先缩了一下，背上垫的那层「肉」底下，压着旧伤。' },
   { npc: 'jy_limazi', attr: '悟性', atLeast: 29,
     text: '「南七北六十三省」，这句开场白他在哪个码头都说，一个字不差，连停顿的地方都一样。' },
   { npc: 'jy_limazi', attr: '胆魄', atLeast: 25,
     text: '铜锣是他的胆；锣声一停，他的眼神就散一下，人也跟着顿一顿。' },
   { room: 'cheng', attr: '体魄', atLeast: 25,
-    text: '东关街扛包的伙计，肩上压出两道深沟，走起路来倒轻快——脚步的劲全在腰腿上。' },
+    text: '东关街扛包的伙计，肩上压出两道深沟，走起路来倒轻快，脚步的劲全在腰腿上。' },
   { room: 'cheng', attr: '身法', atLeast: 29,
     text: '东关街窄，人流都从街心过；盐号门前有几级台阶，高出平地一脚，站在上头，两头的来路都看得见。' }
 ];
