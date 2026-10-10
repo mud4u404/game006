@@ -2,8 +2,8 @@
  * 对战模拟用的搭配：给一个门派、一个时期，按师承规则配出这一期能拿出来的最好搭配，复用试算台和实战的搭配输入。
  * 「同等投入」：同一时期，所有门派的境界、先天根基、功力和品级额度相同（气血由实战人物模型计算），能用的武功由传授方式（teach）决定。
  */
-import { SKILLS } from '../src/content';
-import { FIST, JIANGHU_RULE, OUTER, SCHOOL_STYLE, WEAPON } from '../src/content/skills';
+import { ITEMS, SKILLS } from '../src/content';
+import { CAT_WEAPON, FIST, JIANGHU_RULE, OUTER, SCHOOL_STYLE, WEAPON } from '../src/content/skills';
 import type { FoeDef, SkillDef, SkillGrade, SkillTeach } from '../src/content/types';
 import { rootsOn } from '../src/engine/shicheng';
 import { passiveCost, performBudget, skillPower, ultBudget } from '../src/engine/wuxue';
@@ -32,6 +32,8 @@ const RANK: SkillGrade[] = ['凡品', '良品', '上品', '绝品', '神品', '�
 /** 还没写 teach 的武功（待改造的门派），按品级推定 */
 const GRADE_TEACH: Record<SkillGrade, SkillTeach> = { 凡品: '入门', 良品: '入门', 上品: '外门', 绝品: '内门', 神品: '真传', 禁品: '奇遇' };
 const teachOf = (k: SkillDef): SkillTeach => k.teach ?? GRADE_TEACH[k.grade];
+/** 试算台必须有真实兵器才能激发兵刃武功；没有鞭子的搭配不算已上阵。 */
+const usableOuter = (k: SkillDef): boolean => FIST.includes(k.category) || ITEMS.some(i => i.equip?.weapon === CAT_WEAPON[k.category]);
 
 /** 这一期、这个门派能用的武功（本门加江湖散学） */
 export function available(school: string, st: Stage): SkillDef[] {
@@ -82,7 +84,7 @@ export function bestBuild(school: string, st: Stage): Build {
   const top = (xs: SkillDef[], score: (k: SkillDef) => number, n: number): (SkillDef | undefined)[] => [undefined, ...[...xs].sort((a, b) => score(b) - score(a)).slice(0, n)];
   const ngs = top(pool.filter(k => k.category === '内功'), k => skillPower(k, st.realm) + passiveCost(k.passive) * 2, 4);
   const qgs = top(pool.filter(k => k.category === '轻功'), k => skillPower(k, st.realm) + passiveCost(k.passive) * 2, 3);
-  const outers = pool.filter(k => OUTER.includes(k.category));
+  const outers = pool.filter(k => OUTER.includes(k.category) && usableOuter(k));
   const ults = top(pool.filter(k => k.category === '绝技' && k.ult), k => ultBudget(k.ult!), 3);
   let best: Build = { school, stage: st }, bestV = -1;
   for (const neigong of ngs) for (const qinggong of qgs) for (const ult of ults) {
@@ -108,7 +110,7 @@ export function mixedBuilds(root: string, st: Stage): Build[] {
   const pos = SCHOOL_STYLE[root];
   const qiyuOk = (k: SkillDef): boolean => teachOf(k) === '奇遇' && RANK.indexOf(k.grade) <= RANK.indexOf(st.qiyu);
   const foreign = SKILLS.filter(k => {
-    if (!OUTER.includes(k.category) || k.school === root) return false;
+    if (!OUTER.includes(k.category) || !usableOuter(k) || k.school === root) return false;
     if (k.school === JIANGHU_RULE.school) return true;
     if (pos?.discipline === '严' || !qiyuOk(k)) return false;
     const style = SCHOOL_STYLE[k.school]?.main;
@@ -163,7 +165,7 @@ export interface Matrix { names: string[]; rate: number[][]; overall: number[]; 
 export function matrix(kits: Kit[], n: number, salt = ''): Matrix {
   const k = kits.length;
   const rate = Array.from({ length: k }, () => Array<number>(k).fill(0.5));
-  const heroRate = Array.from({ length: k }, () => Array<number>(k).fill(NaN));
+  const heroRate = Array.from({ length: k }, (_, i) => Array.from({ length: k }, (_, j) => i === j ? match(kits[i], kits[i], n, salt).aHero : NaN));
   for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++) {
     const r = match(kits[i], kits[j], n, salt);
     rate[i][j] = r.score; rate[j][i] = 1 - r.score;
@@ -174,9 +176,10 @@ export function matrix(kits: Kit[], n: number, salt = ''): Matrix {
 }
 export function formatMatrix(m: Matrix): string {
   const pct = (x: number): string => String(Math.round(x * 100)).padStart(4);
-  const head = '          ' + m.names.map(n => n.slice(0, 2).padStart(3)).join('') + '   总胜率';
+  const columns = '          ' + m.names.map(n => n.slice(0, 2).padStart(3)).join('');
+  const head = columns + '   总胜率';
   const rows = m.names.map((n, i) => n.padEnd(5, '　').slice(0, 5) + ' ' + m.rate[i].map((x, j) => i === j ? '   —' : pct(x)).join('') + '   ' + pct(m.overall[i]) + '%');
-  const raw = m.names.map((n, i) => n.padEnd(5, '　').slice(0, 5) + ' ' + m.heroRate[i].map((x, j) => i === j ? '   —' : pct(x)).join(''));
+  const raw = m.names.map((n, i) => n.padEnd(5, '　').slice(0, 5) + ' ' + m.heroRate[i].map(pct).join(''));
   return ['双方轮换玩家/对手角色后的得分率：', head, ...rows,
-    '各行作为玩家、各列作为原生对手的胜率（对手不使用玩家绝招和被动）：', head, ...raw].join('\n');
+    '各行作为玩家、各列作为原生对手的胜率（对角线是真实镜像；对手不使用玩家绝招和被动）：', columns, ...raw].join('\n');
 }

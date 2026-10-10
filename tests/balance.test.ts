@@ -1,6 +1,6 @@
 /**
  * 对战模拟：门派之间谁也不能独大。标准见 docs/menpai.md 第六节。
- * - 模拟本身公平（镜像对局），现在就硬性检查；
+ * - 实际激发的外功、中期总得分率及原始镜像偏差，现在就硬性检查；
  * - 门派胜率、相克、分期、混搭：改造完的门派不少于六个、覆盖四种主打法以后，才硬性检查；在那之前只出报告。
  * 看完整的胜率矩阵：npm run balance
  */
@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { fightKit } from '../src/engine/zhaoshi';
 import { SKILLS } from '../src/content';
 import { SCHOOL_STYLE, STYLE_PENDING, styleBeats } from '../src/content/skills';
-import { STAGES, bestBuild, kitOf, mixedBuilds, duel, formatMatrix, matrix, type Kit, type Matrix } from './balance-kit';
+import { STAGES, bestBuild, kitOf, mixedBuilds, outerOf, duel, formatMatrix, matrix, type Kit, type Matrix } from './balance-kit';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const MID = STAGES[1];
@@ -36,13 +36,31 @@ export function balanceProblems(m: Matrix): string[] {
 }
 
 describe('对战模拟', () => {
-  it('模拟本身公平：同一套搭配左右互打，胜率在 50% ± 5% 以内', () => {
+  it('选出的外功在实战中真正激发，不把没有兵器的搭配当作已上阵', () => {
+    for (const st of STAGES) for (const s of withSkills) {
+      const k = kitOf(bestBuild(s, st));
+      expect(fightKit(k.state).outer?.id, `${s} ${st.name}`).toBe(outerOf(k.build)?.id);
+      for (const b of mixedBuilds(s, st)) expect(fightKit(kitOf(b).state).outer?.id, `${s} ${st.name} 混搭`).toBe(outerOf(b)?.id);
+    }
+  });
+  it('角色轮换镜像：同一套搭配左右互打，得分率在 50% ± 5% 以内', () => {
     for (const s of ['寒江', '武当', '丐帮'].filter(x => withSkills.includes(x))) {
       const k = kitOf(bestBuild(s, MID));
       const r = duel(k, { ...k, name: k.name + '（镜像）' }, 1000, 'mirror');
       expect(Math.abs(r - 0.5), `${s} 镜像 ${r}`).toBeLessThanOrEqual(0.05);
     }
   });
+
+  it('已改造门派的中期总胜率在 40%～60%，原始镜像不让一侧压倒性占优', () => {
+    const m = matrix(kits(done), 1000, 'full');
+    m.names.forEach((s, i) => {
+      expect(m.overall[i], `${s} 总胜率\n${formatMatrix(m)}`).toBeGreaterThanOrEqual(0.4);
+      expect(m.overall[i], `${s} 总胜率\n${formatMatrix(m)}`).toBeLessThanOrEqual(0.6);
+      // 原生对手与玩家流程不同，不假称是对称 PvP；原始率能揭露角色轮换隐藏的偏差。
+      expect(m.heroRate[i][i], `${s} 原始镜像胜率`).toBeGreaterThanOrEqual(0.25);
+      expect(m.heroRate[i][i], `${s} 原始镜像胜率`).toBeLessThanOrEqual(0.75);
+    });
+  }, 60000);
 
   it('门派对打：不能独大、相克成立、没有废门派（改造完的门派）', () => {
     if (!ACTIVE) { console.log(`对战模拟：改造完的门派只有 ${done.length} 个（${done.join('、') || '无'}），凑满六个、覆盖四种主打法后硬性检查。npm run balance 看当前矩阵。`); return; }
