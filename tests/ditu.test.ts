@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { REGIONS, ROOMS } from '../src/content';
-import { HUB_MIN, MAP_H_MAX, hubsOf, layoutRegion, overlaps } from '../src/ui/maplayout';
+import { HUB_MIN, MAP_H_MAX, PAD, ROW_H, hubsOf, layoutRegion, overlaps } from '../src/ui/maplayout';
 
 const WIDTHS = [288, 358, 408];
 const regions = Object.keys(REGIONS).filter(r => ROOMS.some(x => x.region === r));
@@ -49,5 +49,20 @@ describe('地图不乱', () => {
   it('摆法是确定的：同样的内容、同样的宽，摆出来一样', () => {
     const yz = ROOMS.filter(x => x.region === 'yz');
     expect(JSON.stringify(layoutRegion(yz, 358))).toBe(JSON.stringify(layoutRegion(yz, 358)));
+  });
+
+  it('对齐排布（#600）：地点都落在整齐的格子里，一格一处，行距一致', () => {
+    for (const r of regions) for (const w of WIDTHS) {
+      const lay = layoutRegion(ROOMS.filter(x => x.region === r), w);
+      const cells = new Set<string>();
+      for (const n of lay.nodes) {
+        const row = (n.y - PAD) / ROW_H - 0.5;
+        expect(Number.isInteger(row), `${r} ${n.name} 行`).toBe(true);
+        const key = `${row}|${Math.round(n.x)}`;
+        expect(cells.has(key), `${r} ${n.name} 格子被占`).toBe(false);
+        cells.add(key);
+      }
+      expect(new Set(lay.nodes.map(n => Math.round(n.x))).size).toBeLessThanOrEqual(3);
+    }
   });
 });
