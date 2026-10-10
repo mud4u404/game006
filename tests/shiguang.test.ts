@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { S, setState, skipToYangzhou } from '../src/core/state';
 import { advanceDays, dayNo, fullDate, setNowMs } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
-import { SHIGUANG, allowance, checkYue, jingxiu, restDays, settleAway } from '../src/engine/shiguang';
+import { SHIGUANG, allowance, checkYue, jingxiu, nianNi, restDays, settleAway, waitUntil, xiejiaoBao } from '../src/engine/shiguang';
+import { NPCS } from '../src/content';
+import { tickShi } from '../src/engine/shishi';
 
 const H = 3.6e6;
 let now = 1_000_000_000_000;
@@ -125,5 +127,43 @@ describe('约', () => {
     const sour = jingxiu(S, 7, () => 0.99).gongli;
     expect(sour / clean).toBeLessThan(0.9);
     expect(S.xinmo.n).toBeLessThan(1);
+  });
+});
+
+describe('歇脚醒来也有邸报（10-10 试玩第三条）', () => {
+  it('歇过一夜、跨了江湖日：复用出关邸报的取法，写这一带的世事', () => {
+    S.loc = 'cheng';
+    tickShi();
+    S.shi!.ss_zei.seen = 'qi';
+    S.min = 20 * 60;
+    const day0 = dayNo(S);
+    // 世事「闹贼」从起头走到贴告示要隔几日：先让几日过去，再歇这一夜（醒来时一并听到）
+    advanceDays(S, 6);
+    waitUntil(S, 7);
+    expect(dayNo(S)).toBeGreaterThan(day0);
+    const b = xiejiaoBao(S, day0);
+    expect(S.shi?.ss_zei?.at).toBe('bang');
+    expect(b.news.some(n => n.includes('告示'))).toBe(true);
+    expect(b.news.length).toBeLessThanOrEqual(3);
+  });
+
+  it('同一天里歇脚（没跨日）不出邸报', () => {
+    S.min = 7 * 60;
+    const day0 = dayNo(S);
+    waitUntil(S, 12);
+    expect(xiejiaoBao(S, day0)).toEqual({ news: [] });
+  });
+
+  it('某人惦记着你：热络的熟人眼下有心事，才有这一条；点头之交没有', () => {
+    const n = NPCS.find(x => !x.obj && x.life?.want?.length)!;
+    S.rel[n.id] = '点头之交';
+    expect(nianNi(S)).toBeUndefined();
+    S.rel[n.id] = '知交';
+    const t = nianNi(S);
+    expect(t).toContain('惦记着你');
+    S.min = 20 * 60;
+    const day0 = dayNo(S);
+    waitUntil(S, 7);
+    expect(xiejiaoBao(S, day0).nian).toBe(t);
   });
 });

@@ -326,6 +326,11 @@ export interface NpcDef {
   life?: NpcLife;
   /** 迎面（engine/yingmian.ts）：玩家走进来或在场景里过了时辰，满足条件的人可能先开口。别的内容包里的人，用 ContentPack.npcGreet 补 */
   greet?: GreetDef[];
+  /**
+   * 看完这个（物件、人）以后下一步找谁：看过它的话，下面出一个按钮「text」，点了选中那个人、高亮他的动作。
+   * 例：府衙照壁的榜只看不揭，看过悬赏栏，按钮写「去书办那里揭」，一步到书办的「揭」。verb 是要高亮的动作的字头（如「揭」）
+   */
+  next?: { npc: string; text: string; verb?: string };
 }
 
 /**
