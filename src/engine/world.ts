@@ -126,11 +126,15 @@ export function pathMin(from: string, to: string): number {
 /**
  * 这趟路要多久、花多少钱（地图点地名前先给玩家看，负责人 10-09：「成本和时间消耗」要看得见）：
  * 总分钟、经过几处、沿途要付的船钱和过路钱（每上一处有船钱的地方付一回，同 payFare）。去不了返回 null
+ * 耗时按段累加 travelMin(hopMin)，和 travelTo 的实走同款（#285）：总程乘身法系数后只取整一次，
+ * 多段路会比实走少一两分钟
  */
 export function tripCost(to: string): { min: number; hops: number; fee: number } | null {
   const path = pathTo(S.loc, to);
   if (!path.length) return null;
-  return { min: travelMin(pathMin(S.loc, to)), hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
+  let cur = S.loc, min = 0;
+  for (const id of path) { min += travelMin(hopMin(cur, id)); cur = id; }
+  return { min, hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
 }
 
 /** 一步心事此刻的标题和盘算：写了 alt 的，第一条成立的生效（新旧两稿），没写的字段沿用 */
