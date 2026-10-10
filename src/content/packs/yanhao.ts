@@ -7,7 +7,7 @@ import type { ContentPack, NpcDef, QuestDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_yanhao', name: '汪家盐号', area: '扬州城 · 东关', region: 'yz', t: 10, map: [80, 66], nightQuiet: true,
+    id: 'yz_yanhao', name: '汪家盐号', area: '扬州 · 东关街', region: 'yz', t: 10, map: [80, 66], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } }, text: '盐号上了门板，泥金大字隐在黑里。门缝里透出一线灯光，后院偶尔传来几声狗叫，舂盐的声音停了。' },
       { text: '东关街东头最大的铺面，三开间门脸，匾上「汪家盐号」四个泥金大字。柜上算盘声不断，伙计扛着盐包进进出出，后院隐约有舂捣之声。' }

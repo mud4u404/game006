@@ -62,7 +62,7 @@ const SHI_DEF: ShiDef[] = [
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smqz_guan', name: '栖真观', area: '镇江 · 城北郊', region: 'zj', t: 15, map: [82, 30],
+    id: 'smqz_guan', name: '栖真观', area: '镇江 · 栖真观', region: 'zj', t: 15, map: [82, 30],
     desc: [
       { if: { shi: { id: SHI, at: ['qi'] } },
         text: '城北郊一座青瓦道观，观门虚掩。殿前一颗星图碑，观主夜夜一个人在碑前踏步，踏到露水打湿鞋面。知客的下山化缘，五日没回来了。' },

@@ -2,6 +2,11 @@ import { S } from '../../core/state';
 import { REGIONS, ROOMS, room } from '../../content';
 import { SCHOOL_STYLE } from '../../content/skills';
 import { questNav, sectHome } from '../../engine/daohang';
+import { busyRooms, roomBrief, wentSet } from '../../engine/jiemian';
+import { tripCost } from '../../engine/world';
+import { FAR_MIN, chufaLine } from '../../engine/chufa';
+import { minLabel } from '../../core/time';
+import { cn } from '../../core/util';
 import { layoutRegion } from '../maplayout';
 
 /** 正在看的地区；不设时看所在的地区。走到别的地区时自动回到所在地区 */
@@ -47,19 +52,26 @@ export function viewDitu(): string {
       if (a === b || seen.has(key)) continue;
       seen.add(key);
       const [x1, y1] = pct(pos.get(a)!), [x2, y2] = pct(pos.get(b)!);
-      lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`);
+      // 水路：两头有一头是要付船钱的船、渡（RoomDef.fare）；其余是陆路
+      const wet = room(r.id).fare !== undefined || room(to).fare !== undefined;
+      lines.push(`<line${wet ? ' class="wet"' : ''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`);
     }
   }
+  // 标记：当前所在（高亮圈）、主线目标、有事、去过（engine/jiemian.ts）；没到过的画成空心点
+  const busy = busyRooms(), went = wentSet();
+  const mark = (id: string, leaves: string[] = []): string => {
+    const ids = [id, ...leaves];
+    return [shownAs(S.loc) === id ? 'here' : '', q && ids.includes(q) && shownAs(S.loc) !== id ? 'zhu' : '', ids.some(x => busy.has(x)) ? 'busy' : '', ids.some(x => went.has(x)) ? 'went' : ''].filter(Boolean).join(' ');
+  };
   const nodes = lay.nodes.map(n => {
     const at = shownAs(S.loc) === n.id;
-    const marked = q && !at && shownAs(q) === n.id;
     const [x, y] = pct(n);
-    return `<button class="node${at ? ' here' : ''}" style="left:${x}%;top:${y}%" data-act="travelAsk:${n.id}"${at ? ' aria-current="location"' : ''}>${marked ? '<span class="qdot"></span>' : ''}${n.name}${n.leaves.length ? `<span class="nbadge">${n.leaves.length}</span>` : ''}</button>`;
+    return `<button class="node ${mark(n.id, n.leaves)}" style="left:${x}%;top:${y}%" data-act="travelAsk:${n.id}"${at ? ' aria-current="location"' : ''}><i class="pt"></i><span class="nm">${n.name}</span>${n.leaves.length ? `<span class="nbadge">${n.leaves.length}</span>` : ''}</button>`;
   }).join('');
   // 收进街里的去处：列在地图下面，点了照样赶路
   const hubs = lay.nodes.filter(n => n.leaves.length).map(n => `<section class="mhub"><h3>${n.name}一带</h3><div class="mleaves">${n.leaves.map(id => {
     const at = S.loc === id;
-    return `<button class="mleaf${at ? ' here' : ''}" data-act="travelAsk:${id}"${at ? ' aria-current="location"' : ''}>${q === id && !at ? '<span class="qdot"></span>' : ''}${room(id).name}</button>`;
+    return `<button class="mleaf ${mark(id)}${at ? ' here' : ''}" data-act="travelAsk:${id}"${at ? ' aria-current="location"' : ''}><i class="pt"></i>${room(id).name}</button>`;
   }).join('')}</div></section>`).join('');
   // 快捷：回师门、去记挂着的事、赴约（都是现成的数据，点了先看耗时再走）
   const chips: { label: string; to: string; name: string }[] = [];
@@ -77,6 +89,29 @@ export function viewDitu(): string {
       ${nodes}</section>
     ${hubs}
     ${out.length ? `<div class="mout">${out.map(o => `<button data-act="travelAsk:${o.to}"><small>${room(o.from).name}</small><b>往${REGIONS[room(o.to).region]?.name ?? ''} · ${room(o.to).name}</b></button>`).join('')}</div>` : ''}
-    <div class="legend"><span><i style="background:var(--accent)"></i>你在这里</span><span><i style="background:var(--info)"></i>记挂着的事</span><span>点地名，先看要多久、花多少钱</span></div>
+    <div class="legend"><span><i class="pt here"></i>你在这里</span><span><i class="pt zhu"></i>主线目标</span><span><i class="pt busy"></i>有事</span><span><i class="pt went"></i>去过</span><span><i class="pt"></i>没去过</span>
+      <span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" class="land"/></svg>陆路</span><span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" class="wet"/></svg>水路</span></div>
+    <p class="muted mhint">点地名，看那里有什么人、什么事、要走多久，再点「去」赶路。</p>
     ${!small && info ? `<section class="card"><p class="muted">${info.note}</p></section>` : ''}`;
+}
+
+
+/** 地图上点一处弹出的说明：有什么人、什么事、要走多久、花多少钱；再放一个「去」，点了直接赶路（explore.ts 的 travelAsk） */
+export function mapSheet(id: string): string {
+  const b = roomBrief(id);
+  const c = b.here ? null : tripCost(id);
+  const tag = b.here ? '<span class="tag accent">你在这里</span>' : `<span class="tag">${REGIONS[room(id).region]?.name ?? ''}</span>`;
+  const rows = [
+    ['人', b.folks.length ? b.folks.join('、') : '眼下不见人影'],
+    ['事', b.things.length ? b.things.join('<br>') : '眼下没听说有什么事'],
+    ['路', b.here ? '就在这里' : c ? `约 <b>${minLabel(c.min)}</b>，经过 ${cn(c.hops)} 处${c.fee ? `；船钱和过路钱共 <b>${cn(c.fee)} 文</b>` : '；一路不花钱'}` : '从这里去不了那儿']
+  ].map(([k, v]) => `<div><span class="tag">${k}</span><span>${v}</span></div>`).join('');
+  const short = !!c && c.fee > S.silver;
+  // 出远门（赶路超过一个时辰）：带伤、气血、内力、过夜的店钱，点之前说一声（engine/chufa.ts）。船钱不够的另有一句，不重复
+  const warn = c && c.min > FAR_MIN ? chufaLine(S, short ? undefined : c) : null;
+  return `<div class="r-h">${tag}<h2>${b.name}</h2></div>
+    <p class="muted">${b.area}</p>
+    <div class="news mbrief">${rows}</div>
+    ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}${warn ? `<p class="muted chufa">${warn}</p>` : ''}
+    <div class="acts">${c ? `<button class="btn" data-act="travelGo:${id}">去</button>` : ''}<button class="btn ghost" data-act="sheetClose">${c ? '再看看' : '知道了'}</button></div>`;
 }

@@ -4,7 +4,7 @@ import type { ContentPack, NpcDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'cheng_tavern', name: '望江楼', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [74, 80], nightQuiet: true,
+    id: 'cheng_tavern', name: '望江楼', area: '扬州 · 东关街', region: 'yz', t: 5, map: [74, 80], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } }, text: '望江楼的伙计在上门板，大堂里只剩柜上一盏灯。掌柜还在对账，算盘珠子拨得有一下没一下，酒坛都封了泥。' },
       { text: '一楼大堂，酒旗半卷，窗外便是东关街的喧嚣。柜台上排着一溜酒坛，泥封上的红纸写着「花雕」。一个络腮胡的壮汉坐在柜台边，抱着酒坛猛灌。' }

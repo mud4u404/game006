@@ -203,7 +203,7 @@ export function sectNav(): SectNav | null {
 
 
 /** 近处有事：此刻你接得到的差事，派差事的人在哪、要走多久（江湖页「近处有事」卡，试玩：到处乱逛没有目标） */
-export interface Lead { text: string; to: string; toName: string; min: number }
+export interface Lead { text: string; to: string; toName: string; min: number; /** 是零工不是差事 */ gig?: true }
 
 let giverCache: Map<string, string> | null = null;
 /** 每件差事由哪个人（或榜上的书办）发：扫人物的动作里写了「job」效果的那一个 */
@@ -245,7 +245,7 @@ export function gigLead(): Lead | null {
     if (!m) continue;
     const key = (work.do!.find(e => e.type === 'today') as { id: string }).id;
     const min = travelMin(m);
-    if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min };
+    if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min, gig: true };
   }
   return best;
 }

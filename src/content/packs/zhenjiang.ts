@@ -7,7 +7,7 @@ import type { ContentPack, NpcDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'zj_shi', name: '大市口', area: '镇江 · 城中', region: 'zj', t: 15, map: [50, 56], nightQuiet: true,
+    id: 'zj_shi', name: '大市口', area: '镇江 · 大市口', region: 'zj', t: 15, map: [50, 56], nightQuiet: true,
     desc: [
       { if: { hour: { from: 20, to: 5 } },
         text: '大市口收了市。尤家的醋摊上了门板，说书的场子散了——听说他夜里去西津渡的待渡亭，说给等船的人听。驻军的兵爷回了营，街上只剩巡更的梆子声，和几盏没熄透的灯笼。' },

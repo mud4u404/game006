@@ -26,117 +26,234 @@ export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
 export type GearKey = 'weapon' | 'head' | 'body' | 'feet' | 'waist' | 'ring';
 
 export interface GameState {
+  /** 范围：个人；写入口：core/save.ts */
   v: 5;
-  /** 0 为序章，1 起为第几回 */
+  /** 0 为序章，1 起为第几回；范围：个人；写入口：engine/xingdong.ts */
   chapter: number;
-  /** 名，姓固定为沈 */
+  /** 名，姓固定为沈；范围：个人；写入口：engine/xingdong.ts */
   name: string;
+  /** 范围：个人；写入口：engine/world.ts（通行） */
   loc: string;
-  /** 江湖历的年：景和元年为 0（core/time.ts） */
+  /** 江湖历的年：景和元年为 0（core/time.ts）；范围：个人；写入口：core/time.ts（时间引擎） */
   year: number;
+  /** 范围：个人；写入口：core/time.ts（时间引擎） */
   month: number;
+  /** 范围：个人；写入口：core/time.ts（时间引擎） */
   day: number;
+  /** 范围：个人；写入口：core/time.ts（时间引擎） */
   min: number;
+  /** 范围：个人；写入口：engine/xingdong.ts（经 engine/dsl.ts 结算） */
   weather: string;
+  /** 范围：个人；写入口：engine/xingdong.ts、engine/jiesuan.ts */
   hp: number;
+  /** 范围：个人；写入口：engine/ren.ts（人物上限） */
   hpMax: number;
+  /** 范围：个人；写入口：engine/xingdong.ts、engine/jiesuan.ts */
   mp: number;
+  /** 范围：个人；写入口：engine/ren.ts（人物上限） */
   mpMax: number;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   silver: number;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   items: Record<string, number>;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   quests: Record<string, number>;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   track: string;
+  /** 范围：个人；写入口：engine/xingdong.ts；混：个人/世界旗标共用旧档容器，逐项范围见 docs/qibiao-fanwei.md */
   flags: Record<string, boolean>;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   rel: Record<string, string>;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   title: string;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   xia: number;
-  /** 恶名，与侠义互不抵消 */
+  /** 恶名，与侠义互不抵消；范围：个人；写入口：engine/xingdong.ts */
   eming: number;
-  /** 先天根基，常人各二十（engine/person.ts） */
+  /** 先天根基，常人各二十（engine/person.ts）；范围：个人；写入口：engine/xingdong.ts */
   attr: Record<AttrKey, number>;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   skills: Partial<Record<SkillId, SkillProg>>;
-  /** 搭配：各槽位放的武功，见 docs/zhuangbei.md 第二节 */
+  /** 搭配：各槽位放的武功，见 docs/zhuangbei.md 第二节；范围：个人；写入口：engine/xingdong.ts */
   loadout: Loadout;
   /**
    * 身上的装备（纸娃娃，docs/zhuangbei.md 第三节）：装备位到道具 id。
    * 兵器 weapon 决定兵刃位的武功使不使得出来；冠 head、衣 body、靴 feet、佩 waist、饰 ring 给一点护体、闪避、内力、根基。
    * 第四版的旧存档只有 weapon，读档时照样读得出来（core/save.ts 的 repair 把不对的位置空出来）。
+   * 范围：个人；写入口：engine/xingdong.ts
    */
   gear: Partial<Record<GearKey, string>>;
-  /** 师门：同一时间只有一个，见 docs/menpai.md 第七节 */
+  /** 师门：同一时间只有一个，见 docs/menpai.md 第七节；范围：个人；写入口：engine/xingdong.ts */
   sect?: { school: string; rank: SectRank };
   /** 离开过的师门 */
-  /** 离开过的师门：出师的回得去，叛门、被逐出的回不去（engine/shicheng.ts） */
+  /** 离开过的师门：出师的回得去，叛门、被逐出的回不去（engine/shicheng.ts）；范围：个人；写入口：engine/xingdong.ts */
   pastSects?: { school: string; how: LeaveHow }[];
-  /** 功力（年）：一年一百点内力，靠静修的岁月熬（engine/ren.ts） */
+  /** 功力（年）：一年一百点内力，靠静修的岁月熬（engine/ren.ts）；范围：个人；写入口：engine/xingdong.ts */
   gongli: number;
   /**
    * 身上的伤：手、足、内息各几级（零到三）。吃了重招才落下，打完才起作用，带到下一场（engine/shang.ts）。
    * 一级是轻伤，过一日自己好；二级以上是重伤，要找郎中看伤或者服药
+   * 范围：个人；写入口：engine/xingdong.ts
    */
   wounds: { hand: number; foot: number; inner: number };
-  /** 哪几处是轻伤、从江湖历第几分钟起算（过一日自己好，engine/shang.ts 的 healLight） */
+  /** 哪几处是轻伤、从江湖历第几分钟起算（过一日自己好，engine/shang.ts 的 healLight）；范围：个人；写入口：engine/xingdong.ts */
   lightSince?: Partial<Record<'hand' | 'foot' | 'inner', number>>;
-  /** 到过的最高档次：升了档要提一句（ui/shell.ts 的 render，审查 G13） */
+  /** 到过的最高档次：升了档要提一句（ui/shell.ts 的 render，审查 G13）；范围：个人；写入口：engine/tupo.ts */
   tierTop?: number;
   /**
    * 现实的钟（engine/shiguang.ts）：开局（或换算存档）时的现实时刻和那天的江湖日，上次在线的现实时刻。
    * 江湖跑不过现实：江湖的日数最多比开局以来的现实小时数多十日；下线就是静修，现实一小时算江湖一日。
+   * 范围：个人；写入口：core/save.ts、engine/shiguang.ts
    */
   real: { start: number; startDay: number; seen: number; /** 已经用掉的修为日（闭关、静修里真长了修为的日子），铁律只管它（宪章 P7，10-09 改） */ grown?: number };
-  /** 约：和谁、在哪里、哪一日（江湖日）；失约的后果 */
+  /** 约：和谁、在哪里、哪一日（江湖日）；失约的后果；范围：个人；写入口：engine/xingdong.ts */
   yue: Yue[];
-  /** 心魔：几层（可以是小数，慢慢淡），为了什么事 */
+  /** 心魔：几层（可以是小数，慢慢淡），为了什么事；范围：个人；写入口：engine/xingdong.ts */
   xinmo: { n: number; why: string };
-  /** 营生（engine/shenfen.ts）：渔家、游侠、镖师……；本行里的地位（零被辞退，一到三）；哪一日入的行 */
+  /** 营生（engine/shenfen.ts）：渔家、游侠、镖师……；本行里的地位（零被辞退，一到三）；哪一日入的行；范围：个人；写入口：engine/xingdong.ts */
   shenfen: { id: string; standing: number; since: number };
-  /** 闭关、下线静修住哪儿：客栈（一日一百文）、露宿（不花钱，打八折）、师门（有师门的，不花钱）。不写是客栈（engine/shiguang.ts 的 zhuOf） */
+  /** 闭关、下线静修住哪儿：客栈（一日一百文）、露宿（不花钱，打八折）、师门（有师门的，不花钱）。不写是客栈（engine/shiguang.ts 的 zhuOf）；范围：个人；写入口：engine/xingdong.ts */
   zhu?: Zhu;
-  /** 手上的差事：哪一件、约期（江湖日）；办完的差事上回是哪一日办完的 */
+  /** 手上的差事：哪一件、约期（江湖日）；办完的差事上回是哪一日办完的；范围：个人；写入口：engine/xingdong.ts */
   job: { id: string; due: number } | null;
+  /** 范围：个人；写入口：engine/xingdong.ts */
   jobLog: Record<string, number>;
-  /** 行动结算记录：只留最近三百条，旧档从空记录继续 */
+  /** 行动结算记录：只留最近三百条，旧档从空记录继续；范围：个人；写入口：engine/xingdong.ts（事件记录） */
   log: EventRec[];
-  /** 正在读的剧情及本次遇见的凭据；刷新沿用，收尾清掉，旧档可缺省 */
+  /** 正在读的剧情及本次遇见的凭据；刷新沿用，收尾清掉，旧档可缺省；范围：个人；写入口：engine/xingdong.ts */
   storyAt?: { id: string; i: number; started: string };
-  /** 一个江湖日只做一回的营生（零工、讨赏钱）：做的是哪一件 → 哪一日做的（dayNo）。效果 today 写、条件 doneToday 读；过了日子的自动清掉 */
+  /** 一个江湖日只做一回的营生（零工、讨赏钱）：做的是哪一件 → 哪一日做的（dayNo）。效果 today 写、条件 doneToday 读；过了日子的自动清掉；范围：个人；写入口：engine/xingdong.ts */
   dayLog?: Record<string, number>;
-  /** 人情备注：为什么记得这个人，例如「湖畔切磋，不打不相识」 */
+  /** 人情备注：为什么记得这个人，例如「湖畔切磋，不打不相识」；范围：个人；写入口：engine/xingdong.ts */
   relNote?: Record<string, string>;
-  /** 历练：江湖上攒下的见识与实战，闭关时化为武功进境（engine/lilian.ts） */
+  /** 历练：江湖上攒下的见识与实战，闭关时化为武功进境（engine/lilian.ts）；范围：个人；写入口：engine/xingdong.ts */
   lilian: number;
-  /** 和每个对手最近交手的记录：七天内反复打同一人，历练一次比一次少 */
+  /** 和每个对手最近交手的记录：七天内反复打同一人，历练一次比一次少；范围：世界；写入口：engine/lilian.ts、engine/xingdong.ts */
   foeLog?: Record<string, { n: number; day: number }>;
-  /** 掂过斤两的人（对手 id、当时看到的称呼），最近的在后，最多二十个（engine/zhanli.ts）；人物页「认得的人」用 */
+  /** 掂过斤两的人（对手 id、当时看到的称呼），最近的在后，最多二十个（engine/zhanli.ts）；人物页「认得的人」用；范围：个人；写入口：engine/zhanli.ts */
   diao?: { id: string; name: string }[];
   /**
    * 世事（engine/shishi.ts，docs/huojianghu.md）：每件事走到哪一步、哪一刻走到的（core/time.ts 的 absMin）、
    * 玩家知道到哪一步（没有就是还不知道）、了结过几回。还没起头的事不在这里
+   * 范围：世界；写入口：engine/shishi.ts、engine/xingdong.ts
    */
   shi?: Record<string, ShiState>;
-  /** 门派贡献：每个门派各记各的（替师门办差攒下，升地位、学外门以上的武功拿它去换；docs/menpai.md 第七节第八条） */
+  /** 门派贡献：每个门派各记各的（替师门办差攒下，升地位、学外门以上的武功拿它去换；docs/menpai.md 第七节第八条）；范围：个人；写入口：engine/xingdong.ts */
   gongxian?: Record<string, number>;
-  /** 打听：每个人今天问过没有（江湖日） */
+  /** 打听：每个人今天问过没有（江湖日）；范围：个人；写入口：engine/xingdong.ts */
   asked?: Record<string, number>;
-  /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts） */
+  /** 打听：今天对这个人问到第几句了、哪几句已经说过（engine/chuanwen.ts）；隔日清掉；范围：个人；写入口：engine/chuanwen.ts */
+  askLog?: Record<string, { d: number; u: string[] }>;
+  /** 迎面（engine/yingmian.ts）：每个人最近一次主动开口是哪一日（江湖日）；过了日子的自动清掉。旧档可缺省；范围：个人；写入口：engine/yingmian.ts */
+  greeted?: Record<string, number>;
+  /** 场景里眼下的迎面：key 是「地点|日|时辰段」，同一个 key 不再挑第二个人；id 是开口的人，i 是第几条，used 表示话头已经点过。旧档可缺省；范围：个人；写入口：engine/yingmian.ts */
+  greet?: { key: string; id?: string; i?: number; used?: true };
+  /** 最近一次对谁做了动作（江湖日），迎面挑人时「刚做过与他有关的事」排前头。旧档可缺省；范围：个人；写入口：ui/explore.ts */
+  lastWith?: { id: string; day: number };
+  /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts）；范围：世界；写入口：engine/xingdong.ts（经 engine/dsl.ts 结算） */
   away?: Record<string, number>;
-  /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */
+  /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts）；范围：世界；写入口：engine/encounter.ts、engine/xingdong.ts */
   encLog: Record<string, number>;
+  /** 范围：世界；写入口：engine/encounter.ts、engine/xingdong.ts */
   lastEnc: number;
   /**
    * 世界状态（engine/shijie.ts，docs/huo-shijie.md 3.2，存档第五版）：势力、地方、人的处境、世界的种子。
    * 种子开局定下（名字和开局的现实时刻），同一个种子、同样的操作，跑出同一个江湖
+   * 范围：世界；写入口：engine/shijie.ts、engine/xingdong.ts
    */
   w: WorldState;
-  /** 玩家亲耳听过的传闻（engine/chuanwen.ts 的传闻 id）：打听、邸报不再重复说。最多留三百条，传闻清掉了跟着清 */
+  /** 玩家亲耳听过的传闻（engine/chuanwen.ts 的传闻 id）：打听、邸报不再重复说。最多留三百条，传闻清掉了跟着清；范围：个人；写入口：engine/xingdong.ts */
   heard: string[];
+  /** 范围：界面；写入口：core/state.ts（pushFeed）、ui */
   feed: FeedEntry[];
-  /** 战后说书，供说书人复述 */
+  /** 战后说书，供说书人复述；范围：个人；写入口：engine/xingdong.ts */
   story: string;
+  /** 范围：界面；写入口：ui */
   sel: string | null;
-  reply: { id: string; text: string } | null;
+  /** 范围：界面；写入口：ui。at：说这句话时的江湖分钟（core/time absMin）；人走了以后「说完就走了」那张卡只留一小会儿，不隔夜 */
+  reply: { id: string; text: string; at?: number } | null;
+  /** 范围：界面；写入口：ui */
   tab: Tab;
+  /**
+   * 界面记的小账（engine/jiemian.ts），可缺省，旧档没有也读得出来：
+   * power 上次在江湖页角色卡上显示的战力；from 变了以后的旧值（卡上显示「旧 → 新」，离开江湖页就清）；went 到过的地点
+   * 范围：界面；写入口：engine/jiemian.ts
+   */
+  ui?: { power?: number; from?: number; went?: string[] };
 }
+
+/** 字段归属约定（docs/sheji-012-013.md 第 012 节），不在此强制拦截旧写入点。
+ * 初始化、读档修复统一由 core/state.ts、core/save.ts 写；下表登记日常写入口。
+ * flags 的 scope 指旧档容器归个人；mixed 明确其中混有世界旗标，不能只按 scope 分派旗标。
+ */
+type FieldOwner = Readonly<{ scope: '个人' | '世界' | '界面'; writer: string; mixed?: '混' }>;
+export const FIELD_OWNER = Object.freeze({
+  v: { scope: '个人', writer: 'core/save.ts' },
+  chapter: { scope: '个人', writer: 'engine/xingdong.ts' },
+  name: { scope: '个人', writer: 'engine/xingdong.ts' },
+  loc: { scope: '个人', writer: 'engine/world.ts（通行）' },
+  year: { scope: '个人', writer: 'core/time.ts（时间引擎）' },
+  month: { scope: '个人', writer: 'core/time.ts（时间引擎）' },
+  day: { scope: '个人', writer: 'core/time.ts（时间引擎）' },
+  min: { scope: '个人', writer: 'core/time.ts（时间引擎）' },
+  weather: { scope: '个人', writer: 'engine/xingdong.ts（经 engine/dsl.ts 结算）' },
+  hp: { scope: '个人', writer: 'engine/xingdong.ts、engine/jiesuan.ts' },
+  hpMax: { scope: '个人', writer: 'engine/ren.ts（人物上限）' },
+  mp: { scope: '个人', writer: 'engine/xingdong.ts、engine/jiesuan.ts' },
+  mpMax: { scope: '个人', writer: 'engine/ren.ts（人物上限）' },
+  silver: { scope: '个人', writer: 'engine/xingdong.ts' },
+  items: { scope: '个人', writer: 'engine/xingdong.ts' },
+  quests: { scope: '个人', writer: 'engine/xingdong.ts' },
+  track: { scope: '个人', writer: 'engine/xingdong.ts' },
+  flags: { scope: '个人', writer: 'engine/xingdong.ts', mixed: '混' },
+  rel: { scope: '个人', writer: 'engine/xingdong.ts' },
+  title: { scope: '个人', writer: 'engine/xingdong.ts' },
+  xia: { scope: '个人', writer: 'engine/xingdong.ts' },
+  eming: { scope: '个人', writer: 'engine/xingdong.ts' },
+  attr: { scope: '个人', writer: 'engine/xingdong.ts' },
+  skills: { scope: '个人', writer: 'engine/xingdong.ts' },
+  loadout: { scope: '个人', writer: 'engine/xingdong.ts' },
+  gear: { scope: '个人', writer: 'engine/xingdong.ts' },
+  sect: { scope: '个人', writer: 'engine/xingdong.ts' },
+  pastSects: { scope: '个人', writer: 'engine/xingdong.ts' },
+  gongli: { scope: '个人', writer: 'engine/xingdong.ts' },
+  wounds: { scope: '个人', writer: 'engine/xingdong.ts' },
+  lightSince: { scope: '个人', writer: 'engine/xingdong.ts' },
+  tierTop: { scope: '个人', writer: 'engine/tupo.ts' },
+  real: { scope: '个人', writer: 'core/save.ts、engine/shiguang.ts' },
+  yue: { scope: '个人', writer: 'engine/xingdong.ts' },
+  xinmo: { scope: '个人', writer: 'engine/xingdong.ts' },
+  shenfen: { scope: '个人', writer: 'engine/xingdong.ts' },
+  zhu: { scope: '个人', writer: 'engine/xingdong.ts' },
+  job: { scope: '个人', writer: 'engine/xingdong.ts' },
+  jobLog: { scope: '个人', writer: 'engine/xingdong.ts' },
+  log: { scope: '个人', writer: 'engine/xingdong.ts（事件记录）' },
+  storyAt: { scope: '个人', writer: 'engine/xingdong.ts' },
+  dayLog: { scope: '个人', writer: 'engine/xingdong.ts' },
+  relNote: { scope: '个人', writer: 'engine/xingdong.ts' },
+  lilian: { scope: '个人', writer: 'engine/xingdong.ts' },
+  foeLog: { scope: '世界', writer: 'engine/lilian.ts、engine/xingdong.ts' },
+  diao: { scope: '个人', writer: 'engine/zhanli.ts' },
+  shi: { scope: '世界', writer: 'engine/shishi.ts、engine/xingdong.ts' },
+  gongxian: { scope: '个人', writer: 'engine/xingdong.ts' },
+  asked: { scope: '个人', writer: 'engine/xingdong.ts' },
+  askLog: { scope: '个人', writer: 'engine/chuanwen.ts' },
+  greeted: { scope: '个人', writer: 'engine/yingmian.ts' },
+  greet: { scope: '个人', writer: 'engine/yingmian.ts' },
+  lastWith: { scope: '个人', writer: 'ui/explore.ts' },
+  away: { scope: '世界', writer: 'engine/xingdong.ts（经 engine/dsl.ts 结算）' },
+  encLog: { scope: '世界', writer: 'engine/encounter.ts、engine/xingdong.ts' },
+  lastEnc: { scope: '世界', writer: 'engine/encounter.ts、engine/xingdong.ts' },
+  w: { scope: '世界', writer: 'engine/shijie.ts、engine/xingdong.ts' },
+  heard: { scope: '个人', writer: 'engine/xingdong.ts' },
+  feed: { scope: '界面', writer: 'core/state.ts（pushFeed）、ui' },
+  story: { scope: '个人', writer: 'engine/xingdong.ts' },
+  sel: { scope: '界面', writer: 'ui' },
+  reply: { scope: '界面', writer: 'ui' },
+  tab: { scope: '界面', writer: 'ui' },
+  ui: { scope: '界面', writer: 'engine/jiemian.ts' },
+} as const satisfies Record<keyof GameState, FieldOwner>);
+for (const owner of Object.values(FIELD_OWNER)) Object.freeze(owner);
 
 /** 跳过序章时的根基：和走完童年三忆的样子相当（常人各二十） */
 /** 开局时的现实钟：现在，和开局那天的江湖日 */
