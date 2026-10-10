@@ -1,14 +1,15 @@
 import { S } from '../../core/state';
 import { REGIONS, ROOMS, jobById, npc, questById, room } from '../../content';
 import type { JobDef } from '../../content/types';
-import { yueText } from '../../engine/shiguang';
 import { knownShi, type ShiRow } from '../../engine/shishi';
 import { minLabel } from '../../core/time';
 import { cn } from '../../core/util';
-import { questNav, sectNav, whoNav, type NavState, type QuestNav } from '../../engine/daohang';
+import { yueText } from '../../engine/shiguang';
+import { questNav, sectNav, whoNav, yueNow, type NavState, type QuestNav } from '../../engine/daohang';
 import { test } from '../../engine/dsl';
 import { hoursAt, stageText } from '../../engine/world';
 import { IC } from '../icons';
+import { tripNote } from './ditu';
 import { closeSheet, openSheet, render } from '../shell';
 
 /**
@@ -109,7 +110,7 @@ function questRow(n: QuestNav, trackId: string): string {
     ? `<button class="qb-act ${isTrack ? 'on' : ''}" data-act="qtrack:${n.id}" aria-pressed="${isTrack}">${isTrack ? '记挂着' : '记挂'}</button>` : '';
   const goBtn = live && n.to
     ? `<button class="qb-go${here ? ' dim' : ''}" data-act="qgo:${n.id}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button>` : '';
-  const toLine = live && n.toName ? `<small class="qb-to">${n.toName} · ${here ? '就在此处' : '约' + minLabel(n.dist)}</small>` : '';
+  const toLine = live && n.toName ? `<small class="qb-to">${n.toName} · ${here ? '就在此处' : tripNote(n.to!) || '约' + minLabel(n.dist)}</small>` : '';
   const memo = [live ? n.hint : '', ...n.memo, ...n.notes].filter(Boolean).map(x => `<small class="qb-memo">${x}</small>`).join('');
   const past = n.past.length
     ? `<details class="qb-past"><summary>前情</summary><ul>${n.past.map(t => `<li>${t}</li>`).join('')}</ul></details>` : '';
@@ -139,7 +140,7 @@ function jobXianHtml(job: JobDef): string {
         : `眼下不见${who.name}的人影，到${room(to).name}再打听打听。`;
     return `<div class="qb-row qb-xian">
         <div class="qb-info"><p>${x.text}</p><small class="qb-memo">${memo}</small></div>
-        <div class="qb-acts"><button class="qb-go${here ? ' dim' : ''}" data-act="jgo:${to}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button></div>
+        <div class="qb-acts"><button class="qb-go${here ? ' dim' : ''}" data-act="jgo:${to}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button>${here ? '' : `<small class="qb-to">${tripNote(to)}</small>`}</div>
       </div>`;
   }).join('');
 }
@@ -172,7 +173,8 @@ export function questbookSheetHtml(): string {
   // 手上的差事：限期几日，到哪儿交差，交差的人眼下在不在（江湖页顶上也挂着「有约」）
   const job = S.job && jobById(S.job.id);
   const jy = job && S.yue.find(y => y.id === 'job_' + job.id);
-  const jobHere = !!job && S.loc === job.at;
+  const jn = jy ? yueNow(jy) : null;
+  const jobHere = !!jn && S.loc === jn.to;
   const jw = job ? whoNav(job.npc, job.at) : null;
   const jwLine = jw && !jw.now ? `<small class="qb-memo">${jw.when ? `${jw.name}${jw.when}在${room(job!.at).name}。` : `这几日不见${jw.name}的人影。`}</small>` : '';
   const jobHtml = job && jy ? `<h3 class="qb-sec">差事 · 1</h3>
@@ -181,10 +183,11 @@ export function questbookSheetHtml(): string {
           <b>${job.title}</b>
           <span class="qb-stage">${job.sect ? job.sect + '的差事' : '营生'}</span>
           <p>${yueText(S, jy)}</p>
+          ${jn?.step ? `<small class="qb-memo">眼下：${jn.go}。</small>` : ''}
           ${jwLine}
           <small class="qb-to">误了期，${missText(job)}。</small>
         </div>
-        <div class="qb-acts"><button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${job.at}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button></div>
+        <div class="qb-acts">${jn!.step ? '' : `<button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${jn!.to}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button>${jobHere ? '' : `<small class="qb-to">${tripNote(jn!.to)}</small>`}`}</div>
       </div>${jobXianHtml(job)}` : '';
   const failHtml = failed.length ? `<h3 class="qb-sec">未竟 · ${failed.length}</h3>${failed.map(n => questRow(n, trackId)).join('')}` : '';
   const doneN = finished.length + shiDone.length;

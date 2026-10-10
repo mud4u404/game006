@@ -9,7 +9,7 @@ import { room } from '../content';
 import { ZONE_NAME } from '../engine/duel';
 import { gongliText } from '../engine/ren';
 import { gongliCeiling } from '../engine/lilian';
-import { TIELV_TEXT, nextYue, settleAway, skillName, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
+import { TIELV_TEXT, nextYue, profChip, settleAway, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
 import { tierCheck, tupoAdd, tupoTake } from '../engine/tupo';
 import { inFight } from './fight';
 import { canRetreat, powerNow } from '../engine/jiemian';
@@ -31,21 +31,21 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
   const tupo = tupoBlockHTML(tupoTake());
   const healTxt = Object.entries(r.healed).map(([z, n]) => `${ZONE_NAME[z as 'hand']}伤好了${liang(n as number)}级`).join('、');
   const chips = [
-    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `历练 ${S.lilian + r.used} → ${S.lilian}` : r.grow === 0 ? '这几日修为没有长进，伤照样养' : '没有历练可消化，闭门造车'}</span>`,
-    ...r.gains.map(([k, v]) => `<span class="tag accent">${skillName(k)} +${v}</span>`),
+    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `历练 ${S.lilian + r.used} → ${S.lilian}` : r.grow === 0 ? '这几日功夫没有长进，伤却养好了些' : '身上没有可化的历练，白坐了几日'}</span>`,
+    ...r.gains.map(g => `<span class="tag accent">${profChip(r, g)}</span>`),
     // 战力变了写「旧 → 新」（engine/jiemian.ts），没变不写
     power0 !== undefined && power0 !== powerNow() ? `<span class="tag accent">战力 ${power0} → ${powerNow()}</span>` : '',
     canRetreat() ? '<span class="tag">历练还够，可再去闭关</span>' : '',
     // 写长了多少：原来三回出关都写「功力深到三年」，看着像一点没长（审查 G12）
-    r.gongli > 0 ? `<span class="tag accent">功力深了${r.gongli >= 1 ? gongliText(r.gongli) : `${cn(Math.max(1, Math.round(r.gongli * 12)))}个月`}（如今${gongliText(S.gongli)}）</span>`
+    r.gongli > 0 ? `<span class="tag accent">功力深了${gongliText(r.gongli)}（如今${gongliText(S.gongli)}）</span>`
       // 功力熬到了这一重内功的顶：写明白，别让人以为白闭关了（审查 G11）
       : S.gongli >= gongliCeiling(S) - 1e-6 ? `<span class="tag warn">功力已到这一重内功的顶（${gongliText(S.gongli)}），要再深，先把内功往上练一重</span>` : '',
     healTxt ? `<span class="tag">${healTxt}</span>` : '',
     r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : '',
     r.lodging === 'home' ? `<span class="tag">住在师门，不花钱</span>`
-      : r.lodging === 'lusu' ? `<span class="tag warn">露宿${cn(r.lusuDays)}夜，不花钱，睡不安稳，打坐参悟打八折</span>`
+      : r.lodging === 'lusu' ? `<span class="tag warn">露宿${cn(r.lusuDays)}夜，不费钱，只是风露侵人，睡不安稳，参悟慢了几分</span>`
       : !r.lusuDays ? `<span class="tag">住店 −${r.cost} 文</span>`
-      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，打坐参悟打了折</span>`
+      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，风露侵人，参悟慢了几分</span>`
   ].filter(Boolean);
   const y = nextYue(S);
   const lines: string[] = [];
@@ -61,8 +61,29 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
     <p class="story">${head}</p>
     ${stop ? `<p class="muted">${stop}</p>` : ''}
     <div class="rewards">${chips.join('')}</div>
-    ${lines.length ? `<div class="r-sub">江湖邸报</div><div class="news">${lines.join('')}</div>` : ''}
+    ${baoBlock(lines)}
     <button class="btn" data-act="sheetClose">出关</button>`;
+}
+
+/** 邸报那一块（出关、歇脚醒来共用）：没有一条就不画 */
+const baoBlock = (lines: string[]): string => lines.length ? `<div class="r-sub">江湖邸报</div><div class="news">${lines.join('')}</div>` : '';
+
+/**
+ * 歇脚醒来的邸报（engine/shiguang.ts 的 xiejiaoBao）：一夜过去，江湖上几条世事，外加某人惦记着你；
+ * 有约的、失了约的照样写。和出关邸报同一块（baoBlock），只是不带长进、住处这些闭关才有的东西
+ */
+export function xingLaiHTML(bao: { news: string[]; nian?: string; missed?: string[] }, head: string): string {
+  const y = nextYue(S);
+  const lines = [
+    ...(bao.missed ?? []).map(m => `<div><span class="tag danger">失约</span><span>${m}</span></div>`),
+    ...(y ? [`<div><span class="tag warn">有约</span><span>${yueText(S, y)}</span></div>`] : []),
+    ...bao.news.map(n => `<div><span class="tag warn">传闻</span><span>${n}</span></div>`),
+    ...(bao.nian ? [`<div><span class="tag accent">惦记</span><span>${bao.nian}</span></div>`] : [])
+  ];
+  return `<div class="r-h"><span class="tag accent">歇脚</span><h2>醒来</h2></div>
+    <p class="story">${head}</p>
+    ${baoBlock(lines)}
+    <button class="btn" data-act="sheetClose">起身</button>`;
 }
 
 /** 下线回来的开头一句 */

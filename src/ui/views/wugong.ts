@@ -16,37 +16,45 @@ import { canRetreat, retreatLabel, strongPaths } from '../../engine/jiemian';
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
 
 export function viewWugong(): string {
-  // 按钮上直接写预估：「闭关一日：寒江剑法熟练 +9，战力约 +1」（engine/jiemian.ts 的 retreatLabel）
-  const opts: [string, string][] = [['1', retreatLabel(1, '一日')], ['7', retreatLabel(7, '七日')], ['30', retreatLabel(30, '一月')]];
   const learned = SKILLS.filter(k => S.skills[k.id]);
+  // 首屏只留「变强的路」和几门武功；搭配说明、闭关规则、住处、见招拆招、品级表都收进可展开的「说明」
   return `
   ${strongCard()}
+  ${learned.map(skillCard).join('')}
   ${loadoutCard()}
-  <section class="card here-card"><div class="sec-h"><h2>闭关修炼</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
-    <p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多消化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练，闭门造车，进境有限。</p>
-    <p class="muted">闭关也打坐长功力：闭关一月功力深近一年，内功越深越快，也熬得越深（现在${gongliText(S.gongli)}，内功这一重最多熬到${gongliText(gongliCeiling(S))}）。轻伤过一日自己好；重伤闭关养不好，要找郎中、服药。</p>
-    ${zhuPick()}
-    ${S.chapter === 0
-      ? '<p class="muted">江伯还病着，眼下不是闭关的时候。</p>'
-      : (() => {
-        const block = retreatBlock(S);
-        const al = allowance(S);
-        return `<p class="muted">${block ?? `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。下线就是静修，回来先读出关邸报。`}</p>
-        <div class="acts col">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
-      })()}
-  </section>
-  <section class="card here-card"><div class="sec-h"><h2>见招拆招</h2></div>
+  <details class="card here-card shuoming"><summary><b>说明</b><small class="muted">搭配之效、闭关规则、住处、见招拆招、品级</small></summary>
+    <div class="r-sub">搭配之效</div>${effectsHtml()}
+    <div class="r-sub">闭关的规矩</div>${retreatRules()}
+    <div class="r-sub">住处</div>${zhuPick()}
+    <div class="r-sub">见招拆招</div>
     <p class="muted">对手出重招时，你能用的应对来自你搭配的武功：内功硬接，轻功闪避，出手的那门外功拆招、抢攻。成算取决于你的造诣与对手这一招的强弱，境界越高，成算越高；武功的性质还有相生相克。</p>
     <ul class="muted resp-help">
       <li><b>硬接</b>：比内力，稳；得手把他震退。最怕虚招，一掌落空。</li>
       <li><b>闪避</b>：比身法；得手他招式用老，露出空门。</li>
       <li><b>拆招</b>：比招数巧拙，不怕虚招；得手顺势还他一记。</li>
       <li><b>抢攻</b>：比谁先找到空隙，最险；得手重创，失手正撞上他这一招。</li>
-    </ul></section>
-  <section class="card here-card"><div class="sec-h"><h2>品级</h2></div>
+    </ul>
+    <div class="r-sub">品级</div>
     <div class="grades">${GRADES.map(([g, c]) => `<span class="tag g-${c}">${g}</span>`).join('')}</div>
-    <p class="muted">品级是武功的先天资质，境界是你的苦功。低品武功练到极致，一样能技惊四座。</p></section>
-  ${learned.map(skillCard).join('')}`;
+    <p class="muted">品级是武功的先天资质，境界是你的苦功。低品武功练到极致，一样能技惊四座。</p>
+  </details>`;
+}
+
+/** 闭关的规矩（收在「说明」里） */
+function retreatRules(): string {
+  const block = S.chapter === 0 ? null : retreatBlock(S);
+  const al = allowance(S);
+  return `<p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练可化，白坐几日，进境有限。</p>
+    <p class="muted">闭关也打坐长功力：闭关一月功力深近一年，内功越深越快，也熬得越深（现在${gongliText(S.gongli)}，内功这一重最多熬到${gongliText(gongliCeiling(S))}）。轻伤过一日自己好；重伤闭关养不好，要找郎中、服药。</p>
+    <p class="muted">${S.chapter === 0 ? '江伯还病着，眼下不是闭关的时候。' : block ?? `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。下线就是静修，回来先读出关邸报。`}</p>`;
+}
+
+/** 闭关三个按钮：大字是预估的熟练，小字是战力约涨多少（没涨就写还差多少熟练、约几日）。预估和出关结算同一个函数 */
+function retreatButtons(): string {
+  if (S.chapter === 0) return '';
+  const block = retreatBlock(S);
+  const opts: [string, string][] = [['1', '一日'], ['7', '七日'], ['30', '一月']];
+  return `<div class="acts col">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${retreatLabel(Number(d), l)}</button>`).join('')}</div>`;
 }
 
 /** 住处三选一（engine/shiguang.ts 的 zhuOf）：闭关、下线静修都按它 */
@@ -83,8 +91,7 @@ function loadoutCard(): string {
   }).join('');
   return `<section class="card here-card"><div class="sec-h"><h2>搭配</h2><span class="count">${tierNow(S).name} · 功力${gongliText(S.gongli)}</span></div>
     <div class="rows">${rows}</div>
-    <p class="muted">${hand}。战斗中不能换。</p>
-    ${effectsHtml()}</section>`;
+    <p class="muted">${hand}。战斗中不能换。</p></section>`;
 }
 
 type Pv = ReturnType<typeof passivesNow>;
@@ -149,8 +156,8 @@ const schoolName = (k: SkillDef): string => (k.school === JIANGHU_RULE.school ? 
 
 function useText(k: SkillDef, realm: number): string {
   const parts: string[] = [schoolName(k), `${k.nature}${k.reach && k.reach !== '徒手' ? ' · ' + k.reach + '兵' : ''}`];
-  if (k.performs?.length) parts.push(`绝招 ${k.performs.map(p => (p.realm ?? 0) <= realm ? `「${p.name}」` : `「${p.name}」（${REALMS[p.realm!]}）`).join('')}`);
-  if (k.ult) parts.push('杀招 · 怒气满时可用');
+  if (k.performs?.length) parts.push(`绝招 ${k.performs.map(p => (p.realm ?? 0) <= realm ? `「${p.name}」` : `「${p.name}」（火候未到：要${REALMS[p.realm!]}）`).join('')}`);
+  if (k.ult) parts.push('杀招 · 怒气满时可用，平时灰着');
   return parts.join(' · ');
 }
 
@@ -167,7 +174,7 @@ function skillCard(k: SkillDef): string {
     <div class="realm"><span>第${cn(s.r + 1)}重 · ${REALMS[s.r]}</span><small>${stuck ? '瓶颈 · 内功根基不够' : s.r >= REALMS.length - 1 ? '已到顶' : `${Math.floor((s.p / need) * 10) ? liang(Math.min(9, Math.floor((s.p / need) * 10))) + '成火候' : '初学'} · 熟练 ${s.p} / ${need}`}</small></div>
     <div class="tr2"><i style="width:${pct}%"></i></div>
     <p class="sk-d">${k.desc}</p>
-    ${k.moves ? `<div class="moves">${k.moves.map(m => `<span class="tag"${(m.realm ?? 0) > s.r ? ' style="opacity:.4"' : ''}>${m.name}</span>`).join('')}</div>` : ''}
+    ${k.moves ? `<div class="moves">${k.moves.map(m => `<span class="tag"${(m.realm ?? 0) > s.r ? ' style="opacity:.4"' : ''}>${m.name}${(m.realm ?? 0) > s.r ? `<small>（火候未到：要${REALMS[m.realm!]}）</small>` : ''}</span>`).join('')}</div>` : ''}
     <p class="muted">${useText(k, s.r)}</p>
     ${(k.performs?.length || k.ult) && !canPerform(S, k) ? '<p class="muted">没有本门内功打底，绝招、杀招使不出来，只剩普通招式。</p>' : ''}
     ${resps.map(r => `<div class="d-h"><span class="tag accent">见招拆招 · ${r.act}</span><small>造诣 ${huohou(S, r.k)}</small></div>`).join('')}
@@ -179,7 +186,7 @@ function skillCard(k: SkillDef): string {
 function strongCard(): string {
   const ps = strongPaths();
   if (!ps.length) return '';
-  const rows = ps.map(p => `<div class="bqrow"><div class="bqh"><b>${p.name}</b>${p.go ? `<button class="act spar" data-act="${p.go.act}">${p.go.label}</button>` : ''}</div><p class="muted">${p.say}</p><small class="cost">代价：${p.cost}</small></div>`).join('');
+  const rows = ps.map(p => `<div class="bqrow"><div class="bqh"><b>${p.name}</b>${p.go && p.name !== '闭关' ? `<button class="act spar" data-act="${p.go.act}">${p.go.label}</button>` : ''}</div><p class="muted">${p.say}</p>${p.name === '闭关' ? retreatButtons() : ''}<small class="cost">代价：${p.cost}</small></div>`).join('');
   return `<section class="card here-card bq"><div class="sec-h"><h2>变强的路</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
     ${canRetreat() ? '<p class="tip">历练够闭关一日了，可去闭关。</p>' : ''}${rows}</section>`;
 }

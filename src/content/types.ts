@@ -324,6 +324,27 @@ export interface NpcDef {
   actions: Partial<Record<Verb, Branch[]>>;
   /** 人的活气（engine/chuanwen.ts）：有事的人才写。别的内容包里的人，用 ContentPack.npcLife 补，不必改别人的文件 */
   life?: NpcLife;
+  /** 迎面（engine/yingmian.ts）：玩家走进来或在场景里过了时辰，满足条件的人可能先开口。别的内容包里的人，用 ContentPack.npcGreet 补 */
+  greet?: GreetDef[];
+  /**
+   * 看完这个（物件、人）以后下一步找谁：看过它的话，下面出一个按钮「text」，点了选中那个人、高亮他的动作。
+   * 例：府衙照壁的榜只看不揭，看过悬赏栏，按钮写「去书办那里揭」，一步到书办的「揭」。verb 是要高亮的动作的字头（如「揭」）
+   */
+  next?: { npc: string; text: string; verb?: string };
+}
+
+/**
+ * 迎面的一条（docs/sheji-youhua-1010.md 第五条）：条件成立才会开口，同一个人写几条，条件各不相同。
+ * 一个人一个江湖日最多主动一次；同一场景一次只有一个人开口。
+ */
+export interface GreetDef {
+  if?: Cond;
+  /** 开口的话，整句写好，带人名和神态，如「了尘大师抬起头：『施主，……』」 */
+  text: string;
+  /** 话头按钮上的字，三四个字 */
+  topic: string;
+  /** 点了话头以后对这个人做的动作，缺省是「交谈」（走现有动作，所以机器玩家本来就走得到） */
+  go?: Verb;
 }
 
 /**
@@ -933,4 +954,6 @@ export interface ContentPack {
   roomLife?: Record<string, RoomLife>;
   /** 给别的内容包里的人补上活气：人物 id → NpcLife（合并时挂到 NpcDef.life 上） */
   npcLife?: Record<string, NpcLife>;
+  /** 给别的内容包里的人补上迎面的话：人物 id → GreetDef[]（合并时挂到 NpcDef.greet 上） */
+  npcGreet?: Record<string, GreetDef[]>;
 }

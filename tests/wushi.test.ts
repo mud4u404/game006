@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { exportCode } from '../src/core/save';
 import { newGame, S, setState } from '../src/core/state';
-import { addSilver, clearClicks, feedbackUrl, recentClicks, recordClick, setWushi, teleport, URL_MAX, verTap, wushiOn, type FeedbackInfo } from '../src/core/wushi';
+import { addSilver, clearClicks, clickLabel, feedbackUrl, recentClicks, recordClick, setWushi, teleport, URL_MAX, verTap, wushiOn, type FeedbackInfo } from '../src/core/wushi';
 import { wushiToolsHTML } from '../src/ui/views/wushi-tools';
 import { ROOMS } from '../src/content';
 
@@ -86,5 +86,22 @@ describe('巫师模式', () => {
     const before = S.silver;
     addSilver(S);
     expect(S.silver).toBe(before + 1000);
+  });
+});
+
+describe('点击记录取名', () => {
+  const fake = (nm: string | null, aria: string | null, text: string) => ({
+    querySelector: (q: string) => (q === '.nm' && nm !== null ? { textContent: nm } : null),
+    getAttribute: (n: string) => (n === 'aria-label' ? aria : null),
+    textContent: text
+  });
+  it('优先取 .nm 名字元素，不把头像上的字拼进来', () => {
+    expect(clickLabel(fake('衙役', null, '衙衙役'))).toBe('「衙役」');
+    expect(clickLabel(fake('书办', null, '书书办'))).toBe('「书办」');
+  });
+  it('没有 .nm 时取 aria-label，再没有才取整个按钮的字', () => {
+    expect(clickLabel(fake(null, '打开地图', '走走眼下要紧打开地图'))).toBe('「打开地图」');
+    expect(clickLabel(fake(null, null, ' 歇 脚 '))).toBe('「歇 脚」');
+    expect(clickLabel(fake(null, null, ''))).toBe('');
   });
 });

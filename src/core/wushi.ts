@@ -39,6 +39,12 @@ export function recordClick(text: string): void {
   clicks.push(text);
   if (clicks.length > 10) clicks.shift();
 }
+/** 点击记录里的名字：先取名字元素（.nm）或 aria-label，没有再取整个按钮的字；不拼头像上的字 */
+export function clickLabel(el: { querySelector(s: string): { textContent: string | null } | null; getAttribute(n: string): string | null; textContent: string | null }): string {
+  const raw = el.querySelector('.nm')?.textContent || el.getAttribute('aria-label') || el.textContent || '';
+  const t = raw.trim().replace(/\s+/g, ' ').slice(0, 10);
+  return t ? '「' + t + '」' : '';
+}
 export const recentClicks = (): string[] => clicks.slice();
 export const clearClicks = (): void => { clicks.length = 0; };
 

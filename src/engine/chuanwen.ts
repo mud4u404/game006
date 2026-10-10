@@ -498,21 +498,78 @@ function leadPick<T>(arr: readonly T[], npcId: string, salt = 0): T {
   return arr[Math.floor(mulberry32(salt ? seedOf(worldOf().seed, 'lead', npcId, dayNo(S), salt) : seedOf(worldOf().seed, 'lead', npcId, dayNo(S)))() * arr.length)];
 }
 
-/** 对你近来所做之事的一句反应（每个人通用，不替谁说具体的话）：按你眼下的名声、处境、和他的交情挑第一条成立的 */
-const REACT: { if: Cond; text: string; reg?: string }[] = [
-  { if: { wounded: true }, text: '你这脸色不对，是不是跟人动过手？伤着了就别硬撑，江湖路长。' },
-  { if: { flag: 'boss', xia: 20 }, reg: 'yz', text: '渡口那一仗，我也听说了。你这样的后生，如今不多见了。' },
-  { if: { eming: 20 }, text: '近来你的名声不大好听。我不多问，只劝你一句：做事留三分。' },
-  { if: { xia: 30 }, text: '都说近来有位少侠专管不平事，原来是你。这话我不当面夸，心里是有数的。' },
-  { if: { flag: 'boss' }, reg: 'yz', text: '听说你在渡口拿下了黑风寨的头一把交椅。这一带的人，夜里睡得安稳些了。' },
-  { if: { shenfen: 'biaoshi' }, text: '吃镖局这碗饭的，路上要小心。有什么消息，我替你留意着。' }
+/** 对你近来所做之事的一句反应：按他是哪一拨人（gangOf）各说各的口气；「少侠」只留给会这么叫的江湖人 */
+type ReactLine = { if: Cond; text: Record<Gang, string>; reg?: string };
+const REACT: ReactLine[] = [
+  { if: { wounded: true }, text: {
+    sengdao: '施主面带伤气，是与人动过手吧？老衲这里有清水，歇歇脚再走。',
+    guanchai: '你这脸色不对，跟人动过手？在我这一片可别闹出人命来。',
+    shanghu: '客官这脸色不好，是不是跟人动过手？伤着了先坐下喝口茶。',
+    jianghu: '你这脸色不对，是不是跟人动过手？伤着了就别硬撑，江湖路长。',
+    shijing: '你这脸色怎的这般难看？是跟人动过手了吧，快回去养着。' } },
+  { if: { flag: 'boss', xia: 20 }, reg: 'yz', text: {
+    sengdao: '渡口那一仗，贫僧也听说了。施主出手为人，功德不小。',
+    guanchai: '渡口那一仗，衙里都知道了。你的名号，衙里是有数的。',
+    shanghu: '渡口那一仗，满街都在传。有你在，咱们做买卖的也安心些。',
+    jianghu: '渡口那一仗，我也听说了。你这样的后生，如今不多见了。',
+    shijing: '渡口那一仗，这几日街上都在说你。' } },
+  { if: { eming: 20 }, text: {
+    sengdao: '施主近来杀气重，老衲劝你一句，得饶人处且饶人。',
+    guanchai: '你近来的名声不大好听，衙里记着呢。好自为之。',
+    shanghu: '近来听人说起你，口碑不太好。小店不敢多问，只盼你莫在这儿惹事。',
+    jianghu: '近来你的名声不大好听。我不多问，只劝你一句：做事留三分。',
+    shijing: '这几日街上都在嚼你的舌根，不太好听。我不多问，你自己当心。' } },
+  { if: { xia: 30 }, text: {
+    sengdao: '近来听香客说起，有人专管不平事，想来便是施主。善哉。',
+    guanchai: '都说近来有人专管不平事，原来是你。这话我当差的不好多讲，心里有数。',
+    shanghu: '都说近来有位少侠专管不平事，原来是你。往后这条街，托你照应了。',
+    jianghu: '都说近来有位少侠专管不平事，原来是你。这话我不当面夸，心里是有数的。',
+    shijing: '这几日街上都在说你，说你专管不平事。我们小老百姓，心里记着呢。' } },
+  { if: { flag: 'boss' }, reg: 'yz', text: {
+    sengdao: '听说黑风寨的事了结了。阿弥陀佛，此地百姓夜里可以睡个安稳觉。',
+    guanchai: '黑风寨的头一把交椅，叫你拿下了？衙里正为这事头疼，多谢。',
+    shanghu: '听说你拿下了黑风寨的头一把交椅，往后货道上太平些了。',
+    jianghu: '听说你在渡口拿下了黑风寨的头一把交椅。这一带的人，夜里睡得安稳些了。',
+    shijing: '听说黑风寨叫你收拾了？这一带的人，夜里睡得安稳些了。' } },
+  { if: { shenfen: 'biaoshi' }, text: {
+    sengdao: '吃镖局这碗饭，路上多是刀兵。施主千万保重。',
+    guanchai: '吃镖局这碗饭的，过关过卡要手续齐全，有事来衙里言语一声。',
+    shanghu: '吃镖局这碗饭的，路上要小心。我这儿有货要走，改日同你谈谈。',
+    jianghu: '吃镖局这碗饭的，路上要小心。有什么消息，我替你留意着。',
+    shijing: '吃镖局这碗饭的，听说天天在路上奔波，不容易。' } }
 ];
+
+/**
+ * 没有新料可说时的一个动作，按身份分几种（10-10 试玩：佩刀汉子和青衫书生第二回打听，是同一句关心话）。
+ * 一句都不替他编：他只是不再多说。同一天里别人说过的那个动作，下一个人换一个
+ */
+export const SHRUG: Record<Gang, string[]> = {
+  sengdao: ['合十垂目，不再多说。', '低头拨着念珠，没有再开口。', '摇摇头，只念了一声佛号。'],
+  guanchai: ['摆摆手，示意没什么可说的了。', '把簿子一合，不再多说。', '板着脸摇了摇头。'],
+  shanghu: ['摇摇头，低头拨起了算盘。', '摊摊手，没什么可说的了。', '笑了笑，转身去招呼别的客人。'],
+  jianghu: ['冷哼一声，不再多说。', '摇摇头，把脸别向一边。', '耸了耸肩，没有再开口。'],
+  shijing: ['摇摇头，不再多说。', '摆摆手，没什么可说的了。', '只笑了笑，没有再开口。']
+};
+const SHRUGGED = '动作:';
+function shrugFor(npcId: string): string {
+  const pool = SHRUG[gangOf(npcId)], today = dayNo(S), asked = S.asked ?? {};
+  let h = today;
+  for (let i = 0; i < npcId.length; i++) h = (h * 31 + npcId.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < pool.length; i++) {
+    const t = pool[(h + i) % pool.length];
+    if (asked[SHRUGGED + t] !== today) return t;
+  }
+  return pool[h % pool.length];
+}
+const REACTED = '反应:';
+/** 这句反应今天已经对别人说过了 */
+const reactSaid = (t: string): boolean => (S.asked ?? {})[REACTED + t] === dayNo(S);
 
 /** 他对你的这句反应：交情深的另说一句；只说和他同一带的事 */
 function reactFor(npcId: string): string | null {
   const rel = S.rel[npcId] ?? '素不相识';
   if (REL_WARM.includes(rel)) return '你我也算熟人了，这些日子见你来来去去，心里总替你捏一把汗。有什么难处，只管开口。';
-  return REACT.find(r => (!r.reg || homeRegion(npcId) === r.reg) && test(r.if))?.text ?? null;
+  return REACT.find(r => (!r.reg || homeRegion(npcId) === r.reg) && test(r.if))?.text[gangOf(npcId)] ?? null;
 }
 
 /** 他自己的日子：眼下说得出的几句（声口里 idle 成立的各条，内容顺序） */
@@ -531,10 +588,14 @@ function askLogOf(npcId: string, create: boolean): { d: number; u: string[] } | 
 }
 
 /** 下一句他还有什么可说的（不动记录）：自己的旧话在前，对你的反应在后；没有了为空 */
-function nextLine(npcId: string, log: { u: string[] }): { key: string; kind: 'idle' | 'react'; text: string } | null {
+function nextLine(npcId: string, log: { u: string[] }): { key: string; kind: 'idle' | 'react'; text: string; shrug?: boolean } | null {
   const idle = idleLines(lifeOf(npcId)).find(l => !log.u.includes(l.key));
   if (idle) return { ...idle, kind: 'idle' };
-  if (!log.u.includes('r')) { const t = reactFor(npcId); if (t) return { key: 'r', kind: 'react', text: t }; }
+  if (!log.u.includes('r')) {
+    const t = reactFor(npcId);
+    // 同一句关心话今天已对别人说过：不再照抄，这个人只是不再多说（按身份换动作）
+    if (t) return reactSaid(t) ? { key: 'r', kind: 'react', text: shrugFor(npcId), shrug: true } : { key: 'r', kind: 'react', text: t };
+  }
   return null;
 }
 
@@ -562,6 +623,8 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
       const log = askLogOf(npcId, true)!, nx = nextLine(npcId, log);
       if (!nx) return { text: `${who}今日已被你问过了，没有新话可说。`, src: 'again' };
       log.u.push(nx.key);
+      if (nx.kind === 'react') (S.asked ||= {})[(nx.shrug ? SHRUGGED : REACTED) + nx.text] = today;
+      if (nx.shrug) return { text: `${who}${nx.text}`, src: 'react' };
       return { text: `${who}${leadPick(life?.voice.lead ?? DATING_LEAD[gangOf(npcId)], npcId, log.u.length)}${life ? '，道：' : '：'}「${inner(nx.text)}」`, src: nx.kind };
     }
     asked[npcId] = today;

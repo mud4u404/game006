@@ -5,8 +5,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { QUESTS, ROOMS } from '../src/content';
 import { S, setState, skipToYangzhou } from '../src/core/state';
+import { leadsNear } from '../src/engine/daohang';
 import { setNowMs } from '../src/core/time';
-import { jueseKa, powerNow, retreatLabel, strongPaths, trackPower, yaoJin } from '../src/engine/jiemian';
+import { arrivalHot, jueseKa, markArrival, markVisit, powerNow, targetAt, retreatLabel, strongPaths, trackPower, yaoJin } from '../src/engine/jiemian';
 import { viewJianghu } from '../src/ui/views/jianghu';
 import { mapSheet, viewDitu } from '../src/ui/views/ditu';
 import { viewWugong } from '../src/ui/views/wugong';
@@ -18,7 +19,7 @@ beforeEach(() => {
 });
 
 /** 动宾句：以动词起头 */
-const DONGBIN = /^(去|找|办|打开|等|会|拜|赴)/;
+const DONGBIN = /^(去|寻|找|办|打开|等|会|拜|赴)/;
 
 describe('角色卡', () => {
   it('江湖页最上面是角色卡：显示名字、称号（没有名号显示身份）和战力', () => {
@@ -59,12 +60,12 @@ describe('角色卡', () => {
 });
 
 describe('眼下要紧', () => {
-  it('永远只有一件，写成动宾句；往下的「也可以」最多两条', () => {
+  it('永远只有一件，写成动宾句；往下的「也可以」最多一条', () => {
     const html = viewJianghu();
     expect(html.split('眼下要紧').length - 1).toBe(1);
     const y = yaoJin();
     expect(y.text, y.text).toMatch(DONGBIN);
-    expect(y.also.length).toBeLessThanOrEqual(2);
+    expect(y.also.length).toBeLessThanOrEqual(1);
   });
 
   it('每件心事的每一步，都只出一件动宾句', () => {
@@ -74,7 +75,7 @@ describe('眼下要紧', () => {
         S.quests = { [q.id]: i };
         S.track = q.id;
         const y = yaoJin();
-        if (!DONGBIN.test(y.text) || y.also.length > 2) bad.push(`${q.id}#${i}：${y.text}`);
+        if (!DONGBIN.test(y.text) || y.also.length > 1) bad.push(`${q.id}#${i}：${y.text}`);
         expect(viewJianghu().split('眼下要紧').length - 1, `${q.id}#${i}`).toBe(1);
       }
     }
@@ -103,6 +104,62 @@ describe('眼下要紧', () => {
     expect(html).toContain('data-act="tab:ditu"');
     expect(html).not.toContain('class="exits"');
     expect(html).not.toContain('近处有事');
+  });
+});
+
+describe('到地即办（10-10 试玩第一、二条）', () => {
+  it('「也可以」是真 button，带「前往」字样，最多一条', () => {
+    S.track = '';
+    const html = viewJianghu();
+    const also = html.match(/<button class="lead"[^>]*>/g) ?? [];
+    expect(also.length).toBe(1);
+    expect(html).toMatch(/<button class="lead" data-act="travel:[^"]+"><span class="lg">前往<\/span>/);
+  });
+
+  it('去一处之前就问好要找谁：差事派活的人、他的动作；到了以后高亮，做别的就不亮', () => {
+    const l = leadsNear(8).find(x => x.who);
+    expect(l, '开局近处至少有一件带派活人的差事').toBeTruthy();
+    const t = targetAt(l!.to);
+    expect(t?.npc).toBe(l!.who);
+    expect(t?.verb).toBe(l!.verb);
+    S.loc = l!.to;
+    markArrival(t!);
+    expect(arrivalHot()?.npc).toBe(t!.npc);
+    expect(viewJianghu()).toContain('avab hot');
+    markArrival(null);
+    expect(arrivalHot()).toBeUndefined();
+  });
+
+  it('没选过人，要找的人就在此处：先选他，人和动作排在场景白描前面', () => {
+    const l = leadsNear(8).find(x => x.who)!;
+    S.loc = l.to; S.sel = null;
+    markArrival({ npc: l.who!, verb: l.verb });
+    const html = viewJianghu();
+    expect(S.sel).toBe(l.who);
+    expect(html.indexOf('class="card here-card"')).toBeLessThan(html.indexOf('class="card scene"'));
+  });
+
+  it('场景白描：第一次进整段，第二次起折成两行，点开再展开', () => {
+    S.ui = {};
+    markVisit();
+    expect(viewJianghu()).not.toContain('desc fold');
+    S.ui = { ...S.ui, at: 'elsewhere' };
+    markVisit();
+    expect(S.ui?.visits?.[S.loc]).toBe(2);
+    const html = viewJianghu();
+    expect(html).toContain('desc fold');
+    expect(html).toContain('data-act="descToggle"');
+  });
+
+  it('府衙照壁看过悬赏：榜文旁有「去书办那里揭」，一步到书办的「揭」', () => {
+    S.loc = 'yz_zhaobi'; S.min = 10 * 60; S.sel = 'fuya_gaoshi';
+    expect(viewJianghu()).not.toContain('去书办那里揭');
+    S.reply = { id: 'fuya_gaoshi', text: '悬赏那一栏……', at: 0 };
+    expect(viewJianghu()).toContain('data-act="jumpTo:xsb_zhuren:揭"');
+  });
+
+  it('角色卡评语压成一行', () => {
+    expect(viewJianghu()).toMatch(/<p class="jy" title="[^"]*">/);
   });
 });
 
@@ -151,10 +208,10 @@ describe('变强看得见', () => {
     for (const p of ps) expect(p.cost.length, p.name).toBeGreaterThan(3);
   });
 
-  it('闭关按钮上写预估：熟练加多少、战力约加多少', () => {
+  it('闭关按钮上写预估：正文说长进，熟练、战力的数放小字', () => {
     S.lilian = 300;
     const t = retreatLabel(1, '一日');
-    expect(t).toMatch(/^闭关一日：.+熟练 \+\d+，(战力约 \+\d+|战力暂不见涨)$/);
+    expect(t).toMatch(/^闭关一日，(约有长进|一时不见长进)<small>（.+熟练 \+\d+，(战力 \+\d+|战力暂不涨：.+)）<\/small>$/);
     expect(viewWugong()).toContain(t);
   });
 

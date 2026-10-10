@@ -1,6 +1,6 @@
 import { REL_LEGACY } from '../src/engine/renqing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { clearSaveSafely, exportCode, importCode, listBackups, migrate, readSave, useStore, writeSave, KEY, SAVE_VERSION, type SaveStore } from '../src/core/save';
+import { clearSaveSafely, exportCode, exportCodeZ, importCode, importCodeAny, listBackups, migrate, readSave, useStore, writeSave, KEY, SAVE_VERSION, type SaveStore } from '../src/core/save';
 import { newGame, setState, skipToYangzhou, worldSeed } from '../src/core/state';
 import { V5_MATOU } from '../src/core/save';
 import { dayNo } from '../src/core/time';
@@ -287,5 +287,24 @@ describe('存档第五版：世界状态', () => {
     expect(readSave().broken).toBe(true);
     writeSave(newGame());
     expect([...mem.m.keys()].filter(k => k.startsWith('jhyy-save-broken-')).length).toBe(1);
+  });
+});
+
+describe('压缩存档码 z1:', () => {
+  it('压缩后更短、带 z1: 前缀、只含链接安全字符，读回来一模一样', async () => {
+    const s = newGame();
+    const z = await exportCodeZ(s);
+    expect(z.startsWith('z1:')).toBe(true);
+    expect(z.slice(3)).toMatch(/^[A-Za-z0-9_-]+$/);
+    expect(z.length).toBeLessThan(exportCode(s).length / 2);
+    expect(await importCodeAny(z)).toEqual(migrate(JSON.parse(JSON.stringify(s))));
+  });
+  it('旧的 JHYY: 码和备份原文照读；坏的压缩码报错', async () => {
+    const s = newGame();
+    expect(await importCodeAny(exportCode(s))).toEqual(importCode(exportCode(s)));
+    expect((await importCodeAny(JSON.stringify(s))).loc).toBe(s.loc);
+    await expect(importCodeAny('z1:@@@@')).rejects.toThrow('存档码不完整');
+    await expect(importCodeAny('z1:AAAA')).rejects.toThrow('存档码不完整');
+    await expect(importCodeAny('随便一段字')).rejects.toThrow('这不是存档码');
   });
 });

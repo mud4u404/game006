@@ -1,21 +1,19 @@
 /**
  * 地图的摆法（负责人 10-08：「现在增加的地点有点多，导致地图上看着很乱，且互相遮挡」）。纯函数，不碰页面，测试直接调。
  * 1. 一条街上挂着好几处去处的（东关街的武馆、镖局、望江楼、府衙……），地图上只画那条街，去处列在地图下面；
- * 2. 剩下的地名从内容里写的位置（RoomDef.map，百分比）出发，压在一起的互相推开，不出框；挤不下就把地图加高。
+ * 2. 剩下的地点按格子对齐排（一格一处，不互相压），方位照内容里写的位置（RoomDef.map，百分比）。
  */
 import type { RoomDef } from '../content/types';
 
 /** 一处地方挂着几处只通它的去处，就收进它里面 */
 export const HUB_MIN = 4;
-/** 地名按钮：高、左右内边距、一个字宽（和 styles/app.css 的 .node 对得上）、两个按钮之间至少留的缝 */
-const NODE_H = 44, NODE_PAD = 40, CHAR_W = 14, BADGE_W = 24, GAP = 4;
-/** 地图的高：默认、最高 */
-export const MAP_H = 330, MAP_H_MAX = 600;
+/** 地图的高：最高（十七处地点、两列也排得下） */
+export const MAP_H_MAX = 720;
 
 export interface MapNode {
   id: string;
   name: string;
-  /** 中心点，像素 */
+  /** 所在格子的中心，像素 */
   x: number;
   y: number;
   w: number;
@@ -45,60 +43,43 @@ export function hubsOf(rooms: RoomDef[]): Map<string, string[]> {
   return by;
 }
 
-/** 地名按钮的宽：左右内边距各十二、圆点十、点与字之间六，共 NODE_PAD；圆点人人都有（标记靠颜色和圈，不占宽） */
-const nodeW = (name: string, badge: boolean): number => NODE_PAD + CHAR_W * [...name].length + (badge ? BADGE_W : 0);
+/** 格子：一行的高、地图四周的留白、圆点中心离格子顶的距离（和 styles/app.css 的 .node 对得上） */
+export const ROW_H = 64, PAD = 12, DOT_Y = 20;
+/** 一行放几处：窄屏三列也放得下（地名超宽就折成两行，仍在自己的格子里） */
+const colsOf = (w: number): number => (w >= 260 ? 3 : 2);
 
-/** 摆一个地区的地图：w 是地图的宽（像素）。mark 旧时是挂任务小点的地点，现在标记不占宽，留着参数是为了调用处不用改 */
+/**
+ * 摆一个地区的地图（#600 整齐疏朗）：地点按格子对齐排，一格一处，格子彼此不相交，所以地名不可能互相压；
+ * 每处取离内容里写的位置（RoomDef.map）最近的空格，位置的大致方位（北在上、东在右）保留。
+ * w 是地图的宽（像素）。mark 旧时是挂任务小点的地点，标记不占宽了，留着参数是为了调用处不用改。
+ * 返回的 x、y 是格子中心，w、h 是格子大小（点击区）；圆点在格子顶往下 DOT_Y 处。
+ */
 export function layoutRegion(rooms: RoomDef[], w: number, _mark?: string): MapLayout {
   const hubs = hubsOf(rooms);
   const hidden = new Set([...hubs.values()].flat());
   const shown = rooms.filter(r => !hidden.has(r.id));
-  for (let h = MAP_H; ; h = Math.min(MAP_H_MAX, h + 40)) {
-    const nodes = shown.map(r => {
-      const leaves = hubs.get(r.id) ?? [];
-      const nw = Math.min(w, nodeW(r.name, leaves.length > 0));
-      return { id: r.id, name: r.name, x: (r.map[0] / 100) * w, y: (r.map[1] / 100) * h, w: nw, h: NODE_H, leaves };
-    });
-    const ok = relax(nodes, w, h);
-    if (ok || h >= MAP_H_MAX) return { nodes, w, h };
-  }
-}
-
-/** 压在一起的推开、出框的拉回来；返回是不是已经谁也不压谁 */
-function relax(nodes: MapNode[], w: number, h: number): boolean {
-  const home = nodes.map(n => [n.x, n.y]);
-  const clamp = (n: MapNode): void => {
-    n.x = Math.max(n.w / 2, Math.min(w - n.w / 2, n.x));
-    n.y = Math.max(n.h / 2, Math.min(h - n.h / 2, n.y));
-  };
-  nodes.forEach(clamp);
-  // 一对地名横着推了好多回还压着（一排摆不下，被框挡住了），就改成上下错开
-  const tries = new Map<string, number>();
-  for (let it = 0; it < 300; it++) {
-    let moved = false;
-    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i], b = nodes[j];
-      const ox = (a.w + b.w) / 2 + GAP - Math.abs(a.x - b.x);
-      const oy = (a.h + b.h) / 2 + GAP - Math.abs(a.y - b.y);
-      if (ox <= 0 || oy <= 0) continue;
-      moved = true;
-      const key = `${i}|${j}`, n = (tries.get(key) ?? 0) + 1;
-      tries.set(key, n);
-      // 顺着重叠少的那个方向推开，各让一半；同一个点上的，按先后错开
-      if (n <= 20 && ox / (a.w + b.w) < oy / (a.h + b.h)) {
-        const s = a.x < b.x || (a.x === b.x && i < j) ? -1 : 1;
-        a.x += (s * ox) / 2; b.x -= (s * ox) / 2;
-      } else {
-        const s = a.y < b.y || (a.y === b.y && i < j) ? -1 : 1;
-        a.y += (s * oy) / 2; b.y -= (s * oy) / 2;
-      }
+  const cols = colsOf(w), n = shown.length;
+  const rowsN = Math.max(3, Math.ceil(n / cols) + (n > cols ? 1 : 0));
+  const cw = (w - PAD * 2) / cols;
+  const taken = new Set<string>();
+  const nodes: MapNode[] = [];
+  const order = [...shown].sort((a, b) => a.map[1] - b.map[1] || a.map[0] - b.map[0] || (a.id < b.id ? -1 : 1));
+  for (const r of order) {
+    const tc = (r.map[0] / 100) * (cols - 1), tr = (r.map[1] / 100) * (rowsN - 1);
+    let best = [0, 0], bd = Infinity;
+    for (let row = 0; row < rowsN; row++) for (let col = 0; col < cols; col++) {
+      if (taken.has(`${row}|${col}`)) continue;
+      const d = (col - tc) ** 2 * 1.2 + (row - tr) ** 2;
+      if (d < bd - 1e-9) { bd = d; best = [row, col]; }
     }
-    // 轻轻往原来的位置拉一点，地图的样子不走形
-    if (it < 200) nodes.forEach((n, k) => { n.x += (home[k][0] - n.x) * 0.02; n.y += (home[k][1] - n.y) * 0.02; });
-    nodes.forEach(clamp);
-    if (!moved && it >= 200) return true;
+    taken.add(`${best[0]}|${best[1]}`);
+    nodes.push({ id: r.id, name: r.name, x: PAD + cw * (best[1] + 0.5), y: PAD + ROW_H * (best[0] + 0.5), w: cw, h: ROW_H, leaves: hubs.get(r.id) ?? [] });
   }
-  return !overlaps(nodes).length;
+  // 去掉上下空着的行，不留大块空白
+  const rows = nodes.map(n => Math.round((n.y - PAD) / ROW_H - 0.5));
+  const top = Math.min(...rows), bot = Math.max(...rows);
+  nodes.forEach(n => { n.y -= top * ROW_H; });
+  return { nodes, w, h: (bot - top + 1) * ROW_H + PAD * 2 };
 }
 
 /** 互相压着的地名（测试、诊断用） */
@@ -106,7 +87,7 @@ export function overlaps(nodes: MapNode[]): [string, string][] {
   const out: [string, string][] = [];
   for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
     const a = nodes[i], b = nodes[j];
-    if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2) out.push([a.name, b.name]);
+    if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 - 0.5 && Math.abs(a.y - b.y) < (a.h + b.h) / 2 - 0.5) out.push([a.name, b.name]);
   }
   return out;
 }
