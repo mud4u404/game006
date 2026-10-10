@@ -61,6 +61,7 @@ describe('寻人榜（xsb_xunren）：六步整条走通', () => {
     go('cheng_tavern');
     S.min = 22 * 60; // 亥时，舅舅在
     S.attr.悟性 = 25;
+    act('xsb_jiuju', '观察'); // 先看见线索才点得破（#606）
     act('xsb_jiuju', '点破'); // xsb_xr_clue2
     go('sz_matou');
     S.min = 8 * 60; // 小栓、地痞白天在
@@ -96,6 +97,7 @@ describe('寻人榜（xsb_xunren）：六步整条走通', () => {
     go('cheng_tavern');
     S.min = 22 * 60;
     S.attr.悟性 = 25;
+    act('xsb_jiuju', '观察'); // 先看见线索才点得破（#606）
     const r = act('xsb_jiuju', '点破');
     expect(r.text).toContain('枫桥码头');
     expect(S.flags.xsb_xr_clue2).toBe(true);
@@ -108,6 +110,7 @@ describe('寻人榜（xsb_xunren）：六步整条走通', () => {
     act('xsb_shifu', '交谈');
     go('cheng_tavern');
     S.min = 22 * 60; // 不升悟性／胆魄
+    act('xsb_jiuju', '观察'); // 先看见线索才点得破（#606）
     const r = act('xsb_jiuju', '点破');
     expect(r.text).not.toContain('枫桥码头');
     expect(S.flags.xsb_xr_clue2, '不够时不能点破').toBeFalsy();
@@ -168,6 +171,7 @@ describe('寻物榜（xsb_xunwu）：六步整条走通', () => {
     go('zj_shi');
     S.min = 12 * 60; // 陈三十点到十六点在
     S.attr.悟性 = 25;
+    act('xsb_chensan', '观察'); // 先看见线索才点得破（#606）
     act('xsb_chensan', '点破'); // xsb_xw_found
   };
 
@@ -196,6 +200,7 @@ describe('寻物榜（xsb_xunwu）：六步整条走通', () => {
     go('zj_shi');
     S.min = 12 * 60;
     S.attr.悟性 = 25;
+    act('xsb_chensan', '观察'); // 先看见线索才点得破（#606）
     const r = act('xsb_chensan', '点破');
     expect(r.text).toContain('玉佩');
     expect(S.flags.xsb_xw_found).toBe(true);
@@ -207,6 +212,7 @@ describe('寻物榜（xsb_xunwu）：六步整条走通', () => {
     act('xsb_xiuniang', '交谈');
     go('zj_shi');
     S.min = 12 * 60; // 不升悟性／胆魄
+    act('xsb_chensan', '观察'); // 先看见线索才点得破（#606）
     const r = act('xsb_chensan', '点破');
     expect(r.text).not.toContain('玉佩');
     expect(S.flags.xsb_xw_found, '不够时不能点破').toBeFalsy();
