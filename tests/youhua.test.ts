@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { QUESTS, ROOMS } from '../src/content';
 import { S, setState, skipToYangzhou } from '../src/core/state';
 import { setNowMs } from '../src/core/time';
-import { jueseKa, powerNow, retreatLabel, strongPaths, trackPower, yaoJin } from '../src/engine/jiemian';
+import { jueseKa, powerNow, retreatLabel, retreatSmall, strongPaths, trackPower, yaoJin } from '../src/engine/jiemian';
 import { viewJianghu } from '../src/ui/views/jianghu';
 import { mapSheet, viewDitu } from '../src/ui/views/ditu';
 import { viewWugong } from '../src/ui/views/wugong';
@@ -154,7 +154,8 @@ describe('变强看得见', () => {
   it('闭关按钮上写预估：熟练加多少、战力约加多少', () => {
     S.lilian = 300;
     const t = retreatLabel(1, '一日');
-    expect(t).toMatch(/^闭关一日：.+熟练 \+\d+，(战力约 \+\d+|战力暂不见涨)$/);
+    expect(t).toMatch(/^闭关一日：.+熟练 \+\d+$/);
+    expect(retreatSmall(1)).toMatch(/^(战力约 \+\d+|战力暂不涨：.+)$/);
     expect(viewWugong()).toContain(t);
   });
 

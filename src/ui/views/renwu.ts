@@ -10,7 +10,7 @@ import { LODGING, ZHU_NAME, xinmoLine, yueText, zhuOf } from '../../engine/shigu
 import { shenfenOf, shenfenText, gongxianOf } from '../../engine/shenfen';
 import { menguiText, pastSectText, sectText } from '../../engine/shicheng';
 import { fullDate } from '../../core/time';
-import { pingyuOf, renGuo, zhanliLine } from '../../engine/zhanli';
+import { pingyuNow, renGuo, zhanliLine } from '../../engine/zhanli';
 import { ZONE_NAME } from '../../engine/duel';
 import { cn } from '../../core/util';
 import { cloudRowHTML } from './account-link';
@@ -93,7 +93,7 @@ function jinliangHTML(): string {
   return `<section class="card here-card"><div class="sec-h"><h2>斤两</h2><span class="count">战力 ${z.power}</span></div>
     <p class="zhanli"><b>${z.line}</b>${z.hurt ? `<br><span class="hurt">${z.hurt}</span>` : ''}</p>
     ${gap ? `<p class="muted">${gap}</p>` : ''}
-    <p class="pingyu">${pingyuOf(S)}</p>
+    <p class="pingyu">${pingyuNow(S)}</p>
     ${known ? `<div class="sec-h"><h2>认得的人</h2><span class="count">交过手、掂过斤两的</span></div><div class="news">${known}</div>` : ''}</section>`;
 }
 

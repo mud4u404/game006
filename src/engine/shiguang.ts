@@ -10,7 +10,7 @@ import { dibao, type DibaoSrc } from './chuanwen';
 import { S, pushFeed, type GameState, type Yue, type Zhu } from '../core/state';
 import { cn } from '../core/util';
 import { advanceDays, advanceMin, dayNo, nowMs } from '../core/time';
-import { jobById, npc, room, skillById } from '../content';
+import { REALMS, REALM_NEED, jobById, npc, room, skillById } from '../content';
 import type { Effect, SkillId } from '../content/types';
 import { run } from './dsl';
 import { gainProf } from './growth';
@@ -137,6 +137,8 @@ export interface RestReport {
   grow: number;
   used: number;
   gains: [SkillId, number][];
+  /** 每门长了熟练的武功，出关前的境界与熟练（出关结算写「旧 → 新」） */
+  before?: Record<string, { r: number; p: number }>;
   breaks: string[];
   healed: Partial<Record<'hand' | 'foot' | 'inner', number>>;
   gongli: number;
@@ -152,20 +154,30 @@ export interface RestReport {
 }
 
 /**
+ * 静修 days 日的住宿与打折：心魔、住处一并算（嚼用：住客栈的，盘缠以外的钱够住几日住几日，余下的日子露宿，
+ * 睡不安稳，那几日打坐、参悟打八折；自己选露宿的全露宿；回师门的不花钱、不打折）。
+ * 结算（jingxiu）和闭关按钮上的预估（engine/jiemian.ts 的 retreatPreview）共用这一个函数，预估才等于实际
+ */
+export function restEff(s: GameState, days: number): { eff: number; xm1: number; cost: number; innDays: number; lusuDays: number } {
+  const xm0 = s.xinmo.n;
+  const xm1 = Math.max(0, xm0 - XINMO.decay * days);
+  const zhu = zhuOf(s);
+  const innDays = zhu === 'home' ? days : zhu === 'lusu' ? 0 : Math.max(0, Math.min(days, Math.floor((s.silver - LODGING.keep) / LODGING.inn)));
+  const cost = zhu === 'inn' ? innDays * LODGING.inn : 0, lusuDays = days - innDays;
+  const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2) * (days ? (innDays + lusuDays * LODGING.lusuEff) / days : 1);
+  return { eff, xm1, cost, innDays, lusuDays };
+}
+
+/**
  * 静修 days 日：养伤、打坐、参悟，江湖历往前走，出关时气血内力回满。返回邸报要写的东西。
  * 只有前 grow 日长修为（消化历练、长功力；铁律的额度，见 allowance），其余的日子只养伤
  */
 export function jingxiu(s: GameState, days: number, rng: () => number = worldRng, grow: number = Math.min(days, allowance(s))): RestReport {
   grow = Math.max(0, Math.min(days, Math.floor(grow)));
   const xm0 = s.xinmo.n;
-  const xm1 = Math.max(0, xm0 - XINMO.decay * days);
-  // 嚼用：住客栈的，盘缠以外的钱够住几日住几日，余下的日子露宿，睡不安稳，那几日打坐、参悟打八折；
-  // 自己选露宿的全露宿；回师门的不花钱、不打折
+  const { eff, xm1, cost, lusuDays } = restEff(s, days);
   const zhu = zhuOf(s);
-  const innDays = zhu === 'home' ? days : zhu === 'lusu' ? 0 : Math.max(0, Math.min(days, Math.floor((s.silver - LODGING.keep) / LODGING.inn)));
-  const cost = zhu === 'inn' ? innDays * LODGING.inn : 0, lusuDays = days - innDays;
   s.silver -= cost;
-  const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2) * (days ? (innDays + lusuDays * LODGING.lusuEff) / days : 1);
   const jx = jingxiuPlan(s, days, eff);
   for (const [z, n] of Object.entries(jx.healed) as ['hand' | 'foot' | 'inner', number][]) s.wounds[z] = Math.max(0, s.wounds[z] - n);
   markLight(s);
@@ -181,6 +193,9 @@ export function jingxiu(s: GameState, days: number, rng: () => number = worldRng
   const { used, gains } = grow > 0 ? retreatPlan(s, grow, eff) : { used: 0, gains: [] as [SkillId, number][] };
   s.lilian -= used;
   s.real.grown = grownOf(s) + grow;
+  // 出关结算写每门武功的「旧 → 新」：长进之前的境界、熟练先记下
+  const before: Record<string, { r: number; p: number }> = {};
+  for (const [k] of gains) if (s.skills[k]) before[k] = { r: s.skills[k]!.r, p: s.skills[k]!.p };
   const breaks = gains.flatMap(([k, v]) => gainProf(k, v));
   syncBody(s);
   const fromDay = dayNo(s);
@@ -192,7 +207,7 @@ export function jingxiu(s: GameState, days: number, rng: () => number = worldRng
   tickWorld(s);
   const db = dibao(s, fromDay, tickShiFull());
   const missed = checkYue(s);
-  return { days, grow, used, gains, breaks, healed: jx.healed, gongli: gl, zouhuo, news: db.map(x => x.text), newsSrc: db.map(x => x.src), missed, lodging: zhu, cost, lusuDays };
+  return { days, grow, used, gains, before, breaks, healed: jx.healed, gongli: gl, zouhuo, news: db.map(x => x.text), newsSrc: db.map(x => x.src), missed, lodging: zhu, cost, lusuDays };
 }
 
 /** 这个约是榜上揭的差事（JobDef.bang），或者交给一件物件的：误了期不算失信于人 */
@@ -263,3 +278,12 @@ export function settleAway(s: GameState, rng: () => number = worldRng): (RestRep
 
 /** 武功的名字 */
 export const skillName = (id: SkillId): string => skillById(id)?.name ?? id;
+
+/** 每门武功的「旧 → 新」，和战后结算一样写在 熟练 / 本重所需 上：「寒江剑法 91 → 142 / 200」；升了一重写两头的境界 */
+export function profChip(r: Pick<RestReport, 'before'>, [k, v]: [string, number], s: GameState = S): string {
+  const a = r.before?.[k], now = s.skills[k];
+  if (!a || !now) return `${skillName(k)} 熟练 +${v}`;
+  const need = REALM_NEED[now.r];
+  const tail = need ? ` / ${need}` : '';
+  return a.r === now.r ? `${skillName(k)} ${a.p} → ${now.p}${tail}` : `${skillName(k)} ${REALMS[a.r]} ${a.p} → ${REALMS[now.r]} ${now.p}${tail}`;
+}

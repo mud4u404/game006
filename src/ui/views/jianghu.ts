@@ -69,7 +69,7 @@ function jueseHTML(): string {
     <div class="jh"><span class="ava t-accent">沈</span>
       <div class="who"><b>${k.name}</b><small>${k.title}</small></div>
       <div class="jp"><small>战力</small><b>${k.power}</b>${k.from !== undefined ? `<i class="jup" aria-label="战力变了">${k.from} → ${k.power}</i>` : ''}</div></div>
-    <p class="jy">${k.pingyu}</p>
+    ${k.jindu ? `<p class="jd">${k.jindu}</p>` : ''}<p class="jy">${k.pingyu}</p>
     <p class="jl">${k.line}</p>
   </section>`;
 }

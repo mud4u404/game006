@@ -6,8 +6,9 @@
 import { S, save } from '../core/state';
 import { absMin, dateStr, nowMs, shichen } from '../core/time';
 import { $, H, M, MO, buzz, cn, fmt, liang, pick, reduceMotion } from '../core/util';
-import { REALMS, foeById, itemById, jobById, room, skillById } from '../content';
-import type { AfterDef, AfterOpt, Effect, FoeDef, PrepDef, SkillDef, TellDef } from '../content/types';
+import { REALMS, REALM_NEED, foeById, itemById, jobById, room, skillById } from '../content';
+import { realmCap } from '../engine/shicheng';
+import type { AfterDef, AfterOpt, Effect, FoeDef, PerformDef, PrepDef, SkillDef, TellDef } from '../content/types';
 import { textVars } from '../engine/dsl';
 import { act as settleAction, fightAfterReq, fightCheckpoint } from '../engine/xingdong';
 import { gainProf } from '../engine/growth';
@@ -150,7 +151,7 @@ function fightHTML(c: Fight): string {
     <div class="pb" id="pBars"></div>
     <div class="sk" id="idleBody">
       ${c.kit.performs.map((p, i) => `<button class="skb" id="skP${i}" data-act="fSkill:p${i}"><b>${p.name}</b><small></small></button>`).join('')}
-      ${c.kit.locked.map(p => `<button class="skb" disabled><b>${p.name}</b><small>${REALMS[p.realm ?? 0]}可用</small></button>`).join('')}
+      ${c.kit.locked.map(p => `<button class="skb" disabled><b>${p.name}</b><small>${lockWhy(c.kit, p)}</small></button>`).join('')}
       <button class="skb" id="skCharge"><b>运功</b><small>按住运功</small></button>
       <button class="skb ult" id="skUlt" data-act="fSkill:ult"${c.kit.ult ? '' : ' hidden'}><b>${c.kit.ult ? '杀招·' + c.kit.ult.def.name : '杀招'}</b><small></small></button>
       <button class="skb minor" id="skJcy" data-act="fSkill:jcy"></button>
@@ -831,11 +832,19 @@ function setSkill(id: string, disabled: boolean, sub: string): HTMLButtonElement
   return b;
 }
 
+/** 灰着的绝招为什么灰：火候未到（境界不够）；熟练已满却过不去，是要先突破（内功根基限着） */
+function lockWhy(kit: FightKit, p: PerformDef): string {
+  const k = kit.outer ? S.skills[kit.outer.id] : undefined;
+  const need = REALMS[p.realm ?? 0];
+  if (k && k.p >= REALM_NEED[k.r] && kit.outer && k.r >= realmCap(S, kit.outer)) return `要先突破：内功根基不够，才到得了${need}`;
+  return `火候未到：要练到${need}${k ? `（现${REALMS[k.r]}）` : ''}`;
+}
+
 function updSkills(): void {
   const c = C!, d = c.d;
   const locked = performance.now() < c.lock;
   const dis = d.over || c.busy || c.paused || d.waiting || locked, act0 = dis || !!d.prompt;
-  c.kit.performs.forEach((_, i) => setSkill(`#skP${i}`, act0 || !d.canPerform(i), d.pcd[i] > 0 ? `调息 ${d.pcd[i]} 合` : `内力 ${d.performCost(i)}`));
+  c.kit.performs.forEach((_, i) => setSkill(`#skP${i}`, act0 || !d.canPerform(i), d.pcd[i] > 0 ? `调息 ${d.pcd[i]} 合` : d.mp < d.performCost(i) ? `内力不足（要 ${d.performCost(i)}，余 ${Math.floor(d.mp)}）` : `内力 ${d.performCost(i)}`));
   const ch = $('#skCharge') as HTMLButtonElement;
   ch.disabled = act0;
   if (!c.chargeT) {
