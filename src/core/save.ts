@@ -25,15 +25,15 @@ export const SAVE_VERSION = 5;
 const ACTION_LOG_LIMIT = 300;
 
 /** 长事件可以裁掉，已结算的凭据不能跟着忘掉；读档与运行时共用这条规则。 */
-export function trimActionLog(s: GameState): void {
+export function trimActionLog(s: GameState, limit = ACTION_LOG_LIMIT): void {
   const log = Array.isArray(s.log) ? s.log : [];
-  const dropped = log.slice(0, Math.max(0, log.length - ACTION_LOG_LIMIT));
+  const dropped = log.slice(0, Math.max(0, log.length - limit));
   const archived = Array.isArray(s.settledKeys) ? s.settledKeys : [];
   const keys = new Set(archived.filter(k => typeof k === 'string' && k.length > 0));
   for (const e of dropped) if (typeof e?.key === 'string' && e.key.length > 0) keys.add(e.key);
   // 未归档过的旧档仍可缺省；不为无凭据行动造一张空清单。
   if (keys.size || s.settledKeys !== undefined) s.settledKeys = [...keys];
-  s.log = log.slice(-ACTION_LOG_LIMIT);
+  s.log = limit > 0 ? log.slice(-limit) : [];
 }
 /** 正式版的存档键。试玩预览（/preview/）换一套键，见 core/preview.ts；下面用到的键都经 saveKeys() 现算 */
 export const KEY = 'jhyy-save-v2';
@@ -362,6 +362,17 @@ async function pipe(data: Uint8Array, ts: CompressionStream | DecompressionStrea
   void w.write(data as BufferSource).catch(() => {});
   void w.close().catch(() => {});
   return new Uint8Array(await new Response(ts.readable).arrayBuffer());
+}
+
+/**
+ * 反馈用的精简存档（#617：中期存档压缩后仍超过链接上限，存档码空了）：只留最近二十条行动记录和三条动态，
+ * 其余原样（世界、人物、旗标都在，读回来照样能复现）；被裁掉的行动凭据并入 settledKeys，不会重复结算
+ */
+export function leanState(state: GameState, keepLog = 20, keepFeed = 3): GameState {
+  const s = JSON.parse(JSON.stringify(state)) as GameState;
+  trimActionLog(s, keepLog);
+  s.feed = (s.feed ?? []).slice(0, keepFeed);
+  return s;
 }
 
 export async function exportCodeZ(state: GameState): Promise<string> {

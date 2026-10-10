@@ -2,6 +2,7 @@
  * 优化改良（负责人 10-10 七条，docs/sheji-youhua-1010.md）：角色卡、眼下要紧、地图当主力、变强的路。
  * 点按检查（tests/dianji.test.ts）照旧管「每个按钮都有人接」。
  */
+const RAW = import.meta.glob<string>(['./fixtures/v5-midgame.json', '../src/ui/shell.ts'], { query: '?raw', import: 'default', eager: true });
 import { beforeEach, describe, expect, it } from 'vitest';
 import { QUESTS, ROOMS } from '../src/content';
 import { S, setState, skipToYangzhou } from '../src/core/state';
@@ -9,7 +10,9 @@ import { leadsNear } from '../src/engine/daohang';
 import { setNowMs } from '../src/core/time';
 import { arrivalHot, jueseKa, markArrival, markVisit, powerNow, targetAt, retreatLabel, strongPaths, trackPower, yaoJin } from '../src/engine/jiemian';
 import { viewJianghu } from '../src/ui/views/jianghu';
-import { mapSheet, viewDitu } from '../src/ui/views/ditu';
+import { mapSheet, tripNeedsAsk, viewDitu } from '../src/ui/views/ditu';
+import { npcName, roomNpcs, verbsOf } from '../src/engine/world';
+import { npc } from '../src/content';
 import { viewWugong } from '../src/ui/views/wugong';
 
 beforeEach(() => {
@@ -19,7 +22,7 @@ beforeEach(() => {
 });
 
 /** 动宾句：以动词起头 */
-const DONGBIN = /^(去|寻|找|办|打开|等|会|拜|赴)/;
+const DONGBIN = /^(去|寻|找|办|打开|等|会|拜|赴|看)/;
 
 describe('角色卡', () => {
   it('江湖页最上面是角色卡：显示名字、称号（没有名号显示身份）和战力', () => {
@@ -82,11 +85,13 @@ describe('眼下要紧', () => {
     expect(bad).toEqual([]);
   });
 
-  it('没有记挂的事：给近处的差事，没有就请你去地图上走走', () => {
+  it('没有记挂的事：给近处的差事，没有就给一件具体能做的事（去看榜），不写成「打开地图」', () => {
     S.track = '';
     const y = yaoJin();
     expect(y.text).toMatch(DONGBIN);
     expect(y.tag).not.toBe('主线');
+    expect(y.text).not.toContain('地图');
+    expect(y.tab).not.toBe('ditu');
   });
 
   it('到了主线要找的人那里：人高亮，不再弹「就在此处」', () => {
@@ -98,12 +103,28 @@ describe('眼下要紧', () => {
     if (here.hot) expect(viewJianghu()).toContain('avab hot');
   });
 
-  it('去处缩成一行：只有主线要去的那一处和「打开地图」，其余去处不列', () => {
-    const html = viewJianghu();
-    expect(html).toContain('打开地图');
-    expect(html).toContain('data-act="tab:ditu"');
-    expect(html).not.toContain('class="exits"');
-    expect(html).not.toContain('近处有事');
+  it('主界面指向地图的入口一个都没有：去处整节去掉，只剩底栏的「地图」页签（#617）', () => {
+    for (const track of ['', 'main1', 'prologue']) {
+      S.track = track;
+      const html = viewJianghu();
+      expect(html).not.toContain('data-act="tab:ditu"');
+      expect(html).not.toContain('打开地图');
+      expect(html).not.toContain('<h2>去处</h2>');
+      expect(html).not.toContain('class="goline"');
+    }
+    // 底栏的页签还在
+    expect(RAW['../src/ui/shell.ts']).toMatch(/\['ditu', '地图'\]/);
+  });
+
+  it('眼下要紧没有可做的事时，也不再指向地图', () => {
+    S.track = '';
+    S.job = null;
+    for (const loc of ROOMS.slice(0, 40).map(r => r.id)) {
+      S.loc = loc;
+      const y = yaoJin();
+      expect(y.tab, loc).not.toBe('ditu');
+      expect(y.text, loc).not.toContain('地图');
+    }
   });
 });
 
@@ -172,6 +193,41 @@ describe('地图当主力', () => {
     expect(html).toMatch(/<span class="tag">人<\/span>/);
     expect(html).toMatch(/<span class="tag">事<\/span>/);
     expect(html).toMatch(/<span class="tag">路<\/span>/);
+  });
+
+  it('卡片上「去」在最上面，点了直接赶路，不再有第二道确认；要船钱的路才在卡上写明', () => {
+    const to = ROOMS.find(r => r.id !== S.loc && r.region === ROOMS.find(x => x.id === S.loc)!.region)!;
+    const html = mapSheet(to.id);
+    expect(html.indexOf('travelGo:')).toBeGreaterThan(-1);
+    expect(html.indexOf('travelGo:')).toBeLessThan(html.indexOf('class="news mbrief"'));
+    expect(html).toContain('class="btn go"');
+    // 赶路只在要船钱时才先弹卡（ui/explore.ts 的 goOrAsk）：不花钱的路，点地名弹卡、点「去」就走
+    expect(tripNeedsAsk(to.id)).toBe(false);
+    expect(html).not.toContain('确认');
+  });
+
+  it('卡片上列这处的人和能做的事；你在这处时，动作是真按钮，点了就办', () => {
+    const rid = ROOMS.find(r => r.id !== S.loc && roomNpcs(r.id).length)!.id;
+    const far = mapSheet(rid);
+    for (const id of roomNpcs(rid)) expect(far).toContain(npcName(id));
+    expect(far).not.toContain('data-act="sheetDo:');
+    // 就在此处
+    const here = roomNpcs(S.loc).filter(x => verbsOf(npc(x)!).length);
+    expect(here.length).toBeGreaterThan(0);
+    const html = mapSheet(S.loc);
+    for (const id of here) {
+      expect(html).toContain(npcName(id));
+      expect(html).toContain(`data-act="sheetDo:${id}:${verbsOf(npc(id)!)[0]}"`);
+    }
+  });
+
+  it('地图页顶上有「眼下要紧」，点了跳到目标那一处', () => {
+    S.track = 'main1';
+    const y = yaoJin();
+    const html = viewDitu();
+    expect(html).toContain('眼下要紧');
+    if (y.to && y.to !== S.loc) expect(html).toContain(`data-act="mapJump:${y.to}"`);
+    else if (y.here) expect(html).toContain('就在此处');
   });
 
   it('点自己所在的地方：看得到说明，没有「去」', () => {

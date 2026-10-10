@@ -1,10 +1,10 @@
 import { S } from '../../core/state';
 import { absMin, dayNo, minLabel } from '../../core/time';
-import { foeById, npc, room } from '../../content';
+import { foeById, npc } from '../../content';
 import { npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE } from '../widgets';
-import { questNav, yueNow } from '../../engine/daohang';
+import { yueNow } from '../../engine/daohang';
 import { arrivalHot, jueseKa, visitsOf, yaoJin, type YaoJin } from '../../engine/jiemian';
 import { kanren } from '../../engine/zhaoshi';
 import { recordDiao } from '../../engine/zhanli';
@@ -30,9 +30,8 @@ export function viewJianghu(): string {
   // 只留一小会儿：隔了一阵（歇脚、赶路、过夜）就收起，不让昨夜的话挂到第二天
   const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id) && S.reply.at !== undefined && absMin(S) - S.reply.at <= 15
     ? `<section class="card here-card"><div class="detail"><div class="d-h"><b>${npcName(S.reply.id)}</b><small>${npc(S.reply.id)!.obj ? '' : '说完就走了'}</small></div><div class="reply">${S.reply.text}</div></div></section>` : '';
-  // 眼下要紧：永远只有一件，写成动宾句；点了先赶路，到了把人和动作高亮（engine/jiemian.ts）
-  const nav = S.track ? questNav(S.track) : null;
-  const q = nav && (nav.state === '能做' || nav.state === '要等' || nav.state === '卡住') ? nav : null;
+  // 眼下要紧：永远只有一件，写成动宾句；点了先赶路，到了把人和动作高亮（engine/jiemian.ts）。
+  // 去别处只留一个入口：底栏的「地图」（负责人 #617）；主线要去的那处已经写在眼下要紧里，这里不再列「去处」
   const feed = S.feed.slice(0, 2).map(e =>
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
@@ -57,7 +56,6 @@ export function viewJianghu(): string {
   ${greetCard()}
   ${first}
   ${gone}
-  ${goHTML(q?.to)}
   ${xiejiaoHTML()}`;
 }
 
@@ -103,13 +101,6 @@ function yaoJinHTML(yj: YaoJin): string {
   const book = `<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button>`;
   const also = yj.also.length ? `<div class="also"><small>也可以</small>${yj.also.map(a => `<button class="lead" data-act="travel:${a.to}"><span class="lg">前往</span><span class="lt">${a.text}</span><span class="ld">${tripNote(a.to) || '约' + minLabel(a.min)}</span>${IC.chev}</button>`).join('')}</div>` : '';
   return `<div class="quest-row">${main}${book}</div>${also}`;
-}
-
-/** 去处缩成一行：主线要去的那一处，加「打开地图」；其余去处都到地图上点 */
-function goHTML(questTo?: string): string {
-  const to = questTo && questTo !== S.loc ? questTo : '';
-  const target = to ? `<button class="exit solo" data-act="travel:${to}"><span class="dir">往</span><span class="en"><b>${room(to).name}</b><small>${tripNote(to) || minLabel(travelMin(pathMin(S.loc, to)))}</small></span><span class="tag info">主线</span></button>` : '';
-  return `<section class="go"><h2>去处</h2><div class="goline">${target}<button class="exit${target ? '' : ' solo'} mapbtn" data-act="tab:ditu"><span class="dir">图</span><span class="en"><b>打开地图</b><small>其余去处在地图上点</small></span></button></div></section>`;
 }
 
 /** 歇脚：等到天亮、晌午、傍晚、入夜（人有作息，有的人、有的事只在夜里）。序章里不歇 */

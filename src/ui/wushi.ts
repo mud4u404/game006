@@ -3,7 +3,7 @@
  * 规则在 core/wushi.ts，工具栏的 HTML 在 views/wushi-tools.ts。由 main.ts 引入。
  */
 import { S, save } from '../core/state';
-import { exportCode, exportCodeZ, SAVE_VERSION } from '../core/save';
+import { exportCode, exportCodeZ, leanState, SAVE_VERSION } from '../core/save';
 import { advanceMin, fullDate, shichenKe } from '../core/time';
 import { room } from '../content';
 import { tierNow } from '../engine/ren';
@@ -27,18 +27,23 @@ export function feedbackInfo(): FeedbackInfo {
 
 /** 压缩存档码（异步算一次，存档不变就不重算）；发送链接随文本框内容现拼 */
 let zCode = '';
+let zLean = '';
+let zLeaner = '';
 async function refreshLink(): Promise<void> {
   const a = $<HTMLAnchorElement>('#fbSend'), box = $<HTMLTextAreaElement>('#fbText');
   if (!a || !box) return;
   if (!zCode) zCode = await exportCodeZ(S).catch(() => exportCode(S));
+  if (!zLean) zLean = await exportCodeZ(leanState(S)).catch(() => zCode);
+  if (!zLeaner) zLeaner = await exportCodeZ(leanState(S, 0, 0)).catch(() => zLean);
   if (!$('#fbSend')) return;
-  const { url, withCode } = feedbackUrl(box.value, feedbackInfo(), zCode);
+  // 先试完整的，放不下再试精简的（裁行动记录和动态：留二十条，再不行全裁），都不行才改成复制
+  const { url, withCode, which } = feedbackUrl(box.value, feedbackInfo(), [zCode, zLean, zLeaner]);
   a.href = url;
   const cp = $('#fbCopy');
   if (cp) cp.hidden = withCode;
   const note = $('#fbNote');
   if (note) {
-    note.textContent = withCode ? '存档码（已压缩）会附在正文里。' : '存档码太长放不进链接：请先点「复制存档码」，发送后在 GitHub 页面里粘贴在正文末尾。';
+    note.textContent = withCode ? (which >= 1 ? '存档码（已压缩、精简了旧记录）会附在正文里。' : '存档码（已压缩）会附在正文里。') : '存档码太长放不进链接：请先点「复制存档码」，发送后在 GitHub 页面里粘贴在正文末尾。';
     note.classList.toggle('warn', !withCode);
     if (!withCode) note.style.cssText = 'color:#c0392b;font-weight:bold';
     else note.style.cssText = '';
@@ -76,6 +81,8 @@ registerHandlers({
       <a class="btn link" id="fbSend" href="#" target="_blank" rel="noopener">发送</a></div>
       <button class="btn ghost" id="fbCopy" data-act="wsCopyCode" hidden>复制存档码</button>`, false);
     zCode = '';
+    zLean = '';
+    zLeaner = '';
     void refreshLink();
   },
   wsCopyCode: async () => {

@@ -8,7 +8,7 @@ import type { GameState } from './state';
 export const WUSHI_KEY = 'jhyy-wushi';
 export const REPO = 'mud4u404/game006';
 /** 链接超过这么长，存档码就不放进去，改成复制 */
-export const URL_MAX = 7000;
+export const URL_MAX = 7600;
 /** 版本号连点几下切换巫师模式 */
 export const TAP_N = 7;
 
@@ -78,12 +78,19 @@ export function feedbackBody(text: string, info: FeedbackInfo, code: string | nu
   ].join('\n');
 }
 
-/** 拼 GitHub 新建 Issue 的链接；太长就去掉存档码。返回链接和存档码有没有放进去 */
-export function feedbackUrl(text: string, info: FeedbackInfo, code: string): { url: string; withCode: boolean } {
+/**
+ * 拼 GitHub 新建 Issue 的链接。存档码可以给几份，从完整到精简依次试，放得下的第一份用上；
+ * 全放不下才去掉存档码。返回链接、存档码有没有放进去、放的是第几份
+ */
+export function feedbackUrl(text: string, info: FeedbackInfo, codes: string | string[]): { url: string; withCode: boolean; which: number } {
   const mk = (c: string | null): string =>
     `https://github.com/${REPO}/issues/new?labels=${encodeURIComponent('反馈')}&title=${encodeURIComponent(feedbackTitle(text))}&body=${encodeURIComponent(feedbackBody(text, info, c))}`;
-  const full = mk(code);
-  return full.length <= URL_MAX ? { url: full, withCode: true } : { url: mk(null), withCode: false };
+  const list = Array.isArray(codes) ? codes : [codes];
+  for (let i = 0; i < list.length; i++) {
+    const u = mk(list[i]);
+    if (u.length <= URL_MAX) return { url: u, withCode: true, which: i };
+  }
+  return { url: mk(null), withCode: false, which: -1 };
 }
 
 /** 瞬移：只改本地存档的所在场景 */

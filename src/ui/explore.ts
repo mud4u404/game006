@@ -5,7 +5,7 @@
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { absMin, advanceDays, dateStr, dayNo } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
-import { npc, room, skillById } from '../content';
+import { ROOMS, npc, room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
@@ -223,6 +223,25 @@ registerHandlers({
     // 地图上点一处：先看那里有什么人、什么事、要走多久、花多少钱，再点「去」直接赶路（ui/views/ditu.ts 的 mapSheet）
     pendingArrive = undefined;
     openSheet(mapSheet(v), true);
+  },
+  // 地图页顶上的「眼下要紧」：切到目标那处的地区，弹出那处的卡片
+  mapJump: v => {
+    if (!v || !ROOMS.some(r => r.id === v)) return;
+    setMapRegion(room(v).region);
+    pendingArrive = undefined;
+    render();
+    openSheet(mapSheet(v), true);
+  },
+  // 地图卡片上「此处」的人和动作：点了就办（回江湖页，选中这个人，做这个动作）
+  sheetDo: v => {
+    const [id, ...rest] = v.split(':');
+    const verb = rest.join(':') as Verb;
+    if (!id || !verb || !roomNpcs(S.loc).includes(id)) return;
+    closeSheet();
+    S.tab = 'jianghu'; S.sel = id; S.reply = null;
+    markArrival(null);
+    render();
+    doAct(verb);
   },
   travelGo: v => { closeSheet(); const f = pendingArrive; pendingArrive = undefined; travelTo(v, f); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
