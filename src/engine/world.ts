@@ -11,7 +11,7 @@ import { eyesOn } from './yan';
 import { giftable, have, isPawnshop, pawnPrice, wornAt } from './daoju';
 import { warmer } from './renqing';
 import { seeShi } from './shishi';
-import { ask, panwen } from './chuanwen';
+import { ask, canAsk, panwen } from './chuanwen';
 import { jobGongxian, jobPay, shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
 import { minutesOf, passWarn } from './shiguang';
@@ -287,6 +287,8 @@ export function verbPoor(id: string, verb: Verb): boolean {
 
 /** 按钮和结算共用同一份行动盘算；赊账、头回免钱的真实分支仍然能走。 */
 export function verbPlan(id: string, verb: Verb): ActionPlan {
+  // 打听：今天他已经没有新话可说了，按钮灰掉，点之前就知道（engine/chuanwen.ts 的 canAsk）
+  if (verb === '打听' && !npc(id)?.actions['打听'] && !canAsk(id)) return { ok: false, why: '今日已问过', cost: [], gain: [], minutes: 0 };
   const bs = npc(id)?.actions[verb];
   const intended = actionBranch(id, verb, true);
   return plan(branchReq(id, verb, intended, intended ? bs!.indexOf(intended) : 0));
@@ -382,7 +384,7 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
       return { text: result.ok ? `${who}把${it.name}翻来覆去看了一遍，拨了拨算盘，数出钱来。（银两 +${price} 文）` : result.why ?? '', out: result.out, timed: true };
     }
     // 打听：问这个人知道什么（engine/chuanwen.ts）
-    case '打听': return { text: ask(id, { who }).text, out };
+    case '打听': { const r = ask(id, { who }); return { text: r.text, out, timed: r.src === 'again' }; }
     // 盘问：捕快亮腰牌，谁都得答话，不论今天问没问过、交情深浅（人犯另写「盘问」的分支，问得出破绽）
     case '盘问': return { text: panwen(id, who), out };
     case '请教': return { text: `${who}摇摇头：「我没什么可教你的。」`, out };

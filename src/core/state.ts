@@ -144,6 +144,8 @@ export interface GameState {
   gongxian?: Record<string, number>;
   /** 打听：每个人今天问过没有（江湖日）；范围：个人；写入口：engine/xingdong.ts */
   asked?: Record<string, number>;
+  /** 打听：今天对这个人问到第几句了、哪几句已经说过（engine/chuanwen.ts）；隔日清掉；范围：个人；写入口：engine/chuanwen.ts */
+  askLog?: Record<string, { d: number; u: string[] }>;
   /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts）；范围：世界；写入口：engine/xingdong.ts（经 engine/dsl.ts 结算） */
   away?: Record<string, number>;
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts）；范围：世界；写入口：engine/encounter.ts、engine/xingdong.ts */
@@ -164,8 +166,8 @@ export interface GameState {
   story: string;
   /** 范围：界面；写入口：ui */
   sel: string | null;
-  /** 范围：界面；写入口：ui */
-  reply: { id: string; text: string } | null;
+  /** 范围：界面；写入口：ui。at：说这句话时的江湖分钟（core/time absMin）；人走了以后「说完就走了」那张卡只留一小会儿，不隔夜 */
+  reply: { id: string; text: string; at?: number } | null;
   /** 范围：界面；写入口：ui */
   tab: Tab;
 }
@@ -226,6 +228,7 @@ export const FIELD_OWNER = Object.freeze({
   shi: { scope: '世界', writer: 'engine/shishi.ts、engine/xingdong.ts' },
   gongxian: { scope: '个人', writer: 'engine/xingdong.ts' },
   asked: { scope: '个人', writer: 'engine/xingdong.ts' },
+  askLog: { scope: '个人', writer: 'engine/chuanwen.ts' },
   away: { scope: '世界', writer: 'engine/xingdong.ts（经 engine/dsl.ts 结算）' },
   encLog: { scope: '世界', writer: 'engine/encounter.ts、engine/xingdong.ts' },
   lastEnc: { scope: '世界', writer: 'engine/encounter.ts、engine/xingdong.ts' },
