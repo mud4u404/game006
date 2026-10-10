@@ -8,8 +8,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { S, setState, skipToYangzhou } from '../src/core/state';
 import { setNowMs } from '../src/core/time';
-import { npc, shiById } from '../src/content';
-import { DATING_LEAD, ask, gangOf, hearsay, shiRumor } from '../src/engine/chuanwen';
+import { NPCS, npc, room, shiById } from '../src/content';
+import { DATING_LEAD, ask, gangOf, hearsay, roomsOf, shiRumor } from '../src/engine/chuanwen';
 
 const T0 = 1791300000000;
 beforeEach(() => {
@@ -74,8 +74,12 @@ const fresh = (steps: [string, string][]): void => {
 };
 const dayAt = (): number => Math.floor((S.year * 360 + (S.month - 1) * 30 + S.day) * 1440) + S.min;
 
-/** 三个没有声口、也不认识什么事的人（打听只能落到 hearsay） */
-const VOICELESS = ['qichi', 'yz_jj1', 'yz_jj3'];
+/** 三个没有声口、也不认识什么事的人（打听只能落到 hearsay）。
+ *  按 lifeOf 为空现挑，不写死人名：谁哪天补了活气，这条用例自己就换人，不用回来改测试 */
+const VOICELESS: string[] = NPCS
+  .filter(n => !n.life && !n.obj && roomsOf(n.id).some(r => room(r)?.region === 'yz'))
+  .slice(0, 3)
+  .map(n => n.id);
 const forgetAll = (): void => { for (const id of VOICELESS) delete S.w.ppl[id]?.know; };
 
 describe('同一日同一条老话只给一个人说', () => {
@@ -125,7 +129,7 @@ describe('同一日同一条老话只给一个人说', () => {
     expect(Object.keys(S.asked ?? {})).not.toContain('旧话:隔天的老账');
   });
 
-  it('隔天再说，昨儿说过的老话又能拿回来', () => {
+  it('隔天再说，前一天说过的老话又能拿回来', () => {
     fresh([['ss_matou', 'qi'], ['ss_matou', 'duizhi'], ['ss_zei', 'qi']]);
     forgetAll();
     const a = ask('qichi', { force: true });
