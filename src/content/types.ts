@@ -830,9 +830,11 @@ export interface ShiDef {
   start?: Cond;
   /** 起头那一步 */
   first: string;
+  /** 第二回起的开场；省略时仍用 first。指向本件 steps 中已有的一步，不重放首回才有的遭遇。 */
+  firstAlt?: string;
   steps: Record<string, ShiStep>;
-  /** 了结以后过几天重新起头（年年有的事：漕粮北上、庙会……）；不写的只有一回 */
-  again?: number;
+  /** 了结以后过几日重新起头；旧数字为固定日数，min/max 为整数日的闭区间，不写的只有一回。 */
+  again?: number | { min: number; max: number };
   /** 事情出在哪一处（地点 id）：步骤没写 where 的，目击者按这里找（engine/chuanwen.ts） */
   place?: string;
   /** 牵涉的人、势力（人物 id 或势力 id）：当事人一开始就知道，本帮的人一开始就知道 */

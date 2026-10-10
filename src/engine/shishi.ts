@@ -14,7 +14,8 @@ import { SHI, room, shiById } from '../content';
 import type { ShiDef, ShiStep } from '../content/types';
 import { run, test } from './dsl';
 import { ask, shiRumor, type HeardItem } from './chuanwen';
-import { worldRng } from './shijie';
+import { worldOf, worldRng } from './shijie';
+import { mulberry32, seedOf } from './rng';
 
 export { hearsay, panwen } from './chuanwen';
 
@@ -41,12 +42,13 @@ export function learnShi(id: string): boolean {
  * 走到某一步：记下时刻，执行这一步的变化，生一条传闻（玩家插手推的，说的是玩家）；
  * 人在这个地区就听到传开的话，人就在事发的地方就看见了
  */
-function goStep(d: ShiDef, to: string, at: number, heard: HeardItem[], hand = false): void {
+function goStep(d: ShiDef, to: string, at: number, heard: HeardItem[], hand = false, done?: number): void {
   const prev = shiOf(d.id);
   const st: ShiState = { at: to, since: at };
   if (prev?.seen !== undefined) st.seen = prev.seen;
   if (prev?.prev !== undefined) st.prev = prev.prev;
-  if (prev?.done) st.done = prev.done;
+  if (done !== undefined) st.done = done;
+  else if (prev?.done) st.done = prev.done;
   if (prev?.hand) st.hand = true;
   (S.shi ||= {})[d.id] = st;
   const step = d.steps[to];
@@ -67,6 +69,15 @@ function goStep(d: ShiDef, to: string, at: number, heard: HeardItem[], hand = fa
  */
 export function tickShi(): string[] { return tickShiFull().map(h => h.text); }
 
+/** 终局定下下一回的冷却：不消费世界随机流，反复 tick、存档重载都还是同一次抽签。 */
+function againDays(d: ShiDef, st: ShiState): number | undefined {
+  if (typeof d.again === 'number' || d.again === undefined) return d.again;
+  const { min, max } = d.again;
+  if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min) return undefined;
+  const rng = mulberry32(seedOf(worldOf().seed, d.id, st.since, (st.done ?? 0) + 1));
+  return min + Math.floor(rng() * (max - min + 1));
+}
+
 /** 同 tickShi，返回听到的每一句出自哪件事的哪一步（出关邸报核对来处用） */
 export function tickShiFull(): HeardItem[] {
   const now = absMin(S), heard: HeardItem[] = [];
@@ -75,12 +86,14 @@ export function tickShiFull(): HeardItem[] {
     if (!st) {
       if (d.start && !test(d.start)) continue;
       goStep(d, d.first, now, heard);
-    } else if (d.again !== undefined && isEnding(d, st.at) && now - st.since >= d.again * DAY && (!d.start || test(d.start))) {
+    } else if (d.again !== undefined && isEnding(d, st.at)) {
       // 了结过的事，隔了日子再来一回：玩家知道的是上一回的事，这一回从头听起
-      const done = (st.done ?? 0) + 1;
-      delete S.shi![d.id];
-      goStep(d, d.first, st.since + d.again * DAY, heard);
-      S.shi![d.id].done = done;
+      const days = againDays(d, st);
+      if (days !== undefined && now - st.since >= days * DAY && (!d.start || test(d.start))) {
+        const done = (st.done ?? 0) + 1;
+        delete S.shi![d.id];
+        goStep(d, d.firstAlt ?? d.first, st.since + days * DAY, heard, false, done);
+      }
     }
     // 玩家没到过这一带、也没听说的事，停在起头那一步等着：到了这一带就听说，从那时起才往下走
     // （负责人 10-09：「它自动了结了玩家没赶上岂不是浪费？」）。听说了不管，才是错过
@@ -171,7 +184,7 @@ export interface ShiRow {
   /** 了结了，玩家没插手（这一回没赶上） */
   missed: boolean;
   /** 隔几日还会再来（ShiDef.again） */
-  again?: number;
+  again?: ShiDef['again'];
   /** 玩家上一回知道的那一步写的什么（和眼下知道的不是同一步才有）：见闻簿留前一步的一行 */
   before?: string;
   /** 第几回（头一回为 1） */
