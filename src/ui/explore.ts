@@ -117,7 +117,11 @@ function doAct(verb: Verb): void {
   const id = S.sel;
   if (!id) return;
   const key = `${id}|${verb}`, now = performance.now();
-  if (key === lastAct.key && now - lastAct.t < 450) return;
+  if (key === lastAct.key && now - lastAct.t < 450) {
+    // 「动手」「偷窃」要再点一下确认：连点太快被当成手滑吞掉时，补一句话，别让玩家以为点不动
+    if (armed.key === key) toast(`稍等一下，再点一下「${verb}」`);
+    return;
+  }
   lastAct = { key, t: now };
   // 动手、偷窃收不回：三秒内再点一下才算，免得手一滑当街行凶（审查 H43）
   if (verb === '动手' || verb === '偷窃') {
