@@ -9,7 +9,7 @@ import { gongliText, tierNow } from '../../engine/ren';
 import { canPerform, realmCap } from '../../engine/shicheng';
 import { FOE_FX_TAG, passivesNow } from '../../engine/zhaoshi';
 import { RETREAT, gongliCeiling } from '../../engine/lilian';
-import { LODGING, ZHU_NAME, allowance, retreatBlock, zhuOf } from '../../engine/shiguang';
+import { allowance, inXinshou, LODGING, retreatBlock, ZHU_NAME, zhuOf } from '../../engine/shiguang';
 import type { Zhu } from '../../core/state';
 
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
@@ -28,7 +28,14 @@ export function viewWugong(): string {
       : (() => {
         const block = retreatBlock(S);
         const al = allowance(S);
-        return `<p class="muted">${block ?? `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。下线就是静修，回来先读出关邸报。`}</p>
+        // 新手期（Issue #547）：额度不再按现实小时数掐，先把这话说明白，别让玩家以为是自己用错了
+        const 初入 = inXinshou(S);
+        const 额 = 初入
+          ? '初入江湖，这几日修为长得快：额度不看现实时辰，要多少有多少。'
+          : `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。`;
+        const 住 = zhuHint(S);
+        return `<p class="muted">${block ?? `${额}下线就是静修，回来先读出关邸报。`}</p>
+        ${block ? '' : `<p class="muted">${住}</p>`}
         <div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
       })()}
   </section>
@@ -44,6 +51,23 @@ export function viewWugong(): string {
     <div class="grades">${GRADES.map(([g, c]) => `<span class="tag g-${c}">${g}</span>`).join('')}</div>
     <p class="muted">品级是武功的先天资质，境界是你的苦功。低品武功练到极致，一样能技惊四座。</p></section>
   ${learned.map(skillCard).join('')}`;
+}
+
+/**
+ * 闭关前先说清后果（Issue #547）：玩家反馈「起手只有三十文，客栈一百文一宿，闭关当场
+ * 变成露宿、打坐打折，事先不知道」。这里把这一趟住哪、够不够钱、够不上会怎么样写在点之前。
+ */
+export function zhuHint(s: typeof S): string {
+  const cur = zhuOf(s);
+
+  if (cur === 'inn') {
+    const 够 = s.silver >= LODGING.inn;
+    return 够
+      ? `这一趟住客栈，一日${LODGING.inn}文，袋里正好够。睡得安稳，打坐全额的长。`
+      : `这一趟住客栈，一日${LODGING.inn}文——袋里只有${cn(s.silver)}文，**钱不够**，住不上的那些夜算露宿：睡不安稳，打坐参悟打八折。`;
+  }
+  if (cur === 'lusu') return '这一趟露宿：不花钱，睡不安稳，打坐参悟打八折。';
+  return s.sect ? `这一趟回${s.sect.school}住，不花钱，睡得安稳。` : '这一趟露宿：不花钱，睡不安稳，打坐参悟打八折。拜了师才能回师门住。';
 }
 
 /** 住处三选一（engine/shiguang.ts 的 zhuOf）：闭关、下线静修都按它 */
