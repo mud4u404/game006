@@ -155,13 +155,20 @@ export function computeBoard(data, checks, now) {
     let late = !!(last && now - last > 6 * HOUR);
     if (!last && data.evFull && now - data.evOldest > 6 * HOUR) late = true;
     const done48 = merged.filter((m) => isMe(ai, prefixOf(m.ref)) && now - m.at < 48 * HOUR).length;
+    // 要叫醒：手上有活（PR、已领分支、排着的），却超过九十分钟没动静（停用的、维护者不算）
+    const hasWork = myPulls.length + claimed.length + waiting.length > 0;
+    // 从「最后一次动静」和「最早一件还没动的活派下来的时候」里取晚的那个算起：刚派下活不算停，派了很久还不动才算
+    const since = Math.max(last || 0, waiting.length ? Math.min(...waiting.map((i) => i.created || now)) : 0);
+    const stalled = !ai.boss && ai.tag !== '停用' && hasWork && (!since || now - since > 90 * 60 * 1000);
+    const nextNo = myPulls.length ? myPulls[0].n : (waiting.length ? waiting[0].n : null);
     return {
       k: ai.k, n: ai.n, boss: !!ai.boss, tag: ai.tag || '',
       done48, doing: myPulls.length + claimed.length, waiting: waiting.length,
-      lamp, txt, none, late, last,
+      lamp, txt, none, late, last, stalled, nextNo,
       lastTxt: last ? ago(last, now) : (data.evFull ? '>' + Math.round((now - data.evOldest) / HOUR) + ' 小时' : '—'),
       claimed, myPulls: myPulls.map((p) => p.n), waitingIssues: waiting.map((i) => i.n),
     };
   });
-  return { prNums, merged24, sat24, hourly, ais, prLamp };
+  const wake = ais.filter((a) => a.stalled).map((a) => ({ n: a.n, no: a.nextNo, lastTxt: a.lastTxt }));
+  return { prNums, merged24, sat24, hourly, ais, prLamp, wake };
 }

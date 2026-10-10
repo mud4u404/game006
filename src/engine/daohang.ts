@@ -5,15 +5,15 @@
  * - 去哪、找谁：找的人按作息眼下在哪，不在的话什么时辰在；
  * - 卡在哪：写成心里的盘算，只说玩家自己知道的（见 questNav 上面的注释）；
  * - 做不成了：fail 成立，写明为什么。
- * 纯函数，只读 S（试作息时临时改 S.min，算完还原）。见闻簿、江湖页横幅、地图都读它。
+ * 纯函数，只读 S；作息用指定钟点查询，不改时钟。见闻簿、江湖页横幅、地图都读它。
  */
 import { S, pushFeed } from '../core/state';
-import { dayNo, shichen } from '../core/time';
+import { dayNo } from '../core/time';
 import { JOBS, NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
 import { lackOf, test } from './dsl';
-import { npcName, pathMin, roomNpcs, roomObjs, stageText, travelMin } from './world';
+import { hoursAt, npcName, pathMin, stageText, travelMin, whereAt } from './world';
 import { jobOpen } from './shenfen';
 
 /** 能做：去了就办得成；要等：只差时辰、人不在；卡住：差别的门槛；未竟：做不成了；了结：办完了 */
@@ -65,32 +65,10 @@ function roomsOf(id: string): string[] {
   return ROOMS.filter(r => has(r.npcs) || has(r.objs)).map(r => r.id);
 }
 
-const presentAt = (id: string, roomId: string): boolean => roomNpcs(roomId).includes(id) || roomObjs(roomId).includes(id);
-
-/** 十二时辰挨个试：在这处的时辰连成几段（「辰时到申时」「子时、午时」）；都在写「整日」 */
-function hoursAt(id: string, roomId: string): string | null {
-  const keep = S.min, on: boolean[] = [];
-  try {
-    for (let k = 0; k < 12; k++) { S.min = k * 120; on.push(presentAt(id, roomId)); }
-  } finally { S.min = keep; }
-  if (on.every(Boolean)) return '整日';
-  if (!on.some(Boolean)) return null;
-  // 从一个不在的时辰之后起算，跨子夜的段落也连得上
-  const start = (on.indexOf(false) + 1) % 12, runs: [number, number][] = [];
-  for (let i = 0; i < 12; i++) {
-    const k = (start + i) % 12;
-    if (!on[k]) continue;
-    const last = runs[runs.length - 1];
-    if (last && (last[1] + 1) % 12 === k) last[1] = k; else runs.push([k, k]);
-  }
-  const name = (k: number): string => shichen(k * 120);
-  return runs.map(([a, b]) => (a === b ? name(a) : `${name(a)}到${name(b)}`)).join('、');
-}
-
 /** 找的人：眼下在哪；不在要去的那处，什么时辰在 */
 export function whoNav(id: string, to?: string): NavWho {
   const where = roomsOf(id);
-  const now = where.find(r => presentAt(id, r)) ?? null;
+  const now = whereAt(id);
   const at = to ?? now ?? where[0];
   return { id, name: npcName(id), now, when: at ? hoursAt(id, at) : null };
 }

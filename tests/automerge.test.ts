@@ -30,6 +30,12 @@ describe('自动合并：允许改的文件', () => {
     expect([...allowedFiles('### 允许改的文件 (必填)\nfoo.ts')]).toEqual(['src/content/packs/foo.ts']);
   });
 
+  it('docs 下的子目录也认（调研笔记 docs/zhishiku/x.md），内容包不认子目录', () => {
+    expect([...allowedFiles(body('- `docs/zhishiku/mud-yanhuang.md`\n- docs/zhishiku/README.md\n- `docs/linggan.md`'))].sort())
+      .toEqual(['docs/linggan.md', 'docs/zhishiku/README.md', 'docs/zhishiku/mud-yanhuang.md']);
+    expect([...allowedFiles(body('- src/content/packs/sub/y.ts'))]).toEqual([]);
+  });
+
   it('完整路径前面不能还有路径：src/engine/docs/bar.md 不放行 docs/bar.md', () => {
     expect([...allowedFiles(body('- src/engine/docs/bar.md\n- x/src/content/packs/y.ts'))]).toEqual([]);
     expect([...allowedFiles(body('- `docs/bar.md`、(src/content/packs/y.ts)'))].sort()).toEqual(['docs/bar.md', 'src/content/packs/y.ts']);
