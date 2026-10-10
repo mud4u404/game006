@@ -281,6 +281,9 @@ describe('第三稿：序章的人进扬州，关系按路记账', () => {
     const t1 = act('kp_chu', '交谈').text;
     expect(t1).toContain('卫家');
     expect(S.flags.kp_chu_zuo).toBeUndefined();
+    // 第五稿：他要知道卫衡在找他（风声以后）才肯说，之前再谈也不说
+    expect(act('kp_chu', '交谈').text).not.toContain('使刀的是左手');
+    run([{ type: 'shi', id: 'kp_xun', to: 'feng' }]);
     const t2 = act('kp_chu', '交谈').text;
     expect(t2).toContain('左手');
     expect(S.flags.kp_chu_zuo).toBe(true);
@@ -418,7 +421,8 @@ describe('第三稿：三场打分胜负', () => {
   it('普通人的本领在开打前单写一行（先手在你）；「渡口长大的人」全篇只留一处', () => {
     for (const id of ['kp_du', 'kp_wen', 'kp_bu']) {
       for (const card of storyById(id)!.cards) for (const c of card.choices) {
-        if (/kp_(qiantan|lan|zhong)/.test(JSON.stringify(c.do ?? []))) {
+        // 开打的选项才要写先手（第五稿：下水救他也置 kp_qiantan，那里不打，只是认得浅滩）
+        if (/kp_(qiantan|lan|zhong)/.test(JSON.stringify(c.do ?? [])) && JSON.stringify(c.do).includes('"type":"fight"')) {
           expect(c.result, `${id}「${c.label}」`).toContain('\n先手在你：');
           expect(c.sub ?? '').not.toContain('渡口长大的人');
         }

@@ -4,7 +4,7 @@
  */
 import { S, fullName, pushFeed } from '../core/state';
 import { emit } from '../core/bus';
-import { advanceMin, dayNo } from '../core/time';
+import { absMin, advanceMin, dayNo } from '../core/time';
 import { liang } from '../core/util';
 import { itemById, jobById, questById, skillById } from '../content';
 import { REALMS, SECT_RANKS } from '../content/skills';
@@ -88,6 +88,13 @@ export function test(c?: Cond): boolean {
     const at = S.shi?.[c.shi.id]?.at;
     if (c.shi.at && !(at !== undefined && c.shi.at.includes(at))) return false;
     if (c.shi.not && at !== undefined && c.shi.not.includes(at)) return false;
+    // 走到这一步已经几个钟头
+    if (c.shi.age) {
+      const st = S.shi?.[c.shi.id];
+      if (!st) return false;
+      const h = (absMin(S) - st.since) / 60;
+      if ((c.shi.age.below !== undefined && h >= c.shi.age.below) || (c.shi.age.atLeast !== undefined && h < c.shi.age.atLeast)) return false;
+    }
   }
   // 世界状态（engine/shijie.ts）：码头归谁、治安、物价、势力、人的处境
   if (c.w && !testWorld(c.w)) return false;

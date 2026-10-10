@@ -10,7 +10,7 @@ import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { TIELV_TEXT, XIEJIAO, checkYue, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
+import { TIELV_TEXT, XIEJIAO, checkYue, restLine, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
 import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
@@ -251,7 +251,8 @@ registerHandlers({
     const frac = Math.min(0.3, (m / 60) * 0.03);
     S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * frac));
     S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * frac));
-    pushFeed('江湖', `你找了个地方歇脚，一直歇到${label}，缓过了些气力。`);
+    // 歇脚那一句换几种说法，不进动态（动态里天天一模一样的一行，读着腻）
+    toast(restLine(S, label));
     const tip = kpBiguanTip(S, 'rest');
     if (tip) pushFeed('江湖', tip);
     render();

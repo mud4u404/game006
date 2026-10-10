@@ -10,7 +10,13 @@ export interface SkillProg { r: number; p: number }
 /** 约：npc 在 at 等你，due 是哪一个江湖日（core/time.ts 的 dayNo）；miss 是失约的后果 */
 export interface Yue { id: string; npc: string; at: string; due: number; text: string; miss?: Effect[] }
 /** 世事：走到哪一步、从何时起、玩家知道到哪一步、了结过几回、玩家插过手没有 */
-export interface ShiState { at: string; since: number; seen?: string; done?: number; hand?: true }
+export interface ShiState { at: string; since: number; seen?: string; /** 玩家上一回知道的那一步（见闻簿留前一步的一行） */ prev?: string; done?: number; hand?: true }
+/** 玩家知道到哪一步：换了一步，原来知道的记作 prev */
+export function markSeen(st: ShiState, step: string): void {
+  if (st.seen === step) return;
+  if (st.seen !== undefined) st.prev = st.seen;
+  st.seen = step;
+}
 /** 静修的住处 */
 export type Zhu = 'inn' | 'lusu' | 'home';
 export interface FeedEntry { t: FeedTag; x: string; n: number }

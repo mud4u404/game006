@@ -129,9 +129,17 @@ function fight(fid: string, depth: number): void {
   if (st.r?.then) handle(run(st.r.then), depth);
 }
 
-/** 这些效果把盯着的世事推到还没走过的一步 */
+/**
+ * 这些效果把盯着的世事推到还没走过的一步：直接推（shi 效果），或者写下一个旗标做安排，
+ * 世事到日子读它改走另一步（ShiStep.next.route，卫衡寻褚七的提醒、劝当面了结）
+ */
 function pushesNew(list: Effect[] | undefined): boolean {
-  return !!cur?.shi && (list ?? []).some(e => e.type === 'shi' && e.id === cur!.shi && !!e.to && !cov.shi.has(`${e.id}.${e.to}`));
+  if (!cur?.shi) return false;
+  const id = cur.shi;
+  const routed = Object.values(shiById(id)!.steps).flatMap(st => (st.next?.route ?? []).flatMap(r => flagsIn(r.if).map(f => [f, r.to] as const)));
+  return (list ?? []).some(e =>
+    (e.type === 'shi' && e.id === id && !!e.to && !cov.shi.has(`${e.id}.${e.to}`))
+    || (e.type === 'flag' && e.value !== false && routed.some(([f, to]) => f === e.flag && !cov.shi.has(`${id}.${to}`))));
 }
 
 /** 不出招、不应对，干挨打：打输了的那些结局也得有人走到 */
@@ -444,7 +452,13 @@ function play(r: Run): void {
     // 袖手旁观的局，等到它自己走到结局就收场（这条路只有一个结局）
     if (r.shi) {
       const d = shiById(r.shi)!, at = S.shi?.[r.shi]?.at;
-      if (at && isEnding(d, at)) { if (r.watch) break; run([{ type: 'shi', id: r.shi, to: d.first }]); }
+      if (at && isEnding(d, at)) {
+        if (r.watch) break;
+        // 重来一回：上一回做的安排（next.route 读的旗标）和走了的人都清掉，玩家不会在同一件事里把同一个安排做两回
+        for (const st of Object.values(d.steps)) for (const rt of st.next?.route ?? []) for (const f of flagsIn(rt.if)) delete S.flags[f];
+        for (const id of d.subj ?? []) if (npc(id)) run([{ type: 'w', op: 'free', npc: id }]);
+        run([{ type: 'shi', id: r.shi, to: d.first }]);
+      }
     }
     // 过了约期的约不该还挂着（界面上会一直写「今日」）
     if (S.yue.some(y => y.due < dayNo(S))) err('过了约期的约还挂着');
