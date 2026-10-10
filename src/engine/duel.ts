@@ -127,6 +127,10 @@ export type TellDom = 'li' | 'su' | 'qiao';
 export interface FoeSpec {
   person: Person;
   name: string;
+  /** 动态练功木人复制玩家当下气血；普通对手仍按 Person 和原系数计算。 */
+  hp?: number;
+  hpMax?: number;
+  sparFloor?: number;
   /** 重招：内容里每一招的主项 */
   tells: TellDom[];
   firstTell?: number;
@@ -267,8 +271,8 @@ export class Duel {
     this.passive = { ...NO_PASSIVE, ...hero.passive };
     // 对手：用对手流程打的人，气血厚一些（玩家另有绝招、破绽、反击）
     const fp = foe.person, weak = foe.weak ?? 1, fm = dmgMul(fp, sc) * weak;
-    this.ehpMax = Math.round(hpMaxOf(fp, sc) * sc.foeHp * weak);
-    this.ehp = this.ehpMax;
+    this.ehpMax = foe.hpMax ?? Math.round(hpMaxOf(fp, sc) * sc.foeHp * weak);
+    this.ehp = Math.min(this.ehpMax, foe.hp ?? this.ehpMax);
     this.atk = scl([55, 80], fm * (foe.atkMul ?? 1));
     this.big = ((55 + 80) / 2) * fm * sc.bigK * (foe.bigMul ?? 1);
     const fhh = huohouOf(fp, sc), base = (fhh.block + fhh.dodge + fhh.parry) / 3, k = sc.tellSpread;
@@ -286,7 +290,7 @@ export class Duel {
     this.mom = clamp(50 + 0.5 * (this.dan - this.eDan), 35, 65);
     this.nextTell = foe.firstTell ?? 3 + Math.floor(this.rng() * 3);
     this.floor = foe.spar ? Math.round(Math.min(this.hpMax * 0.3, this.hp * 0.5)) : foe.script ? Math.round(this.hpMax * 0.25) : 0;
-    this.efloor = foe.spar ? Math.round(this.ehpMax * 0.3) : 0;
+    this.efloor = foe.spar ? foe.sparFloor ?? Math.round(this.ehpMax * 0.3) : 0;
     this.allies = opts.allies ?? [];
     this.allyHits = this.allies.map(() => 0);
     this.crowd = opts.crowd ?? { n: 1, maxAtk: 1 };

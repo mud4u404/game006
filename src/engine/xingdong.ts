@@ -11,6 +11,7 @@ import { gainProf } from './growth';
 import { autoSlot } from './wuxue';
 import { minutesOf } from './shiguang';
 import { kpMark, kpPos } from './kaipian';
+import { zhuangPlan, type ZhuangPlan } from './zhudi';
 
 export interface ActionReq {
   who: 'player' | string;
@@ -60,13 +61,14 @@ export const CHAIN_LIMIT = 10;
 
 type GxEffect = Extract<Effect, { type: 'gongxian' }> & { school?: string };
 interface LearnPrice { price: number; gx: number; school: string }
-interface Prepared extends ActionPlan { learned: Map<string, LearnPrice> }
+interface Prepared extends ActionPlan { learned: Map<string, LearnPrice>; training?: ZhuangPlan }
 const nextN = (): number => (S.log?.at(-1)?.n ?? 0) + 1;
 const reward = (e: Effect): boolean =>
   (e.type === 'silver' || e.type === 'item' || e.type === 'gongxian') ? e.delta > 0 :
     e.type === 'lilian' || e.type === 'prof' ? e.amount > 0 : e.type === 'learn' || e.type === 'jobDone' || e.type === 'quest';
 const resource = (e: Effect): boolean =>
-  (e.type === 'silver' || e.type === 'item' || e.type === 'gongxian') ? e.delta < 0 : e.type === 'lilian' && e.amount < 0;
+  (e.type === 'silver' || e.type === 'item' || e.type === 'gongxian') ? e.delta < 0 : e.type === 'lilian' ? e.amount < 0 :
+    e.type === 'heal' && ((typeof e.hp === 'number' && e.hp < 0) || (typeof e.mp === 'number' && e.mp < 0));
 const copy = <T>(x: T): T => structuredClone(x);
 
 /** 没钱的回绝不能遮住标价；真实的赊账、免钱分支则仍然能做。 */
@@ -135,8 +137,14 @@ export function fightCheckpoint(out: Outcome): void {
 function prepare(req: ActionReq): Prepared {
   const p: Prepared = { ok: true, cost: [], gain: [], minutes: 0, learned: new Map() };
   const deny = (why: string): Prepared => { p.ok = false; p.why = why; return p; };
+  if (req.verb === '练桩') {
+    if (req.who !== 'player') return deny('练桩的行动者不合。');
+    p.training = zhuangPlan(S, req.target ?? S.loc);
+    if (!p.training.ok) return deny(p.training.why!);
+    if (req.key !== p.training.key) return deny('练桩的凭据还未定下。');
+  }
   const b = req.effects === undefined && req.target ? actionBranch(req.target, req.verb, true) : undefined;
-  const rawEffects = req.effects ?? (b && !b.do?.some(e => ['time', 'fight', 'story'].includes(e.type)) && !b.if?.doneToday
+  const rawEffects = p.training?.effects ?? req.effects ?? (b && !b.do?.some(e => ['time', 'fight', 'story'].includes(e.type)) && !b.if?.doneToday
     ? [...(b.do ?? []), { type: 'time' as const, add: VERB_MIN[req.verb] ?? 10 }] : b?.do ?? []);
   // 条件银两在开始时定下；不生效的既不预付也不列所得，生效的不能因耗时后条件变化再漏扣。
   const effects = rawEffects.flatMap<Effect>(e => {
@@ -194,11 +202,15 @@ function prepare(req: ActionReq): Prepared {
   }
   p.minutes = minutesOf(S, times);
   if (p.minutes) p.cost.push({ type: 'time', add: p.minutes });
-  let silver = S.silver, lilian = S.lilian;
+  let silver = S.silver, lilian = S.lilian, hp = S.hp, mp = S.mp;
   const items = { ...S.items }, gx = { ...S.gongxian };
   for (const e of p.cost) {
     if (e.type === 'silver' && (silver += e.delta) < 0) return deny('囊中银两不足。');
     if (e.type === 'lilian' && (lilian += e.amount) < 0) return deny('历练不足。');
+    if (e.type === 'heal') {
+      if (typeof e.hp === 'number' && (hp += e.hp) < 0) return deny('气血不足。');
+      if (typeof e.mp === 'number' && (mp += e.mp) < 0) return deny('内力不足。');
+    }
     if (e.type === 'item' && (items[e.id] = (items[e.id] ?? 0) + e.delta) < 0) return deny('行囊里的物件不足。');
     if (e.type === 'gongxian') {
       const school = (e as GxEffect).school ?? S.sect?.school ?? '';
@@ -219,7 +231,7 @@ function prepare(req: ActionReq): Prepared {
 
 /** 只读状态，不扣钱、不走时间、不抽随机数、不写记录或存档。 */
 export function plan(req: ActionReq): ActionPlan {
-  const { learned: _learned, ...p } = prepare(req);
+  const { learned: _learned, training: _training, ...p } = prepare(req);
   return p;
 }
 
@@ -322,7 +334,9 @@ export function act(req: ActionReq, out: Outcome = newOutcome(), checkpoint?: (o
       if (!test(req.finish)) {
         const refunds = req.refundable ?? [];
         for (const e of refunds) {
-          const refund = e.type === 'lilian' ? { ...e, amount: -e.amount } : { ...e, delta: -('delta' in e ? e.delta : 0) };
+          const refund = e.type === 'lilian' ? { ...e, amount: -e.amount } : e.type === 'heal'
+            ? { ...e, hp: typeof e.hp === 'number' ? -e.hp : e.hp, mp: typeof e.mp === 'number' ? -e.mp : e.mp }
+            : { ...e, delta: -('delta' in e ? e.delta : 0) };
           runStep([refund as Effect], work);
           event.cost.splice(event.cost.findIndex(x => JSON.stringify(x) === JSON.stringify(e)), 1);
         }
@@ -332,6 +346,11 @@ export function act(req: ActionReq, out: Outcome = newOutcome(), checkpoint?: (o
       }
       runStep(p.gain, work);
       event.gain = logEffects(p.gain);
+      if (p.training) {
+        (S.dayLog ??= {})[p.training.daily] = p.training.day;
+        if (p.training.grow) S.real.grown = (S.real.grown ?? Math.max(0, p.training.day - S.real.startDay)) + p.training.grow;
+        pushFeed('江湖', p.training.note);
+      }
       for (const child of req.chains ?? []) {
         const result = act({ ...child, cause: String(event.n) }, work);
         if (!result.ok && (ctx.depth >= CHAIN_DEPTH || ctx.count >= CHAIN_LIMIT)) break;

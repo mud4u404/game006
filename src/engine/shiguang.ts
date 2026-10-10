@@ -26,7 +26,7 @@ export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
  * 嚼用：住下房一日一钱银子（一百文，docs/foundation.md 第三节第六条）；钱不够就露宿，不花钱，睡不安稳，那几日打坐、参悟打八折。
  * 身上留一百文盘缠不拿来住店：一趟长闭关不至于把人花得一文不剩，连买条鱼、打点衙役的钱都没有（机器玩家摸底时发现）。
  */
-export const LODGING = { inn: 100, lusuEff: 0.8, keep: 100 };
+export const LODGING = { inn: 100, lusuEff: 0.8, homeEff: 1.1, keep: 100 };
 
 /**
  * 住处三选一（docs/paiban.md D05，负责人 10-09 同意）：闭关、下线前自己选，下线沿用上回的选择。
@@ -160,12 +160,12 @@ export function jingxiu(s: GameState, days: number, rng: () => number = worldRng
   const xm0 = s.xinmo.n;
   const xm1 = Math.max(0, xm0 - XINMO.decay * days);
   // 嚼用：住客栈的，盘缠以外的钱够住几日住几日，余下的日子露宿，睡不安稳，那几日打坐、参悟打八折；
-  // 自己选露宿的全露宿；回师门的不花钱、不打折
+  // 自己选露宿的全露宿；回师门的不花钱，打坐参悟多一成
   const zhu = zhuOf(s);
   const innDays = zhu === 'home' ? days : zhu === 'lusu' ? 0 : Math.max(0, Math.min(days, Math.floor((s.silver - LODGING.keep) / LODGING.inn)));
   const cost = zhu === 'inn' ? innDays * LODGING.inn : 0, lusuDays = days - innDays;
   s.silver -= cost;
-  const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2) * (days ? (innDays + lusuDays * LODGING.lusuEff) / days : 1);
+  const eff = Math.max(0.2, 1 - XINMO.k * (xm0 + xm1) / 2) * (days ? (innDays + lusuDays * LODGING.lusuEff) / days : 1) * (zhu === 'home' ? LODGING.homeEff : 1);
   const jx = jingxiuPlan(s, days, eff);
   for (const [z, n] of Object.entries(jx.healed) as ['hand' | 'foot' | 'inner', number][]) s.wounds[z] = Math.max(0, s.wounds[z] - n);
   markLight(s);
