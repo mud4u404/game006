@@ -8,7 +8,7 @@ import type { ContentPack, NpcDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_guandao', name: '蜀冈官道', area: '扬州 · 城北', region: 'yz', t: 25, map: [18, 14], nightQuiet: true,
+    id: 'yz_guandao', name: '蜀冈官道', area: '扬州 · 蜀冈官道', region: 'yz', t: 25, map: [18, 14], nightQuiet: true,
     desc: [
       { if: { hour: { from: 5, to: 18 }, notFlag: 'bs_done' },
         text: '官道沿蜀冈西麓向北而去，直通淮安、京城。道旁一座驿亭，驿卒牵着马换公文。路边一块大青石上坐着个精瘦汉子，就着石头磨一把断刀，过路的客商都绕着他走。' },
@@ -29,7 +29,7 @@ const ROOMS: RoomDef[] = [
     ]
   },
   {
-    id: 'yz_chapeng', name: '官道茶棚', area: '扬州 · 城北', region: 'yz', t: 5, map: [8, 30], nightQuiet: true,
+    id: 'yz_chapeng', name: '官道茶棚', area: '扬州 · 蜀冈官道', region: 'yz', t: 5, map: [8, 30], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '茶棚的芦席帘子放下来了，条凳倒扣在桌上，炭炉里只剩一点余烬。官道上黑沉沉的，远处驿亭那盏气死风灯一晃一晃。' },
@@ -42,7 +42,7 @@ const ROOMS: RoomDef[] = [
     road: '你顺着官道走到拐弯处，茶香混着炭烟飘了过来……'
   },
   {
-    id: 'yz_mubing', name: '募兵帐', area: '扬州 · 城北', region: 'yz', t: 10, map: [32, 6], nightQuiet: true,
+    id: 'yz_mubing', name: '募兵帐', area: '扬州 · 蜀冈官道', region: 'yz', t: 10, map: [32, 6], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '募兵帐前冷冷清清，旗子卷了起来，只有帐门口一盏风灯。帐后的粮车蒙着油布，偶尔有马在暗处打个响鼻。' },

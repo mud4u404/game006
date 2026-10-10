@@ -26,7 +26,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, NewsDef, N
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smem_guanyin', name: '观音庵', area: '瓜洲 · 江堤东', region: 'gz', t: 10, map: [78, 34],
+    id: 'smem_guanyin', name: '观音庵', area: '瓜洲 · 观音庵', region: 'gz', t: 10, map: [78, 34],
     desc: [
       { if: { flag: 'smem_in' },
         text: '江堤东头一座小庵，白墙灰瓦，院里一株老银杏。你进门时，小满正在扫香灰，见了你，把扫帚一放就往后院跑，一路喊着「师太，居士来了」。' },
