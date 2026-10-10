@@ -23,7 +23,7 @@ import { payFare, roomDesc, roomNpcs } from '../src/engine/world';
 import { dating, hearsay, moveShi } from '../src/engine/shishi';
 import { rollEncounter } from '../src/engine/encounter';
 import { jingxiu } from '../src/engine/shiguang';
-import { JAIL, initWorld, marksOf, ownerOf, runWorld, stOf, tickWorld, whereNow, worldRng } from '../src/engine/shijie';
+import { JAIL, initWorld, marksOf, ownerOf, runWorld, stOf, tickWorld, whereNow, worldOf, worldRng } from '../src/engine/shijie';
 import { NEWS, SHI, npc, shiById } from '../src/content';
 import type { Branch, Cond, NewsDef, NpcLife } from '../src/content/types';
 import { tickShi } from '../src/engine/shishi';
@@ -549,6 +549,23 @@ describe('话有来处：传播的规律', () => {
 });
 
 describe('话有来处：打听', () => {
+  it('开场白是纯文字：有没有声口、问几个人，都不动世界的随机流', () => {
+    const next = (): number => { setState(skipToYangzhou()); S.min = 10 * 60; worldOf(); return 0; };
+    // 同一个世界，打听前后世界随机抽出的下一个数不变；给人补上、拿掉声口，也一样
+    const probe = (): number => { const n = S.w.rn; ask('xiaoer', { force: true }); ask('chuanfu', { force: true }); expect(S.w.rn).toBe(n); return worldRng(); };
+    next();
+    const base = probe();
+    const n = npc('xiaoer')!, had = n.life;
+    try {
+      if (n.life) n.life = { ...n.life, voice: { ...n.life.voice, lead: ['冷笑一声', '摇了摇头'] } };
+      next();
+      expect(probe()).toBe(base);
+      delete n.life;
+      next();
+      expect(probe()).toBe(base);
+    } finally { n.life = had; }
+  });
+
   it('素不相识、有过节的不说不耸动的（零点四以下）；相谈甚欢的说', () => {
     const r = rid('ss_zei', 'qi', 0.35);
     learn(S.w, 'xiaoer', r, 0, dayNo(S));
