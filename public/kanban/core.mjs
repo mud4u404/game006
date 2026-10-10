@@ -45,7 +45,38 @@ export function slimIssue(x) {
   let dep = '';
   const m = /依赖[：:]\s*([^\n\r]*)/.exec(x.body || '');
   if (m) dep = (m[1].match(/#\d+/g) || []).join(' ');
-  return { n: x.number, title: x.title, labels, created: Date.parse(x.created_at), dep };
+  return { n: x.number, title: x.title, labels, created: Date.parse(x.created_at), dep, refs: refsOf((x.title || '') + '\n' + (x.body || '')) };
+}
+/* 正文和标题里引用的计划项号：「第 004 项」「第 004、005 项」「第 004～006 项」都取三位数字 */
+export function refsOf(text) {
+  const out = [];
+  const re = /第\s*(\d{3}(?:\s*[、，,和及与～~\-—到至]\s*\d{3})*)\s*项/g;
+  let m;
+  while ((m = re.exec(text || ''))) {
+    for (const d of m[1].match(/\d{3}/g)) { const n = Number(d); if (out.indexOf(n) < 0) out.push(n); }
+  }
+  return out;
+}
+export function slimClosed(x) {
+  return { n: x.number, refs: refsOf((x.title || '') + '\n' + (x.body || '')), closed: true };
+}
+
+/* 里程碑自动算：jindu 是 jindu.json；openIssues 是 slimIssue 的结果；closedIssues 是 slimClosed 的结果 */
+export function milestoneOf(jindu, openIssues, closedIssues) {
+  const ms = (jindu && jindu.milestone) || {};
+  const upto = ms.upto || 0;
+  const remaining = [];
+  let done = 0;
+  for (const it of (jindu && jindu.items) || []) {
+    if (it.id > upto) continue;
+    if (it.status === 'done') { done++; continue; }
+    const open = (openIssues || []).filter((i) => (i.refs || []).indexOf(it.id) >= 0).map((i) => i.n);
+    if (open.length) { remaining.push({ id: it.id, title: it.title, open, noIssue: false }); continue; }
+    const closed = (closedIssues || []).some((i) => (i.refs || []).indexOf(it.id) >= 0);
+    if (closed) { done++; continue; }
+    remaining.push({ id: it.id, title: it.title, open: [], noIssue: true });
+  }
+  return { name: ms.name || '', upto, remaining, done, total: upto };
 }
 export function slimPull(x) {
   return {

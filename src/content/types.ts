@@ -347,8 +347,8 @@ export interface NpcLife {
    */
   voice: { lead: string[]; idle: Branch[] };
   /**
-   * 以下四项见 docs/sheji-021-026.md（021 诉求与底线、026 所知与来处）。引擎暂不读：第一版只由内容按旗标、关系分支，
-   * 在交谈里把相应的话写出来，保证玩家碰得到；日后引擎接上（wantOf、refuseOf、打听），内容不必重写。
+   * 以下各项见 docs/sheji-021-026.md。want、refuse、has 接入人物规则与行动协议；
+   * knows 的打听入口留给 026，现有交谈仍按旗标、关系分支说话。
    * 想要的：按处境挑第一条成立的（和分支一样，最后一条不带条件）
    */
   want?: { k: string; text: string; if?: Cond }[];
@@ -356,6 +356,8 @@ export interface NpcLife {
   fear?: string;
   /** 底线：什么情况下他不肯做某件事，原因原样给玩家看 */
   refuse?: { verb: Verb | '*'; if?: Cond; why: string }[];
+  /** 开局持有：silver 是银钱，其他键是物品 id；配置后按实际持有结算。 */
+  has?: Record<string, number>;
   /** 本来知道的（不靠听传闻）：secret 的，关系到相谈甚欢以上才说 */
   knows?: { k: string; text: string; if?: Cond; secret?: true }[];
 }

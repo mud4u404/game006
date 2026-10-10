@@ -12,11 +12,12 @@
  */
 import { mulberry32, seedOf } from './rng';
 import { FACTIONS, ROOMS, facById, npc, room } from '../content';
-import type { PersonSt, Range, RoomLife, WorldCond, WorldEffect } from '../content/types';
+import type { NpcLife, PersonSt, Range, RoomLife, WorldCond, WorldEffect } from '../content/types';
 import { S, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
 import { seedNews, spreadDay, type RumorInst } from './chuanwen';
 import { shiLeftHours } from './shishi';
+import { test } from './dsl';
 
 /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；until 是哪一日擦掉（江湖日） */
 export interface Mark { k: string; text: string; until: number; /** 只在这个时段看得见（二十一点到二十三点） */ h?: [number, number]; /** 只在这件世事离下一步不足几个钟头时看得见 */ l?: [id: string, below: number] }
@@ -38,6 +39,8 @@ export interface PersonState {
   until?: number;
   at?: { room: string; slot?: 'day' | 'night'; until: number };
   know?: Know[];
+  /** 持有与开局不同的数量；零也保留，免得读档补回已交出的东西。 */
+  has?: Record<string, number>;
 }
 export interface WorldState {
   /** 世界种子：开局定下（seedOf(名字, 开局的现实时刻)） */
@@ -95,7 +98,13 @@ export function fillWorld(w: WorldState, seed: number, day: number): WorldState 
   w.ppl = w.ppl && typeof w.ppl === 'object' ? w.ppl : {};
   // 传闻（1B 起）：没有的补空；人知道的传闻不是数组的丢掉
   w.rumor = w.rumor && typeof w.rumor === 'object' ? w.rumor : {};
-  for (const p of Object.values(w.ppl)) if (p && 'know' in p && !Array.isArray(p.know)) delete p.know;
+  for (const p of Object.values(w.ppl)) {
+    if (p && 'know' in p && !Array.isArray(p.know)) delete p.know;
+    if (!p || p.has === undefined) continue;
+    if (!p.has || typeof p.has !== 'object' || Array.isArray(p.has)) { delete p.has; continue; }
+    for (const [key, value] of Object.entries(p.has))
+      p.has[key] = typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
+  }
   for (const [id, f] of Object.entries(fresh.fac)) {
     const cur = w.fac[id];
     if (!cur) { w.fac[id] = f; continue; }
@@ -165,7 +174,7 @@ export function dayPass(w: WorldState): void {
     if (p.st && p.st !== 'dead' && p.until !== undefined && p.until <= w.day) { delete p.st; delete p.until; }
     if (p.at && p.at.until <= w.day) delete p.at;
     // 知道传闻的人留着（engine/chuanwen.ts）：伤好了，知道的事不丢
-    if (!p.st && !p.at && !p.know?.length) delete w.ppl[id];
+    if (!p.st && !p.at && !p.know?.length && !p.has) delete w.ppl[id];
   }
 }
 
@@ -184,6 +193,35 @@ export function tickWorld(s: GameState = S): void {
 }
 
 /* ---------- 读 ---------- */
+
+/** 想要的按处境挑第一条；返回键与文字，供界面和以后的人物行动共用。 */
+export const wantOf = (id: string): NonNullable<NpcLife['want']>[number] | undefined =>
+  npc(id)?.life?.want?.find(w => test(w.if));
+
+/** 底线的原话；动作字符串也包括协议中的内部动作。 */
+export const refuseOf = (id: string, verb: string): string | undefined =>
+  npc(id)?.life?.refuse?.find(r => (r.verb === '*' || r.verb === verb) && test(r.if))?.why;
+
+/** 尚未配置的旧人物继续沿用原结算；配置空对象表示确实两手空空。 */
+export const tracksHas = (id: string, s: GameState = S): boolean =>
+  npc(id)?.life?.has !== undefined || s.w?.ppl[id]?.has !== undefined;
+
+/** 只读持有，不铺世界；存档仅覆盖与开局不同的键。 */
+export const hasOf = (id: string, s: GameState = S): Record<string, number> =>
+  ({ ...npc(id)?.life?.has, ...s.w?.ppl[id]?.has });
+
+/** 协议草稿内落实持有变化；返回开局数量的键不占存档。 */
+export function changeHas(id: string, key: string, delta: number, s: GameState = S): void {
+  const base = npc(id)?.life?.has?.[key] ?? 0;
+  const next = (hasOf(id, s)[key] ?? 0) + delta;
+  if (!Number.isFinite(next) || next < 0) throw new Error('人物的持有物不足');
+  const w = worldOf(s), p = w.ppl[id] ??= {};
+  const has = p.has ??= {};
+  if (next === base) delete has[key]; else has[key] = next;
+  // 没有开局配置的旧人物若已显式进入持有规则，空表仍表示「确实两手空空」。
+  if (!Object.keys(has).length && npc(id)?.life?.has !== undefined) delete p.has;
+  if (!p.st && !p.at && !p.know?.length && !p.has) delete w.ppl[id];
+}
 
 /** 这处地方眼下归谁（没有活气的地方没有主人） */
 export function ownerOf(place: string, s: GameState = S): string | undefined {
@@ -303,7 +341,7 @@ export function applyWorld(w: WorldState, e: WorldEffect, today: number): void {
       const p = w.ppl[e.npc];
       if (p && p.st !== 'dead') {
         delete p.st; delete p.until; delete p.at;
-        if (!p.know?.length) delete w.ppl[e.npc];
+        if (!p.know?.length && !p.has) delete w.ppl[e.npc];
       }
       for (const p of Object.values(w.place)) p.marks = p.marks.filter(m => m.k !== personKey(e.npc));
       break;
@@ -311,8 +349,10 @@ export function applyWorld(w: WorldState, e: WorldEffect, today: number): void {
     case 'dead': {
       // 死了：不带日子，dayPass 不会把它清掉；知道的传闻留着（人死了，话还在人嘴里传）
       const know = w.ppl[e.npc]?.know;
+      const has = w.ppl[e.npc]?.has;
       w.ppl[e.npc] = { st: 'dead' };
       if (know?.length) w.ppl[e.npc].know = know;
+      if (has) w.ppl[e.npc].has = has;
       if (e.mark) addMark(w, e.mark.place, personKey(e.npc), e.mark.text, today + 30);
       break;
     }
@@ -324,8 +364,10 @@ export function applyWorld(w: WorldState, e: WorldEffect, today: number): void {
       const days = e.days ?? (e.op === 'hurt' ? 3 : undefined);
       // 新的处境盖过原来的打断：伤了的人不再去守码头
       const know = w.ppl[e.npc]?.know;
+      const has = w.ppl[e.npc]?.has;
       w.ppl[e.npc] = days === undefined ? { st } : { st, until: today + days };
       if (know?.length) w.ppl[e.npc].know = know;
+      if (has) w.ppl[e.npc].has = has;
       if (e.mark) addMark(w, e.mark.place, personKey(e.npc), e.mark.text, today + (days ?? 30));
       break;
     }

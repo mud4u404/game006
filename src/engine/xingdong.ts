@@ -5,13 +5,14 @@ import { SECT_RANKS } from '../content/skills';
 import { S, pushFeed, save, setState, type GameState } from '../core/state';
 import { emit } from '../core/bus';
 import { absMin, dayNo } from '../core/time';
-import { newOutcome, pickBranch, runStep, test, withRunHooks, type Outcome } from './dsl';
+import { newOutcome, runStep, test, withRunHooks, type Outcome } from './dsl';
 import { barredFrom, canLearn, gongxianCost, learnCost, rootHint } from './shicheng';
 import { gainProf } from './growth';
 import { autoSlot } from './wuxue';
 import { minutesOf } from './shiguang';
 import { kpMark, kpPos } from './kaipian';
 import { zhuangPlan, type ZhuangPlan } from './zhudi';
+import { changeHas, hasOf, refuseOf, tracksHas } from './shijie';
 
 export interface ActionReq {
   who: 'player' | string;
@@ -51,6 +52,8 @@ export interface EventRec {
   cause?: number;
   /** 失败、截断也留来由；不占用内容旗标 */
   why?: string;
+  /** 同一次结算里人物持有的实际变化。 */
+  holds?: { who: string; delta: Record<string, number> }[];
 }
 export interface ActionResult extends ActionPlan { out: Outcome; event?: EventRec }
 
@@ -61,7 +64,8 @@ export const CHAIN_LIMIT = 10;
 
 type GxEffect = Extract<Effect, { type: 'gongxian' }> & { school?: string };
 interface LearnPrice { price: number; gx: number; school: string }
-interface Prepared extends ActionPlan { learned: Map<string, LearnPrice>; training?: ZhuangPlan }
+interface Holding { who: string; key: string; delta: number; phase: 'cost' | 'gain' }
+interface Prepared extends ActionPlan { learned: Map<string, LearnPrice>; holding: Holding[]; training?: ZhuangPlan }
 const nextN = (): number => (S.log?.at(-1)?.n ?? 0) + 1;
 const reward = (e: Effect): boolean =>
   (e.type === 'silver' || e.type === 'item' || e.type === 'gongxian') ? e.delta > 0 :
@@ -71,13 +75,24 @@ const resource = (e: Effect): boolean =>
     e.type === 'heal' && ((typeof e.hp === 'number' && e.hp < 0) || (typeof e.mp === 'number' && e.mp < 0));
 const copy = <T>(x: T): T => structuredClone(x);
 
+/** 人物行动的资源门槛读本人持有，世界与剧情条件照常读取。 */
+function actionTest(c: Cond | undefined, who: string): boolean {
+  if (who === 'player' || !c) return test(c);
+  const { silver, item, noItem, any, ...rest } = c;
+  const owned = hasOf(who);
+  return test(rest) && (silver === undefined || (owned.silver ?? 0) >= silver)
+    && (!item || (owned[item.id] ?? 0) >= (item.atLeast ?? 1))
+    && (!noItem || (owned[noItem] ?? 0) <= 0)
+    && (!any || any.some(x => actionTest(x, who)));
+}
+
 /** 没钱的回绝不能遮住标价；真实的赊账、免钱分支则仍然能做。 */
-export function actionBranch(id: string, verb: string, preview = false): Branch | undefined {
-  const bs = npc(id)?.actions[verb], real = pickBranch(bs);
+export function actionBranch(id: string, verb: string, preview = false, who = 'player'): Branch | undefined {
+  const bs = npc(id)?.actions[verb], real = bs?.find(b => actionTest(b.if, who));
   if (!preview || real?.do?.some(e => e.type !== 'time')) return real;
   return bs?.find(b => {
     const { silver: _s, canLearn: learn, gongxian: _g, ...rest } = b.if ?? {};
-    if (!test(rest)) return false;
+    if (!actionTest(rest, who)) return false;
     const def = learn && skillById(learn);
     return !def || canLearn({ ...S, lilian: Infinity, gongxian: { ...S.gongxian, [def.school]: Infinity } }, def).ok;
   }) ?? real;
@@ -135,7 +150,7 @@ export function fightCheckpoint(out: Outcome): void {
 }
 
 function prepare(req: ActionReq): Prepared {
-  const p: Prepared = { ok: true, cost: [], gain: [], minutes: 0, learned: new Map() };
+  const p: Prepared = { ok: true, cost: [], gain: [], minutes: 0, learned: new Map(), holding: [] };
   const deny = (why: string): Prepared => { p.ok = false; p.why = why; return p; };
   if (req.verb === '练桩') {
     if (req.who !== 'player') return deny('练桩的行动者不合。');
@@ -143,13 +158,16 @@ function prepare(req: ActionReq): Prepared {
     if (!p.training.ok) return deny(p.training.why!);
     if (req.key !== p.training.key) return deny('练桩的凭据还未定下。');
   }
-  const b = req.effects === undefined && req.target ? actionBranch(req.target, req.verb, true) : undefined;
+  const person = req.who === 'player' ? req.target : req.who;
+  const refusal = person && refuseOf(person, req.verb);
+  if (refusal) return deny(refusal);
+  const b = req.effects === undefined && req.target ? actionBranch(req.target, req.verb, true, req.who) : undefined;
   const rawEffects = p.training?.effects ?? req.effects ?? (b && !b.do?.some(e => ['time', 'fight', 'story'].includes(e.type)) && !b.if?.doneToday
     ? [...(b.do ?? []), { type: 'time' as const, add: VERB_MIN[req.verb] ?? 10 }] : b?.do ?? []);
   // 条件银两在开始时定下；不生效的既不预付也不列所得，生效的不能因耗时后条件变化再漏扣。
   const effects = rawEffects.flatMap<Effect>(e => {
     if (e.type !== 'silver') return [e];
-    if (!test(e.if)) return [];
+    if (!actionTest(e.if, req.who)) return [];
     const { if: _if, ...active } = e;
     return [active];
   });
@@ -158,9 +176,9 @@ function prepare(req: ActionReq): Prepared {
   if (req.at && req.who === 'player' && req.at !== S.loc) return deny('你不在此处。');
   if (req.key && S.log?.some(e => e.key === req.key)) return deny('这件事已经结算过了。');
   if (effects.some(reward) && !req.key) return deny('这件事的凭据还未定下。');
-  // 人物资源、作息分别在 022、023 项接；当前入口不能花玩家的钱、长玩家的武功。
-  if (req.who !== 'player' && effects.some(e => !['w', 'feed', 'toast', 'time'].includes(e.type)))
-    return deny('人物的持有物尚未接入。');
+  // 人物的钱物从自身持有结算；作息在 023 项接，不借玩家的武学、历练和身份。
+  if (req.who !== 'player' && effects.some(e => !['silver', 'item', 'w', 'feed', 'toast', 'time'].includes(e.type)))
+    return deny('人物不能使用玩家的修为或身份。');
   const shadow = { ...S, skills: copy(S.skills), sect: S.sect && { ...S.sect }, pastSects: S.pastSects?.map(x => ({ ...x })) };
   const times: Effect[] = [];
   for (const e of effects) {
@@ -202,22 +220,44 @@ function prepare(req: ActionReq): Prepared {
   }
   p.minutes = minutesOf(S, times);
   if (p.minutes) p.cost.push({ type: 'time', add: p.minutes });
-  let silver = S.silver, lilian = S.lilian, hp = S.hp, mp = S.mp;
-  const items = { ...S.items }, gx = { ...S.gongxian };
+  const owned = req.who === 'player' ? undefined : hasOf(req.who);
+  let silver = owned ? owned.silver ?? 0 : S.silver, lilian = S.lilian, hp = S.hp, mp = S.mp;
+  const items = owned ? { ...owned } : { ...S.items }, gx = { ...S.gongxian };
   for (const e of p.cost) {
-    if (e.type === 'silver' && (silver += e.delta) < 0) return deny('囊中银两不足。');
+    if (e.type === 'silver' && (silver += e.delta) < 0) return deny(req.who === 'player' ? '囊中银两不足。' : '他手里没有');
     if (e.type === 'lilian' && (lilian += e.amount) < 0) return deny('历练不足。');
     if (e.type === 'heal') {
       if (typeof e.hp === 'number' && (hp += e.hp) < 0) return deny('气血不足。');
       if (typeof e.mp === 'number' && (mp += e.mp) < 0) return deny('内力不足。');
     }
-    if (e.type === 'item' && (items[e.id] = (items[e.id] ?? 0) + e.delta) < 0) return deny('行囊里的物件不足。');
+    if (e.type === 'item' && (items[e.id] = (items[e.id] ?? 0) + e.delta) < 0) return deny(req.who === 'player' ? '行囊里的物件不足。' : '他手里没有');
     if (e.type === 'gongxian') {
       const school = (e as GxEffect).school ?? S.sect?.school ?? '';
       if ((gx[school] = (gx[school] ?? 0) + e.delta) < 0) return deny(`${school}贡献不足。`);
     }
   }
-  if (!test(condition)) return deny('眼下还办不了这件事。');
+  if (!actionTest(condition, req.who)) return deny('眼下还办不了这件事。');
+  const target = req.target && npc(req.target);
+  const store = target && (!!target.service?.length || !!target.actions.购买);
+  const holder = req.who !== 'player' ? req.who : target && !store && tracksHas(target.id) ? target.id : undefined;
+  if (holder) {
+    const stock = hasOf(holder), playerItems = { ...S.items };
+    for (const phase of ['cost', 'gain'] as const) {
+      for (const e of p[phase]) {
+        if (e.type !== 'silver' && e.type !== 'item') continue;
+        const key = e.type === 'silver' ? 'silver' : e.id;
+        if (e.type === 'item') {
+          const current = (req.who === 'player' ? playerItems[key] : stock[key]) ?? 0;
+          if (e.delta > 0 && e.max !== undefined) e.delta = Math.max(0, Math.min(e.delta, e.max - current));
+          if (req.who === 'player') playerItems[key] = current + e.delta;
+        }
+        const delta = req.who === 'player' ? -e.delta : e.delta;
+        if (!delta) continue;
+        if ((stock[key] = (stock[key] ?? 0) + delta) < 0) return deny('他手里没有');
+        p.holding.push({ who: holder, key, delta, phase });
+      }
+    }
+  }
   // 只允许退这回实际预付的部分；不能借退费凭空生钱。
   const refundable = req.refundable ?? [];
   const remaining = copy(p.cost);
@@ -231,7 +271,7 @@ function prepare(req: ActionReq): Prepared {
 
 /** 只读状态，不扣钱、不走时间、不抽随机数、不写记录或存档。 */
 export function plan(req: ActionReq): ActionPlan {
-  const { learned: _learned, training: _training, ...p } = prepare(req);
+  const { learned: _learned, holding: _holding, training: _training, ...p } = prepare(req);
   return p;
 }
 
@@ -302,6 +342,16 @@ export function act(req: ActionReq, out: Outcome = newOutcome(), checkpoint?: (o
   try {
     // 先占流水和凭据：后续链不能趁父行动尚未记账重领同一回的好处。
     const event = record(req, { ...p, cost: [], gain: [] });
+    const hold = (h: Holding, sign = 1): void => {
+      changeHas(h.who, h.key, h.delta * sign);
+      const list = event.holds ??= [];
+      let person = list.find(x => x.who === h.who);
+      if (!person) list.push(person = { who: h.who, delta: {} });
+      person.delta[h.key] = (person.delta[h.key] ?? 0) + h.delta * sign;
+      if (!person.delta[h.key]) delete person.delta[h.key];
+      event.holds = list.filter(x => Object.keys(x.delta).length);
+      if (!event.holds.length) delete event.holds;
+    };
     ctx.parent = event.n;
     withRunHooks({
       chain: (effects, into) => {
@@ -328,23 +378,30 @@ export function act(req: ActionReq, out: Outcome = newOutcome(), checkpoint?: (o
         into.breaks.push(msg);
       }
     }, () => {
-      const cost = req.who === 'player' ? p.cost : p.cost.filter(e => e.type !== 'time');
+      const personal = (e: Effect): boolean => e.type === 'silver' || e.type === 'item' || e.type === 'time';
+      const cost = req.who === 'player' ? p.cost : p.cost.filter(e => !personal(e));
       runStep(cost, work);
+      p.holding.filter(h => h.phase === 'cost').forEach(h => hold(h));
       event.cost = logEffects(p.cost);
-      if (!test(req.finish)) {
+      if (!actionTest(req.finish, req.who)) {
         const refunds = req.refundable ?? [];
         for (const e of refunds) {
           const refund = e.type === 'lilian' ? { ...e, amount: -e.amount } : e.type === 'heal'
             ? { ...e, hp: typeof e.hp === 'number' ? -e.hp : e.hp, mp: typeof e.mp === 'number' ? -e.mp : e.mp }
             : { ...e, delta: -('delta' in e ? e.delta : 0) };
-          runStep([refund as Effect], work);
+          if (req.who === 'player') runStep([refund as Effect], work);
+          const key = e.type === 'silver' ? 'silver' : e.type === 'item' ? e.id : undefined;
+          const delta = 'delta' in e ? e.delta : 0;
+          const h = p.holding.find(h => h.phase === 'cost' && h.key === key && Math.abs(h.delta) === Math.abs(delta));
+          if (h) hold(h, -1);
           event.cost.splice(event.cost.findIndex(x => JSON.stringify(x) === JSON.stringify(e)), 1);
         }
         result.ok = false; result.why = event.why = '耗过了时辰，完成条件已不成立。';
         result.cost = copy(event.cost); result.gain = [];
         return;
       }
-      runStep(p.gain, work);
+      p.holding.filter(h => h.phase === 'gain').forEach(h => hold(h));
+      runStep(req.who === 'player' ? p.gain : p.gain.filter(e => !personal(e)), work);
       event.gain = logEffects(p.gain);
       if (p.training) {
         (S.dayLog ??= {})[p.training.daily] = p.training.day;
