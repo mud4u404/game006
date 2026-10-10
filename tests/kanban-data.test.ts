@@ -14,6 +14,7 @@ const FAKE: Record<string, any> = {
     { number: 13, title: '一个讨论', labels: lab('讨论'), body: '', created_at: hAgo(5) },
     { number: 99, title: '这其实是 PR', labels: [], body: '', created_at: hAgo(1), pull_request: {} },
   ],
+  '/issues?state=closed&sort=updated&direction=desc&per_page=100': [],
   '/pulls?state=open&per_page=50': [
     { number: 50, title: '[#10] 甲：已有 PR', head: { ref: 'codex/10-jia', sha: 'sha50' }, labels: lab(), updated_at: hAgo(1), draft: false },
     { number: 51, title: '[#20] 丁', head: { ref: 'trae/20-ding', sha: 'sha51' }, labels: lab('要改'), updated_at: hAgo(8), draft: false },
