@@ -5,7 +5,7 @@
  * - 气血、内力的上限不再一笔笔加减，由「人」算出来（engine/person.ts），存档里只是记下当前的数。
  */
 import type { GameState } from '../core/state';
-import { GRADE_COEF } from '../content';
+import { GRADE_COEF, REALM_NEED } from '../content';
 import type { SkillDef } from '../content/types';
 import { COMMON, gongliAt, houtian, hpMaxOf, mpMaxOf, realmAt, tierName, tierOf, type Attr, type Person } from './person';
 import { cn } from '../core/util';
@@ -64,9 +64,9 @@ export function tierNow(s: GameState): { t: number; name: string } {
   return { t, name: tierName(t) };
 }
 
-/** 功力怎样说：「三年」「一年半」「二十七年」 */
+/** 功力怎样说，全游戏一种说法（年、月）：「三年」「一年六月」「九月」；不满一月写「不满一月」。人物页、搭配、出关邸报都用它 */
 export function gongliText(g: number): string {
-  const y = Math.floor(g + 1e-9), half = g - y >= 0.5 - 1e-9;
+  const total = Math.max(0, Math.round(g * 12 + 1e-9)), y = Math.floor(total / 12), m = total % 12;
   const cnN = (n: number): string => {
     const d = '零一二三四五六七八九';
     if (n < 10) return d[n];
@@ -74,8 +74,8 @@ export function gongliText(g: number): string {
     if (n < 100) return d[Math.floor(n / 10)] + '十' + (n % 10 ? d[n % 10] : '');
     return String(n);
   };
-  if (y === 0) return half ? '半年' : '不到半年';
-  return (y === 1 && half ? '一年半' : cnN(y) + '年' + (half ? '多' : ''));
+  if (total === 0) return '不满一月';
+  return (y ? cnN(y) + '年' : '') + (m ? cnN(m) + '月' : '');
 }
 
 /**
@@ -90,6 +90,24 @@ export function nextTierLine(s: GameState): string | null {
   const a = `搭配着的武功里练得最高的一门到第${cn(needR)}重${r >= needR ? '（已到）' : `（眼下第${cn(r)}重）`}`;
   const b = `功力${gongliText(needG)}${s.gongli >= needG ? '（已到）' : `（眼下${gongliText(s.gongli)}）`}`;
   return `要入${tierName(t + 1)}：${a}，${b}。`;
+}
+
+/**
+ * 离下一档还有多远，一行字（角色卡、战力旁边）：「距三流：寒江剑法第一重 → 第三重，已 51 / 200」。
+ * 搭配着的内功、轻功、出手的外功里，练得最高的那门最近；重数够了就看功力。到顶或一切都够了返回 null
+ */
+export function jinduLine(s: GameState): string | null {
+  const t = tierNow(s).t;
+  if (t >= 5) return null;
+  const needR = Math.ceil(realmAt(t + 1) - 1e-9), needG = gongliAt(t + 1) * 0.5;
+  const defs = [activeOuter(s), slotSkill(s, 'neigong'), slotSkill(s, 'qinggong')].filter((d): d is SkillDef => !!d && !!s.skills[d.id]);
+  const top = defs.reduce<SkillDef | undefined>((a, d) => (!a || s.skills[d.id]!.r > s.skills[a.id]!.r ? d : a), undefined);
+  const to = tierName(t + 1);
+  if (top) {
+    const k = s.skills[top.id]!;
+    if (k.r + 1 < needR) return `距${to}：${top.name}第${cn(k.r + 1)}重 → 第${cn(needR)}重，已 ${k.p} / ${REALM_NEED[k.r]}`;
+  }
+  return s.gongli < needG ? `距${to}：功力${gongliText(s.gongli)} → ${gongliText(needG)}` : null;
 }
 
 /** 下一档要多少功力（档次看功力够不够这一档的一半） */

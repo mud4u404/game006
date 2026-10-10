@@ -10,15 +10,15 @@ import { S } from '../core/state';
 import { NPCS, REALMS, REALM_NEED, foeById, npc, room, skillById } from '../content';
 import type { Verb } from '../content/types';
 import { RETREAT, retreatPlan } from './lilian';
-import { LODGING, allowance, retreatBlock, skillName, zhuOf } from './shiguang';
+import { LODGING, restDays, restEff, retreatBlock, skillName, zhuOf } from './shiguang';
 import { type Lead, jobStep, leadsNear, questNav, sectHome, sectNav, yueNow } from './daohang';
-import { test } from './dsl';
+import { pickBranch, test } from './dsl';
 import { profMul } from './gengu';
-import { personOf, tierNow } from './ren';
+import { jinduLine, personOf, tierNow } from './ren';
 import { realmCap } from './shicheng';
-import { marksOf } from './shijie';
-import { npcName, pathMin, roomNpcs, travelMin, tripCost, verbsOf, whereAt } from './world';
-import { pingyuOf, zhanliShu } from './zhanli';
+import { marksOf, refuseOf } from './shijie';
+import { npcName, pathMin, roomNpcs, travelMin, tripCost, verbPlan, verbsOf, whereAt } from './world';
+import { pingyuNow, zhanliShu } from './zhanli';
 import { shenfenOf } from './shenfen';
 import type { Tab } from '../core/state';
 
@@ -43,13 +43,13 @@ export function chenghao(): string {
   return S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : shenfenOf(S).name + ' · ' + tierNow(S).name;
 }
 
-export interface JueseKa { name: string; title: string; power: number; from?: number; pingyu: string; line: string }
+export interface JueseKa { name: string; title: string; power: number; from?: number; pingyu: string; jindu: string | null; line: string }
 
 export function jueseKa(): JueseKa {
   const power = powerNow();
   const from = S.ui?.from !== undefined && S.ui.from !== power ? S.ui.from : undefined;
   return {
-    name: '沈' + S.name, title: chenghao(), power, from, pingyu: pingyuOf(S),
+    name: '沈' + S.name, title: chenghao(), power, from, pingyu: pingyuNow(S), jindu: jinduLine(S),
     line: `气血 ${S.hp}/${S.hpMax} · 内力 ${S.mp}/${S.mpMax} · 银两 ${S.silver} 文`
   };
 }
@@ -236,37 +236,66 @@ export function busyRooms(): Set<string> {
 
 /* ---------- 变强的路 ---------- */
 
-export interface RetreatPreview { days: number; used: number; gain?: [string, number]; power0: number; power1: number; grow: number }
+export interface RetreatPreview { days: number; used: number; gain?: [string, number]; power0: number; power1: number; grow: number; note: string }
 
-/**
- * 闭关 days 日大约长多少：用 retreatPlan 算熟练的进账，再照境界的门槛推一推战力（不碰存档，不触发突破的提示）。
- * 内功瓶颈、住处打折这些细处不算，所以写「约」
- */
-export function retreatPreview(days: number): RetreatPreview {
-  const grow = Math.min(days, allowance(S));
-  const plan = grow > 0 ? retreatPlan(S, grow) : { used: 0, gains: [] as [string, number][] };
-  const power0 = powerNow();
-  // 推一推：熟练加上去，够了门槛就升一重（上限同 engine/growth.ts 的 settle）
-  const skills = Object.fromEntries(Object.entries(S.skills).map(([k, v]) => [k, { ...v! }]));
-  for (const [id, n] of plan.gains) {
+/** 熟练加上去，够了门槛就升一重（上限同 engine/growth.ts 的 settle），不碰存档 */
+function applyGains(skills: Record<string, { r: number; p: number } | undefined>, gains: [string, number][]): void {
+  for (const [id, n] of gains) {
     const sk = skillById(id), s = skills[id];
     if (!sk || !s) continue;
     s.p += Math.max(0, Math.round(n * profMul(S, sk)));
     const cap = Math.min(REALMS.length - 1, realmCap(S, sk));
     while (s.r < cap && s.p >= REALM_NEED[s.r]) { s.p -= REALM_NEED[s.r]; s.r++; }
   }
-  const p1 = zhanliShu(personOf({ ...S, skills }));
-  const top = plan.gains[0];
-  return { days, used: plan.used, gain: top ? [skillName(top[0]), top[1]] : undefined, power0, power1: p1, grow };
 }
 
-/** 闭关按钮上的预估：正文「闭关一日，约有长进」，数字放进小字「（寒江剑法熟练 +9，战力 +1）」 */
+const cloneSkills = (): Record<string, { r: number; p: number }> => Object.fromEntries(Object.entries(S.skills).map(([k, v]) => [k, { ...v! }]));
+
+/**
+ * 闭关 want 日的预估：和出关结算（engine/shiguang.ts 的 jingxiu）用同一套算法——
+ * 日子数、修为额度、约期（restDays）、住处与心魔的打折（restEff）、历练的消化（retreatPlan）都是同一个函数，
+ * 所以熟练的进账等于实际。战力是照境界的门槛推一推，写「约」
+ */
+export function retreatPreview(want: number): RetreatPreview {
+  const r = restDays(S, want);
+  const grow = r.grow;
+  const eff = r.days > 0 ? restEff(S, r.days).eff : 1;
+  const plan = grow > 0 ? retreatPlan(S, grow, eff) : { used: 0, gains: [] as [string, number][] };
+  const power0 = powerNow();
+  const skills = cloneSkills();
+  applyGains(skills, plan.gains);
+  const p1 = zhanliShu(personOf({ ...S, skills }));
+  const top = plan.gains[0];
+  const gain: [string, number] | undefined = top ? [skillName(top[0]), top[1]] : undefined;
+  return { days: r.days, used: plan.used, gain, power0, power1: p1, grow, note: top ? retreatNote(top[0], p1 - power0, eff, power0) : '' };
+}
+
+/** 小字：战力涨了写「战力约 +N」；没涨写还差多少熟练才涨、约几日（逐日照历练的消化往后推） */
+function retreatNote(topId: string, d: number, eff: number, power0: number): string {
+  if (d > 0) return `战力 +${d}`;
+  const sk = skillById(topId), cur = S.skills[topId];
+  if (!sk || !cur) return '战力暂不见涨';
+  if (cur.r >= Math.min(REALMS.length - 1, realmCap(S, sk)) && cur.p >= REALM_NEED[cur.r]) return `战力暂不涨：「${sk.name}」卡在瓶颈，先把内功练上去`;
+  const lack = Math.max(0, REALM_NEED[cur.r] - cur.p);
+  const tmp = { lilian: S.lilian ?? 0, loadout: S.loadout, gear: S.gear, skills: cloneSkills() };
+  for (let day = 1; day <= 30; day++) {
+    const pl = retreatPlan(tmp, 1, eff);
+    applyGains(tmp.skills, pl.gains);
+    tmp.lilian -= pl.used;
+    if (zhanliShu(personOf({ ...S, skills: tmp.skills })) > power0) return `战力暂不涨：「${sk.name}」还差 ${lack} 熟练进下一重，约 ${day} 日`;
+  }
+  return `战力暂不涨：「${sk.name}」还差 ${lack} 熟练进下一重，一月之内难见涨`;
+}
+
+/** 闭关按钮上的预估：正文「闭关一日，约有长进」，数字放进小字「（寒江剑法熟练 +9，战力约 +1）」；战力没涨，小字写还差多少熟练、约几日 */
 export function retreatLabel(days: number, name: string): string {
   const p = retreatPreview(days);
   if (!p.gain) return `闭关${name}`;
-  const d = p.power1 - p.power0;
-  return `闭关${name}，${d > 0 ? '约有长进' : '一时不见长进'}<small>（${p.gain[0]}熟练 +${p.gain[1]}${d > 0 ? `，战力 +${d}` : ''}）</small>`;
+  return `闭关${name}，${p.power1 > p.power0 ? '约有长进' : '一时不见长进'}<small>（${p.gain[0]}熟练 +${p.gain[1]}，${p.note}）</small>`;
 }
+
+
+export const retreatSmall = (days: number): string => retreatPreview(days).note;
 
 /** 够闭关一日的历练：提示「可去闭关」 */
 export const canRetreat = (): boolean => S.chapter > 0 && (S.lilian ?? 0) >= RETREAT[1].cap;
@@ -288,15 +317,23 @@ export function strongPaths(): StrongPath[] {
   // 学艺：把历练化成新武功
   out.push({
     name: '学艺', say: '向人请教、拜师、读秘籍，把平日的历练化成新招；有的要先有根基，有的要银两，有的要师门点头。',
-    cost: `历练 ${S.lilian ?? 0} 可用，学成了历练要扣`
+    cost: `历练 ${S.lilian ?? 0} 可用，学成了历练要扣`,
+    go: S.sect ? undefined : { act: 'tab:ditu', label: '翻地图找师父' }
   });
-  // 切磋：此处有、或最近的有人可切磋的
+  // 切磋：只推荐此刻点了真会打的人（和切磋动作同一套判定，sparWilling）；要先混熟的，写明「要先混熟」
   const sp = sparNear();
   if (sp) out.push({
     name: '切磋', say: `${sp.here ? `此处的${sp.name}` : `${sp.at}的${sp.name}`}肯指点几招。点到为止，输赢都不伤和气。`,
     cost: sp.here ? '一场切磋的工夫；赢了熟练有长，每日有额度' : `路上约${sp.min}分钟；赢了熟练有长，每日有额度`,
-    go: sp.here ? undefined : { act: `travel:${sp.to}`, label: `去${sp.at}` }
+    go: sp.here ? { act: 'tab:jianghu', label: '去江湖页' } : { act: `travel:${sp.to}`, label: `去${sp.at}` }
   });
+  else {
+    const mix = sparMixFirst();
+    out.push({
+      name: '切磋', say: mix ? `${mix}要先混熟，才肯陪你过招。` : '眼下没有肯陪你过招的人，换个时辰、换个地方再看。',
+      cost: '先去和人打交道（交谈、赠礼）'
+    });
+  }
   // 门派练功
   const home = S.sect ? sectHome() : null;
   if (S.sect && home) {
@@ -310,18 +347,38 @@ export function strongPaths(): StrongPath[] {
   return out;
 }
 
-/** 眼下最近的、可以切磋的人（先看此处，再看全江湖里眼下在场、路最近的） */
-function sparNear(): { name: string; at: string; to: string; here: boolean; min: number } | null {
-  let best: { name: string; at: string; to: string; here: boolean; min: number } | null = null;
+/** 切磋这个动作此刻点了会不会真打起来：和 world.ts 的 act 同一套判定（没有底线拒绝、选中的分支里有开打的效果、行动协议放行） */
+export function sparWilling(id: string): boolean {
+  const n = npc(id);
+  if (!n || n.obj || !verbsOf(n).includes('切磋') || refuseOf(id, '切磋')) return false;
+  const b = pickBranch(n.actions['切磋']);
+  return !!b?.do?.some(e => e.type === 'fight') && verbPlan(id, '切磋').ok;
+}
+
+/** 有开打的分支，只是交情不够（分支条件里有 rel）：此刻不肯，混熟了肯。返回他的名字 */
+function sparMixFirst(): string | null {
   for (const n of NPCS) {
-    if (n.obj || !verbsOf(n).includes('切磋')) continue;
+    if (n.obj || !verbsOf(n).includes('切磋') || !whereAt(n.id)) continue;
+    if (n.actions['切磋']?.some(b => b.if?.rel && !test(b.if) && b.do?.some(e => e.type === 'fight'))) return npcName(n.id);
+  }
+  return null;
+}
+
+export interface SparTarget { id: string; name: string; at: string; to: string; here: boolean; min: number }
+
+/** 眼下最近的、点了切磋真会打的人（先看此处，再看全江湖里眼下在场、路最近的） */
+export function sparTarget(): SparTarget | null {
+  let best: SparTarget | null = null;
+  for (const n of NPCS) {
+    if (!sparWilling(n.id)) continue;
     const at = whereAt(n.id);
     if (!at) continue;
-    if (at === S.loc) return { name: npcName(n.id), at: room(at).name, to: at, here: true, min: 0 };
+    if (at === S.loc) return { id: n.id, name: npcName(n.id), at: room(at).name, to: at, here: true, min: 0 };
     const m = pathMin(S.loc, at);
     if (!m) continue;
     const min = travelMin(m);
-    if (!best || min < best.min) best = { name: npcName(n.id), at: room(at).name, to: at, here: false, min };
+    if (!best || min < best.min) best = { id: n.id, name: npcName(n.id), at: room(at).name, to: at, here: false, min };
   }
   return best;
 }
+const sparNear = sparTarget;

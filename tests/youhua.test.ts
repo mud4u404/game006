@@ -211,7 +211,7 @@ describe('变强看得见', () => {
   it('闭关按钮上写预估：正文说长进，熟练、战力的数放小字', () => {
     S.lilian = 300;
     const t = retreatLabel(1, '一日');
-    expect(t).toMatch(/^闭关一日，(约有长进|一时不见长进)<small>（.+熟练 \+\d+(，战力 \+\d+)?）<\/small>$/);
+    expect(t).toMatch(/^闭关一日，(约有长进|一时不见长进)<small>（.+熟练 \+\d+，(战力 \+\d+|战力暂不涨：.+)）<\/small>$/);
     expect(viewWugong()).toContain(t);
   });
 

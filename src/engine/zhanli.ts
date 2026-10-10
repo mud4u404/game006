@@ -4,7 +4,7 @@
  * 对手的战力数也这样算，谁强谁弱因此对得上。
  */
 import type { GameState } from '../core/state';
-import { foeById, npc } from '../content';
+import { foeById, npc, skillById } from '../content';
 import { cn } from '../core/util';
 import { tierCont, tierName, tierOf, type Person } from './person';
 import { personOf } from './ren';
@@ -72,6 +72,20 @@ export function zhanliLine(s: GameState): { power: number; line: string; hurt: s
 export const pingyuOf = (s: GameState): string => {
   const p = personOf(s);
   return PINGYU[luOf(p)][tierOf(p)];
+};
+
+/**
+ * 评语按实际火候说：还在不入流的，不能一句「样样粗浅，尚在门墙之外」，旁边却摆着几门武功、六百多气血——
+ * 写身上有几门武功、最高的才到第几重
+ */
+export const pingyuNow = (s: GameState): string => {
+  const p = personOf(s);
+  if (tierOf(p) > 0) return pingyuOf(s);
+  const ks = Object.entries(s.skills).filter(([, v]) => v);
+  const top = ks.reduce<[string, { r: number }] | undefined>((a, k) => (!a || k[1]!.r > a[1].r ? [k[0], k[1]!] : a), undefined);
+  const nm = top ? skillById(top[0])?.name : undefined;
+  if (!top || !nm) return pingyuOf(s);
+  return `身上有${cn(ks.length)}门武功，练得最高的「${nm}」才到第${cn(top[1].r + 1)}重，火候尚浅，离三流还差一截。`;
 };
 
 /** 掂过斤两的人最多记这么多个 */
