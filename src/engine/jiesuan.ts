@@ -14,6 +14,9 @@ import { fightLilian } from './lilian';
 import { tierName } from './person';
 import { ZONES, capWounds, isHeavy, markLight, woundCap } from './shang';
 
+/** 谁克这一路：与 engine/wuxue.ts 的 BEATS 反过来（柔克刚、刚克阴、阴克阳、阳克柔），中正没有 */
+const COUNTER: Partial<Record<string, string>> = { 刚: '柔', 阴: '刚', 阳: '阴', 柔: '阳' };
+
 /** 开打前：剧本战撑不住时有人出手，开打时至少留一口气撑一阵 */
 export function brace(f: FoeDef): void {
   if (f.script) S.hp = Math.max(S.hp, Math.round(S.hpMax * 0.25) + 300);
@@ -171,7 +174,9 @@ export function loseNote(x: LoseFacts): LoseNote {
     const mine = tierName(x.tier), his = tierName(x.foeTier);
     const why = mine === his ? `对手比你高出${gapWord(gap)}，同在${his}里，他更拔尖。` : `对手是${his}，你眼下是${mine}，他高出你${gapWord(gap)}。`;
     const need = Math.max(Math.floor(x.maxR) + 1, Math.ceil(1 + 1.5 * (x.foeTier - 0.4) - 1e-9));
-    const alt = [x.nature ? `换一门克他${x.nature}路的功夫` : '', x.prepIdle ? '先把他的底细打听清楚、帮手请来' : ''].filter(Boolean);
+    // 克他那一路的功夫（柔克刚、刚克阴、阴克阳、阳克柔）；中正没有谁克，不写这句
+    const ke = x.nature ? COUNTER[x.nature] : undefined;
+    const alt = [ke ? `换一门${ke}路的功夫克他` : '', x.prepIdle ? '先把他的底细打听清楚、帮手请来' : ''].filter(Boolean);
     return { kind: 'tier', why, mend: `最高的一门功夫练到第${cn(need)}重再来领教${alt.length ? `；也可${alt.join('，或')}` : ''}。` };
   }
   if (best === 'wound') {

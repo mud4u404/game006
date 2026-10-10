@@ -111,7 +111,7 @@ const STORIES: StoryDef[] = [
           result: '你把钱交给一个老脚夫。老脚夫掂了掂钱袋，叹了口气：「少侠，饭好给，那口气难消啊。」',
           do: [{ type: 'silver', delta: -20 }, { type: 'xia', delta: 2 }], next: -1 },
         // 失物赎回：上回败在他手里，被摸去的十文，在这里要得回来
-        { label: '拦住那孩子，要回钱袋里的十文', sub: '银两 +10', if: { flag: 'ly_xiaozei_took' },
+        { label: '追上那孩子，要回钱袋里的十文', sub: '银两 +10', if: { flag: 'ly_xiaozei_took' },
           result: '孩子梗着脖子站了半晌，到底从怀里摸出十文钱，拍在你手里，扭头就跑。老脚夫在一旁叹气：「他是真饿。」',
           do: [{ type: 'silver', delta: 10 }, { type: 'flag', flag: 'ly_xiaozei_took', value: false }], next: -1 },
         { label: '由他们去',

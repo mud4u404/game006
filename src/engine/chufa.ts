@@ -9,7 +9,7 @@ import { jobById, npc } from '../content';
 import type { GameState } from '../core/state';
 import { test } from './dsl';
 import { ZONES, isHeavy } from './shang';
-import { LODGING } from './shiguang';
+import { LODGING, zhuOf } from './shiguang';
 import { tripCost, verbsOf } from './world';
 
 /** 赶路超过这么多分钟（一个时辰）才算「出远门」 */
@@ -18,8 +18,9 @@ export const FAR_MIN = 120;
 const HURT_WORD = { hand: '使兵刃要吃亏', foot: '身法要打折扣', inner: '内力运不顺' } as const;
 const HURT_PLACE = { hand: '手上', foot: '腿上', inner: '内息' } as const;
 
-/** 这趟路要备的钱：沿途的船钱，加上过夜的店钱（赶到时过了半夜的，一夜一百文） */
-export const tripNeed = (s: Pick<GameState, 'min'>, fee: number, min: number): number => fee + LODGING.inn * Math.floor((s.min + min) / 1440);
+/** 这趟路要备的钱：沿途的船钱，加上过夜的店钱（住店的人，赶到时过了半夜的，一夜一百文；露宿、住师门的不花店钱） */
+export const tripNeed = (s: GameState, fee: number, min: number): number =>
+  fee + (zhuOf(s) === 'inn' ? LODGING.inn * Math.floor((s.min + min) / 1440) : 0);
 
 export interface Trip { fee: number; min: number }
 
