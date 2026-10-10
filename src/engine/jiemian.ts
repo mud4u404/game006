@@ -144,7 +144,7 @@ export function yaoJin(): YaoJin {
   const weak = nav && nav.state === '能做' ? tooStrong(nav) : null;
   if (nav && weak) {
     const mainAt: Also = { text: nav.who ? `去${nav.toName}，找${nav.who.name}（${kind}，眼下还打不过）` : `办「${nav.title}」`, to: nav.to ?? S.loc, toName: nav.toName ?? room(S.loc).name, min: nav.to && nav.to !== S.loc ? travelMin(pathMin(S.loc, nav.to)) : 0 };
-    const why = `${weak.name}高你${weak.gap >= 2 ? ` ${Math.floor(weak.gap)} 档` : '一档'}，${nav.to === S.loc ? '他不理你，' : '现在去也是送死，'}你得先变强`;
+    const why = `${weak.name}${weak.gap >= 2 ? '的功夫高出你两三层' : '功夫在你之上'}，${nav.to === S.loc ? '他不理你，' : '现在去也是送死，'}你得先变强`;
     const h = (S.lilian ?? 0) > 0 ? helpOf(false, ls) : ls[0] ? helpOf(true, ls) : { tag: '先变强', text: '先去闭关，攒够历练再回来', tab: 'wugong' as Tab, to: undefined, toName: undefined };
     const used = ls.find(l => l.to === h.to && leadText(l) === h.text);
     return { ...h, tag: '先变强', here: false, why, also: [mainAt, ...alsoOf(used)].slice(0, 2) };
