@@ -187,9 +187,14 @@ const NPCS: NpcDef[] = [
   {
     id: 'smhs_shenbo', name: '申伯', ini: '申', tone: 'blue', brief: '在廊下抄案卷', at: { room: 'yz_fuya' },
     look: '六十来岁，抄案卷的老书吏，左手按着纸，右手悬着笔，写三个字就要停下来揉一揉眼睛。案卷码得半人高，边角都对得整整齐齐。',
-    verbs: ['交谈', '观察',
+    verbs: ['交谈', '观察', '打听',
       { verb: '求信', if: { noItem: 'smhs_xin' } }],
     actions: {
+      打听: [
+        { if: { noSect: true, notFlag: 'smhs_xin_given' },
+          text: '「信不是老朽说写就写的，得捕头爷点头。他在前堂，白天都在；你替府衙办成过案子，他自然肯保。」' },
+        { text: '「老朽只管抄案卷。北固山那位柏先生的闲话，倒是听老书吏们讲过几回。」', do: [{ type: 'news' }] }
+      ],
       交谈: [
         { if: { flag: 'smhs_xin_given' },
           text: '申伯揉着眼睛抬头：「信送到了没有？北固山上的柏先生——当年府里一桩陈年悬案，是他在城墙上指了一个人，捕头爷才破的案。替我问他安。」' },
