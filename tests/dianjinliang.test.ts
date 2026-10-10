@@ -32,34 +32,35 @@ const 抬到三流 = (): void => {
 const 档次对手 = (base: FoeDef, rank: number, id = `t${rank}`): FoeDef => ({ ...base, id, rank });
 
 describe('掂斤两按档次说话', () => {
-  it('不入流去掂三流：说「高你一档」，不说势均力敌', () => {
+  it('不入流去掂三流：说「功夫在你之上」，不说势均力敌', () => {
     setState(newGame());                       // 新开局：不入流
     expect(tierNow(S).t, '新开局该是不入流').toBeLessThan(1);
     const { say } = kanren(S, 屠千山);
-    expect(say, `新入局掂三流的屠千山，说的却是「${say}」`).toContain('高你一档');
-    expect(say).toContain('多半要输');
+    expect(say, `新入局掂三流的屠千山，说的却是「${say}」`).toContain('功夫在你之上');
+    expect(say).toContain('硬拼多半要输');
     expect(say).not.toMatch(/旗鼓相当|势均力敌|你胜面大些|深浅看不透/);
   });
 
-  it('差两档说得更重：档数要写出来，不笼统说「一档」', () => {
+  it('差两档说得更重：说「莫去招惹」，不写档数', () => {
     setState(newGame());
     const 高两档 = 档次对手(屠千山, 3);
     const { say } = kanren(S, 高两档);
-    expect(say).toContain('高你');
-    expect(say).toContain('3 档');
+    expect(say).toContain('高出你两三层');
+    expect(say).toContain('莫去招惹');
+    expect(say).not.toMatch(/\d+\s*档/);
   });
 
-  it('比自己高一档的对手：说「他不如你」', () => {
+  it('比自己高一档的对手：说「他不是你的对手」', () => {
     setState(newGame());
     // 造一个不入流的对手（rank 0），新入局也是不入流——同档，另测
     const 同档 = 档次对手(屠千山, 0);
     const { say } = kanren(S, 同档);
-    expect(say).not.toContain('不如你');          // 同档按胜率说，不按档次
+    expect(say).not.toContain('不是你的对手');          // 同档按胜率说，不按档次
     // 真高一档：玩家三流（练一门一品武功到第一重），对手不入流
     抬到三流();
     expect(tierNow(S).t, '功法到第一重、功力够，该升到三流').toBeGreaterThanOrEqual(1);
     const { say: s2 } = kanren(S, 档次对手(屠千山, 0, 't低一档'));
-    expect(s2, `对手不入流、玩家三流，说的却是「${s2}」`).toContain('不如你');
+    expect(s2, `对手不入流、玩家三流，说的却是「${s2}」`).toContain('不是你的对手');
   });
 
   it('一个人对四个打手：不说「他远不如你」', () => {
@@ -75,7 +76,7 @@ describe('掂斤两按档次说话', () => {
     setState(newGame());
     const f = 档次对手(屠千山, tierNow(S).t + 1);   // 强制高一档
     const { p, say } = kanren(S, f);
-    expect(say).toContain('多半要输');
+    expect(say).toContain('硬拼多半要输');
     // 势条那条就是拿这个 p 去算的（src/ui/fight.ts 的 updMom 开打前用 odds = kanren(...).p）
     expect(p * 100, `掂斤两说多半要输，胜率却有 ${(p * 100).toFixed(0)}%`).toBeLessThan(50);
   });
@@ -85,7 +86,7 @@ describe('掂斤两按档次说话', () => {
     抬到三流();
     const f = 档次对手(屠千山, 0, 't弱一档');
     const { p, say } = kanren(S, f);
-    expect(say).toContain('不如你');
+    expect(say).toContain('不是你的对手');
     expect(p * 100).toBeGreaterThan(50);
   });
 });
