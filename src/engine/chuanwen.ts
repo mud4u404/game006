@@ -14,9 +14,9 @@
  */
 import { S, markSeen, pushFeed, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
-import { NEWS, NPCS, ROOMS, npc, room, shiById } from '../content';
-import type { NpcLife, ShiDef, ShiStep } from '../content/types';
-import { pickBranch, test } from './dsl';
+import { FACTIONS, NEWS, NPCS, REGIONS, ROOMS, npc, room, shiById } from '../content';
+import type { Branch, Cond, NewsDef, NpcLife, ShiDef, ShiStep } from '../content/types';
+import { test } from './dsl';
 import { mulberry32, seedOf } from './rng';
 import { learnShi } from './shishi';
 import { worldOf, worldRng, type Know, type WorldState } from './shijie';
@@ -169,6 +169,43 @@ function newsText(id: string): string | null {
   return newsMap.get(id) ?? null;
 }
 
+
+/** 传闻池的话出在哪儿：话里提到的地区名、地点名（只认全内容里独一份的名字），取最先提到的 */
+let keyTab: { k: string; region: string; place?: string }[] | undefined;
+function newsKeys(): { k: string; region: string; place?: string }[] {
+  if (!keyTab) {
+    const byName = new Map<string, string[]>();
+    for (const r of ROOMS) if (r.name.length >= 3) byName.set(r.name, [...(byName.get(r.name) ?? []), r.id]);
+    keyTab = [];
+    for (const [k, ids] of byName) if (ids.length === 1) keyTab.push({ k, region: regionOfRoom(ids[0]), place: ids[0] });
+    for (const [rid, def] of Object.entries(REGIONS)) for (const k of [def.name, def.name.replace(/渡$/, '')]) if (k.length >= 2) keyTab.push({ k, region: rid });
+    keyTab.push({ k: '京口', region: 'zj' });
+  }
+  return keyTab;
+}
+export function newsHits(n: NewsDef): { region: string; place?: string }[] {
+  if (n.region || n.at) return [{ region: n.region ?? regionOfRoom(n.at!), place: n.at }];
+  const hits: { i: number; k: string; region: string; place?: string }[] = [];
+  for (const e of newsKeys()) { const i = n.text.indexOf(e.k); if (i >= 0) hits.push({ i, ...e }); }
+  return hits.sort((x, y) => x.i - y.i || y.k.length - x.k.length);
+}
+/**
+ * 话出在哪儿：写明了的，或者话里点了独一份的地点名，就是那儿（地点名是实打实的锚）；
+ * 只提到地区名的，取候选人里有人住的那个地区（话里顺口提一句瓜洲的，不一定出在瓜洲）；都对不上，取候选人头一个所在的地区
+ */
+export function newsWhere(n: NewsDef, who: string[]): { region: string; place?: string } {
+  const hits = newsHits(n);
+  const anchor = n.region || n.at ? hits[0] : hits.find(h => h.place);
+  if (anchor) return anchor;
+  return hits.find(h => who.some(p => homeRegion(p) === h.region)) ?? { region: homeRegion(who[0] ?? '') };
+}
+/** 话说的就是他自己的事：点了他所在帮的名号，或者他守的地方的名字 */
+function selfNamed(who: string, text: string): boolean {
+  const l = lifeOf(who), f = FACTIONS.find(x => x.id === l?.faction);
+  const names = [...(f ? [f.name, f.name.replace(/东舵|西舵|分舵|扬州/g, '')] : []), ...roomsOf(who).map(r => room(r).name)];
+  return names.some(k => k.length >= 2 && text.includes(k));
+}
+
 /** 世事的步排先后：顺着 next 链排，插手才到的结局排在最后 */
 function stepRank(d: ShiDef, step: string): number {
   const chain: string[] = [];
@@ -262,7 +299,7 @@ export function shiRumor(d: ShiDef, to: string, at: number, hand: boolean): stri
 export function seedNews(w: WorldState, day: number): void {
   const ppl = lifePeople(), heard = new Set(S.heard ?? []);
   let known: Set<string> | undefined;
-  const cand: { id: string; who: string[]; far: boolean }[] = [];
+  const cand: { id: string; who: string[]; far: boolean; place: string }[] = [];
   for (const n of NEWS) {
     if (!n.who?.length || n.about) continue;
     const id = newsId(n.text), old = w.rumor[id];
@@ -273,12 +310,18 @@ export function seedNews(w: WorldState, day: number): void {
     }
     if (!test(n.if)) continue;
     let who = ppl.filter(p => { const l = lifeOf(p)!; return n.who!.includes(l.trade) || (!!l.faction && n.who!.includes(l.faction)); });
+    let region = '', place: string | undefined;
     if (n.far) { const run = who.filter(isRunner); who = run.length ? run : ppl.filter(isRunner); }
-    if (who.length) cand.push({ id, who, far: !!n.far });
+    else {
+      // 话只发给该知道的人：出在哪个地区，就只发给那一带的人；说的就是自家的事（话里点了他的帮、他守的地方），不给他
+      ({ region, place } = newsWhere(n, who));
+      who = who.filter(p => homeRegion(p) === region && !selfNamed(p, n.text));
+    }
+    if (who.length) cand.push({ id, who, far: !!n.far, place: place ?? (n.far ? '' : roomsOf(who[0])[0] ?? '') });
   }
   for (let i = 0; i < NEWS_PER_DAY && cand.length; i++) {
-    const { id, who, far } = cand.splice(Math.floor(worldRng() * cand.length), 1)[0];
-    w.rumor[id] = { id, ev: id, ph: '', day, place: far ? '' : roomsOf(who[0])[0] ?? '', juice: far ? 0.45 : 0.4, subj: [], ...(far ? { far: true as const } : {}) };
+    const { id, who, far, place } = cand.splice(Math.floor(worldRng() * cand.length), 1)[0];
+    w.rumor[id] = { id, ev: id, ph: '', day, place, juice: far ? 0.45 : 0.4, subj: [], ...(far ? { far: true as const } : {}) };
     for (const x of who) learn(w, x, id, 0, day);
   }
 }
@@ -437,8 +480,8 @@ function pickFor(npcId: string, force: boolean): { r: RumorInst; k: Know; text: 
 
 export interface AskResult {
   text: string;
-  /** know：说的是他知道的；idle：说他自己的日子；old：没写声口的人，说这一带传开的；none：没得说；again：今日问过了 */
-  src: 'know' | 'idle' | 'old' | 'none' | 'again';
+  /** know：说的是他知道的；idle：说他自己的日子；react：对你近来所做之事的一句；old：没写声口的人，说这一带传开的；none：没得说；again：今日问过了、没有可说的了 */
+  src: 'know' | 'idle' | 'react' | 'old' | 'none' | 'again';
   /** 说的是哪条传闻 */
   rumor?: string;
   far?: boolean;
@@ -449,31 +492,84 @@ export interface AskResult {
 /**
  * 开场白的挑法：只由（世界种子、人、日子）算出，不取世界的随机数（worldRng）。
  * 纯文字的挑选动了世界随机流，世界里别的随机跟着挪位（世事的时点、传闻的走样），同一个种子就不一字不差了；
- * 给谁补上声口、改了几句开场白，都不该改变江湖的走向
+ * 给谁补上声口、改了几句开场白，都不该改变江湖的走向。salt 是同一天里第几回问（头一回不加，老存档的开场白不变）
  */
-function leadPick<T>(arr: readonly T[], npcId: string): T {
-  return arr[Math.floor(mulberry32(seedOf(worldOf().seed, 'lead', npcId, dayNo(S)))() * arr.length)];
+function leadPick<T>(arr: readonly T[], npcId: string, salt = 0): T {
+  return arr[Math.floor(mulberry32(salt ? seedOf(worldOf().seed, 'lead', npcId, dayNo(S), salt) : seedOf(worldOf().seed, 'lead', npcId, dayNo(S)))() * arr.length)];
+}
+
+/** 对你近来所做之事的一句反应（每个人通用，不替谁说具体的话）：按你眼下的名声、处境、和他的交情挑第一条成立的 */
+const REACT: { if: Cond; text: string; reg?: string }[] = [
+  { if: { wounded: true }, text: '你这脸色不对，是不是跟人动过手？伤着了就别硬撑，江湖路长。' },
+  { if: { flag: 'boss', xia: 20 }, reg: 'yz', text: '渡口那一仗，我也听说了。你这样的后生，如今不多见了。' },
+  { if: { eming: 20 }, text: '近来你的名声不大好听。我不多问，只劝你一句：做事留三分。' },
+  { if: { xia: 30 }, text: '都说近来有位少侠专管不平事，原来是你。这话我不当面夸，心里是有数的。' },
+  { if: { flag: 'boss' }, reg: 'yz', text: '听说你在渡口拿下了黑风寨的头一把交椅。这一带的人，夜里睡得安稳些了。' },
+  { if: { shenfen: 'biaoshi' }, text: '吃镖局这碗饭的，路上要小心。有什么消息，我替你留意着。' }
+];
+
+/** 他对你的这句反应：交情深的另说一句；只说和他同一带的事 */
+function reactFor(npcId: string): string | null {
+  const rel = S.rel[npcId] ?? '素不相识';
+  if (REL_WARM.includes(rel)) return '你我也算熟人了，这些日子见你来来去去，心里总替你捏一把汗。有什么难处，只管开口。';
+  return REACT.find(r => (!r.reg || homeRegion(npcId) === r.reg) && test(r.if))?.text ?? null;
+}
+
+/** 他自己的日子：眼下说得出的几句（声口里 idle 成立的各条，内容顺序） */
+function idleLines(life: NpcLife | undefined): { key: string; text: string }[] {
+  const out: { key: string; text: string }[] = [];
+  (life?.voice.idle ?? []).forEach((b: Branch, i) => { if (b.text && test(b.if)) out.push({ key: `i${i}`, text: b.text }); });
+  return out;
+}
+
+/** 今天对这个人的问话记录；隔日换新 */
+function askLogOf(npcId: string, create: boolean): { d: number; u: string[] } | undefined {
+  const today = dayNo(S), logs = S.askLog;
+  if (logs) for (const k of Object.keys(logs)) if (logs[k].d !== today) delete logs[k];
+  if (create) return ((S.askLog ||= {})[npcId] ||= { d: today, u: [] });
+  return logs?.[npcId];
+}
+
+/** 下一句他还有什么可说的（不动记录）：自己的旧话在前，对你的反应在后；没有了为空 */
+function nextLine(npcId: string, log: { u: string[] }): { key: string; kind: 'idle' | 'react'; text: string } | null {
+  const idle = idleLines(lifeOf(npcId)).find(l => !log.u.includes(l.key));
+  if (idle) return { ...idle, kind: 'idle' };
+  if (!log.u.includes('r')) { const t = reactFor(npcId); if (t) return { key: 'r', kind: 'react', text: t }; }
+  return null;
+}
+
+/** 现在还能不能向他打听：今天没问过，或者问过了他还有话可说（按钮灰不灰看它） */
+export function canAsk(npcId: string): boolean {
+  const log = askLogOf(npcId, false);
+  return !log || nextLine(npcId, log) !== null;
 }
 
 /**
- * 打听：问这个人知道什么（engine/world.ts 的「打听」，人人都有）。一个人一天只问一回（force 不管，也不管关系）。
- * 写了声口的人：{名}{开口前的样子}，道：「{说法}」，听来的再接一句（听某某说的）；什么都没有就说他自己的日子。
- * 没写声口的人：先说他自己知道的，再说这一带传开的，都没有说「太平得很」
+ * 打听：问这个人知道什么（engine/world.ts 的「打听」，人人都有）。force 不管次数，也不管关系。
+ * 头一回：写了声口的人，{名}{开口前的样子}，道：「{说法}」，听来的再接一句（听某某说的）；什么都没有就说他自己的日子。
+ * 没写声口的人：先说他自己知道的，再说这一带传开的，都没有说「太平得很」。
+ * 再问：先是他自己的旧话、闲话（声口里成立的各条，一条一回），再是他对你近来所做之事的一句反应；都说过了，就是「今日已问过」（按钮灰掉）
  */
 export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}): AskResult {
   const who = opt.who ?? npcName(npcId);
+  const life = lifeOf(npcId);
+  const first = !opt.force && !askLogOf(npcId, false);
   if (!opt.force) {
     const today = dayNo(S);
     const asked = (S.asked ||= {});
     for (const k of Object.keys(asked)) if (asked[k] !== today) delete asked[k];
-    if (asked[npcId] === today) return { text: `${who}摆摆手：「知道的都跟你说了，改日再来吧。」`, src: 'again' };
+    if (!first) {
+      const log = askLogOf(npcId, true)!, nx = nextLine(npcId, log);
+      if (!nx) return { text: `${who}今日已被你问过了，没有新话可说。`, src: 'again' };
+      log.u.push(nx.key);
+      return { text: `${who}${leadPick(life?.voice.lead ?? DATING_LEAD[gangOf(npcId)], npcId, log.u.length)}${life ? '，道：' : '：'}「${inner(nx.text)}」`, src: nx.kind };
+    }
     asked[npcId] = today;
+    askLogOf(npcId, true);
   }
-  const life = lifeOf(npcId);
-  // 取法都用 leadPick：只由（世界种子、人、日子）算出，不抽世界随机数（main 的 8180335）。
-  // 分组是 Issue #263 的那层：没写声口的人按身份落进自己那一组，动作不跟市井混在一起。
+  const log = opt.force ? undefined : askLogOf(npcId, true);
+  // 分组是 Issue #263 的那层：没写声口的人按身份落进自己那一组，动作不跟市井混在一起
   const open = (): string => (life ? `${who}${leadPick(life.voice.lead, npcId)}，道：` : `${who}${leadPick(DATING_LEAD[gangOf(npcId)], npcId)}：`);
-
   const got = pickFor(npcId, !!opt.force);
   if (got) {
     tellYou(got.r, got.text);
@@ -481,8 +577,8 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
     return { text: `${open()}「${inner(got.text)}」${from ? `（听${npcName(from)}说的）` : ''}`, src: 'know', rumor: got.r.id, far: farFor(got.r, npcId), from };
   }
   if (life) {
-    const idle = pickBranch(life.voice.idle)?.text;
-    if (idle) return { text: `${open()}「${idle}」`, src: 'idle' };
+    const idle = idleLines(life)[0];
+    if (idle) { log?.u.push(idle.key); return { text: `${open()}「${idle.text}」`, src: 'idle' }; }
   }
   const line = hearsay({ skip: saidToday() });
   if (line) {

@@ -19,7 +19,7 @@ export function allowedSection(body) {
 }
 
 // docs 下可以有子目录（如 docs/zhishiku/x.md，调研笔记）；内容包不分子目录
-const FULL = /(?<![A-Za-z0-9_./-])(?:src\/content\/packs\/|docs\/(?:[A-Za-z0-9_-]+\/)*)[A-Za-z0-9_.-]+\.(?:ts|md)/g;
+const FULL = /(?<![A-Za-z0-9_./-])(?:src\/content\/packs\/|tests\/|docs\/(?:[A-Za-z0-9_-]+\/)*)[A-Za-z0-9_.-]+\.(?:ts|md)/g;
 // 裸名：前面不是路径字符，例如 `zhaoshi.ts`；写成路径的（src/engine/x.ts）不算裸名
 const BARE = /(?<![A-Za-z0-9_./-])[A-Za-z0-9_-][A-Za-z0-9_.-]*\.(?:ts|md)(?![A-Za-z0-9_])/g;
 
@@ -37,7 +37,8 @@ export function allowedFiles(body) {
 
 /**
  * files：GitHub 接口 pulls/:n/files 返回的 { status, deletions, filename }。
- * 只算「只动了内容」：新增或改内容包、新增或改文档，都必须在允许的文件里（新增的也要点名，不点名的内容包不自动合）；forbidden-names 只许加词。
+ * 只算「只动了内容」：新增或改内容包、新增或改文档，都必须在允许的文件里（新增的也要点名，不点名的内容包不自动合）；forbidden-names、id-registry 只许加；
+ * 新增的测试文件点名了也算（改已有测试不算）。
  * 返回 { ok, bad }，bad 是越界的文件名。
  */
 export function judgeFiles(files, allowed) {
@@ -48,6 +49,10 @@ export function judgeFiles(files, allowed) {
     let ok = false;
     if ((status === 'added' || status === 'modified') && (inPack || inDocs)) ok = allowed.has(filename);
     else if (status === 'modified' && filename === 'tests/forbidden-names.ts') ok = deletions === 0;
+    // 新增的测试文件（Issue 点名了才算）：只许新增，改已有测试仍要维护者审（免得把断言改松）（10-10：协作者的 PR 多带一条新测试，全卡在人审上）
+    else if (status === 'added' && /^tests\/[^/]+\.test\.ts$/.test(filename)) ok = allowed.has(filename);
+    // id 登记表只许加行
+    else if (status === 'modified' && filename === 'tests/id-registry.json') ok = deletions === 0;
     if (!ok) bad.push(filename);
   }
   return { ok: files.length > 0 && bad.length === 0, bad };

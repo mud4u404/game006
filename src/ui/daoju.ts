@@ -3,6 +3,7 @@
  * 规则在 engine/daoju.ts、engine/zhuangbei.ts；这里只画底板、接点击。
  */
 import { S, type GearKey } from '../core/state';
+import { absMin } from '../core/time';
 import { itemById, npc } from '../content';
 import type { ItemDef, Verb } from '../content/types';
 import { act, npcName } from '../engine/world';
@@ -94,7 +95,7 @@ function reply(verb: Verb, item: string): void {
   const id = S.sel;
   if (!id) return;
   const { text, out } = act(id, verb, item);
-  S.reply = text ? { id, text } : null;
+  S.reply = text ? { id, text, at: absMin(S) } : null;
   afterOutcome(out);
   document.querySelector('.reply')?.scrollIntoView({ block: 'nearest' });
 }
