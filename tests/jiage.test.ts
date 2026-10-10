@@ -138,6 +138,21 @@ describe('价钱的几处来源，各归各的表', () => {
     }
   });
 
+  it('渡口的过路钱：世事里报的数就是眼下主人那一档', () => {
+    // 「码头归了西舵…过一回船先交二十文」（shishi-yangzhou.ts 的 xiduo 步）
+    // 对的是 yz-shili.ts 里 gz_kechuan 的 toll。数从台词里取、主人从这一步的 do 里取，都不写死：
+    // 台词改了或主人换了，这条自己跟着变。
+    const step = SHI.flatMap(s => Object.values(s.steps)).find(x => x.now.includes('过一回船'));
+    expect(step, '找不到说「过一回船」的那一步世事').toBeTruthy();
+    const said = saidMoney(step!.now);
+    expect(said.length, `「${step!.now}」里读出 ${JSON.stringify(said)} 个钱数，应是一个`).toBe(1);
+    const own = step!.do?.find(e => e.type === 'w' && e.op === 'owner') as Extract<Effect, { type: 'w'; op: 'owner' }> | undefined;
+    expect(own, '这一步没有改码头的主人').toBeTruthy();
+    const toll = ROOMS.find(r => r.id === 'gz_kechuan')?.life?.toll;
+    expect(toll, '运河客船 gz_kechuan 没有写过路钱').toBeTruthy();
+    expect(toll![own!.to as string], `${own!.to} 治下过路钱 ${toll![own!.to as string]} 文，台词里说的是 ${said[0]} 文`).toBe(said[0]);
+  });
+
   it('住店：一日一百文，是 docs/foundation.md 第三节第六条那个数', () => {
     expect(LODGING.inn).toBe(100);
     expect(LODGING.inn).toBe(LODGING.keep);
@@ -158,15 +173,25 @@ describe('价钱的几处来源，各归各的表', () => {
   });
 
   it('悬赏榜上写的数和交差给的数一样', () => {
-    // src/content/packs/xuanshang.ts 里书办报的四张榜（自己念一遍，别照抄错数）
-    const DAN: Record<string, number> = { xsb_xunren: 250, xsb_xunwu: 800, xsb_xiong: 1500, xsb_jiaofei: 3380 };
-    for (const [id, said] of Object.entries(DAN)) {
+    // 数从书办嘴里取（src/content/packs/xuanshang.ts，xsb_zhuren 的 actions），不写死：
+    // 写死了这条就名不副实——书办改了价，它照样绿。书办改了台词，这里跟着红。
+    const shuban = NPCS.find(n => n.id === 'xsb_zhuren');
+    expect(shuban, '书办 xsb_zhuren 不见了').toBeTruthy();
+    // 四张榜 + 河贼那桩（书办顺口提的，不在四张榜里，也一并核上）。[差事 id, 书办说的那一支]
+    const DAN: [string, string][] = [
+      ['xsb_xunren', '揭寻人'], ['xsb_xunwu', '揭寻物'],
+      ['xsb_xiong', '揭缉凶'], ['xsb_jiaofei', '揭剿匪'], ['xs_hezei', '揭河贼'],
+    ];
+    for (const [id, verb] of DAN) {
+      const line = shuban!.actions[verb]?.[0]?.text;
+      expect(line, `书办没有「${verb}」这一支`).toBeTruthy();
+      const said = saidMoney(line!);
+      // 一句话里只许有一个钱数，多了就说不清哪个是赏格了
+      expect(said.length, `${verb} 这句话里读出 ${JSON.stringify(said)} 个钱数，应是一个`).toBe(1);
       const j = JOBS.find(x => x.id === id);
       expect(j, `悬赏 ${id} 不见了`).toBeTruthy();
-      expect(jobPay(j!), `${id} 榜上写 ${said} 文，交差给的是别的数`).toBe(said);
+      expect(jobPay(j!), `${verb} 里书办说 ${said[0]} 文，${id} 交差给的是别的数`).toBe(said[0]);
     }
-    // 河贼那桩书办是顺口提的，不在四张榜里，也一并核上
-    expect(jobPay(JOBS.find(x => x.id === 'xs_hezei')!)).toBe(800);
   });
 });
 
