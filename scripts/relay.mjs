@@ -7,6 +7,8 @@ export const WORK_LABELS = ['内容', '功能'];
 export const HOLD_LABEL = '暂缓';
 /** 维护者退回的 PR 带这个标签（再加「给:作者」）：作者先把它改完，再领新任务 */
 export const REDO_LABEL = '要改';
+/** 调研任务（读同类作品写笔记，docs/zhishiku/）：没有别的活时才领，排在一切正经活之后 */
+export const IDLE_LABEL = '调研';
 /**
  * 指派：Issue 带「给:trae」这样的标签，只有自报名字叫 trae 的协作者（node scripts/wait-for-work.mjs --for trae）才领得到；
  * 不报名字的协作者领不到任何带「给:」的任务，所以多个工具同时开着自动模式也不会抢同一件
@@ -28,8 +30,11 @@ export const branchIssue = name => (name.startsWith('claude/') ? null : Number(n
  * items：GitHub 接口 /issues?state=open 返回的数组，Issue 和 PR 混在一起（PR 带 pull_request 字段）。
  * branches：远端分支名。推送了任务分支、CI 还没来得及建 PR 时，也算有人在做。
  * 可以做的任务：带「内容」或「功能」标签，不带「暂缓」，还没有开着的 PR 标题写着 [#编号]，
- * 也没有对应的任务分支，依赖的 Issue、PR 都已关闭（合并），带「给:xxx」的只给自报名字 xxx 的人。编号最小的先做；没有就返回 null。
+ * 也没有对应的任务分支，依赖的 Issue、PR 都已关闭（合并），带「给:xxx」的只给自报名字 xxx 的人。编号最小的先做，
+ * 带「调研」的排在最后（闲下来才做）；没有就返回 null。
  */
+const idle = i => (labelNames(i).includes(IDLE_LABEL) ? 1 : 0);
+
 export function pickWork(items, branches = [], me = '') {
   const prs = items.filter(i => i.pull_request);
   // 退回的 PR 排在最前：带「要改」和「给:我」的，先改它（不带「给:」的不派，免得别人去改不是自己的分支）
@@ -58,7 +63,7 @@ export function pickWork(items, branches = [], me = '') {
         return names.some(n => WORK_LABELS.includes(n)) && !names.includes(HOLD_LABEL) && !taken.has(i.number) && mine;
       })
       .filter(i => deps(i.body).every(d => !open.has(d)))
-      .sort((a, b) => a.number - b.number)[0] ?? null
+      .sort((a, b) => idle(a) - idle(b) || a.number - b.number)[0] ?? null
   );
 }
 

@@ -1,0 +1,74 @@
+name: kanban-data
+
+# 开发看板（Pages 上的 /kanban/）的数据由这里定时算好，页面只读一个 data.json，
+# 不再让每个访客的浏览器匿名调 GitHub API（每小时只有 60 次，一下就被限流）。
+#
+# 做什么：跑 scripts/kanban-data.mjs（用 GITHUB_TOKEN 调 API，算出各家 AI 的 PR、检查结果、排着的 Issue、
+# 最近推送、最近合并、24/48 小时合并数、待领任务池），把 data.json 提交到孤立分支 kanban-data（只有这一个文件，强推覆盖）。
+# 页面读的地址：https://raw.githubusercontent.com/mud4u404/game006/kanban-data/data.json
+#
+# 触发：每十分钟一次（GitHub 的定时常晚到，只当兜底）；手动；PR 开关、推送、打标签；Issue 开关、打标签、评论；任何分支推送；CI 跑完。
+# 有动静一分钟内就重算；同一组只留最新一次，旧的取消，所以触发多也不费。
+# 注意：用 GITHUB_TOKEN 做的操作（比如 automerge 合并 PR）不会再触发 pull_request / issues 事件，这类变化最迟十分钟由定时那一次补上。
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+  pull_request:
+    types: [opened, closed, reopened, synchronize, labeled, unlabeled]
+  issues:
+    types: [opened, closed, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+  # 协作者推了新提交、CI 跑完，都马上重算（kanban-data 分支自己不触发，免得打转）
+  push:
+    branches-ignore: [kanban-data]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+# 只有 contents: write 是推分支必需的；其余三项是只读，读 Issue、PR、检查结果用
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+  checks: read
+
+# 同一组只留最新一次，旧的取消（数据只看最新）
+concurrency:
+  group: kanban-data
+  cancel-in-progress: true
+
+jobs:
+  data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # 不管是谁触发的，脚本都取 main 上的（pull_request 事件默认取的是合并预览，不一定有脚本）
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 算数据
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/kanban-data.mjs "$RUNNER_TEMP/data.json"
+      - name: 推到孤立分支 kanban-data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/kanban-branch"
+          rm -rf "$out" && mkdir "$out"
+          cp "$RUNNER_TEMP/data.json" "$out/data.json"
+          cd "$out"
+          git init -q -b kanban-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git commit -q -m "看板数据 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git push --force origin kanban-data

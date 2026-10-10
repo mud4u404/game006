@@ -96,13 +96,14 @@ const NPCS: NpcDef[] = [
         { if: { eming: 12 },
           text: '先生摇了摇头：「恶名比我这柴门还旧。华山弟子出门在外，报的是华山的名——你这个名，华山担不起。先把这些事了一了。」' },
         { if: { noSect: true, noItem: 'smhs_xin' },
-          text: '先生朝山下抬了抬下巴：「柴门不对生人开。有人肯替你担保，写信来，那扇门才为你开。扬州府里还有人记着老朽一点旧情，你若办过让府衙记得住的事，去那里问问。没人肯保，就先把人做好。」哑叔在你身后，把柴门轻轻掩上了。' },
+          text: '先生朝山下抬了抬下巴：「柴门不对生人开。有人肯替你担保，写信来，那扇门才为你开。扬州府里还有人记着老朽一点旧情，你若办过让府衙记得住的事，去那里问问。没人肯保，就先把人做好。」哑叔在你身后，把柴门轻轻掩上了。',
+          do: [{ type: 'quest', id: 'smhs_yin', stage: 0 }] },
         { if: { noSect: true, item: { id: 'smhs_xin' }, flag: 'smhs_mo' },
           text: '先生接过信，看也没看就压在磨剑石边上，转而端详你的手：「磨剑的手，稳。」他点点头，「肯下笨功夫的人，学得会华山的东西。从今往后，你是老朽门下的记名弟子。」',
           do: HS_JOIN },
         { if: { noSect: true, item: { id: 'smhs_xin' } },
           text: '先生接过信，看也没看，压在磨剑石边上：「信我收下了。考校两条路：接我三十招，剑上无眼，点到为止；或者让哑叔领你去磨剑——我那口剑钝了，磨得亮，心就静。想好了，来叩门。」',
-          do: [{ type: 'quest', id: 'smhs_mo', stage: 0 }, { type: 'flag', flag: 'smhs_asked' },
+          do: [{ type: 'quest', id: 'smhs_yin', stage: 2 }, { type: 'quest', id: 'smhs_mo', stage: 0 }, { type: 'flag', flag: 'smhs_asked' },
             { type: 'feed', tag: '江湖', text: '北固山的柏舟先生收下了引荐信：接他三十招，或者替他磨剑，两条路都算考校。' }] },
         { text: '先生摆摆手：「华山不受两家香火。你身上挂着别家的名分，先去那边了断干净。」' }
       ],
@@ -223,14 +224,15 @@ const NPCS: NpcDef[] = [
       求信: [
         { if: { rel: { npc: 'fuya_zhou', is: ['相谈甚欢', '知交'] } },
           text: '申伯抬起眼：「捕头爷提起过你。」他从抽屉里取出纸笔，当场研墨，写了不到两行，吹干，折好，用火漆封了，压上扬州府的戳：「拿去。北固山下，剑庐。替我问柏先生安。」',
-          do: [{ type: 'item', id: 'smhs_xin', delta: 1 }, { type: 'flag', flag: 'smhs_xin_given' }] },
+          do: [{ type: 'item', id: 'smhs_xin', delta: 1 }, { type: 'flag', flag: 'smhs_xin_given' }, { type: 'quest', id: 'smhs_yin', stage: 1 }] },
         { if: { any: [{ flag: 'csf_caught' }, { flag: 'csf_surrender' }] },
           text: '申伯翻开案卷看了半天，点了点头：「茱萸湾那桩案子，是你办成的。」他研墨提笔，写了不到两行，吹干折好，火漆封上，压了府衙的戳：「捕头爷说了，肯替他办成案子的，他都肯保。拿去。北固山下，剑庐。」',
-          do: [{ type: 'item', id: 'smhs_xin', delta: 1 }, { type: 'flag', flag: 'smhs_xin_given' }] },
+          do: [{ type: 'item', id: 'smhs_xin', delta: 1 }, { type: 'flag', flag: 'smhs_xin_given' }, { type: 'quest', id: 'smhs_yin', stage: 1 }] },
         { if: { xia: 25 },
           text: '申伯眯着眼把你上下打量了一遍：「江湖上传你的那些事，我抄案卷时见过几笔。」他研墨提笔，写了不到两行，吹干折好，火漆封上：「捕头爷不保不熟的人。不过——侠名在外，也算熟。拿去。北固山下，剑庐。」',
-          do: [{ type: 'item', id: 'smhs_xin', delta: 1 }, { type: 'flag', flag: 'smhs_xin_given' }] },
-        { text: '申伯把笔搁下，摇了摇头：「不熟的人，捕头爷不敢保，我也不敢写。」他把案卷拢了拢，「先去办几件让府衙记得住的事——办成了，再来找我。」' }
+          do: [{ type: 'item', id: 'smhs_xin', delta: 1 }, { type: 'flag', flag: 'smhs_xin_given' }, { type: 'quest', id: 'smhs_yin', stage: 1 }] },
+        { text: '申伯把笔搁下，摇了摇头：「不熟的人，捕头爷不敢保，我也不敢写。」他把案卷拢了拢，又道：「府衙里记得住的，无非几样：替捕头爷把案子办成的；在扬州城里行了侠，名声传进衙门来的；再有，就是同捕头爷坐下来说得上话的。眼下他案头压着一桩草上飞的案子，你若肯去，是个现成的由头。」',
+          do: [{ type: 'flag', flag: 'smhs_shen_nao' }] }
       ]
     }
   }
@@ -322,6 +324,15 @@ const QUESTS: QuestDef[] = [
     { title: '过柏舟先生的考校', to: 'smhs_jianlu', who: 'smhs_yashu', hint: '柏舟先生说，考校有两条路：接他三十招，剑上无眼；或是让哑叔领着，去把他那口钝了的剑磨亮。',
       need: [{ if: { noSect: true }, text: '了断别家的名分' }] },
     { title: '华山 · 磨剑 · 完' }
+  ] },
+  // 求引荐信：柏舟先生拒了之后开，申伯给了信推到第二步，柏舟收下信了结。只加新任务，不动「磨剑」的阶段，旧存档不受影响
+  { id: 'smhs_yin', name: '华山 · 求引荐', lilian: 60, stages: [
+    { title: '柏先生要一封担保的信', to: 'yz_fuya', hint: '他说扬州府里有人记着他的旧情，该去府衙问问。' },
+    { title: '信到手了，回北固山剑庐', to: 'smhs_jianlu', who: 'smhs_baizhou', hint: '火漆封着的引荐信，该亲手交到柏舟先生手里。' },
+    { title: '华山 · 求引荐 · 完' }
+  ],
+  notes: [
+    { if: { flag: 'smhs_shen_nao' }, text: '府衙的申伯说，衙门里记得住的，是替周捕头把案子办成的，在扬州行了侠、名声传进衙门的，还有同周捕头说得上话的。眼下周捕头案头压着一桩草上飞的案子。' }
   ] }
 ];
 

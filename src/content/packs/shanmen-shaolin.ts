@@ -160,7 +160,7 @@ const NPCS: NpcDef[] = [
         { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }], xia: 15 },
           text: '长老翻了翻差事簿：「拳打熟了，人护过了，簿子上替寺里办的差还空着。差事天天有，去讨一件，办扎实了再来见老衲。」' },
         { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }], gongxian: 100 },
-          text: '长老叫你在殿前打一趟罗汉拳，打完了，问：「这一趟拳，打的是谁？」你答不上来。长老替你答：「拳要护人的时候才见分寸。你还没护过人，这一趟打出去，就只是拳。去做几件护人的事，再来。」' },
+          text: '长老叫你在殿前打一趟罗汉拳，打完了，问：「这一趟拳，打的是谁？」你答不上来。长老等了一等，自己开了口：「拳要护人的时候才见分寸。你还没护过人，这一趟打出去，就只是拳。去做几件护人的事，再来。」' },
         { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }] },
           text: '长老点了点头：「拳和气都上了身，看得出下过苦功。可佛门的功夫是护人的——你去行几件护人的事，再替寺里办几件差。护过人，办过差，来见老衲。」' },
         { if: { sect: SMSL, xia: 15 },
