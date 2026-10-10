@@ -3,7 +3,7 @@
  * 规则在 core/wushi.ts，工具栏的 HTML 在 views/wushi-tools.ts。由 main.ts 引入。
  */
 import { S, save } from '../core/state';
-import { exportCode, SAVE_VERSION } from '../core/save';
+import { exportCode, exportCodeZ, SAVE_VERSION } from '../core/save';
 import { advanceMin, fullDate, shichenKe } from '../core/time';
 import { room } from '../content';
 import { tierNow } from '../engine/ren';
@@ -25,21 +25,29 @@ export function feedbackInfo(): FeedbackInfo {
   };
 }
 
-/** 发送链接：随文本框内容现拼 */
-function refreshLink(): void {
+/** 压缩存档码（异步算一次，存档不变就不重算）；发送链接随文本框内容现拼 */
+let zCode = '';
+async function refreshLink(): Promise<void> {
   const a = $<HTMLAnchorElement>('#fbSend'), box = $<HTMLTextAreaElement>('#fbText');
   if (!a || !box) return;
-  const { url, withCode } = feedbackUrl(box.value, feedbackInfo(), exportCode(S));
+  if (!zCode) zCode = await exportCodeZ(S).catch(() => exportCode(S));
+  if (!$('#fbSend')) return;
+  const { url, withCode } = feedbackUrl(box.value, feedbackInfo(), zCode);
   a.href = url;
   const cp = $('#fbCopy');
   if (cp) cp.hidden = withCode;
   const note = $('#fbNote');
-  if (note) note.textContent = withCode ? '存档码会附在正文里。' : '存档码太长放不进链接：先点「复制存档码」，发送后粘贴在正文末尾。';
+  if (note) {
+    note.textContent = withCode ? '存档码（已压缩）会附在正文里。' : '存档码太长放不进链接：请先点「复制存档码」，发送后在 GitHub 页面里粘贴在正文末尾。';
+    note.classList.toggle('warn', !withCode);
+    if (!withCode) note.style.cssText = 'color:#c0392b;font-weight:bold';
+    else note.style.cssText = '';
+  }
   const t = $('#fbTitle');
   if (t) t.textContent = feedbackTitle(box.value);
 }
 
-document.addEventListener('input', e => { if ((e.target as HTMLElement).id === 'fbText') refreshLink(); });
+document.addEventListener('input', e => { if ((e.target as HTMLElement).id === 'fbText') void refreshLink(); });
 
 registerHandlers({
   verTap: () => {
@@ -67,10 +75,11 @@ registerHandlers({
       <div class="btnrow"><button class="btn ghost" data-act="sheetClose">关闭</button>
       <a class="btn link" id="fbSend" href="#" target="_blank" rel="noopener">发送</a></div>
       <button class="btn ghost" id="fbCopy" data-act="wsCopyCode" hidden>复制存档码</button>`, false);
-    refreshLink();
+    zCode = '';
+    void refreshLink();
   },
-  wsCopyCode: () => {
-    const code = exportCode(S);
+  wsCopyCode: async () => {
+    const code = zCode || await exportCodeZ(S);
     const done = (): void => toast('已复制存档码');
     if (navigator.clipboard?.writeText) navigator.clipboard.writeText(code).then(done, () => toast('复制失败，请用「导出存档码」'));
     else toast('复制失败，请用「导出存档码」');

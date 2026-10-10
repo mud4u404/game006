@@ -22,6 +22,19 @@ import { dateStr, dayNo, nowMs } from './time';
 import { storageKey } from './preview';
 
 export const SAVE_VERSION = 5;
+const ACTION_LOG_LIMIT = 300;
+
+/** 长事件可以裁掉，已结算的凭据不能跟着忘掉；读档与运行时共用这条规则。 */
+export function trimActionLog(s: GameState): void {
+  const log = Array.isArray(s.log) ? s.log : [];
+  const dropped = log.slice(0, Math.max(0, log.length - ACTION_LOG_LIMIT));
+  const archived = Array.isArray(s.settledKeys) ? s.settledKeys : [];
+  const keys = new Set(archived.filter(k => typeof k === 'string' && k.length > 0));
+  for (const e of dropped) if (typeof e?.key === 'string' && e.key.length > 0) keys.add(e.key);
+  // 未归档过的旧档仍可缺省；不为无凭据行动造一张空清单。
+  if (keys.size || s.settledKeys !== undefined) s.settledKeys = [...keys];
+  s.log = log.slice(-ACTION_LOG_LIMIT);
+}
 /** 正式版的存档键。试玩预览（/preview/）换一套键，见 core/preview.ts；下面用到的键都经 saveKeys() 现算 */
 export const KEY = 'jhyy-save-v2';
 const META = 'jhyy-save-meta';
@@ -176,7 +189,7 @@ function repair(s: GameState): GameState {
   else fillWorld(s.w, worldSeed(s.name, s.real.start), dayNo(s));
   for (const k of Object.keys(def)) if (rec[k] === undefined) rec[k] = def[k];
   // 第五版内增字段；不升版本，也不改事件里的旧内容 id
-  s.log = Array.isArray(s.log) ? s.log.slice(-300) : [];
+  trimActionLog(s);
   // 装备（纸娃娃，docs/zhuangbei.md 第三节）：第四版的旧存档只有兵器，照样读得出来。
   // 只留认得的位置、放得进这个位置、行囊里还有的；手里的兵器已经不在行囊里了，就空着手。先于算气血上限，装备也算在里头
   const worn = (rec.gear && typeof rec.gear === 'object' ? rec.gear : {}) as Record<string, unknown>;
@@ -341,6 +354,35 @@ export function exportCode(state: GameState): string {
   return CODE_HEAD + btoa(bin);
 }
 
+/* 压缩存档码：z1: + deflate-raw 压缩后的 base64url。反馈链接里放得下，旧的 JHYY: 码照读 */
+const Z_HEAD = 'z1:';
+
+async function pipe(data: Uint8Array, ts: CompressionStream | DecompressionStream): Promise<Uint8Array> {
+  const w = ts.writable.getWriter();
+  void w.write(data as BufferSource).catch(() => {});
+  void w.close().catch(() => {});
+  return new Uint8Array(await new Response(ts.readable).arrayBuffer());
+}
+
+export async function exportCodeZ(state: GameState): Promise<string> {
+  const z = await pipe(new TextEncoder().encode(JSON.stringify(state)), new CompressionStream('deflate-raw'));
+  let bin = '';
+  for (const b of z) bin += String.fromCharCode(b);
+  return Z_HEAD + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** 读任何格式的存档码：z1:（压缩）、JHYY:（旧）、备份原文 */
+export async function importCodeAny(code: string): Promise<GameState> {
+  const t = code.trim();
+  if (!t.startsWith(Z_HEAD)) return importCode(t);
+  try {
+    const b64 = t.slice(Z_HEAD.length).replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b64);
+    const raw = await pipe(Uint8Array.from(bin, c => c.charCodeAt(0)), new DecompressionStream('deflate-raw'));
+    return migrate(JSON.parse(new TextDecoder().decode(raw)));
+  } catch { throw new Error('存档码不完整，请整段复制'); }
+}
+
 /** 读存档码；也接受从备份里直接复制出来的原文。认不出来时抛出给玩家看的错误 */
 export function importCode(code: string): GameState {
   const t = code.trim();
@@ -351,6 +393,7 @@ export function importCode(code: string): GameState {
       json = new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
     } catch { throw new Error('存档码不完整，请整段复制'); }
   } else if (t.startsWith('{')) json = t;
+  else if (t.startsWith(Z_HEAD)) throw new Error('压缩存档码要用 importCodeAny 读');
   else throw new Error('这不是存档码，存档码以 JHYY: 开头');
   try { return migrate(JSON.parse(json)); } catch { throw new Error('存档码不完整，请整段复制'); }
 }

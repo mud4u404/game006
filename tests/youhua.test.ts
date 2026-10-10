@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 /** 动宾句：以动词起头 */
-const DONGBIN = /^(去|找|办|打开|等|会|拜|赴)/;
+const DONGBIN = /^(去|寻|找|办|打开|等|会|拜|赴)/;
 
 describe('角色卡', () => {
   it('江湖页最上面是角色卡：显示名字、称号（没有名号显示身份）和战力', () => {
@@ -208,10 +208,10 @@ describe('变强看得见', () => {
     for (const p of ps) expect(p.cost.length, p.name).toBeGreaterThan(3);
   });
 
-  it('闭关按钮上写预估：熟练加多少、战力约加多少', () => {
+  it('闭关按钮上写预估：正文说长进，熟练、战力的数放小字', () => {
     S.lilian = 300;
     const t = retreatLabel(1, '一日');
-    expect(t).toMatch(/^闭关一日：.+熟练 \+\d+，(战力约 \+\d+|战力暂不见涨)$/);
+    expect(t).toMatch(/^闭关一日，(约有长进|一时不见长进)<small>（.+熟练 \+\d+(，战力 \+\d+)?）<\/small>$/);
     expect(viewWugong()).toContain(t);
   });
 

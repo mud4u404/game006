@@ -31,7 +31,7 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
   const tupo = tupoBlockHTML(tupoTake());
   const healTxt = Object.entries(r.healed).map(([z, n]) => `${ZONE_NAME[z as 'hand']}伤好了${liang(n as number)}级`).join('、');
   const chips = [
-    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `历练 ${S.lilian + r.used} → ${S.lilian}` : r.grow === 0 ? '这几日修为没有长进，伤照样养' : '没有历练可消化，闭门造车'}</span>`,
+    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `历练 ${S.lilian + r.used} → ${S.lilian}` : r.grow === 0 ? '这几日功夫没有长进，伤却养好了些' : '身上没有可化的历练，白坐了几日'}</span>`,
     ...r.gains.map(([k, v]) => `<span class="tag accent">${skillName(k)} +${v}</span>`),
     // 战力变了写「旧 → 新」（engine/jiemian.ts），没变不写
     power0 !== undefined && power0 !== powerNow() ? `<span class="tag accent">战力 ${power0} → ${powerNow()}</span>` : '',
@@ -43,9 +43,9 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
     healTxt ? `<span class="tag">${healTxt}</span>` : '',
     r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : '',
     r.lodging === 'home' ? `<span class="tag">住在师门，不花钱</span>`
-      : r.lodging === 'lusu' ? `<span class="tag warn">露宿${cn(r.lusuDays)}夜，不花钱，睡不安稳，打坐参悟打八折</span>`
+      : r.lodging === 'lusu' ? `<span class="tag warn">露宿${cn(r.lusuDays)}夜，不费钱，只是风露侵人，睡不安稳，参悟慢了几分</span>`
       : !r.lusuDays ? `<span class="tag">住店 −${r.cost} 文</span>`
-      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，打坐参悟打了折</span>`
+      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，风露侵人，参悟慢了几分</span>`
   ].filter(Boolean);
   const y = nextYue(S);
   const lines: string[] = [];
