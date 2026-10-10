@@ -15,7 +15,7 @@ import { growAttr } from './gengu';
 import { houtianOf, syncGear } from './ren';
 import { keyOfSlot } from './zhuangbei';
 import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
-import { learnShi, moveShi } from './shishi';
+import { learnShi, moveShi, shiLeftHours } from './shishi';
 import { hearsay, inner } from './chuanwen';
 import { addLilian, questDone } from './lilian';
 import { ZONE_NAME, type Zone } from './duel';
@@ -94,6 +94,11 @@ export function test(c?: Cond): boolean {
       if (!st) return false;
       const h = (absMin(S) - st.since) / 60;
       if ((c.shi.age.below !== undefined && h >= c.shi.age.below) || (c.shi.age.atLeast !== undefined && h < c.shi.age.atLeast)) return false;
+    }
+    // 离下一步还有几个钟头
+    if (c.shi.left) {
+      const h = shiLeftHours(c.shi.id);
+      if (h === undefined || (c.shi.left.below !== undefined && h >= c.shi.left.below) || (c.shi.left.atLeast !== undefined && h < c.shi.left.atLeast)) return false;
     }
   }
   // 世界状态（engine/shijie.ts）：码头归谁、治安、物价、势力、人的处境

@@ -323,6 +323,35 @@ describe('第五稿一：插手只改安排，不当场收', () => {
     expect(verbsOf(npc('kp_wei')!)).not.toContain('插手');
   });
 
+  it('对面那一夜要认结算在哪一夜：下午三点告诉卫衡，当晚二十二点离结算还有一日，插手、卫衡在渡口、痕迹都没有；次日二十二点才有', () => {
+    begin('结算在次夜');
+    S.min = 15 * 60;
+    choose('xun_wei', '运河渡口');
+    expect(step()).toBe('duimian');
+    const t0 = absMin(S);
+    // 起头后九个半钟头再往后第一个二十三时，是次日夜里
+    expect(dueAt(t0, SHI.find(d => d.id === XUN)!.steps.duimian.next!) - t0, '结算在次日二十三时').toBe(DAY + 8 * 60);
+    S.loc = 'dukou';
+    advanceMin(S, 7 * 60);
+    tickShi();
+    expect(S.min).toBe(22 * 60);
+    expect(step(), '当晚还在对面这一步').toBe('duimian');
+    expect(verbsOf(npc('kp_wei')!), '当晚没有「插手」').not.toContain('插手');
+    expect(verbsOf(npc('kp_chu')!)).not.toContain('插手');
+    expect(roomNpcs('dukou'), '卫衡当晚不在渡口').not.toContain('kp_wei');
+    expect(marksOf('dukou').join(''), '当晚痕迹不显示').not.toContain('按剑的外乡人');
+    expect(roomNpcs('jc_yz_kezhan'), '头一夜卫衡歇在客栈，不是不见了').toContain('kp_wei');
+    // 次日二十二点：离结算只剩一个钟头
+    advanceMin(S, DAY);
+    tickShi();
+    expect(S.min).toBe(22 * 60);
+    expect(step()).toBe('duimian');
+    expect(verbsOf(npc('kp_wei')!)).toContain('插手');
+    expect(verbsOf(npc('kp_chu')!)).toContain('插手');
+    expect(roomNpcs('dukou')).toContain('kp_wei');
+    expect(marksOf('dukou').join('')).toContain('按剑的外乡人');
+  });
+
   it('撑船夜渡：卫衡认得你的，记一笔怨（降一档）；没见过他的，卫衡不知道是谁', () => {
     begin('夜渡认得');
     S.flags.kp_qiantan = true;

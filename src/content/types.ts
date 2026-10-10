@@ -77,9 +77,10 @@ export interface Cond {
   gongxian?: number;
   /**
    * 世事（engine/shishi.ts）眼下在这几步之一（at）；不在这几步（not，还没起头也算不在）；
-   * age：走到这一步已经过了几个钟头（人物的话随日子换：刚了结的、过了几日的，各说各的）
+   * age：走到这一步已经过了几个钟头（人物的话随日子换：刚了结的、过了几日的，各说各的）；
+   * left：离这一步走向下一步还有几个钟头（对面那一夜只在结算前的两三个钟头里算「今夜」；这一步没有下一步的，条件不成立）
    */
-  shi?: { id: string; at?: string[]; not?: string[]; age?: Range };
+  shi?: { id: string; at?: string[]; not?: string[]; age?: Range; left?: Range };
   /** 世界状态（engine/shijie.ts，docs/huo-shijie.md 3.2）：码头归谁、一处的治安和物价、一股势力的实力和对你的账、一个人眼下的处境 */
   w?: WorldCond;
   any?: Cond[];
@@ -115,7 +116,9 @@ export type WorldEffect =
   /** 一股势力对你的账：恩为正、怨为负 */
   | { type: 'w'; op: 'you'; fac: string; delta: number }
   /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；每处最多两行 */
-  | { type: 'w'; op: 'mark'; place: string; k: string; text: string; days: number; hour?: { from: number; to: number } };
+  | { type: 'w'; op: 'mark'; place: string; k: string; text: string; days: number; hour?: { from: number; to: number };
+      /** 只在这件世事离下一步不足几个钟头时看得见（engine/shishi.ts 的 shiLeftHours；和 hour 同时写，两个都满足才显示） */
+      left?: { id: string; below: number } };
 
 /** 效果：按顺序执行 */
 export type Effect =

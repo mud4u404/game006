@@ -41,6 +41,11 @@ const XUN = 'kp_xun';
 /** 这件世事眼下在这几步之一 */
 const at = (...steps: string[]): Cond => ({ shi: { id: XUN, at: steps } });
 const NIGHT = { from: 21, to: 5 };
+/**
+ * 对面那一夜「今夜」：对面这一步，且离当夜二十三时结算只剩两三个钟头。
+ * 对面是起头后九个半钟头再往后第一个二十三时，起头钟点不同，结算可能落在第二夜；只看「夜里」会让前一夜就看见、插得上手
+ */
+const TONIGHT: Cond = { shi: { id: XUN, at: ['duimian'], left: { below: 3 } } };
 /** 卫衡还在寻、对面还没到的几步：安排（提醒、劝当面、告诉、指错）只谈得上在这几步里 */
 const BEFORE = ['fang', 'feng', 'cuo'];
 /** 风声以后（褚七知道卫衡在找他）：他还在渡口的几步 */
@@ -86,7 +91,7 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '赠礼',
       // 卫衡寻褚七：对褚七提醒、劝他当面了结（xun_chu，只改安排，到对面那夜才结算）；对面那一夜在场，伸手管不管（xun_dui）
       { verb: '劝告', if: { ...at(...BEFORE), flag: 'kp_chu_met', notFlag: 'kp_chu_warned', any: [{ notFlag: 'kp_chu_meet' }] } },
-      { verb: '插手', if: { ...at('duimian'), hour: NIGHT } }],
+      { verb: '插手', if: { ...TONIGHT, hour: NIGHT } }],
     actions: {
       劝告: [{ text: '褚七把盐包撂在垛上，抬头等你开口。', do: [{ type: 'story', id: 'xun_chu' }] }],
       插手: [
@@ -110,7 +115,7 @@ const NPCS: NpcDef[] = [
           do: [{ type: 'flag', flag: 'kp_chu_zuo' }, { type: 'feed', tag: '江湖', text: '褚七说，二十年前雇他押镖的那个人，使刀用的是左手。' }] },
         // 卫衡寻褚七（第四稿）：这件事走到哪一步，他就说哪一步的话
         { if: { flag: 'kp_wei_told', notFlag: 'kp_chu_gripe' },
-          text: '褚七的手停在盐包上，没有回头：「有人把我的下落，递给了姓卫的。」他顿了顿，「我不问是谁。」',
+          text: '褚七的手停在盐包上，没有回头：「有人把我的下落，递给了姓卫的。」隔了一会儿，又道：「我不问是谁。」',
           do: [{ type: 'flag', flag: 'kp_chu_gripe' }] },
         { if: at('tiaoting'),
           text: '褚七仍旧夜里扛包，只是肩头直了些：「话说出了口，倒睡得着了。」他看了看江面，「那位卫家后生追人去了，我在这儿等着。」' },
@@ -166,8 +171,8 @@ const NPCS: NpcDef[] = [
     at: [
       { room: 'hu', if: { ...NEW, hour: { from: 9, to: 17 } } },
       // 对面那一夜（世事 kp_xun 的第三步）：夜里他在运河渡口，不在店里
-      { room: 'dukou', if: { ...NEW, ...at('duimian'), hour: NIGHT } },
-      { room: 'jc_yz_kezhan', if: { ...NEW, any: [{ hour: { from: 17, to: 21 } }, { hour: { from: 5, to: 9 } }, { hour: NIGHT, shi: { id: XUN, not: ['duimian'] } }] } }
+      { room: 'dukou', if: { ...NEW, ...TONIGHT, hour: NIGHT } },
+      { room: 'jc_yz_kezhan', if: { ...NEW, any: [{ hour: { from: 17, to: 21 } }, { hour: { from: 5, to: 9 } }, { hour: NIGHT, any: [{ shi: { id: XUN, not: ['duimian'] } }, { shi: { id: XUN, at: ['duimian'], left: { atLeast: 3 } } }] }] } }
     ],
     look: '三十来岁，腰悬长剑，站着的时候右肩微微下沉，剑穗的结打得很紧。鞋帮上的泥已经干了，裂出一道一道的纹，是走了很远的路。',
     gift: '卫衡双手接了，道一声谢，却没有往怀里放，仍旧托在手上，像是怕欠下什么。',
@@ -175,7 +180,7 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '赠礼',
       // 卫衡寻褚七：他问你知不知道那人在哪里（xun_wei：知道的告诉、指错，没见过的说没见过）；对面那一夜在场，伸手管不管（xun_dui）
       { verb: '递话', if: { ...at('fang', 'feng'), flag: 'kp_wei_met', notFlag: 'kp_wei_ans' } },
-      { verb: '插手', if: { ...at('duimian'), hour: NIGHT, notFlag: 'kp_chu_warned' } }],
+      { verb: '插手', if: { ...TONIGHT, hour: NIGHT, notFlag: 'kp_chu_warned' } }],
     actions: {
       递话: [{ text: '卫衡抬起头来，等你开口。', do: [{ type: 'story', id: 'xun_wei' }] }],
       插手: [{ text: '卫衡的手按在剑柄上，眼睛盯着那个扛包的人。', do: [{ type: 'story', id: 'xun_dui' }] }],
@@ -212,7 +217,7 @@ const NPCS: NpcDef[] = [
         { if: atAge(['si'], { below: 12 }),
           text: '卫衡像是很久没有合眼，眼窝陷了下去：「晚辈赶到时，人已经躺在石阶下了。脚夫们都说没看见。」他望着自己的手，「那一句话，往后问谁去。」' },
         { if: atAge(['si'], { atLeast: 12, below: 240 }),
-          text: '卫衡不大说话了，隔了半晌才道：「石阶下那个人，晚辈替他在庙里点了一盏灯。」他顿了顿，「该问的话，埋了。」' },
+          text: '卫衡不大说话了，隔了半晌才道：「石阶下那个人，晚辈替他在庙里点了一盏灯。」隔了一会儿，又道：「该问的话，埋了。」' },
         { if: atAge(['si_see'], { below: 24 }),
           text: '卫衡的脸色发白，不敢看你：「你也看见了。」他的喉头动了动，「晚辈到时，人已经倒在石阶下了。」' },
         { if: atAge(['si_see'], { atLeast: 24, below: 240 }),
@@ -407,7 +412,7 @@ const SHI: ShiDef[] = [
         juice: 0.75, subj: ['kp_wei', 'kp_chu'], where: 'dukou', window: true,
         self: { kp_wei: '晚辈今夜去运河渡口。找着了人，只问他一句话。' },
         // 来了人，脚夫们都停了手：只在对面那一夜的前半夜看得见，白天、后半夜渡口照旧
-        do: [{ type: 'w', op: 'mark', place: 'dukou', k: '寻人', days: 2, hour: { from: 21, to: 23 },
+        do: [{ type: 'w', op: 'mark', place: 'dukou', k: '寻人', days: 2, hour: { from: 21, to: 23 }, left: { id: XUN, below: 3 },
           text: '缆桩边站着个按剑的外乡人，脚夫们都收了工，远远地蹲着，没有人过去搬盐包。' }],
         // 当夜二十三时结算：玩家在渡口亲眼看着的走 *_see；事先安排过的走安排的；都没有，种子抽
         next: {

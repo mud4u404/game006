@@ -101,7 +101,9 @@ export function tickShiFull(): HeardItem[] {
       const to = pickNext(d, st, nx, now - due);
       let at = due;
       // 预告的窗口：补了半个江湖日以上才走到这一步（下线静修、一口气歇了几日），日子从玩家回来这一刻起算（docs/sheji-001-003.md 第 003 项）
-      if (d.steps[to].window && now - at >= DAY / 2) at = now;
+      // 或者补过了头：预告和结局挤进同一次 tick，预告也只剩一瞬，同样从玩家回来这一刻起算
+      const nxTo = d.steps[to].next;
+      if (d.steps[to].window && (now - at >= DAY / 2 || (nxTo && now >= dueAt(at, nxTo)))) at = now;
       goStep(d, to, at, heard);
     }
   }
@@ -117,6 +119,13 @@ export function dueAt(since: number, nx: NonNullable<ShiStep['next']>): number {
   const t = since + Math.round(nx.days * DAY);
   if (nx.clock === undefined) return t;
   return t + ((nx.clock * 60 - (t % DAY) + DAY) % DAY);
+}
+
+/** 这件世事离下一步还有几个钟头（还没起头、这一步没有下一步的，没有答案） */
+export function shiLeftHours(id: string, s = S): number | undefined {
+  const st = s.shi?.[id];
+  const nx = st && shiById(id)?.steps[st.at]?.next;
+  return st && nx ? (dueAt(st.since, nx) - absMin(s)) / 60 : undefined;
 }
 
 /** 亲眼看着：到了日子，玩家还在这一步的 where 那里，隔着不过三个钟头（歇在原地也算） */
