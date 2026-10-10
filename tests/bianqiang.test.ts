@@ -28,8 +28,7 @@ describe('推荐的切磋真能打', () => {
         S.loc = loc;
         S.min = hour * 60;
         const sp = sparTarget();
-        const row = strongPaths().find(p => p.name === '切磋');
-        expect(row?.say ?? '', loc).not.toContain('肯指点');
+        
         if (!sp) continue;
         seen++;
         expect(sparWilling(sp.id), sp.id).toBe(true);

@@ -22,8 +22,8 @@ import { refreshGreet } from '../engine/yingmian';
 import { tickWorld } from '../engine/shijie';
 import { dropFailedTrack } from '../engine/daohang';
 import { isPreview } from '../core/preview';
-import { markWent, trackPower } from '../engine/jiemian';
-import { recordClick, wushiOn } from '../core/wushi';
+import { markVisit, markWent, trackPower } from '../engine/jiemian';
+import { clickLabel, recordClick, wushiOn } from '../core/wushi';
 
 type Handler = (v: string, el: HTMLElement) => void;
 const handlers: Record<string, Handler> = {};
@@ -107,7 +107,7 @@ export function buildShell(): void {
     if (el.hasAttribute('data-self') && e.target !== el) return;
     const a = el.dataset.act || '';
     // 巫师模式：记最近 10 次点击（动作名 + 按钮上的字），反馈时附上
-    recordClick(a + ((el.textContent || '').trim() ? '「' + (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 10) + '」' : ''));
+    recordClick(a + clickLabel(el));
     const i = a.indexOf(':');
     const k = i < 0 ? a : a.slice(0, i);
     const v = i < 0 ? '' : a.slice(i + 1);
@@ -211,6 +211,7 @@ export function render(): void {
   const main = $('#main'), tabs = $('#tabs');
   if (!main || !tabs) return;
   renderBar();
+  markVisit();
   markWent(S.loc);
   trackPower(S.tab === 'jianghu');
   main.innerHTML = (VIEWS[S.tab] || viewJianghu)();

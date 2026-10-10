@@ -188,7 +188,12 @@ const MSG_BU: Record<Ending | 'stay', StoryCard> = Object.fromEntries(([
   ['lose', '那夜没渡人，堤下的持刀汉子把你打倒在泥里'],
   ['flee', '那夜没渡人，堤下的持刀汉子追来，你拔腿就跑']
 ] as const).map(([k, note]) => [k, { tag: '序章 · 天明', title: '去路', paras: MSG_BU_HEAD,
-  choices: [{ label: '记下了', do: [{ type: 'rel', npc: 'kp_wei', value: '素不相识', note }] }] } satisfies StoryCard])) as Record<Ending | 'stay', StoryCard>;
+  // Issue #533：来转告「扬州，大明寺，了尘」的是卞婆婆，她名下也该记一笔；
+  // 卫衡那一笔照旧留着——那夜的事卫衡在堤上看得最清楚，不渡就是不相识。
+  choices: [{ label: '记下了', do: [
+    { type: 'rel', npc: 'kp_wei', value: '素不相识', note },
+    { type: 'rel', npc: 'kp_bian', value: '点头之交', note: '她一夜没睡，在焦船边等你等到天亮' }
+  ] }] } satisfies StoryCard])) as Record<Ending | 'stay', StoryCard>;
 
 /** 登船：序章了结，题字「第一回 · 扬州」 */
 const BOARD: Effect[] = [
@@ -497,7 +502,8 @@ const STORIES: StoryDef[] = [
         '码头上响起卫衡的脚步声，不紧不慢。',
         '镖师忽然把钱袋往船板上一丢，转身扑通一声，跳进了江里。'
       ],
-      choices: [{ label: '继续', do: [{ type: 'time', add: 10 }] }] },
+      // Issue #533：另两路都是二十分钟（prologue.ts:446、:472），这里原是十分钟，没有特别的用意，对齐
+      choices: [{ label: '继续', do: [{ type: 'time', add: 20 }] }] },
     { tag: '序章 · 第一夜', title: '落水的人',
       paras: [
         '江面上只剩一圈圈散开的水纹。那人不会水，扑腾得很厉害，往下游的芦苇荡漂去。',
@@ -507,8 +513,12 @@ const STORIES: StoryDef[] = [
         { label: '下水救他', sub: '体魄 +1', do: [{ type: 'attr', key: '体魄', delta: 1 }, { type: 'flag', flag: 'kp_jiu' }, { type: 'flag', flag: 'kp_qiantan' }, { type: 'rel', npc: 'kp_chu', value: '相谈甚欢', note: '水里捞上来的命' }, { type: 'story', id: 'kp_bu_hou' }],
           result: '你把竹篙一抛，跃进江里。江水冷得像刀。你记得这一带江心有一道浅滩，脚下一探，果然踩实了。你抓住他的衣领，一寸一寸把他拖上滩。他吐出一口江水，趴在泥里看了你很久，什么话也没说，爬起来钻进了芦苇。' },
         { label: '沿着江堤追他', next: 2 },
-        { label: '留在船上，陪着江伯', do: [{ type: 'story', id: 'kp_bu_hou' }],
-          result: '你没有动。江伯也没有动。卫衡站在码头上，望着江面上那圈越散越大的水纹，望了很久，才转身走了。' }
+        // Issue #533：这一支不打、不追，一夜过去气血还是满的、还白拿一件腰牌。代价记在江伯身上：
+        // 他在船上坐了一夜，你一动没动，他看在眼里——「相依为命」到这儿就淡了（#327 核对表的结论）。
+        // 不动 xia（侠义为零是 prologue.ts:434 定下的，三条路都一样），只降这一档。
+        { label: '留在船上，陪着江伯',
+          do: [{ type: 'rel', npc: 'jiangbo', value: '点头之交', note: '那夜你缩在船尾没动，江伯在船上坐了一夜' }, { type: 'story', id: 'kp_bu_hou' }],
+          result: '你没有动。江伯也没有动。卫衡站在码头上，望着江面上那圈越散越大的水纹，望了很久，才转身走了。天亮前江伯才开口，说的是：「你不渡，我也不怪你。可你总该说一声。」' }
       ] },
     { tag: '序章 · 第一夜', title: '堤下的人',
       paras: [

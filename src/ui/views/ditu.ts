@@ -1,12 +1,12 @@
 import { S } from '../../core/state';
 import { REGIONS, ROOMS, room } from '../../content';
-import { questNav, sectHome } from '../../engine/daohang';
-import { busyRooms, roomBrief, wentSet } from '../../engine/jiemian';
+import { questNav, sectHome, yueNow } from '../../engine/daohang';
+import { busyRooms, roomBrief, tooStrong, wentSet } from '../../engine/jiemian';
 import { tripCost } from '../../engine/world';
 import { FAR_MIN, chufaLine } from '../../engine/chufa';
 import { minLabel } from '../../core/time';
 import { cn } from '../../core/util';
-import { layoutRegion } from '../maplayout';
+import { DOT_Y, layoutRegion, type MapNode } from '../maplayout';
 
 /** 正在看的地区；不设时看所在的地区。走到别的地区时自动回到所在地区 */
 let viewing: string | null = null;
@@ -32,7 +32,22 @@ export function viewDitu(): string {
   const pos = new Map(lay.nodes.map(n => [n.id, n]));
   const hubOf = new Map(lay.nodes.flatMap(n => n.leaves.map(l => [l, n.id] as const)));
   const shownAs = (id: string): string => hubOf.get(id) ?? id;
-  const pct = (n: { x: number; y: number }): [string, string] => [((n.x / lay.w) * 100).toFixed(2), ((n.y / lay.h) * 100).toFixed(2)];
+  // 圆点在格子顶往下 DOT_Y 处；线从点到点
+  const dot = (n: { x: number; y: number; h: number }): [number, number] => [n.x, n.y - n.h / 2 + DOT_Y];
+  const pct = ([x, y]: [number, number]): [string, string] => [((x / lay.w) * 100).toFixed(2), ((y / lay.h) * 100).toFixed(2)];
+  // 线只留必要的：一条线要是从第三处的圆点或地名上穿过，就不画（点开那处的说明看得到怎么走）
+  const blocked = (a: MapNode, b: MapNode): boolean => {
+    const [x1, y1] = dot(a), [x2, y2] = dot(b);
+    return lay.nodes.some(c => {
+      if (c === a || c === b) return false;
+      const [cx, cy] = dot(c);
+      for (let i = 1; i < 24; i++) {
+        const x = x1 + ((x2 - x1) * i) / 24, y = y1 + ((y2 - y1) * i) / 24;
+        if (Math.abs(x - cx) < c.w * 0.45 && y > cy - 9 && y < c.y + c.h / 2 - 2) return true;
+      }
+      return false;
+    });
+  };
   const seen = new Set<string>();
   const lines: string[] = [];
   const out: { from: string; to: string }[] = [];
@@ -43,7 +58,8 @@ export function viewDitu(): string {
       const key = [a, b].sort().join('|');
       if (a === b || seen.has(key)) continue;
       seen.add(key);
-      const [x1, y1] = pct(pos.get(a)!), [x2, y2] = pct(pos.get(b)!);
+      if (blocked(pos.get(a)!, pos.get(b)!)) continue;
+      const [x1, y1] = pct(dot(pos.get(a)!)), [x2, y2] = pct(dot(pos.get(b)!));
       // 水路：两头有一头是要付船钱的船、渡（RoomDef.fare）；其余是陆路
       const wet = room(r.id).fare !== undefined || room(to).fare !== undefined;
       lines.push(`<line${wet ? ' class="wet"' : ''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`);
@@ -55,10 +71,12 @@ export function viewDitu(): string {
     const ids = [id, ...leaves];
     return [shownAs(S.loc) === id ? 'here' : '', q && ids.includes(q) && shownAs(S.loc) !== id ? 'zhu' : '', ids.some(x => busy.has(x)) ? 'busy' : '', ids.some(x => went.has(x)) ? 'went' : ''].filter(Boolean).join(' ');
   };
+  // 一个地点只有一种状态标记（点的样子）：所在 > 主线目标 > 有事 > 去过 > 没去过；一条街一带的处数写在名字后头
   const nodes = lay.nodes.map(n => {
     const at = shownAs(S.loc) === n.id;
-    const [x, y] = pct(n);
-    return `<button class="node ${mark(n.id, n.leaves)}" style="left:${x}%;top:${y}%" data-act="travelAsk:${n.id}"${at ? ' aria-current="location"' : ''}><i class="pt"></i><span class="nm">${n.name}</span>${n.leaves.length ? `<span class="nbadge">${n.leaves.length}</span>` : ''}</button>`;
+    const [x, y] = [((n.x / lay.w) * 100).toFixed(2), ((n.y / lay.h) * 100).toFixed(2)];
+    const major = at || n.leaves.length > 0 || mark(n.id, n.leaves).includes('zhu');
+    return `<button class="node ${mark(n.id, n.leaves)}${major ? " major" : ""}" style="left:${x}%;top:${y}%;width:${n.w.toFixed(1)}px;height:${n.h}px" data-act="travelAsk:${n.id}"${at ? ' aria-current="location"' : ''}><i class="pt"></i><span class="nm">${n.name}${n.leaves.length ? `<em>${n.leaves.length}处</em>` : ''}</span></button>`;
   }).join('');
   // 收进街里的去处：列在地图下面，点了照样赶路
   const hubs = lay.nodes.filter(n => n.leaves.length).map(n => `<section class="mhub"><h3>${n.name}一带</h3><div class="mleaves">${n.leaves.map(id => {
@@ -69,9 +87,10 @@ export function viewDitu(): string {
   const chips: { label: string; to: string; name: string }[] = [];
   const home = sectHome();
   if (home && home.to !== S.loc) chips.push({ label: '回师门', to: home.to, name: home.name });
-  if (nav && q && q !== S.loc) chips.push({ label: '记挂的事', to: q, name: room(q).name });
-  const yue = S.yue.find(y => y.at && y.at !== S.loc && ROOMS.some(r => r.id === y.at));
-  if (yue?.at) chips.push({ label: '有约', to: yue.at, name: room(yue.at).name });
+  // 主线要找的人明显打不过时，眼下要紧改成先变强（engine/jiemian.ts 的 tooStrong），记挂的事芯片不再直指过去
+  if (nav && q && q !== S.loc && !tooStrong(nav)) chips.push({ label: '记挂的事', to: q, name: room(q).name });
+  const yue = S.yue.map(yueNow).find(y => y.to !== S.loc && ROOMS.some(r => r.id === y.to));
+  if (yue) chips.push({ label: '有约', to: yue.to, name: yue.toName });
   const quick = chips.length ? `<div class="mchips" aria-label="快捷">${chips.map(c => `<button data-act="travelAsk:${c.to}"><small>${c.label}</small><b>${c.name}</b></button>`).join('')}</div>` : '';
   const tabs = regionsWithRooms();
   const info = REGIONS[region];
@@ -81,9 +100,10 @@ export function viewDitu(): string {
       ${nodes}</section>
     ${hubs}
     ${out.length ? `<div class="mout">${out.map(o => `<button data-act="travelAsk:${o.to}"><small>${room(o.from).name}</small><b>往${REGIONS[room(o.to).region]?.name ?? ''} · ${room(o.to).name}</b></button>`).join('')}</div>` : ''}
-    <div class="legend"><span><i class="pt here"></i>你在这里</span><span><i class="pt zhu"></i>主线目标</span><span><i class="pt busy"></i>有事</span><span><i class="pt went"></i>去过</span><span><i class="pt"></i>没去过</span>
+    <details class="legend"><summary>图例</summary>
+      <div class="lg"><span><i class="pt here"></i>你在这里</span><span><i class="pt zhu"></i>主线目标</span><span><i class="pt busy"></i>有事</span><span><i class="pt went"></i>去过</span><span><i class="pt"></i>没去过</span>
       <span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" class="land"/></svg>陆路</span><span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" class="wet"/></svg>水路</span></div>
-    <p class="muted mhint">点地名，看那里有什么人、什么事、要走多久，再点「去」赶路。</p>
+      <p class="muted mhint">点地名，看那里有什么人、什么事、要走多久，再点「去」赶路。</p></details>
     ${info ? `<section class="card"><p class="muted">${info.note}</p></section>` : ''}`;
 }
 

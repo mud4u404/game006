@@ -9,12 +9,14 @@
  */
 import { S, pushFeed } from '../core/state';
 import { dayNo } from '../core/time';
-import { JOBS, NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
+import { JOBS, NPCS, ROOMS, itemById, jobById, questById, room, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
-import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
+import type { Branch, Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
 import { lackOf, test } from './dsl';
 import { hoursAt, npcName, pathMin, stageText, travelMin, whereAt } from './world';
 import { jobOpen } from './shenfen';
+import { yueText } from './shiguang';
+import type { Yue } from '../core/state';
 
 /** 能做：去了就办得成；要等：只差时辰、人不在；卡住：差别的门槛；未竟：做不成了；了结：办完了 */
 export type NavState = '能做' | '要等' | '卡住' | '未竟' | '了结';
@@ -203,15 +205,15 @@ export function sectNav(): SectNav | null {
 
 
 /** 近处有事：此刻你接得到的差事，派差事的人在哪、要走多久（江湖页「近处有事」卡，试玩：到处乱逛没有目标） */
-export interface Lead { text: string; to: string; toName: string; min: number; /** 是零工不是差事 */ gig?: true }
+export interface Lead { text: string; to: string; toName: string; min: number; /** 是零工不是差事 */ gig?: true; /** 到了地方要找的人、点的动作（到地即办：自动选中他、高亮动作） */ who?: string; verb?: Verb }
 
-let giverCache: Map<string, string> | null = null;
+let giverCache: Map<string, { npc: string; verb: Verb }> | null = null;
 /** 每件差事由哪个人（或榜上的书办）发：扫人物的动作里写了「job」效果的那一个 */
-function giverOf(jobId: string): string | undefined {
+function giverOf(jobId: string): { npc: string; verb: Verb } | undefined {
   if (!giverCache) {
     giverCache = new Map();
-    for (const n of NPCS) for (const bs of Object.values(n.actions)) for (const b of bs ?? []) {
-      for (const e of b.do ?? []) if (e.type === 'job' && !giverCache.has(e.id)) giverCache.set(e.id, n.id);
+    for (const n of NPCS) for (const [verb, bs] of Object.entries(n.actions) as [Verb, Branch[] | undefined][]) for (const b of bs ?? []) {
+      for (const e of b.do ?? []) if (e.type === 'job' && !giverCache.has(e.id)) giverCache.set(e.id, { npc: n.id, verb });
     }
   }
   return giverCache.get(jobId);
@@ -235,7 +237,7 @@ export function gigLead(): Lead | null {
   if (S.job || S.chapter === 0 || S.silver >= GIG_POOR) return null;
   if (Object.keys(GIG_TEXT).some(k => S.dayLog?.[k] === dayNo(S))) return null;
   let best: Lead | null = null;
-  for (const n of NPCS) for (const bs of Object.values(n.actions)) {
+  for (const n of NPCS) for (const [verb, bs] of Object.entries(n.actions) as [Verb, Branch[] | undefined][]) {
     // 零工的写法：开工的那条分支里有一条 today 效果，记号在 GIG_TEXT 里
     const work = bs?.find(b => b.do?.some(e => e.type === 'today' && e.id in GIG_TEXT));
     if (!work || !test(work.if ?? {})) continue;
@@ -245,7 +247,7 @@ export function gigLead(): Lead | null {
     if (!m) continue;
     const key = (work.do!.find(e => e.type === 'today') as { id: string }).id;
     const min = travelMin(m);
-    if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min, gig: true };
+    if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min, gig: true, who: n.id, verb };
   }
   return best;
 }
@@ -258,13 +260,52 @@ export function leadsNear(n = 3): Lead[] {
     if (!jobOpen(S, j.id)) continue;
     const g = giverOf(j.id);
     if (!g) continue;
-    const at = whoNav(g).now ?? roomsOf(g)[0];
+    const at = whoNav(g.npc).now ?? roomsOf(g.npc)[0];
     if (!at || at === S.loc) continue;
     const m = pathMin(S.loc, at);
     if (!m) continue;
-    out.push({ text: j.title, to: at, toName: room(at).name, min: travelMin(m) });
+    out.push({ text: j.title, to: at, toName: room(at).name, min: travelMin(m), who: g.npc, verb: g.verb });
   }
   const jobs = out.sort((a, b) => a.min - b.min).slice(0, n);
   const gig = gigLead();
   return gig ? [...jobs, gig] : jobs;
+}
+
+
+/* ---------- 有约：按步骤指路（负责人 #601：「有约不能只显示交任务的地点，应该是按照步骤每一步地点都提示」） ---------- */
+
+/** 差事此刻该走的那一步：线头（JobDef.xian）里第一条条件成立的；没有线头或都办完了为空（该去交差了） */
+export function jobStep(jobId: string): { to: string; toName: string; who: NavWho; text: string } | null {
+  const job = jobById(jobId);
+  const x = job?.xian?.find(k => test(k.if ?? {}));
+  if (!x) return null;
+  const who = whoNav(x.npc, x.at);
+  const to = x.at ?? who.now ?? roomsOf(x.npc)[0];
+  return to ? { to, toName: room(to).name, who, text: x.text } : null;
+}
+
+export interface YueNow {
+  /** 一句话：差事的期限和名目，后面括号里是这一步去哪、找谁 */
+  text: string;
+  /** 这一步的地点；约好的地方就是 y.at */
+  to: string;
+  toName: string;
+  /** 现在是不是在办中间的一步（false 就是该去交差/赴约了） */
+  step: boolean;
+  /** 这一步怎么走：「去府衙照壁，找寡妇周氏」；该交差/赴约时为空 */
+  go: string;
+}
+
+/**
+ * 一个约眼下指向哪里。差事（job_）按线头走到哪一步，就指那一步的地点和人，线头办完才指交差处；
+ * 没写线头的差事和普通的约，仍指约好的地方。横幅、地图的「有约」、地点说明、眼下要紧都读它，说法一致。
+ */
+export function yueNow(y: Yue): YueNow {
+  const st = y.id.startsWith('job_') ? jobStep(y.id.slice(4)) : null;
+  if (!st) return { text: yueText(S, y), to: y.at, toName: room(y.at).name, step: false, go: '' };
+  const d = y.due - dayNo(S);
+  const n = ['', '一', '两', '三', '四', '五', '六', '七', '八', '九', '十'][d] ?? String(d);
+  const lim = d <= 0 ? '今日之内' : d === 1 ? '明日之内' : `${n}日之内`;
+  const go = `${st.to === S.loc ? '' : `去${st.toName}，`}找${st.who.name}`;
+  return { text: `${lim}：${y.text}（${go}）`, to: st.to, toName: st.toName, step: true, go };
 }

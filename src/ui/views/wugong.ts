@@ -11,7 +11,7 @@ import { FOE_FX_TAG, passivesNow } from '../../engine/zhaoshi';
 import { RETREAT, gongliCeiling } from '../../engine/lilian';
 import { LODGING, ZHU_NAME, allowance, retreatBlock, zhuOf } from '../../engine/shiguang';
 import type { Zhu } from '../../core/state';
-import { canRetreat, retreatLabel, retreatSmall, strongPaths } from '../../engine/jiemian';
+import { canRetreat, retreatLabel, strongPaths } from '../../engine/jiemian';
 
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
 
@@ -44,7 +44,7 @@ export function viewWugong(): string {
 function retreatRules(): string {
   const block = S.chapter === 0 ? null : retreatBlock(S);
   const al = allowance(S);
-  return `<p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多消化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练，闭门造车，进境有限。</p>
+  return `<p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练可化，白坐几日，进境有限。</p>
     <p class="muted">闭关也打坐长功力：闭关一月功力深近一年，内功越深越快，也熬得越深（现在${gongliText(S.gongli)}，内功这一重最多熬到${gongliText(gongliCeiling(S))}）。轻伤过一日自己好；重伤闭关养不好，要找郎中、服药。</p>
     <p class="muted">${S.chapter === 0 ? '江伯还病着，眼下不是闭关的时候。' : block ?? `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。下线就是静修，回来先读出关邸报。`}</p>`;
 }
@@ -53,8 +53,8 @@ function retreatRules(): string {
 function retreatButtons(): string {
   if (S.chapter === 0) return '';
   const block = retreatBlock(S);
-  const opts: [string, string, string][] = [['1', '一日', ''], ['7', '七日', ''], ['30', '一月', '']];
-  return `<div class="acts col">${opts.map(([d, l]) => `<button class="act spar priced" data-act="retreat:${d}"${block ? ' disabled' : ''}>${retreatLabel(Number(d), l)}${block ? '' : `<small>${retreatSmall(Number(d))}</small>`}</button>`).join('')}</div>`;
+  const opts: [string, string][] = [['1', '一日'], ['7', '七日'], ['30', '一月']];
+  return `<div class="acts col">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${retreatLabel(Number(d), l)}</button>`).join('')}</div>`;
 }
 
 /** 住处三选一（engine/shiguang.ts 的 zhuOf）：闭关、下线静修都按它 */
