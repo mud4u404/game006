@@ -599,13 +599,14 @@ describe('话有来处：打听', () => {
 
   it('没写声口的人：先说这一带传开的，没有就说太平得很；一人一日一回', () => {
     S.loc = 'hu';
-    const none = ask('huagu');
+    // 拿没写 life 的人当样本。卖花姑娘（huagu）从 #232 起有活气了，换成同在瘦西湖畔、还没写 life 的柳寒舟
+    const none = ask('liu');
     expect(none.src).toBe('none');
     expect(none.text).toContain('太平得很');
-    expect(ask('huagu').src).toBe('again');
+    expect(ask('liu').src).toBe('again');
     advanceDays(S, 1);
     const r = rid('ss_zei', 'bang', 0.5, dayNo(S), { place: 'cheng' });
-    const old = ask('huagu');
+    const old = ask('liu');
     expect(old.src).toBe('old');
     expect(old.text).toContain(shiById('ss_zei')!.steps.bang.news!);
     expect(S.heard).toContain(r);
