@@ -181,7 +181,7 @@ export interface GameState {
    * power 上次在江湖页角色卡上显示的战力；from 变了以后的旧值（卡上显示「旧 → 新」，离开江湖页就清）；went 到过的地点
    * 范围：界面；写入口：engine/jiemian.ts
    */
-  ui?: { power?: number; from?: number; went?: string[] };
+  ui?: { power?: number; from?: number; went?: string[]; /** 上一次画的所在地、各处走进过几次（场景白描第二次起折叠） */ at?: string; visits?: Record<string, number> };
 }
 
 /** 字段归属约定（docs/sheji-012-013.md 第 012 节），不在此强制拦截旧写入点。

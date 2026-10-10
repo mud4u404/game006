@@ -22,7 +22,7 @@ import { refreshGreet } from '../engine/yingmian';
 import { tickWorld } from '../engine/shijie';
 import { dropFailedTrack } from '../engine/daohang';
 import { isPreview } from '../core/preview';
-import { markWent, trackPower } from '../engine/jiemian';
+import { markVisit, markWent, trackPower } from '../engine/jiemian';
 import { clickLabel, recordClick, wushiOn } from '../core/wushi';
 
 type Handler = (v: string, el: HTMLElement) => void;
@@ -211,6 +211,7 @@ export function render(): void {
   const main = $('#main'), tabs = $('#tabs');
   if (!main || !tabs) return;
   renderBar();
+  markVisit();
   markWent(S.loc);
   trackPower(S.tab === 'jianghu');
   main.innerHTML = (VIEWS[S.tab] || viewJianghu)();
