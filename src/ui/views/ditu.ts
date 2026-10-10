@@ -1,7 +1,7 @@
 import { S } from '../../core/state';
 import { REGIONS, ROOMS, room } from '../../content';
-import { questNav, sectHome } from '../../engine/daohang';
-import { busyRooms, roomBrief, wentSet } from '../../engine/jiemian';
+import { questNav, sectHome, yueNow } from '../../engine/daohang';
+import { busyRooms, roomBrief, tooStrong, wentSet } from '../../engine/jiemian';
 import { tripCost } from '../../engine/world';
 import { FAR_MIN, chufaLine } from '../../engine/chufa';
 import { minLabel } from '../../core/time';
@@ -69,9 +69,10 @@ export function viewDitu(): string {
   const chips: { label: string; to: string; name: string }[] = [];
   const home = sectHome();
   if (home && home.to !== S.loc) chips.push({ label: '回师门', to: home.to, name: home.name });
-  if (nav && q && q !== S.loc) chips.push({ label: '记挂的事', to: q, name: room(q).name });
-  const yue = S.yue.find(y => y.at && y.at !== S.loc && ROOMS.some(r => r.id === y.at));
-  if (yue?.at) chips.push({ label: '有约', to: yue.at, name: room(yue.at).name });
+  // 主线要找的人明显打不过时，眼下要紧改成先变强（engine/jiemian.ts 的 tooStrong），记挂的事芯片不再直指过去
+  if (nav && q && q !== S.loc && !tooStrong(nav)) chips.push({ label: '记挂的事', to: q, name: room(q).name });
+  const yue = S.yue.map(yueNow).find(y => y.to !== S.loc && ROOMS.some(r => r.id === y.to));
+  if (yue) chips.push({ label: '有约', to: yue.to, name: yue.toName });
   const quick = chips.length ? `<div class="mchips" aria-label="快捷">${chips.map(c => `<button data-act="travelAsk:${c.to}"><small>${c.label}</small><b>${c.name}</b></button>`).join('')}</div>` : '';
   const tabs = regionsWithRooms();
   const info = REGIONS[region];

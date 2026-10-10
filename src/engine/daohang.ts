@@ -9,12 +9,14 @@
  */
 import { S, pushFeed } from '../core/state';
 import { dayNo } from '../core/time';
-import { JOBS, NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
+import { JOBS, NPCS, ROOMS, itemById, jobById, questById, room, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
 import { lackOf, test } from './dsl';
 import { hoursAt, npcName, pathMin, stageText, travelMin, whereAt } from './world';
 import { jobOpen } from './shenfen';
+import { yueText } from './shiguang';
+import type { Yue } from '../core/state';
 
 /** 能做：去了就办得成；要等：只差时辰、人不在；卡住：差别的门槛；未竟：做不成了；了结：办完了 */
 export type NavState = '能做' | '要等' | '卡住' | '未竟' | '了结';
@@ -267,4 +269,43 @@ export function leadsNear(n = 3): Lead[] {
   const jobs = out.sort((a, b) => a.min - b.min).slice(0, n);
   const gig = gigLead();
   return gig ? [...jobs, gig] : jobs;
+}
+
+
+/* ---------- 有约：按步骤指路（负责人 #601：「有约不能只显示交任务的地点，应该是按照步骤每一步地点都提示」） ---------- */
+
+/** 差事此刻该走的那一步：线头（JobDef.xian）里第一条条件成立的；没有线头或都办完了为空（该去交差了） */
+export function jobStep(jobId: string): { to: string; toName: string; who: NavWho; text: string } | null {
+  const job = jobById(jobId);
+  const x = job?.xian?.find(k => test(k.if ?? {}));
+  if (!x) return null;
+  const who = whoNav(x.npc, x.at);
+  const to = x.at ?? who.now ?? roomsOf(x.npc)[0];
+  return to ? { to, toName: room(to).name, who, text: x.text } : null;
+}
+
+export interface YueNow {
+  /** 一句话：差事的期限和名目，后面括号里是这一步去哪、找谁 */
+  text: string;
+  /** 这一步的地点；约好的地方就是 y.at */
+  to: string;
+  toName: string;
+  /** 现在是不是在办中间的一步（false 就是该去交差/赴约了） */
+  step: boolean;
+  /** 这一步怎么走：「去府衙照壁，找寡妇周氏」；该交差/赴约时为空 */
+  go: string;
+}
+
+/**
+ * 一个约眼下指向哪里。差事（job_）按线头走到哪一步，就指那一步的地点和人，线头办完才指交差处；
+ * 没写线头的差事和普通的约，仍指约好的地方。横幅、地图的「有约」、地点说明、眼下要紧都读它，说法一致。
+ */
+export function yueNow(y: Yue): YueNow {
+  const st = y.id.startsWith('job_') ? jobStep(y.id.slice(4)) : null;
+  if (!st) return { text: yueText(S, y), to: y.at, toName: room(y.at).name, step: false, go: '' };
+  const d = y.due - dayNo(S);
+  const n = ['', '一', '两', '三', '四', '五', '六', '七', '八', '九', '十'][d] ?? String(d);
+  const lim = d <= 0 ? '今日之内' : d === 1 ? '明日之内' : `${n}日之内`;
+  const go = `${st.to === S.loc ? '' : `去${st.toName}，`}找${st.who.name}`;
+  return { text: `${lim}：${y.text}（${go}）`, to: st.to, toName: st.toName, step: true, go };
 }
