@@ -29,6 +29,23 @@ catch (e) {
 }
 // 用矮屏手机的尺寸跑：手机浏览器的工具栏、微信的标题栏会吃掉一截高度，按钮跑到屏幕外，玩家就会以为卡死了
 const p = await b.newPage({ viewport: { width: 360, height: 560 }, deviceScaleFactor: 2 });
+// 固定随机，每次走的路一样（路遇、打斗都不靠运气）：
+// 世界的种子 = 名字 + 开局的现实时刻（core/state.ts 的 worldSeed），路遇的骰子、传闻的走样都出自它（engine/shijie.ts 的 worldRng）；
+// 打斗的骰子用的是 Math.random（ui/fight.ts）。所以把现实的钟钉死在一个时刻，再把 Math.random 换成带种子的。
+// 只在这个脚本的页面里生效，游戏代码里没有任何测试专用开关，正式玩家碰不到。换路：SMOKE_SEED=7 npm run smoke
+const SEED = Number(process.env.SMOKE_SEED ?? 1) || 1;
+const FIXED_NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
+await p.addInitScript(({ seed, now }) => {
+  Date.now = () => now;
+  let a = seed >>> 0;
+  Math.random = () => {                                // mulberry32，同 src/engine/rng.ts
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}, { seed: SEED, now: FIXED_NOW });
 const errs = [];
 p.on('pageerror', e => errs.push(e.message));
 await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
@@ -112,14 +129,25 @@ async function fight(tag, pickBest = true) {
   return 'timeout';
 }
 
-// 赶路途中可能遇到路遇（随机）：弹出剧情就点第一个选项，开打就打完，直到路走完
-let stuck = 0;
+// 赶路途中会遇到路遇：弹出剧情就点第一个选项，开打就打完，直到路走完。
+// 种子固定以后遇上哪几次是定的（每次日志里的「路遇」几行应该一样）；这里仍要会处理，因为改了内容或引擎，路遇的位置会变
+let lastCard = '', sameCard = 0;
+// 同一张路遇卡连着出现三次，说明点的选项不起作用：把界面上的按钮打出来再报错，别空等到超时
+async function stuckCard(title) {
+  const dump = await p.evaluate(() => [...document.querySelectorAll('#storyLayer .choice')].map(b => `${b.dataset.act}:${b.textContent.trim().slice(0, 16)}${b.classList.contains('locked') ? '(锁)' : ''}`)).catch(e => String(e));
+  console.log('· 路遇卡住时的选项：', JSON.stringify(dump));
+  throw new Error('路遇「' + title + '」连着三次停在同一张卡，点的选项不起作用（选项见上一行）');
+}
 async function settle() {
   for (let i = 0; i < 80; i++) {
     await p.waitForTimeout(250);
+    // 只点点得动的选项：条件不满足的选项渲染成 .choice.locked（ui/story.ts，点了没反应）。
+    // 曾因「卖身葬父」第一项要五十两银子、机器玩家没钱，永远停在同一张卡，直到 CI 十分钟超时
     if (await p.$('#storyLayer:not([hidden]) .choice')) {
-      log('路遇', (await p.textContent('#storyLayer h2')).trim());
-      await p.click('#storyLayer .choice').catch(() => {});
+      const title = (await p.textContent('#storyLayer h2')).trim();
+      log('路遇', title);
+      if (title === lastCard) { if (++sameCard >= 3) await stuckCard(title); } else { lastCard = title; sameCard = 1; }
+      await p.click('#storyLayer .choice:not(.locked)', { timeout: 4000 }).catch(() => {});
       continue;
     }
     // 先看结算页：打完以后结算页盖在战斗层上面，战斗层这时还没收起
@@ -127,7 +155,7 @@ async function settle() {
     if (await p.$('#fightLayer:not([hidden])')) {
       const r = await fight(null);
       log('路遇开打', r);
-      if (r === 'timeout' && ++stuck >= 2) throw new Error('路遇的打斗两次都打不完，卡住了（界面见上一行）');
+      if (r === 'timeout') throw new Error('路遇的打斗打不完，卡住了（界面见上一行）');
       continue;
     }
     if (await p.$('#travel:not([hidden])')) continue;
@@ -137,7 +165,7 @@ async function settle() {
 // 按任务横幅赶路；路上开了打、停在半路的，再点一次接着走
 async function goQuest(dest) {
   for (let k = 0; k < 5; k++) {
-    // 上一段路尾巴上弹出的路遇（随机，出在脚本走开的那一刻）会盖住横幅：先处理掉；点不动就再处理一遍
+    // 上一段路尾巴上弹出的路遇，出在脚本走开的那一刻（时机，不是运气）会盖住横幅：先处理掉；点不动就再处理一遍
     await settle();
     try { await p.waitForSelector('[data-act="quest"]', { timeout: 8000 }); await p.click('[data-act="quest"]', { timeout: 4000 }); }
     catch { await settle(); continue; }
