@@ -1,5 +1,6 @@
 import type { AttrKey, Effect, FeedTag, LeaveHow, SectRank, SkillId } from '../content/types';
 import type { Loadout } from '../engine/wuxue';
+import type { EventRec } from '../engine/xingdong';
 import { clearSaveSafely, readSave, writeSave } from './save';
 import { nowMs } from './time';
 import { syncBody } from '../engine/ren';
@@ -94,6 +95,10 @@ export interface GameState {
   /** 手上的差事：哪一件、约期（江湖日）；办完的差事上回是哪一日办完的 */
   job: { id: string; due: number } | null;
   jobLog: Record<string, number>;
+  /** 行动结算记录：只留最近三百条，旧档从空记录继续 */
+  log: EventRec[];
+  /** 正在读的剧情及本次遇见的凭据；刷新沿用，收尾清掉，旧档可缺省 */
+  storyAt?: { id: string; i: number; started: string };
   /** 一个江湖日只做一回的营生（零工、讨赏钱）：做的是哪一件 → 哪一日做的（dayNo）。效果 today 写、条件 doneToday 读；过了日子的自动清掉 */
   dayLog?: Record<string, number>;
   /** 人情备注：为什么记得这个人，例如「湖畔切磋，不打不相识」 */
@@ -161,7 +166,7 @@ export function newGame(): GameState {
     skills: { hanjiang: { r: 0, p: 0 }, xinfa: { r: 0, p: 0 }, taxue: { r: 0, p: 0 } },
     loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'kp_mujian' },
     feed: [{ t: '传闻', x: '江上这两天来了几条生船，不打鱼，专打听人。', n: 0 }],
-    story: '', sel: null, reply: null, tab: 'jianghu'
+    log: [], story: '', sel: null, reply: null, tab: 'jianghu'
   };
   syncBody(s);
   s.mp = Math.round(s.mpMax / 2);
@@ -199,7 +204,7 @@ export function skipToYangzhou(): GameState {
       { t: '江湖', x: '你在扬州城外的破庙里歇了一夜，江伯教的那几招剑法，比划来比划去，总觉得差着火候。', n: 0 },
       { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮吃了哑巴亏。', n: 0 }
     ],
-    story: '', sel: 'liu', reply: null, tab: 'jianghu'
+    log: [], story: '', sel: 'liu', reply: null, tab: 'jianghu'
   };
   // 气血、内力上限由「人」算出来；那一夜的伤还没全好，气血八成半、内力三分之二
   syncBody(s);

@@ -14,7 +14,7 @@ import { TIELV_TEXT, XIEJIAO, checkYue, restLine, jingxiu, nightWarn, restDays, 
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
 import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
-import { run } from '../engine/dsl';
+import { act as settleAction, effectReq } from '../engine/xingdong';
 import { FAR_MIN, chufaLine } from '../engine/chufa';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
@@ -215,7 +215,7 @@ registerHandlers({
     if (!S.sect || (v !== '辞别' && v !== '叛门')) return;
     if (v === '辞别' && S.pastSects?.some(x => x.how === '辞别')) return;
     const school = S.sect.school;
-    run([{ type: 'leaveSect', how: v }]);
+    settleAction(effectReq(v, S.sect?.school ?? '', [{ type: 'leaveSect', how: v }]));
     pushFeed('江湖', v === '辞别' ? `你向${school}的师长磕了三个头，辞别下山。` : `你叛出了${school}。`);
     closeSheet();
     render();

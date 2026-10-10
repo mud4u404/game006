@@ -1,13 +1,14 @@
 import { S, pushFeed } from '../core/state';
 import { cn, fmt } from '../core/util';
-import { jobById, npc, questById, room, skillById } from '../content';
+import { itemById, jobById, npc, questById, room, skillById } from '../content';
 import type { Branch, Cond, EyeDef, NpcDef, QuestStage, RoomDef, Verb } from '../content/types';
-import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
+import { newOutcome, pickBranch, test, textVars, type Outcome } from './dsl';
+import { act as settleAction, actionBranch, effectReq, plan, VERB_MIN, type ActionPlan } from './xingdong';
 import { advanceMin, dayNo, shichen, spanLabel } from '../core/time';
 import { attrEffects } from './gengu';
 import { tierNow } from './ren';
 import { eyesOn } from './yan';
-import { giveGift, isPawnshop, pawn } from './daoju';
+import { giveGift, have, isPawnshop, pawnPrice, wornAt } from './daoju';
 import { seeShi } from './shishi';
 import { ask, panwen } from './chuanwen';
 import { jobGongxian, jobPay, shenfenOf } from './shenfen';
@@ -179,7 +180,7 @@ export const travelMin = (m: number): number => Math.max(1, Math.round(m * attrE
  * 每个动作花多少时间（分钟）。分支里写了 time 效果的，以分支为准；开打、开剧情的，由战斗、剧情自己算时间。
  * 没列出的动作算十分钟。这样在城里走动、和人说话，时辰也会慢慢过去。
  */
-export const VERB_MIN: Record<string, number> = { 观察: 5, 细看: 5, 推门: 2, 交谈: 10, 打听: 10, 盘问: 10, 购买: 5, 打赏: 5, 赠礼: 5, 抓药: 10, 偷窃: 5, 请教: 30 };
+export { VERB_MIN } from './xingdong';
 const DEFAULT_MIN = 10;
 
 /** 天色转换时记一句见闻 */
@@ -193,7 +194,8 @@ export function verbPrice(id: string, verb: Verb): number | null {
   const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
   const b = bs?.find(x => { const { silver: _s, ...rest } = x.if ?? {}; return test(rest); });
   if (!b?.do) return null;
-  const price = b.do.reduce((sum, e) => (e.type === 'silver' && e.delta < 0 ? sum - e.delta : sum), 0);
+  const p = plan(branchReq(id, verb, b, bs?.indexOf(b) ?? 0));
+  const price = p.cost.reduce((sum, e) => (e.type === 'silver' && e.delta < 0 ? sum - e.delta : sum), 0);
   return price > 0 ? price : null;
 }
 
@@ -238,10 +240,31 @@ export function verbGain(id: string, verb: Verb): string | null {
 
 /** 钱不够时真正走到的分支只是一句回绝（没有扣钱以外的实效）才算「买不起」；赊账、记账这类还能办事的分支，按钮不灰 */
 export function verbPoor(id: string, verb: Verb): boolean {
-  if (verbPrice(id, verb) === null) return false;
-  const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
-  const real = bs?.find(x => test(x.if ?? {}));
-  return !real || !(real.do ?? []).some(e => e.type !== 'time');
+  return !verbPlan(id, verb).ok;
+}
+
+/** 按钮和结算共用同一份行动盘算；赊账、头回免钱的真实分支仍然能走。 */
+export function verbPlan(id: string, verb: Verb): ActionPlan {
+  const bs = npc(id)?.actions[verb];
+  const intended = actionBranch(id, verb, true);
+  return plan(branchReq(id, verb, intended, intended ? bs!.indexOf(intended) : 0));
+}
+
+function branchReq(id: string, verb: Verb, b: Branch | undefined, index: number) {
+  const req = effectReq(verb, id, b?.do, b?.if, `npc:${id}:${verb}:${index}`);
+  if (!b?.do?.some(e => ['time', 'fight', 'story'].includes(e.type)) && !b?.if?.doneToday)
+    req.effects = [...(req.effects ?? []), { type: 'time', add: VERB_MIN[verb] ?? DEFAULT_MIN }];
+  return req;
+}
+
+/** 没有明写耗时的动作，在协议里一并预付；失败则不耗时间。 */
+function executeBranch(id: string, verb: Verb, b: Branch, index: number, out = newOutcome()) {
+  const req = branchReq(id, verb, b, index);
+  const before = shichen(S.min);
+  return settleAction(req, out, () => {
+    const now = shichen(S.min);
+    if (!b.do?.some(e => e.type === 'time') && now !== before && DUSK[now]) pushFeed('江湖', DUSK[now]);
+  });
 }
 
 /** 对人物、物件做一个动作：执行分支，再按动作花掉时间。arg 是赠礼、典当时挑的那件道具 */
@@ -262,12 +285,20 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
   if (verb === '观察') {
     // 先是外貌，再接上随条件变化的细节（例如拿到线索以后才看得出的东西）
     const b = pickBranch(n.actions['观察']);
-    const out = b ? run(b.do) : newOutcome();
+    const before = shichen(S.min);
+    let eyes: EyeDef[] = [];
+    const result = settleAction(branchReq(id, verb, b, b ? n.actions['观察']!.indexOf(b) : 0), undefined, out => {
+      // 根基之眼的后续效果共用这一回的草稿、连锁预算和存档。
+      eyes = eyesOn({ npc: id });
+      for (const e of eyes) settleAction(effectReq('观察所得', id, e.do, undefined, `eye:${id}:${e.attr}:${e.text}`), out);
+      const now = shichen(S.min);
+      if (!b?.do?.some(e => e.type === 'time') && now !== before && DUSK[now]) pushFeed('江湖', DUSK[now]);
+    });
+    const out = result.out;
+    if (!result.ok) return { text: result.why ?? '', out, timed: true };
     const more = b?.text ? '\n' + fmt(b.text, { ...textVars(), ...out.vars }) : '';
     // 根基之眼：根基够了，多看出一层（engine/yan.ts）；看见的同时写下的旗标，解锁别处的做法
-    const eyes = eyesOn({ npc: id });
-    for (const e of eyes) run(e.do, out);
-    return { text: fmt(n.look, textVars()) + more, out, timed: b?.do?.some(e => e.type === 'time'), eyes };
+    return { text: fmt(n.look, textVars()) + more, out, timed: true, eyes };
   }
   const bs = n.actions[verb as keyof typeof n.actions];
   const b = pickBranch(bs);
@@ -275,15 +306,25 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
   const warn = b ? passWarn(S, b.do) : null;
   if (b) {
     const short = lilianShort(bs, b);
-    const out = run(b.do);
-    return { text: (warn ? `（${warn}）\n` : '') + fmt(b.text ?? '', { ...textVars(), ...out.vars }) + (short ? `\n（${short}）` : ''), out, timed: b.do?.some(e => e.type === 'time') };
+    const preview = verbPlan(id, verb);
+    const strict = /^(买|购买|卖|典当|学|请教|抓药|交差)/.test(verb) || preview.gain.some(e => e.type === 'learn' || e.type === 'jobDone');
+    if (strict && !preview.ok && preview.cost.some(e => e.type !== 'time') && !b.do?.some(e => e.type !== 'time'))
+      return { text: fmt(b.text ?? preview.why ?? '', textVars()) + (short ? `\n（${short}）` : ''), out: newOutcome(), timed: true };
+    const result = executeBranch(id, verb, b, bs!.indexOf(b));
+    return { text: result.ok ? (warn ? `（${warn}）\n` : '') + fmt(b.text ?? '', { ...textVars(), ...result.out.vars }) + (short ? `\n（${short}）` : '') : result.why ?? '', out: result.out, timed: true };
   }
   const who = npcName(id);
   const out = newOutcome();
   switch (verb) {
     // 赠礼、典当：从行囊里挑一件（engine/daoju.ts）。送了人物喜欢的，关系升一级
     case '赠礼': return { text: giveGift(n, who, arg), out };
-    case '典当': return { text: pawn(who, arg), out };
+    case '典当': {
+      const it = arg ? itemById(arg) : undefined, price = it ? pawnPrice(it) : 0;
+      if (!it || !price || have(it.id) < 1) return { text: `${who}摇摇头：「这东西小号不收。」`, out, timed: true };
+      if (have(it.id) - (wornAt(it.id) ? 1 : 0) < 1) return { text: `${it.name}还在你身上，先卸下来再说。`, out, timed: true };
+      const result = settleAction(effectReq('典当', id, [{ type: 'item', id: it.id, delta: -1 }, { type: 'silver', delta: price }, { type: 'time', add: DEFAULT_MIN }]));
+      return { text: result.ok ? `${who}把${it.name}翻来覆去看了一遍，拨了拨算盘，数出钱来。（银两 +${price} 文）` : result.why ?? '', out: result.out, timed: true };
+    }
     // 打听：问这个人知道什么（engine/chuanwen.ts）
     case '打听': return { text: ask(id, { who }).text, out };
     // 盘问：捕快亮腰牌，谁都得答话，不论今天问没问过、交情深浅（人犯另写「盘问」的分支，问得出破绽）
@@ -320,7 +361,9 @@ export function enter(id: string): Outcome | null {
   seeShi(id);
   const b = pickBranch(room(id).onEnter);
   if (!b) return null;
-  const out = run(b.do);
+  const result = settleAction(effectReq('进门', id, b.do, b.if, `enter:${id}:${room(id).onEnter!.indexOf(b)}`));
+  const out = result.out;
+  if (!result.ok) return out;
   // 进门时的文字记进见闻，玩家才看得到；最近几条里已经有同一句，就不再重复
   const t = b.text ? fmt(b.text, { ...textVars(), ...out.vars }) : '';
   if (t && !S.feed.slice(0, 5).some(e => e.x === t)) pushFeed('江湖', t);
