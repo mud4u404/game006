@@ -8,7 +8,7 @@ import type { ContentPack, FoeDef, NpcDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_chuanwu', name: '虹桥船坞', area: '瘦西湖 · 虹桥', region: 'yz', t: 10, map: [34, 32],
+    id: 'yz_chuanwu', name: '虹桥船坞', area: '扬州 · 瘦西湖', region: 'yz', t: 10, map: [34, 32],
     desc: [
       { if: { hour: { from: 5, to: 18 } },
         text: '虹桥底下是一片废弃的旧船坞，半沉的破船歪在泥里，桅杆斜指着天。日头底下水光粼粼，看什么都是明明白白，只有船坞深处黑洞洞的。' },
@@ -235,15 +235,15 @@ const pack: ContentPack = {
   npcs: NPCS,
   foes: [GUARD],
   news: [
-    { if: { flag: 'cw_baoguan' },
+    { if: { flag: 'cw_baoguan' }, at: 'yz_chuanwu',
       text: '虹桥下的「水鬼」原是私盐的盐丁，叫一名年轻公子送去府衙自首了。盐窝子抄了，湖上清净了。', who: ['渔家', '船夫', '捕快'], about: 'you' },
-    { if: { flag: 'cw_cao' },
+    { if: { flag: 'cw_cao' }, at: 'yz_chuanwu',
       text: '漕帮的船近来夜里泊在虹桥下。老漕工说，这湖里的营生，如今姓了漕。', who: ['渔家', '船夫', 'dong'] },
-    { if: { flag: 'cw_fang' },
+    { if: { flag: 'cw_fang' }, at: 'yz_chuanwu',
       text: '虹桥下的「水鬼」不闹了。渔家说，是一位过路的少侠放了他一马，那盐丁如今白天在码头扛活。', who: ['渔家', '船夫', '脚夫'], about: 'you' },
-    { if: { flag: 'cw_sha' },
+    { if: { flag: 'cw_sha' }, at: 'yz_chuanwu',
       text: '虹桥边的渔家说，那扮水鬼的盐丁叫人杀了。他家里还有老娘和两个孩子，天天在桥头等他回来。', who: ['渔家', '船夫', '脚夫'], about: 'you' },
-    { if: { flag: 'cw_qiao' },
+    { if: { flag: 'cw_qiao' }, at: 'yz_chuanwu',
       text: '虹桥下那穷盐丁叫人勒索了一文钱。过路的船家看见了，背地里骂那人缺德。', who: ['渔家', '船夫', '更夫'] }
   ]
 };

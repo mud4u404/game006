@@ -11,13 +11,15 @@ import { NPCS } from '../src/content';
 import { test } from '../src/engine/dsl';
 import { S, skipToYangzhou, setState, type GameState } from '../src/core/state';
 import { worldOf } from '../src/engine/shijie';
-import { roomNpcs } from '../src/engine/world';
+import { whereAt } from '../src/engine/world';
 import { askWhere, askableTargets, canTell, whereaboutsOf, lifeOf, roomsOf } from '../src/engine/chuanwen';
 import type { NpcAt } from '../src/content/types';
 
 /** 临时白名单：测出来确有过重叠、且现在不该改内容的人物 id。回报里要列出 */
 const WHITELIST = new Set<string>([
-  // 例如 'xxx_yyy',  // 等跑出违规再填
+  // 闻铁匠：suzhou.ts 里 at 是 [{ room:'sz_hanshan', if:{ shi:{ id:钟, at:['xiangzhu'] } } }, { room:'sz_shantang' }]，
+  // 第二处没有条件。补钟那一步（xiangzhu）一旦成立，两处同时成立。内容不在本 Issue 的允许文件里，先登记白名单并报维护者。
+  'sz_wentiejiang',
 ]);
 
 function atEntries(id: string): NpcAt[] {
@@ -69,7 +71,7 @@ describe('作息不重叠', () => {
 });
 
 describe('打听去处', () => {
-  beforeAll(() => { setState(skipToYangzhou()); S.min = 12 * 60; }); // 固定全局态与时钟，房间在场人物确定
+  beforeAll(() => setState(skipToYangzhou())); // 固定全局态；「此刻在哪」一律走 #304 的 whereAt，不拨钟
 
   const withAt = NPCS.filter(n => n.at && !n.obj);
 
@@ -80,7 +82,7 @@ describe('打听去处', () => {
       const fa = lifeOf(a.id)?.faction, fb = lifeOf(b.id)?.faction;
       if (fa && fb && fa !== fb) {
         const ra = new Set(roomsOf(a.id)), rb = new Set(roomsOf(b.id));
-        if (![...ra].some(r => rb.has(r)) && !roomNpcs(S.loc).includes(b.id)) return [a, b];
+        if (![...ra].some(r => rb.has(r)) && whereAt(b.id) !== S.loc) return [a, b];
       }
     }
     throw new Error('找不到势力不同、常待处不相交的两个有作息人物');
@@ -167,6 +169,16 @@ describe('打听去处', () => {
     const saved = n.at;
     n.at = [{ room: 'yz_zhaobi', if: { any: [{ any: [{ hour: { from: 5, to: 9 } }] }, { flag: '_zuoxi_test_flag' }] } } as NpcAt];
     expect(whereaboutsOf(A1.id)).toContain('清早');
+    n.at = saved;
+  });
+
+  it('any 里有两段时辰，两段都说出来（不只说第一段）', () => {
+    const n = NPCS.find(x => x.id === A1.id)!;
+    const saved = n.at;
+    n.at = [{ room: 'yz_zhaobi', if: { any: [{ hour: { from: 5, to: 9 } }, { hour: { from: 20, to: 23 } }] } } as NpcAt];
+    const w = whereaboutsOf(A1.id);
+    expect(w).toContain('清早');
+    expect(w).toContain('入夜');
     n.at = saved;
   });
 

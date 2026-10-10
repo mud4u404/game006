@@ -188,7 +188,12 @@ const MSG_BU: Record<Ending | 'stay', StoryCard> = Object.fromEntries(([
   ['lose', '那夜没渡人，堤下的持刀汉子把你打倒在泥里'],
   ['flee', '那夜没渡人，堤下的持刀汉子追来，你拔腿就跑']
 ] as const).map(([k, note]) => [k, { tag: '序章 · 天明', title: '去路', paras: MSG_BU_HEAD,
-  choices: [{ label: '记下了', do: [{ type: 'rel', npc: 'kp_wei', value: '素不相识', note }] }] } satisfies StoryCard])) as Record<Ending | 'stay', StoryCard>;
+  // Issue #533：来转告「扬州，大明寺，了尘」的是卞婆婆，她名下也该记一笔；
+  // 卫衡那一笔照旧留着——那夜的事卫衡在堤上看得最清楚，不渡就是不相识。
+  choices: [{ label: '记下了', do: [
+    { type: 'rel', npc: 'kp_wei', value: '素不相识', note },
+    { type: 'rel', npc: 'kp_bian', value: '点头之交', note: '她一夜没睡，在焦船边等你等到天亮' }
+  ] }] } satisfies StoryCard])) as Record<Ending | 'stay', StoryCard>;
 
 /** 登船：序章了结，题字「第一回 · 扬州」 */
 const BOARD: Effect[] = [
@@ -497,7 +502,8 @@ const STORIES: StoryDef[] = [
         '码头上响起卫衡的脚步声，不紧不慢。',
         '镖师忽然把钱袋往船板上一丢，转身扑通一声，跳进了江里。'
       ],
-      choices: [{ label: '继续', do: [{ type: 'time', add: 10 }] }] },
+      // Issue #533：另两路都是二十分钟（prologue.ts:446、:472），这里原是十分钟，没有特别的用意，对齐
+      choices: [{ label: '继续', do: [{ type: 'time', add: 20 }] }] },
     { tag: '序章 · 第一夜', title: '落水的人',
       paras: [
         '江面上只剩一圈圈散开的水纹。那人不会水，扑腾得很厉害，往下游的芦苇荡漂去。',
@@ -507,8 +513,12 @@ const STORIES: StoryDef[] = [
         { label: '下水救他', sub: '体魄 +1', do: [{ type: 'attr', key: '体魄', delta: 1 }, { type: 'flag', flag: 'kp_jiu' }, { type: 'flag', flag: 'kp_qiantan' }, { type: 'rel', npc: 'kp_chu', value: '相谈甚欢', note: '水里捞上来的命' }, { type: 'story', id: 'kp_bu_hou' }],
           result: '你把竹篙一抛，跃进江里。江水冷得像刀。你记得这一带江心有一道浅滩，脚下一探，果然踩实了。你抓住他的衣领，一寸一寸把他拖上滩。他吐出一口江水，趴在泥里看了你很久，什么话也没说，爬起来钻进了芦苇。' },
         { label: '沿着江堤追他', next: 2 },
-        { label: '留在船上，陪着江伯', do: [{ type: 'story', id: 'kp_bu_hou' }],
-          result: '你没有动。江伯也没有动。卫衡站在码头上，望着江面上那圈越散越大的水纹，望了很久，才转身走了。' }
+        // Issue #533：这一支不打、不追，一夜过去气血还是满的、还白拿一件腰牌。代价记在江伯身上：
+        // 他在船上坐了一夜，你一动没动，他看在眼里——「相依为命」到这儿就淡了（#327 核对表的结论）。
+        // 不动 xia（侠义为零是 prologue.ts:434 定下的，三条路都一样），只降这一档。
+        { label: '留在船上，陪着江伯',
+          do: [{ type: 'rel', npc: 'jiangbo', value: '点头之交', note: '那夜你缩在船尾没动，江伯在船上坐了一夜' }, { type: 'story', id: 'kp_bu_hou' }],
+          result: '你没有动。江伯也没有动。卫衡站在码头上，望着江面上那圈越散越大的水纹，望了很久，才转身走了。天亮前江伯才开口，说的是：「你不渡，我也不怪你。可你总该说一声。」' }
       ] },
     { tag: '序章 · 第一夜', title: '堤下的人',
       paras: [
@@ -604,14 +614,19 @@ const STORIES: StoryDef[] = [
 const FOES: FoeDef[] = [
   /* ---------- 新开局：第一夜的三场打。对手都弱，主角不会死；打赢、打输、逃开各接一张不同的卡 ---------- */
   { id: 'kp_jiading', name: '卫家家丁', title: '抡着短棍的老仆', ini: '丁', tone: 'amber', weapon: '短棍', ws: '棍', tag: '序章',
-    rank: 0, build: 'outer', weak: 0.55, firstTell: 2,
+    rank: 0, build: 'outer', weak: 0.28, firstTell: 2,
     moves: ['当头一棍', '横扫腰肋', '戳向心口'],
     flourish: ['短棍抡得呼呼作响', '骂声一句紧似一句', '棍头在船帮上敲得砰砰响'],
     tells: [
+    // 重招三句，引擎挨着不重出（engine/duel.ts 的 heavy：while (i === lastTell)）
       { name: '拼命一棍', text: '家丁双手攥紧短棍，嘴里骂着「还我老爷的手来」，整个人都压在这一棍上……', dom: 'li', after: '棍子砸在船帮上，木屑乱飞！',
-        judge: '你看出这一棍全是蛮力，抡得太满，收不回来。' }
+        judge: '你看出这一棍全是蛮力，抡得太满，收不回来。' },
+      { name: '扫脚一棍', text: '家丁把短棍收到腰后，贴着船板横扫过来，正奔你的脚踝……', dom: 'su', after: '短棍贴着船板扫过来，木屑从水面上溅起一片。',
+        judge: '你看出他收棍再扫，是要等你站不稳的时候补上一下。' },
+      { name: '从侧后扑上', text: '家丁绕到你侧后，短棍从肩上抢下来，没头没脑地劈向你的后颈……', dom: 'qiao', after: '家丁整个人从侧面扑上来，棍子带着风。',
+        judge: '你看出他不瞄准，只求快；越快，这一手落得越散。' }
     ],
-    asides: ['堤上的卫衡又喝了一声，没有人听。', '江水拍着船帮，哗哗地响。'],
+    asides: ['堤上的卫衡又喝了一声，没有人听。', '江水拍着船帮，哗哗地响。', '船头那盏挂灯晃了一下，两条影子在灯下叠成一团。'],
     opening: ['抡得太满', '棍头磕在船舷上', '骂得岔了气'],
     intro: '家丁把短棍往船帮上一磕：「老爷的右手，就废在这个人一句话上！今天谁也别想护他！」',
     tips: ['对手使出重招时，战斗会停下来，由你挑一种应对。看清他的招式再挑。'],
@@ -623,20 +638,27 @@ const FOES: FoeDef[] = [
     win: '家丁手里的短棍脱手，在甲板上滚了两滚。',
     lose: '你脚下一滑，肋下挨了一棍，疼得眼前发黑。',
     results: {
-      win: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }], then: [{ type: 'story', id: 'kp_du_hou' }] },
+      // weak 从 0.55 调到 0.28 以后 foeLilian 只给 28（engine/lilian.ts），这里补回 27：
+      // 打斗压短是少挨几下，不该顺带把打赢的奖励也削了（不然学不成边军大枪，见 shicheng.ts 的 canLearn）
+      win: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }, { type: 'lilian', amount: 27 }], then: [{ type: 'story', id: 'kp_du_hou' }] },
       lose: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.6 }], then: [{ type: 'story', id: 'kp_du_hou_lose' }] },
       flee: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }], then: [{ type: 'story', id: 'kp_du_hou_flee' }] }
     } },
 
   { id: 'kp_biaoshi', name: '独臂镖师', title: '走投无路的人', ini: '镖', tone: 'gray', weapon: '鱼叉', ws: '叉', tag: '序章',
-    rank: 0, build: 'outer', weak: 0.55, firstTell: 2,
+    rank: 0, build: 'outer', weak: 0.28, firstTell: 2,
     moves: ['乱戳', '横拍', '直刺心窝'],
     flourish: ['单手攥着鱼叉直抖', '退一步，戳一下', '嘴里念着听不清的话'],
     tells: [
+    // 重招三句，引擎挨着不重出（engine/duel.ts 的 heavy）
       { name: '拼命一刺', text: '镖师闭上眼，单手攥住鱼叉，朝你胸口直直捅来，像是除此以外，再没有别的法子……', dom: 'su', after: '叉尖钉进船板，震得他虎口发麻。',
-        judge: '你看出这一叉没有章法，单臂使叉，劲全在肩上，是怕极了的人才这样刺。' }
+        judge: '你看出这一叉没有章法，单臂使叉，劲全在肩上，是怕极了的人才这样刺。' },
+      { name: '叉尖挑刀', text: '镖师把鱼叉横过来，叉尖贴着地面一挑，想把你手里的家伙挑飞……', dom: 'qiao', after: '鱼叉横着挑上来，叉尖在灯下一闪。',
+        judge: '你看出他单臂使叉挑不动重家伙，这一手是虚张声势。' },
+      { name: '扑上来抱住', text: '镖师忽然往前一扑，用肩膀撞向你胸口，鱼叉同时往下扎……', dom: 'li', after: '镖师连人带叉撞上来，肩上的水珠甩了一地。',
+        judge: '你看出他退了这么久还在往前，是想拿一条命换一条命。' }
     ],
-    asides: ['卫衡的手按在剑柄上，没有拔出来。', '灯芯跳了一下，舱里的影子晃得厉害。'],
+    asides: ['卫衡的手按在剑柄上，没有拔出来。', '灯芯跳了一下，舱里的影子晃得厉害。', '舱里那盏灯矮矮的，两个人的影子都被压在脚底下。'],
     opening: ['单臂使叉，收得慢', '叉头够不着舱壁', '脚跟蹭到了缆绳'],
     intro: '镖师退到船尾，鱼叉直抖：「我、我不是逃兵——」',
     tips: ['对手使出重招时，战斗会停下来，由你挑一种应对。看清他的招式再挑。'],
@@ -653,20 +675,25 @@ const FOES: FoeDef[] = [
     win: '鱼叉脱手，当啷落在船板上。',
     lose: '叉柄撞在你肋下，你踉跄着退了两步。',
     results: {
-      win: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }], then: [{ type: 'story', id: 'kp_wen_hou' }] },
+      win: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }, { type: 'lilian', amount: 27 }], then: [{ type: 'story', id: 'kp_wen_hou' }] },
       lose: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.6 }], then: [{ type: 'story', id: 'kp_wen_hou_lose' }] },
       flee: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }], then: [{ type: 'story', id: 'kp_wen_hou_flee' }] }
     } },
 
   { id: 'kp_zhuibing', name: '持刀汉子', title: '腰挂牌子的人', ini: '汉', tone: 'red', weapon: '单刀', ws: '刀', tag: '序章',
-    rank: 0, build: 'even', weak: 0.65, firstTell: 2,
+    rank: 0, build: 'even', weak: 0.29, firstTell: 2,
     moves: ['劈', '撩', '横抹'],
     flourish: ['单刀在雨里划出一道白光', '脚下踩着江堤的烂泥', '不耐烦地一刀接一刀'],
     tells: [
+    // 重招三句，引擎挨着不重出（engine/duel.ts 的 heavy）
       { name: '开山一刀', text: '汉子懒得多说，单刀高举过顶，对着你的肩头直劈下来……', dom: 'li', after: '刀锋砍进堤上的泥里，溅起一片泥点。',
-        judge: '你看出这一刀是惯常的劈法，力气有，只是起手太直，一眼看得到底。' }
+        judge: '你看出这一刀是惯常的劈法，力气有，只是起手太直，一眼看得到底。' },
+      { name: '横抹咽喉', text: '汉子把刀放平，从下往上横着抹过来，刀锋擦着水气直奔你的咽喉……', dom: 'su', after: '刀锋横着抹上来，带起一片水汽。',
+        judge: '你看出他这一刀走得慢，是要在你躲的时候跟进第二刀。' },
+      { name: '虚晃一记', text: '汉子忽然把刀往上一提，做出劈砍的架势，脚底下却往旁边滑了半步……', dom: 'qiao', after: '刀落下来的时候，人已经在你侧面。',
+        judge: '你看出刀是虚的，脚是真动；他要绕到你持刀的那一侧。' }
     ],
-    asides: ['江风吹着芦苇，沙沙地响。', '水里的人已经不动了，不知是沉了，还是躲了。'],
+    asides: ['江风吹着芦苇，沙沙地响。', '水里的人已经不动了，不知是沉了，还是躲了。', '堤上的芦苇被风压弯又弹回来，扫过他的裤脚。'],
     opening: ['刀劈得太直', '靴子陷进烂泥', '用力过猛'],
     intro: '汉子啐了一口：「不识抬举的小东西。」单刀一横，朝你逼来。',
     tips: ['对手使出重招时，战斗会停下来，由你挑一种应对。看清他的招式再挑。'],
@@ -684,7 +711,7 @@ const FOES: FoeDef[] = [
     lose: '汉子刀背在你肩头一磕，你半边身子发麻，坐倒在泥里。',
     results: {
       // 打赢了，落水的人才有命爬上岸（旗标 kp_jiu：褚七在扬州出不出得来）
-      win: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }, { type: 'flag', flag: 'kp_jiu' },
+      win: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }, { type: 'lilian', amount: 36 }, { type: 'flag', flag: 'kp_jiu' },
         { type: 'rel', npc: 'kp_chu', value: '相谈甚欢', note: '水里捞上来的命' }], then: [{ type: 'story', id: 'kp_bu_hou_win' }] },
       lose: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.6 }], then: [{ type: 'story', id: 'kp_bu_hou_lose' }] },
       flee: { silent: true, do: [{ type: 'cure' }, { type: 'heal', hpAtLeast: 0.7 }], then: [{ type: 'story', id: 'kp_bu_hou_flee' }] }

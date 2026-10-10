@@ -12,6 +12,7 @@ import { gongliCeiling } from '../engine/lilian';
 import { TIELV_TEXT, nextYue, settleAway, skillName, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
 import { tierCheck, tupoAdd, tupoTake } from '../engine/tupo';
 import { inFight } from './fight';
+import { canRetreat, powerNow } from '../engine/jiemian';
 import { openSheet, render } from './shell';
 import { tupoBlockHTML } from './tupo';
 
@@ -22,7 +23,7 @@ const hoursText = (h: number): string => {
 };
 
 /** 邸报的正文；head 是开头的一句 */
-export function chuguanHTML(r: RestReport, head: string, title: string, stop?: string): string {
+export function chuguanHTML(r: RestReport, head: string, title: string, stop?: string, power0?: number): string {
   // 这一回出关长的境界、档次、新学的武功，攒在 engine/tupo.ts 里，合成最上面的一块「突破」；
   // 这里取走，出关后就不会再另外弹一张卡
   tierCheck();
@@ -30,8 +31,11 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
   const tupo = tupoBlockHTML(tupoTake());
   const healTxt = Object.entries(r.healed).map(([z, n]) => `${ZONE_NAME[z as 'hand']}伤好了${liang(n as number)}级`).join('、');
   const chips = [
-    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `消化历练 ${r.used}` : r.grow === 0 ? '这几日修为没有长进，伤照样养' : '没有历练可消化，闭门造车'}</span>`,
+    `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `历练 ${S.lilian + r.used} → ${S.lilian}` : r.grow === 0 ? '这几日功夫没有长进，伤却养好了些' : '身上没有可化的历练，白坐了几日'}</span>`,
     ...r.gains.map(([k, v]) => `<span class="tag accent">${skillName(k)} +${v}</span>`),
+    // 战力变了写「旧 → 新」（engine/jiemian.ts），没变不写
+    power0 !== undefined && power0 !== powerNow() ? `<span class="tag accent">战力 ${power0} → ${powerNow()}</span>` : '',
+    canRetreat() ? '<span class="tag">历练还够，可再去闭关</span>' : '',
     // 写长了多少：原来三回出关都写「功力深到三年」，看着像一点没长（审查 G12）
     r.gongli > 0 ? `<span class="tag accent">功力深了${r.gongli >= 1 ? gongliText(r.gongli) : `${cn(Math.max(1, Math.round(r.gongli * 12)))}个月`}（如今${gongliText(S.gongli)}）</span>`
       // 功力熬到了这一重内功的顶：写明白，别让人以为白闭关了（审查 G11）
@@ -39,9 +43,9 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
     healTxt ? `<span class="tag">${healTxt}</span>` : '',
     r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : '',
     r.lodging === 'home' ? `<span class="tag">住在师门，不花钱</span>`
-      : r.lodging === 'lusu' ? `<span class="tag warn">露宿${cn(r.lusuDays)}夜，不花钱，睡不安稳，打坐参悟打八折</span>`
+      : r.lodging === 'lusu' ? `<span class="tag warn">露宿${cn(r.lusuDays)}夜，不费钱，只是风露侵人，睡不安稳，参悟慢了几分</span>`
       : !r.lusuDays ? `<span class="tag">住店 −${r.cost} 文</span>`
-      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，打坐参悟打了折</span>`
+      : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，风露侵人，参悟慢了几分</span>`
   ].filter(Boolean);
   const y = nextYue(S);
   const lines: string[] = [];
@@ -69,13 +73,14 @@ export function awayHead(r: RestReport & { hours: number }): string {
 /** 下线回来（从标题画面继续、切回这个页面）：离开的时辰算成静修，出一页邸报。正在打、正在看剧情、开着别的页时不算 */
 export function welcomeBack(): boolean {
   if (inFight() || !$('#storyLayer')?.hidden || !$('#titleLayer')?.hidden || !$('#sheetLayer')?.hidden) return false;
+  const power0 = powerNow();
   const rep = settleAway(S);
   if (!rep) { save(); return false; }
   // 约的内容下面「有约」那一行会写，这里不再重复（审查 G27）
   const stop = rep.why === 'yue' && rep.yue ? '约期到了，今日一早出关。' : rep.why === 'tielv' ? (rep.grow ? `其中${liang(rep.grow)}日修为有长进；余下的日子，${TIELV_TEXT}` : TIELV_TEXT) : undefined;
   pushFeed('出关', `静修${liang(rep.days)}日${rep.used ? `，消化历练 ${rep.used}` : ''}${rep.gongli > 0 ? `，功力深到${gongliText(S.gongli)}` : ''}。`);
   // 先拼邸报（取走这回的突破），再画页面：不然 render 先把突破弹成另一张卡
-  const html = chuguanHTML(rep, awayHead(rep), `静修${liang(rep.days)}日`, stop);
+  const html = chuguanHTML(rep, awayHead(rep), `静修${liang(rep.days)}日`, stop, power0);
   save();
   render();
   openSheet(html);

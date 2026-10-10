@@ -53,6 +53,8 @@ export async function buildData(get, now = Date.now()) {
     repo: REPO,
     ...data,
     checks,
+    // 最近关闭的 Issue 编号（看板「负责人要求」那一块判「Issue 已关」用）
+    closedIssues: closedSlim.map((x) => x.n),
     // 算数那一刻的快照（页面打开时会按当时的时间重算，用的是同一个函数）
     derived: {
       merged24: board.merged24,

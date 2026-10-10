@@ -20,6 +20,7 @@ import { SHENFEN, jobGongxian, jobPay } from '../engine/shenfen';
 import { brace, fateOpts, loseFacts, loseNote, settle, takeWounds } from '../engine/jiesuan';
 import { checkYue } from '../engine/shiguang';
 import { foeRepeats } from '../engine/lilian';
+import { canRetreat } from '../engine/jiemian';
 import { FOE_FX_TAG, FX_SAY, activePrep, alliesOf, fightKit, foeSpec, heroSpec, kanren, weaponWord, type FightKit } from '../engine/zhaoshi';
 import { woundNote } from '../engine/shang';
 import { IC } from './icons';
@@ -797,7 +798,11 @@ function updFoe(): void {
 }
 
 function updMom(): void {
-  const m = Math.round(C!.d.mom);
+  // 开打前这一条按掂斤两的结论走（Issue #546）：d.mom 的初值只看胆魄、还钳在 35～65
+  // （engine/duel.ts 的构造），不入流打三流也显示「势均力敌」，十二合败了才知道。
+  // 开打以后还看实时的势，那是这一合的攻守，不是开打前的估量。
+  const 开打前 = C!.d.round === 0 && C!.odds !== undefined;
+  const m = Math.round(开打前 ? C!.odds! * 100 : C!.d.mom);
   $('#mMe')!.textContent = `你 ${m}%`;
   $('#mOp')!.textContent = `${100 - m}% 对手`;
   $('#mSt')!.textContent = '攻守之势 · ' + (m >= 75 ? '你压制对手' : m >= 56 ? '你占上风' : m > 44 ? '势均力敌' : m > 25 ? '对手占优' : '你被压制');
@@ -918,9 +923,11 @@ function composeStory(c: Fight): string {
 /** 由结算效果自动生成奖励标签 */
 function rewardChips(effects: Effect[] | undefined, hpEnd = 0): string[] {
   const chips: string[] = [];
+  // 历练合成一条「旧 → 新」（结算已经加进 S.lilian）；够闭关一日了，提一句可去闭关
+  const lil = (effects || []).reduce((a, e) => a + (e.type === 'lilian' ? e.amount : 0), 0);
+  if (lil > 0) chips.push(`<span class="tag accent">历练 ${S.lilian - lil} → ${S.lilian}</span>${canRetreat() ? '<span class="tag">可去闭关</span>' : ''}`);
   for (const e of effects || []) {
     if (e.type === 'prof') chips.push(`<span class="tag accent">${skillById(e.skill)?.name} 熟练 +${e.amount}</span>`);
-    else if (e.type === 'lilian') chips.push(`<span class="tag accent">历练 +${e.amount}</span>`);
     else if (e.type === 'learn') chips.push(`<span class="tag accent">习得 ${skillById(e.skill)?.name}</span>`);
     // 正负分开写：原来降恶名也写成「恶名 +-2」、还用红色（审查 H18）
     else if (e.type === 'xia') chips.push(e.delta >= 0 ? `<span class="tag accent">侠义 +${e.delta}</span>` : `<span class="tag danger">侠义 −${-e.delta}</span>`);

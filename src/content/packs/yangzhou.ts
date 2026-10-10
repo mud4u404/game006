@@ -27,14 +27,14 @@ const ROOMS: RoomDef[] = [
     npcs: ['caobang', 'liu'], objs: ['bei'],
     exits: [['北', 'daming'], ['东', 'dukou'], ['南', 'cheng'], ['西', 'jinshan']],
     road: '你折回湖畔，柳丝拂过肩头……' },
-  { id: 'daming', name: '大明寺', area: '扬州 · 蜀冈', region: 'yz', t: 30, map: [50, 14],
+  { id: 'daming', name: '大明寺', area: '扬州 · 大明寺', region: 'yz', t: 30, map: [50, 14],
     desc: [
       { if: { hour: NIGHT_H }, text: '古寺掩了山门，只有大殿里一盏长明灯。蜀冈上风大，古木在黑暗里沙沙地响，禅房那头传来一两声木鱼。' },
       { text: '古寺依冈而建，晨钟初歇，香烟缭绕。平山堂前古木参天，一位白眉老僧正不疾不徐地扫着石阶上的落花。' }
     ],
     npcs: ['liaochen', 'zhike'], exits: [['南', 'hu']],
     road: '你沿着湖堤向北，拾级登上蜀冈……' },
-  { id: 'dukou', name: '运河渡口', area: '扬州 · 东关', region: 'yz', t: 15, map: [79, 50], nightQuiet: true,
+  { id: 'dukou', name: '运河渡口', area: '扬州 · 运河渡口', region: 'yz', t: 15, map: [79, 50], nightQuiet: true,
     desc: [
       // 夜里：脚夫、船夫都回去了，屠千山也回了船上
       { if: { hour: NIGHT_H, ...BOSS_HERE },
@@ -54,7 +54,7 @@ const ROOMS: RoomDef[] = [
     ],
     npcs: [{ id: 'tu', if: BOSS_HERE }, 'chuanfu', 'guanshi'], exits: [['西', 'hu']],
     road: '你穿过几条小巷，河风里带着咸腥的盐味……' },
-  { id: 'cheng', name: '东关街', area: '扬州城', region: 'yz', t: 15, map: [50, 86], nightQuiet: true,
+  { id: 'cheng', name: '东关街', area: '扬州 · 东关街', region: 'yz', t: 15, map: [50, 86], nightQuiet: true,
     desc: [
       // 夜里（packs/shishi-yangzhou.ts 的更夫、黑影只在夜里出来）
       { if: { hour: { from: 21, to: 5 }, shi: { id: 'ss_zei', at: ['qi', 'bang'] } },
@@ -70,14 +70,14 @@ const ROOMS: RoomDef[] = [
     npcs: ['yaopu', 'xiaoer'], exits: [['北', 'hu']],
     road: '你穿过高高的城门洞，市声渐渐近了……' },
   // 负责人 10-09「场景不许像派出所审犯人」：房牙子、布庄掌柜、跑腿的阿七从东关街挪进东圈门
-  { id: 'yz_dongquan', name: '东圈门', area: '扬州城 · 东关街北', region: 'yz', t: 5, map: [70, 92], nightQuiet: true,
+  { id: 'yz_dongquan', name: '东圈门', area: '扬州 · 东关街', region: 'yz', t: 5, map: [70, 92], nightQuiet: true,
     desc: [
       { if: { hour: NIGHT_H }, text: '圈门洞里黑魆魆的，两边的高墙挡住了月光，深院里偶尔一声狗叫。巷子尽头挂着一盏灯笼，照着谁家门上的一对铜环。' },
       { text: '东关街往北一拐，穿过一道砖砌的老圈门，便是东圈门。巷子窄窄的，两边高墙深院，墙头探出几枝枇杷、几丛修竹。巷口一家布庄半开着门板，过往的多是住在里头的人家。' }
     ],
     npcs: [], exits: [['街', 'cheng', '巷']],
     road: '你从东关街往北一拐，钻进了老圈门的门洞……' },
-  { id: 'jinshan', name: '小金山', area: '瘦西湖 · 湖心', region: 'yz', t: 10, map: [20, 50], nightQuiet: true,
+  { id: 'jinshan', name: '小金山', area: '扬州 · 瘦西湖', region: 'yz', t: 10, map: [20, 50], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } }, text: '湖心岛上黑沉沉的，风亭里没有灯。石桌上那局残棋还摆着，棋子叫夜露打湿了，泛着微光。四下里只有湖水拍岸的声音。' },
       { text: '湖心小岛上亭台错落，风亭立在山顶，凭栏可望尽一湖烟雨。亭中石桌上摆着一局残棋，一个老人对着棋盘出神。' }
@@ -167,8 +167,15 @@ const NPCS: NpcDef[] = [
     look: '须眉皆白，扫地时步子不疾不徐，落叶却都自己往簸箕里飘。',
     gift: '了尘大师合十一笑：「阿弥陀佛，拈花一笑，施主有心了。」',
     likes: ['flower'],
-    verbs: ['交谈', '观察', '请教', '赠礼'],
+    verbs: ['交谈', '观察', '打听', '请教', '赠礼'],
     actions: {
+      打听: [
+        { if: { shi: { id: 'kp_xun', at: ['fang', 'feng'] } },
+          text: '「卫家的公子在城里寻人，白天常在瘦西湖一带访，夜里歇在广陵客栈。要找的那个人，运河渡口的船家兴许见过。」' },
+        { if: { quest: { id: 'side_cangjing', atLeast: 1, below: 3 } },
+          text: '「藏经阁丢了经卷，守阁的是法空，常去转的是书贩张四。要寻眉目，先看阁里那几样东西。」' },
+        { text: '「寺里的日子简单：晨钟、早课、扫地、晚钟。施主要听世间的消息，山下的茶馆里多。」', do: [{ type: 'news' }] }
+      ],
       交谈: [
         // 新开局：先白给一层（江伯是他旧识，那夜的人冲着旧账来的），再把屠千山说成一条线，不是价钱
         { if: { quest: { id: 'main1', is: 0 }, item: { id: 'jade' }, flag: 'kp_xin', any: [{ item: { id: 'kp_mujian' } }] },
@@ -196,6 +203,15 @@ const NPCS: NpcDef[] = [
         { if: { quest: { id: 'main1', is: 1 }, realm: { skill: 'hanjiang', below: 3 } },
           text: '了尘大师伸出两指，在你腕上轻轻一搭，摇了摇头：「施主脚下虚浮，剑上也没有火候。屠千山那口鬼头刀，一刀能劈开青石，你此刻单枪匹马去，是送命。」他拾起扫帚，慢慢道：「江湖上的本事，不全在剑上。渡口的船夫天天看他卸货，漕帮的人恨他入骨，湖边那位撑伞的书生，剑也不在你之下。看不透他，便去问看得透的人；一个人打不过，便去找肯帮你的人。」' },
         { if: { quest: { id: 'main1', is: 1 } }, text: '了尘大师打量你几眼，点了点头：「剑上有火候了，可以去试一试。屠千山刀法刚猛，莫与他硬拼。他刀势一老，便是你出手的时候。」' },
+        // 主线之后按身上的伤、交情、时辰、做过的事换话（试玩：交谈不能每回都是同一句）
+        { if: { wounded: true },
+          text: '了尘大师抬眼在你身上停了停，放下扫帚：「施主走路，左脚比右脚重了几分。这伤别拿药酒糊弄过去，后头禅房有口井，水凉，先浸一浸手腕。」' },
+        { if: { rel: { npc: 'liaochen', is: ['相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'] } },
+          text: '了尘大师把簸箕里的落叶倒进墙根，朝你招招手：「来得巧，新到的茶，老衲一个人喝不完。」他斟了半盏递来，又道：「渡口的事早已了了，施主眉头还锁着，可是在想湖畔那块石碑？」' },
+        { if: { hour: { from: 19, to: 5 } },
+          text: '了尘大师提着一盏灯，立在廊下：「夜深了，扬州城的灯一盏一盏地灭，山下的船还在走。」他把灯往你这边偏了偏，又道：「台阶潮，施主脚下留神。」' },
+        { if: { flag: 'bei' },
+          text: '了尘大师扶着扫帚，望了望山下的湖：「石碑上的字，施主既已看见，老衲便不多嘴了。」他慢慢扫开阶前一片落叶，又道：「有些路，得自己一步一步走到跟前，旁人替不了脚。」' },
         { text: '「阿弥陀佛。施主仗义出手，漕帮兄弟会记住的。至于湖畔那块石碑……日后再说吧。」' }
       ],
       请教: [

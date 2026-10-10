@@ -1,79 +1,97 @@
-import { S, fullName } from '../../core/state';
-import { dayNo, minLabel } from '../../core/time';
+import { S } from '../../core/state';
+import { absMin, dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
-import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
+import { npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
 import { askableTargets } from '../../engine/chuanwen';
 import { IC } from '../icons';
-import { FEED_TONE, mb } from '../widgets';
-import { tierNow } from '../../engine/ren';
-import { leadsNear, questNav } from '../../engine/daohang';
+import { FEED_TONE } from '../widgets';
+import { questNav } from '../../engine/daohang';
+import { jueseKa, yaoJin, type YaoJin } from '../../engine/jiemian';
 import { kanren } from '../../engine/zhaoshi';
 import { recordDiao } from '../../engine/zhanli';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef, Verb } from '../../content/types';
 import { cn, fmt } from '../../core/util';
 import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine/shiguang';
-import { shenfenOf } from '../../engine/shenfen';
 import { verbChufa } from '../../engine/chufa';
 import { refuseOf, wantOf } from '../../engine/shijie';
 import { test, textVars } from '../../engine/dsl';
+import { greetNow } from '../../engine/yingmian';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
 
 export function viewJianghu(): string {
   const all = roomNpcs(S.loc).concat(roomObjs(S.loc));
-  const exits = openExits(S.loc);
   if (!S.sel || !all.includes(S.sel)) S.sel = all[0] || null;
   // 刚说完话人就走了（世事推着他离场、跳了河、回去报信）：话留着，不然玩家只看到动态里一行小字（审查 C03）
-  const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id)
+  // 只留一小会儿：隔了一阵（歇脚、赶路、过夜）就收起，不让昨夜的话挂到第二天
+  const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id) && S.reply.at !== undefined && absMin(S) - S.reply.at <= 15
     ? `<section class="card here-card"><div class="detail"><div class="d-h"><b>${npcName(S.reply.id)}</b><small>${npc(S.reply.id)!.obj ? '' : '说完就走了'}</small></div><div class="reply">${S.reply.text}</div></div></section>` : '';
-  // 横幅只挂记挂着、还没了结的心事（docs/huojianghu.md 第三节第四条）；要等、卡住的写一句缘故（engine/daohang.ts）
+  // 眼下要紧：永远只有一件，写成动宾句；点了先赶路，到了把人和动作高亮（engine/jiemian.ts）
   const nav = S.track ? questNav(S.track) : null;
   const q = nav && (nav.state === '能做' || nav.state === '要等' || nav.state === '卡住') ? nav : null;
+  const yj = yaoJin();
   const feed = S.feed.slice(0, 2).map(e =>
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
-  // 横幅标签按任务种类：序章、主线（main 开头）、其余都是支线
-  const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
-  // 眼下去不成的缘故另起一行，写成心里话（engine/daohang.ts：不剧透、不讲解）
-  const why = q && q.state !== '能做' ? `<small class="qs">${q.why}</small>` : '';
-  const dist = q?.to && q.state === '能做' ? `<span class="qd">${q.dist === 0 ? '就在此处' : '约' + minLabel(q.dist)}</span>` : '';
-  const quest = !q ? '' : q.to
-    ? `<button class="card quest" data-act="quest"><span class="tag info">${kind}</span><span class="qt">${q.title}${why}</span>${dist}${IC.chev}</button>`
-    : `<button class="card quest" data-act="questbook"><span class="tag accent">${kind}</span><span class="qt">${q.title}${why}</span></button>`;
-  const questBar = `<div class="quest-row">${quest}<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button></div>`;
   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
   const y = nextYue(S);
   // 点了就赶去约定的地方
   const yueBar = !y || y.due - dayNo(S) > 3 ? '' : S.loc === y.at
     ? `<div class="card quest"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">就在此处</span></div>`
     : `<button class="card quest" data-act="travel:${y.at}"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">约${minLabel(travelMin(pathMin(S.loc, y.at)))}</span>${IC.chev}</button>`;
-  const who = S.chapter === 0 ? '渔家少年' : S.title ? '「' + S.title + '」' : shenfenOf(S).name + ' · ' + tierNow(S).name;
   return `
-  <section class="card status">
-    <span class="ava t-accent">沈</span>
-    <div class="who"><b>${fullName()}</b><small>${who}</small></div>
-    <div class="minibars">${mb('气血', S.hp, S.hpMax, 'hp')}${mb('内力', S.mp, S.mpMax, 'mp')}</div>
-  </section>
-  ${questBar}
+  ${jueseHTML()}
+  ${yaoJinHTML(yj)}
   ${yueBar}
-  ${leadsCard()}
+  ${greetCard()}
   <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
   ${gone}
   ${all.length ? `<section class="card here-card">
     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
-    <div class="avas">${all.map(avaBtn).join('')}</div>
-    ${S.sel ? detail(S.sel) : ''}
+    <div class="avas">${all.map(id => avaBtn(id, yj.hot)).join('')}</div>
+    ${S.sel ? detail(S.sel, yj.hot) : ''}
   </section>` : ''}
-  <section class="go"><h2>去处</h2><div class="exits">${exits.map(([d, id]) => exitBtn(d, id, exits.length === 1, q?.to)).join('')}</div></section>
+  ${goHTML(q?.to)}
   ${xiejiaoHTML()}`;
 }
 
-/** 近处有事：眼下接得到的差事，派差的人在哪、约多久（差事最多三行，另可添一条零工；点了先看耗时再走）。不推你去做，只是告诉你哪里有事 */
-function leadsCard(): string {
+/** 迎面（engine/yingmian.ts）：场景里有人先开口，一句话加一个话头，点了就对他做对应的动作 */
+function greetCard(): string {
   if (S.chapter === 0) return '';
-  const ls = leadsNear();
-  if (!ls.length) return '';
-  return `<section class="card leads"><div class="sec-h"><h2>近处有事</h2></div>${ls.map(l => `<button class="lead" data-act="travelAsk:${l.to}"><span class="lt">${l.text}</span><span class="ld">${l.toName} · 约${minLabel(l.min)}</span>${IC.chev}</button>`).join('')}</section>`;
+  const g = greetNow();
+  if (!g) return '';
+  return `<section class="card greet"><p class="gt">${fmt(g.text, textVars())}</p><button class="act greet-btn" data-act="greet">${g.topic}</button></section>`;
+}
+
+/** 角色卡：名字、称号、战力（变了写「旧 → 新」）、一句武学评价、气血内力银两（engine/jiemian.ts） */
+function jueseHTML(): string {
+  const k = jueseKa();
+  return `<section class="card juese" aria-label="角色卡">
+    <div class="jh"><span class="ava t-accent">沈</span>
+      <div class="who"><b>${k.name}</b><small>${k.title}</small></div>
+      <div class="jp"><small>战力</small><b>${k.power}</b>${k.from !== undefined ? `<i class="jup" aria-label="战力变了">${k.from} → ${k.power}</i>` : ''}</div></div>
+    <p class="jy">${k.pingyu}</p>
+    <p class="jl">${k.line}</p>
+  </section>`;
+}
+
+/** 眼下要紧：一件事，动宾句；主线卡住的写缘故；往下最多两条「也可以」 */
+function yaoJinHTML(yj: YaoJin): string {
+  const other = yj.to ? `travel:${yj.to}` : yj.tab ? `tab:${yj.tab}` : '';
+  const act = yj.main || other;
+  const sub = yj.here ? '就在此处' : yj.to ? `约${minLabel(travelMin(pathMin(S.loc, yj.to)))}` : '';
+  const body = `<span class="tag ${yj.main ? 'info' : 'accent'}">${yj.tag}</span><span class="qt"><small class="qk">眼下要紧</small>${yj.text}${yj.why ? `<small class="qs">${yj.why}</small>` : ''}</span>${sub ? `<span class="qd">${sub}</span>` : ''}${act ? IC.chev : ''}`;
+  const main = act ? `<button class="card quest yj" data-act="${yj.main ? 'quest' : other}">${body}</button>` : `<div class="card quest yj">${body}</div>`;
+  const book = `<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button>`;
+  const also = yj.also.length ? `<div class="also"><small>也可以</small>${yj.also.map(a => `<button class="lead" data-act="travel:${a.to}"><span class="lt">${a.text}</span><span class="ld">约${minLabel(a.min)}</span>${IC.chev}</button>`).join('')}</div>` : '';
+  return `<div class="quest-row">${main}${book}</div>${also}`;
+}
+
+/** 去处缩成一行：主线要去的那一处，加「打开地图」；其余去处都到地图上点 */
+function goHTML(questTo?: string): string {
+  const to = questTo && questTo !== S.loc ? questTo : '';
+  const target = to ? `<button class="exit solo" data-act="travel:${to}"><span class="dir">往</span><span class="en"><b>${room(to).name}</b><small>${minLabel(travelMin(pathMin(S.loc, to)))}</small></span><span class="tag info">主线</span></button>` : '';
+  return `<section class="go"><h2>去处</h2><div class="goline">${target}<button class="exit${target ? '' : ' solo'} mapbtn" data-act="tab:ditu"><span class="dir">图</span><span class="en"><b>打开地图</b><small>其余去处在地图上点</small></span></button></div></section>`;
 }
 
 /** 歇脚：等到天亮、晌午、傍晚、入夜（人有作息，有的人、有的事只在夜里）。序章里不歇 */
@@ -86,16 +104,16 @@ function xiejiaoHTML(): string {
     `<button class="act" data-act="${late(h) ? 'xiejiaoAsk' : 'xiejiao'}:${h}">到${h * 60 <= S.min ? '明日' : ''}${l}</button>`).join('')}</div>${XIEJIAO.some(([h]) => late(h)) ? `<p class="muted">${warn}歇过半夜就误了。</p>` : ''}</section>`;
 }
 
-function avaBtn(id: string): string {
+function avaBtn(id: string, hot?: YaoJin['hot']): string {
   const n = npc(id);
   if (!n) return '';
   const inner = n.obj
     ? `<span class="ava sq t-gray">${IC[n.icon || 'stele']}</span>`
     : `<span class="ava t-${n.tone || 'gray'}">${n.ini || n.name[0]}${n.count ? `<span class="badge">${n.count}</span>` : ''}</span>`;
-  return `<button class="avab" data-act="sel:${id}" aria-pressed="${S.sel === id}">${inner}<span class="nm">${npcName(id)}</span></button>`;
+  return `<button class="avab${hot?.npc === id ? ' hot' : ''}" data-act="sel:${id}" aria-pressed="${S.sel === id}">${inner}<span class="nm">${npcName(id)}</span></button>`;
 }
 
-function detail(id: string): string {
+function detail(id: string, hot?: YaoJin['hot']): string {
   const n = npc(id);
   if (!n) return '';
   const rel = n.obj ? '物品' : (S.rel[id] || '素不相识');
@@ -115,7 +133,7 @@ function detail(id: string): string {
   const want = !n.obj && ['相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'].includes(rel) ? wantOf(id) : undefined;
   const wanting = want ? `<p class="muted">他眼下想${want.text}。</p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
-    ${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}${n.obj ? '' : askBtn()}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
+${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id, hot?.npc === id ? hot.verb : undefined)).join('')}${n.obj ? '' : askBtn()}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
 }
 
 /** 打听按钮旁加一个「问人」：弹出你认得、又有常去处的人，问眼前这人知不知道他们的去处 */
@@ -124,7 +142,7 @@ function askBtn(): string {
 }
 
 /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
-const verbBtn = (id: string) => (v: Verb): string => {
+const verbBtn = (id: string, hotVerb?: Verb) => (v: Verb): string => {
   const price = verbPrice(id, v);
   const p = verbPlan(id, v);
   const poor = !p.ok;
@@ -133,12 +151,8 @@ const verbBtn = (id: string) => (v: Verb): string => {
   const specificWhy = poor && p.why && (p.why === refuseOf(id, v) || p.why === '他手里没有');
   const sub = specificWhy ? `${p.why}${price !== null ? ` · ${cn(price)}文` : ''}`
     : price !== null ? `${poor && S.silver < price ? '囊中不足，要' : ''}${cn(price)}文` : poor ? p.why : gain;
-  return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;
+  return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}${hotVerb === v ? ' hot' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;
 };
-
-function exitBtn(d: string, id: string, solo: boolean, questTo?: string): string {
-  return `<button class="exit${solo ? ' solo' : ''}" data-act="travel:${id}"><span class="dir">${d}</span><span class="en"><b>${room(id).name}</b><small>${minLabel(travelMin(hopMin(S.loc, id)))}</small></span>${questTo === id ? '<span class="tag info">主线</span>' : ''}</button>`;
-}
 
 /** 根基之眼的一行：根基名做标签，后面是看出来的东西（engine/yan.ts） */
 export const eyeLine = (e: EyeDef): string => `<p class="eye"><span class="tag eye-${e.attr}">${e.attr}</span><span>${fmt(e.text, textVars())}</span></p>`;
