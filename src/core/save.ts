@@ -162,6 +162,8 @@ function repair(s: GameState): GameState {
   if (!rec.w || typeof rec.w !== 'object') rec.w = initWorld(worldSeed(s.name, s.real.start), dayNo(s));
   else fillWorld(s.w, worldSeed(s.name, s.real.start), dayNo(s));
   for (const k of Object.keys(def)) if (rec[k] === undefined) rec[k] = def[k];
+  // 第五版内增字段；不升版本，也不改事件里的旧内容 id
+  s.log = Array.isArray(s.log) ? s.log.slice(-300) : [];
   // 装备（纸娃娃，docs/zhuangbei.md 第三节）：第四版的旧存档只有兵器，照样读得出来。
   // 只留认得的位置、放得进这个位置、行囊里还有的；手里的兵器已经不在行囊里了，就空着手。先于算气血上限，装备也算在里头
   const worn = (rec.gear && typeof rec.gear === 'object' ? rec.gear : {}) as Record<string, unknown>;

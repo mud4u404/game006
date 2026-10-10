@@ -4,11 +4,12 @@
  * 对手的台词、预兆、帮手的话、胜负以后的去路和结算，都来自 src/content/packs/ 下各内容包的 foes 字段。
  */
 import { S, save } from '../core/state';
-import { dateStr, shichen } from '../core/time';
+import { absMin, dateStr, nowMs, shichen } from '../core/time';
 import { $, H, M, MO, buzz, cn, fmt, liang, pick, reduceMotion } from '../core/util';
 import { REALMS, foeById, itemById, jobById, room, skillById } from '../content';
 import type { AfterDef, AfterOpt, Effect, FoeDef, PrepDef, SkillDef, TellDef } from '../content/types';
-import { run, textVars } from '../engine/dsl';
+import { textVars } from '../engine/dsl';
+import { act as settleAction, fightAfterReq, fightCheckpoint } from '../engine/xingdong';
 import { gainProf } from '../engine/growth';
 import { Duel, JCY_MAX, ZONE_NAME, type DuelRes, type Ev, type Opt, type RespKey, type Wounds } from '../engine/duel';
 import { RESP_ACT, cheng, chengN, judgeText } from '../engine/formulas';
@@ -25,7 +26,7 @@ import { IC } from './icons';
 import { mb } from './widgets';
 import { growthHTML } from './growth';
 import { pickFresh } from './fresh';
-import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, tooSoon } from './shell';
+import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, toast, tooSoon } from './shell';
 
 const ROUND_MS = 1500;
 const PARTS = ['左肩', '右肩', '左臂', '右臂', '胸口', '右肋', '左肋', '小腹', '左腿', '右腿'];
@@ -60,6 +61,8 @@ const NOTE: Record<RespKey, string> = { block: '得手反震', dodge: '得手露
 interface PromptUI { t: TellDef; dur: number; end: number; rem?: number; untimed?: boolean }
 interface Fight {
   f: FoeDef; d: Duel; kit: FightKit;
+  /** 这场仗的开打时刻：战后接续只结算一次 */
+  started: string;
   /** 本场用过的战报句子（ui/fresh.ts） */
   used: Set<string>;
   /** 生效的备战：知彼、帮手（engine/zhaoshi.ts 的 activePrep） */
@@ -102,7 +105,7 @@ export function startFight(fid: string, lead?: string): void {
   brace(f);
   const d = new Duel(heroSpec(S, kit, f), foeSpec(f, prep), { rng: Math.random, allies: alliesOf(prep) });
   C = {
-    f, d, kit, used: new Set(), prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
+    f, d, kit, started: `${absMin(S)}:${nowMs()}`, used: new Set(), prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
     chargeT: 0, ui: null, openPart: null, busy: false, paused: false, lock: 0, big: [], T: {}, odds,
     learn: 0.5 ** foeRepeats(S, f.id)
   };
@@ -954,7 +957,9 @@ function showResult(): void {
   if (!r) { closeFight(); return; }
   if (r.silent) {
     closeFight();
-    afterOutcome(run(r.then));
+    const result = settleAction(fightAfterReq(c.f.id, c.started, r.then), undefined, fightCheckpoint);
+    if (!result.ok) toast(result.why ?? '眼下还办不了。');
+    afterOutcome(result.out);
     return;
   }
   let story = pk?.story ?? (r.story || '');
@@ -1001,11 +1006,16 @@ registerHandlers({
   fResult: () => {
     if (tooSoon()) return;
     const then = C?.then;
+    const request = C && fightAfterReq(C.f.id, C.started, then);
     closeSheet();
     closeFight();
     // 打完一架时辰走了一刻，过了约期的算失约（engine/shiguang.ts）
     checkYue(S);
-    if (then) afterOutcome(run(then));
+    if (then && request) {
+      const result = settleAction(request, undefined, fightCheckpoint);
+      if (!result.ok) toast(result.why ?? '眼下还办不了。');
+      afterOutcome(result.out);
+    }
   }
 });
 
