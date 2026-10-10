@@ -98,7 +98,7 @@ function fight(fid: string, depth: number): void {
   const f = foeById(fid);
   if (!f) { err(`对手「${fid}」不存在`); return; }
   // 开打前掂斤两（engine/shang.ts）：打赢了比自己弱的，落的伤封顶。机器玩家少掂几回，省时间
-  const odds = f.spar || f.script ? undefined : kanren(S, f, 8).p;
+  const odds = f.spar || f.script ? undefined : kanren(S, f, 8, true).p;
   brace(f);
   const prep = activePrep(f);
   const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, prep), { rng, allies: alliesOf(prep) });
@@ -415,6 +415,8 @@ function play(r: Run): void {
     run([{ type: 'shi', id: r.shi, to: shiById(r.shi)!.first }]);
     // 卫衡寻褚七的「撑船夜渡」要渔家的本领（序章里选过认得浅滩）：跳过序章的人没有选过，盯世事的局里每三局给一回，走一走这条路
     if (r.shi === 'kp_xun' && r.seed % 3 === 0) S.flags.kp_qiantan = true;
+    // 对卫衡递话（告诉、指错路）要先在夜里的渡口见过褚七：机器玩家乱走很少碰巧夜里去渡口，另三分之一的局当作见过，走一走递话这条路
+    if (r.shi === 'kp_xun' && r.seed % 3 === 1) S.flags.kp_chu_met = true;
   }
   // 盯一件心事的局，跳过序章开局的人是「已经办过几件侠义事」的：有的心事要名声够了才肯开口
   // （华山的引荐信，申伯那里侠义到二十五才写；这是有意的代价，不是机器玩家该靠乱走撞出来的）

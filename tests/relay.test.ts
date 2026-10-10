@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { branchIssue, deps, pickWork, type GhItem } from '../scripts/relay.mjs';
+import { branchIssue, deps, describe as describeWork, pickWork, type GhItem } from '../scripts/relay.mjs';
 
 const issue = (number: number, labels: string[], body = ''): GhItem => ({ number, title: `任务 ${number}`, body, labels: labels.map(name => ({ name })) });
 const pr = (number: number, title: string, labels: string[] = []): GhItem => ({ number, title, labels: labels.map(name => ({ name })), pull_request: {} });
@@ -62,5 +62,11 @@ describe('接力：挑下一个任务', () => {
     expect(pickWork([pr(40, '[#20] 师门差事', ['要改'])], [], 'zcode')).toBeNull();
     expect(pickWork([issue(21, ['内容', '给:zcode']), pr(40, '[#20] 师门差事', ['给:zcode'])], [], 'zcode')?.number).toBe(21);
     expect(pickWork([pr(40, '[#20] 师门差事', ['要改', '给:zcode', '暂缓'])], [], 'zcode')).toBeNull();
+  });
+
+  it('describe：标题里已有【】就不再重复加类型', () => {
+    expect(describeWork({ ...issue(21, ['功能']), title: '【功能】行动协议' })).toBe('有新任务 #21【功能】行动协议');
+    expect(describeWork({ ...issue(21, ['内容', '适合入门']), title: '丐帮的老乞丐' })).toBe('有新任务 #21【内容】丐帮的老乞丐');
+    expect(describeWork(pr(40, '[#20] 师门差事', ['要改']))).toContain('有退回要改的 PR #40：[#20] 师门差事');
   });
 });

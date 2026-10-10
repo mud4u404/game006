@@ -6,6 +6,7 @@ import { autoSlot } from './wuxue';
 import { canLearn, realmCap, rootHint, learnCost, gongxianCost } from './shicheng';
 import { profMul } from './gengu';
 import { syncBody } from './ren';
+import { tupoAdd } from './tupo';
 
 /** 按境界上限把攒够的熟练度换成突破，返回突破说明 */
 function settle(id: SkillId): string[] {
@@ -18,6 +19,7 @@ function settle(id: SkillId): string[] {
     s.p -= REALM_NEED[s.r];
     s.r++;
     out.push(`「${sk.name}」突破至「${REALMS[s.r]}」`);
+    tupoAdd('zhong', out[out.length - 1]);
   }
   // 武功深了一重，后天根基跟着长，气血、内力由「人」重新算（engine/ren.ts）
   if (out.length) {
@@ -41,7 +43,8 @@ export function gainProf(id: SkillId, n: number): string[] {
   const out = settle(id);
   // 内功突破了，先前卡在瓶颈的外功跟着突破
   if (sk.category === '内功' && out.length) for (const other of Object.keys(S.skills)) if (other !== id) out.push(...settle(other));
-  out.forEach(x => { pushFeed('突破', x + '！'); emit('toast', x + '！'); });
+  // 突破不再弹一行转瞬即逝的提示：攒进 engine/tupo.ts，界面弹一张「突破」卡，闭关的邸报排在最上面
+  out.forEach(x => pushFeed('突破', x + '！'));
   const need = REALM_NEED[s.r];
   if (s.r < REALMS.length - 1 && s.p >= need && was < need) pushFeed('江湖', `「${sk.name}」已到瓶颈：内功根基不够，先把内功练上去，才突破得了。`);
   return out;
@@ -72,7 +75,7 @@ export function learnSkill(id: SkillId, realm = 0, prof = 0, cost?: number): str
   const msg = `习得「${sk.name}」`;
   const paid = [price ? `历练 ${price}` : '', gx ? `${sk.school}贡献 ${gx}` : ''].filter(Boolean).join('、');
   pushFeed('突破', msg + (paid ? `！拿${paid}换的。` : '！'));
-  emit('toast', msg + (paid ? `！${paid.replace(/ /g, ' −')}` : '！'));
+  tupoAdd('xue', msg + (paid ? `，拿${paid}换的` : ''));
   // 学到本门内功，内功位上却还是别的内功：记一条见闻，换不换由玩家定
   const hint = rootHint(S, sk);
   if (hint) pushFeed('江湖', hint);
