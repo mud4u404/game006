@@ -56,10 +56,17 @@ const NPCS: NpcDef[] = [
   {
     id: 'fuya_zhou', name: '周捕头', ini: '周', tone: 'blue', brief: '翻着卷宗',
     look: '四十出头，络腮胡刮得发青，两眼布满血丝。皂衣上打了个补丁，腰牌上刻着一个「周」字，漆快掉光了。他手背上有一道旧刀伤，从虎口一直划到腕子上，卷宗里夹着一张画像，画着个短打汉子，左手缺了个小指。',
-    verbs: ['交谈', '观察', '揭榜', { verb: '交差', if: { quest: { id: 'side_caoshangfei', atLeast: 2 } } },
+    verbs: ['交谈', '观察', '打听', '揭榜', { verb: '交差', if: { quest: { id: 'side_caoshangfei', atLeast: 2 } } },
       // 码头空出来以后（packs/shishi-yangzhou.ts）：报官是插手的一条路
       { verb: '报官', if: { shi: { id: 'ss_matou', at: ['qi', 'duizhi', 'huobing'] } } }],
     actions: {
+      打听: [
+        { if: { noSect: true, notFlag: 'smhs_xin_given' },
+          text: '「求引荐信？信得我点头才写得。廊下抄案卷的申伯，笔归他出——先替我办成一件案子，他才好动笔。」' },
+        { if: { quest: { id: 'side_caoshangfei', atLeast: 1 } },
+          text: '「茱萸湾那桩，账房还押在牢里，另一个主儿在水上。要问案，去茱萸湾找渔家；要提审，牢头那儿有钥匙。」' },
+        { text: '「我这里只有案卷和榜。要打听江湖上的消息，街上茶馆里坐半天，比衙门快。」' }
+      ],
       报官: [
         { text: '你把渡口的事说了。周捕头听完，把卷宗一合：「漕帮自家的事，衙门向来不管。可要是见了血，又夹着私盐……」他叫来两个衙役，「封了渡口，搭个税棚。谁的码头？官府的码头。」他看了你一眼，「这事是你报的，漕帮那头，你自己小心。」',
           do: [{ type: 'shi', id: 'ss_matou', to: 'guanfu' },
@@ -150,8 +157,15 @@ const NPCS: NpcDef[] = [
   {
     id: 'fuya_yayi', name: '衙役', ini: '衙', tone: 'gray', brief: '打着哈欠', night: true,
     look: '皂衣歪戴，腰牌上的漆掉了一半，一看就是混日子的。水火棍靠在墙根下，棍头沾着半片落叶，腰间挂着个酒葫芦。',
-    verbs: ['交谈', '观察', '打赏'],
+    verbs: ['交谈', '观察', '打赏', '打听'],
     actions: {
+      打听: [
+        { if: { any: [{ job: 'xsb_xunren' }, { job: 'xsb_xunwu' }, { job: 'xsb_xiong' }, { job: 'xsb_jiaofei' }, { job: 'xs_hezei' }] },
+          text: '衙役拿水火棍往照壁那头一指：「你揭的那张榜，登记、领赏都认书办老爷那本册子。他天一亮就在照壁，掌灯才收摊。」' },
+        { if: { hour: { from: 6, to: 18 } },
+          text: '「手头紧寻活路？码头扛包找常把头，书摊抄写找席先生，后厨帮厨找葛师傅；夜里替更，就找街上打梆子的更夫。」' },
+        { text: '「府衙门口的事，白天问书办，夜里问巡更的。旁的，小的也说不上来。」' }
+      ],
       交谈: [
         { if: { flag: 'boss' }, text: '衙役一见是你，连忙起身抱拳：「少侠恕罪，小的有眼无珠！」' },
         { text: '「有什么事找周捕头？他在前堂忙着呢，有事等着。」衙役朝条案那边努努嘴，「揭悬赏的，找书办登记。」' }

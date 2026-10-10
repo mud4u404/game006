@@ -407,12 +407,19 @@ const NPCS: NpcDef[] = [
   {
     id: 'bs2_han', name: '韩什长', ini: '韩', tone: 'red', brief: '在帐前操练新兵', at: { room: 'yz_mubing' },
     look: '四十来岁，半边脸上一大块烧伤的疤，一只耳朵没了。站着像一杆枪，脚边立着一根去了枪头的白蜡杆。',
-    verbs: ['交谈', '观察',
+    verbs: ['交谈', '观察', '打听',
       { verb: '投军', if: { notFlag: 'bs2_jw_in' } },
       { verb: '请教', if: { sect: JW } },
       { verb: '考校', if: { sect: JW, notFlag: 'bs2_jw_wai' } },
       { verb: '讨差事', if: { sect: JW } }],
     actions: {
+      打听: [
+        { if: { shi: { id: 'lsm_xiong', at: ['zaitao', 'zuoan'] } },
+          text: '「逃兵熊大，改名换姓在镇江打铁巷抡锤。那家铁铺一打听就找得到，他右臂上刺着『忠勇』二字。」' },
+        { if: { any: [{ job: 'smcs_jw_xun' }, { job: 'smcs_jw_liang' }] },
+          text: '「巡夜的差事，交令找官道驿亭的哨兵；押粮的，找瓜洲码头的粮官。按令行事，别误了时辰。」' },
+        { text: '「当兵的只管操练、巡营。要问江湖上的事，码头茶馆里坐半天，比问我强。」' }
+      ],
       交谈: [
         // 海捕文书 · 逃兵熊大（packs/liushanmen.ts）：识破他的一条路，也是一桩两难
         { if: { shi: { id: 'lsm_xiong', at: ['zaitao', 'zuoan'] }, notFlag: 'lsm_xiong_shipo' },

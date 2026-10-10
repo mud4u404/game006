@@ -171,9 +171,14 @@ const NPCS: NpcDef[] = [
   {
     id: 'smwd_saochen', name: '扫尘', ini: '尘', tone: 'amber', brief: '扫着落叶',
     look: '十二三岁的小道童，头发用一根木簪别着，别得歪歪的。扫帚比他高半头，扫两下就要停下来比一比谁高。',
-    verbs: ['交谈', '观察',
+    verbs: ['交谈', '观察', '打听',
       { verb: '站桩', if: { flag: 'smwd_asked', notFlag: 'smwd_zhuang', noSect: true } }],
     actions: {
+      打听: [
+        { if: { flag: 'smwd_asked', notFlag: 'smwd_zhuang' },
+          text: '「要拜师，先过考校：想动手，找邢师兄接三十招；不想动手，就在我这儿站桩。观主在廊下看着呢。」' },
+        { text: '「观里的事，问观主，问邢师兄，都比问我强。我只会扫地和数树枝。」' }
+      ],
       交谈: [
         { if: { flag: 'smwd_zhuang' },
           text: '扫尘把扫帚一扔，凑过来捏你的腿：「硬了没有？站过桩的腿，头三天都是硬的。我头一回站，哭了一下午——别告诉邢师兄。」' },
