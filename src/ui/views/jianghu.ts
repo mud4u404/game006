@@ -109,7 +109,7 @@ function detail(id: string): string {
   const chufa = verbChufa(id);
   const look = foe ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kanren(S, foe).say}</b></p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
-    <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}${askBtn()}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
+    <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}${n.obj ? '' : askBtn()}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
 }
 
 /** 打听按钮旁加一个「问人」：弹出你认得、又有常去处的人，问眼前这人知不知道他们的去处 */

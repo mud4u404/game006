@@ -11,7 +11,8 @@ import { NPCS } from '../src/content';
 import { test } from '../src/engine/dsl';
 import { S, skipToYangzhou } from '../src/core/state';
 import { worldOf } from '../src/engine/shijie';
-import { askWhere, askableTargets, canTell, whereaboutsOf } from '../src/engine/chuanwen';
+import { roomNpcs } from '../src/engine/world';
+import { askWhere, askableTargets, canTell, whereaboutsOf, lifeOf, roomsOf } from '../src/engine/chuanwen';
 import type { NpcAt } from '../src/content/types';
 
 /** 临时白名单：测出来确有过重叠、且现在不该改内容的人物 id。回报里要列出 */
@@ -60,61 +61,110 @@ describe('作息不重叠', () => {
 });
 
 describe('打听去处', () => {
-  beforeAll(() => skipToYangzhou());
+  beforeAll(() => { skipToYangzhou(); S.min = 12 * 60; }); // 固定时钟，房间在场人物确定
 
-  const withAt = NPCS.filter(n => n.at);
-  const A = withAt[0];
-  const B = withAt.find(n => n.id !== A.id)!;
+  const withAt = NPCS.filter(n => n.at && !n.obj);
 
-  it('有作息、且玩家认识的人才会进「问人」的名单', () => {
-    const before = askableTargets();
-    expect(before).not.toContain(A.id);
-    S.rel[A.id] = '点头之交';
-    expect(askableTargets()).toContain(A.id);
+  // 一对：势力不同、常待处不相交、且此刻不同室 —— 应「不知道」
+  function findStranger(): [typeof withAt[number], typeof withAt[number]] {
+    for (const a of withAt) for (const b of withAt) {
+      if (a.id === b.id) continue;
+      const fa = lifeOf(a.id)?.faction, fb = lifeOf(b.id)?.faction;
+      if (fa && fb && fa !== fb) {
+        const ra = new Set(roomsOf(a.id)), rb = new Set(roomsOf(b.id));
+        if (![...ra].some(r => rb.has(r)) && !roomNpcs(S.loc).includes(b.id)) return [a, b];
+      }
+    }
+    throw new Error('找不到势力不同、常待处不相交的两个有作息人物');
+  }
+  // 一对：势力相同（或常待处相交）—— 应「答得出」
+  function findClan(): [typeof withAt[number], typeof withAt[number]] {
+    for (const a of withAt) for (const b of withAt) {
+      if (a.id === b.id) continue;
+      const fa = lifeOf(a.id)?.faction, fb = lifeOf(b.id)?.faction;
+      if (fa && fb && fa === fb) return [a, b];
+      const ra = new Set(roomsOf(a.id)), rb = new Set(roomsOf(b.id));
+      if ([...ra].some(r => rb.has(r))) return [a, b];
+    }
+    throw new Error('找不到同势力或常待处相交的两个有作息人物');
+  }
+  const [A0, B0] = findStranger();
+  const [A1, B1] = findClan();
+  const noAt = NPCS.find(n => !n.at && !n.obj)!;
+
+  it('有作息、玩家认识、活着、不是物件、不是被问者，才进「问人」名单', () => {
+    S.sel = B0.id; // 问的是 B0，自己不算
+    expect(askableTargets()).not.toContain(B0.id);
+    expect(askableTargets()).not.toContain(S.sel);
+    S.rel[A0.id] = '点头之交';
+    expect(askableTargets()).toContain(A0.id);
+    // 物件不列
+    const obj = NPCS.find(n => n.obj)!;
+    S.rel[obj.id] = '点头之交';
+    expect(askableTargets()).not.toContain(obj.id);
   });
 
-  it('不认识这人，只说不知道', () => {
-    S.rel[B.id] = '素不相识';
-    const r = askWhere(A.id, B.id);
+  it('不同圈子（势力不同、地方不同）的，只说不知道——含界面路径（目标在「问人」名单里也照样不知道）', () => {
+    S.sel = A0.id;
+    S.rel[B0.id] = '点头之交'; // 让 B0 进「问人」名单
+    expect(askableTargets()).toContain(B0.id);
+    expect(canTell(A0.id, B0.id)).toBe(false);
+    const r = askWhere(A0.id, B0.id);
     expect(r.src).toBe('unknown');
-    expect(r.text).toContain('哪知道');
+    expect(r.text).toContain('素不相识');
+    expect(r.text).toContain('哪里晓得');
   });
 
-  it('认识（点头之交以上）就答得出公开去处', () => {
-    S.rel[B.id] = '点头之交';
-    expect(canTell(A.id, B.id)).toBe(true);
-    const r = askWhere(A.id, B.id);
+  it('没个准地方的人，照实说不知道', () => {
+    S.sel = A0.id;
+    const r = askWhere(A0.id, noAt.id);
+    expect(r.src).toBe('nosched');
+    expect(r.text).toContain('没个准地方');
+  });
+
+  it('同一圈子（同势力/同处）才答得出公开去处', () => {
+    S.sel = A1.id;
+    expect(canTell(A1.id, B1.id)).toBe(true);
+    const r = askWhere(A1.id, B1.id);
     expect(r.src).toBe('know');
-    expect(r.text).toContain(B.name);
-    // 含作息的公开部分：白日/入夜/常在某处
+    expect(r.text).toContain(B1.name);
     expect(/平日的去处我知道|没个准地方/.test(r.text)).toBe(true);
   });
 
-  it('secret 的一处不打听出来', () => {
-    const n = NPCS.find(x => x.id === B.id)!;
+  it('带旗标条件的作息，旗标没成立时不说；成立时才说', () => {
+    const n = NPCS.find(x => x.id === A1.id)!;
     const saved = n.at;
-    const base: NpcAt[] = Array.isArray(saved) ? saved : saved ? [saved] : [];
-    n.at = [...base, { room: 'yz_zhaobi', if: { hour: { from: 20, to: 5 } }, secret: true } as NpcAt];
-    const out = whereaboutsOf(B.id);
-    expect(out).not.toContain('府衙照壁'); // secret 的那处不出现
-    expect(out.length).toBeGreaterThan(0);
+    n.at = [{ room: 'yz_zhaobi', if: { flag: '_zuoxi_test_flag' } } as NpcAt];
+    expect(whereaboutsOf(A1.id)).toBe(''); // 旗标没成立，这处不公开
+    S.flags['_zuoxi_test_flag'] = true;
+    expect(whereaboutsOf(A1.id)).toContain('府衙照壁'); // 成立后说出来
+    delete S.flags['_zuoxi_test_flag'];
+    n.at = saved;
+  });
+
+  it('secret 的一处不打听出来', () => {
+    const n = NPCS.find(x => x.id === A1.id)!;
+    const saved = n.at;
+    n.at = [{ room: 'yz_zhaobi', if: { hour: { from: 20, to: 5 } }, secret: true } as NpcAt];
+    expect(whereaboutsOf(A1.id)).toBe(''); // secret 的整条都不说
     n.at = saved;
   });
 
   it('事件打断作息：知情的人才说得出新去处', () => {
     const w = worldOf();
-    w.ppl[B.id] = { at: { room: 'gz_town', until: 999 } };
-    // 让 A 知道这件事（传闻牵涉 B）
-    w.rumor['_t'] = { id: '_t', ev: 'x', ph: '', day: 0, place: '', juice: 0.5, subj: [B.id] } as any;
-    w.ppl[A.id] = { ...(w.ppl[A.id] || {}), know: [['_t', 0, 0, '']] };
-    S.rel[B.id] = '点头之交';
-    const r = askWhere(A.id, B.id);
+    w.ppl[B1.id] = { at: { room: 'gz_town', until: 999 } };
+    // 让 A1 知道这件事（传闻牵涉 B1）
+    w.rumor['_t'] = { id: '_t', ev: 'x', ph: '', day: 0, place: '', juice: 0.5, subj: [B1.id] } as any;
+    w.ppl[A1.id] = { ...(w.ppl[A1.id] || {}), know: [['_t', 0, 0, '']] };
+    S.rel[B1.id] = '点头之交';
+    S.sel = A1.id;
+    const r = askWhere(A1.id, B1.id);
     expect(r.src).toBe('know');
     expect(r.text).toContain('这几日');
     expect(r.text).toContain('瓜洲镇');
     // 不知情的人（清掉 know）只说平常的去处
-    delete (w.ppl[A.id] as any).know;
-    const r2 = askWhere(A.id, B.id);
+    delete (w.ppl[A1.id] as any).know;
+    const r2 = askWhere(A1.id, B1.id);
     expect(r2.text).not.toContain('这几日');
   });
 });
