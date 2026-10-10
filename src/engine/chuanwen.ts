@@ -264,7 +264,7 @@ function forget(w: WorldState, day: number): void {
     p.know = p.know.filter(k => { const r = w.rumor[k[0]]; return !!r && day - k[2] < 8 + r.juice * 30; });
     if (p.know.length) { for (const k of p.know) known.add(k[0]); continue; }
     delete p.know;
-    if (!p.st && !p.at) delete w.ppl[id];
+    if (!p.st && !p.at && !p.has) delete w.ppl[id];
   }
   // 传闻池的不清：一条留一个底，免得条件一直成立时反复生
   for (const [id, r] of Object.entries(w.rumor)) if (!isNews(r) && !known.has(id) && day - r.day > RUMOR_KEEP) delete w.rumor[id];

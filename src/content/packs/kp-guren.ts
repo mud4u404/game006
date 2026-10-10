@@ -22,8 +22,8 @@ import type { Cond, ContentPack, Effect, FoeDef, NpcDef, Range, ShiDef, StoryDef
  * kp_chu_warned（提醒了褚七，他躲开了）、kp_chu_meet（劝他当面了结，约在对面那夜）、kp_wei_told（告诉了卫衡，对面提前到次夜）、
  * kp_wei_lied（指了错路，从原定日子再晚两日）；kp_wei_told_said、kp_zou_known 是卫衡已经说过那一句。
  *
- * NpcLife 上的 want、fear、refuse、knows（content/types.ts）引擎还不读：这里先把诉求和所知写下来，
- * 同时在交谈里按旗标、关系分支，把相应的话说出来，玩家碰得到。卫衡找褚七的冲突留给第 037 项，先写在两人的 want 里。
+ * NpcLife 上的 want、refuse、has 接入 021、022；拒绝限定打听，交谈里的既有剧情仍按旗标、关系分支继续。
+ * fear、knows 的打听入口留给后续人物任务，现有交谈先把相应的话说出来。
  * 剧透词（黑水盟、寒江派、账册……）一概不碰。
  */
 
@@ -143,6 +143,7 @@ const NPCS: NpcDef[] = [
     },
     life: {
       trade: '脚夫', talk: 0.3,
+      has: { silver: 6 },
       voice: {
         lead: ['往江面上望了一眼', '拿脚尖拨了拨地上的盐粒', '把那一只手在腰带上蹭了蹭'],
         idle: [
@@ -158,7 +159,7 @@ const NPCS: NpcDef[] = [
       ],
       fear: '卫家的人，还有那只使刀的左手。',
       refuse: [
-        { verb: '*', if: { flag: 'kp_wen' }, why: '船上当着卫衡的面认了旧账，他不愿再提；礼数还在，话已说尽' }
+        { verb: '打听', if: { flag: 'kp_wen' }, why: '船上当着卫衡的面认了旧账，他不愿再提；礼数还在，话已说尽' }
       ],
       knows: [
         { k: 'chu_zuo', text: '二十年前雇他押镖的人，使刀用的是左手', secret: true },
@@ -288,6 +289,7 @@ const NPCS: NpcDef[] = [
     },
     life: {
       trade: '游侠', talk: 0.4,
+      has: { silver: 30 },
       voice: {
         lead: ['把手搭在剑柄上', '抬眼往街那头看了看', '低头看了看自己的靴尖'],
         idle: [
@@ -302,7 +304,7 @@ const NPCS: NpcDef[] = [
       ],
       fear: '家父那只拿不得剑的右手，和一件二十年没有人答得上的事。',
       refuse: [
-        { verb: '*', if: { flag: 'kp_du', rel: { npc: 'kp_wei', is: ['心存芥蒂'] } }, why: '那夜你渡了他要找的人，他礼数不缺，话却不肯多说' }
+        { verb: '打听', if: { flag: 'kp_du', rel: { npc: 'kp_wei', is: ['心存芥蒂'] } }, why: '那夜你渡了他要找的人，他礼数不缺，话却不肯多说' }
       ],
       knows: [
         { k: 'wei_back', text: '二十年前那一夜，他父亲是江伯背出来的', secret: true },
