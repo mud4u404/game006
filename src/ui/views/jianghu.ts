@@ -64,7 +64,7 @@ export function viewJianghu(): string {
   ${xiejiaoHTML()}`;
 }
 
-/** 近处有事：眼下接得到的差事，派差的人在哪、约多久（最多三行，点了先看耗时再走）。不推你去做，只是告诉你哪里有事 */
+/** 近处有事：眼下接得到的差事，派差的人在哪、约多久（差事最多三行，另可添一条零工；点了先看耗时再走）。不推你去做，只是告诉你哪里有事 */
 function leadsCard(): string {
   if (S.chapter === 0) return '';
   const ls = leadsNear();
