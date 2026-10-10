@@ -79,6 +79,16 @@ export function restDays(s: GameState, want: number): { days: number; grow: numb
 /** 歇脚能等到的几个钟点（docs/huojianghu.md 第三节第二条：人有作息，玩家要等得到夜里、等得到天亮） */
 export const XIEJIAO: [number, string][] = [[6, '天亮'], [12, '晌午'], [17, '傍晚'], [21, '入夜']];
 
+/** 歇脚完的一句话：几种说法轮着来，按今日的日子和钟点挑一种（只进提示，不进动态） */
+const REST_LINES: ((t: string) => string)[] = [
+  t => `在檐下靠了一阵，一直歇到${t}，气力缓过来些。`,
+  t => `寻了个背风的角落闭目养神，歇到${t}才起身。`,
+  t => `喝了口凉茶，坐着歇了一阵，直歇到${t}。`,
+  t => `歇到${t}，手脚松快了许多。`,
+  t => `靠着墙根眯了一觉，醒来已是${t}。`
+];
+export const restLine = (s: Pick<GameState, 'day' | 'min'>, label: string): string => REST_LINES[(s.day * 7 + Math.floor(s.min / 60)) % REST_LINES.length](label);
+
 /** 从现在等到 hour 点要几分钟（今天过了就是明天） */
 export const waitMin = (s: Pick<GameState, 'min'>, hour: number): number => {
   const m = hour * 60 - s.min;

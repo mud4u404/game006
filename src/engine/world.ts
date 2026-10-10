@@ -1,6 +1,6 @@
-import { S, pushFeed } from '../core/state';
+import { S, pushFeed, type GameState } from '../core/state';
 import { cn, fmt } from '../core/util';
-import { itemById, jobById, npc, questById, room, skillById } from '../content';
+import { ROOMS, itemById, jobById, npc, questById, room, skillById } from '../content';
 import type { Branch, Cond, EyeDef, NpcDef, QuestStage, RoomDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, test, textVars, type Outcome } from './dsl';
 import { act as settleAction, actionBranch, effectReq, plan, VERB_MIN, type ActionPlan } from './xingdong';
@@ -20,17 +20,17 @@ import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
 export const nowMin = (): number => dayNo(S) * 1440 + S.min;
 
 /** 暂时走开了（效果 away）：跳了河、跑了，这几个时辰哪儿都见不到 */
-const awayNow = (id: string): boolean => (S.away?.[id] ?? 0) > nowMin();
+const awayNow = (id: string, s: GameState): boolean => (s.away?.[id] ?? 0) > dayNo(s) * 1440 + s.min;
 
 /** 入夜回家的时辰：亥时到寅时（RoomDef.nightQuiet） */
 export const NIGHT_HOME = { from: 21, to: 5 };
 const timed = (c?: Cond): boolean => !!c && (!!c.hour || !!c.any?.some(timed));
 /** 入夜了还在：住店、看病的铺子开着；手上有约在这儿等你的；住在这儿、守夜的（NpcDef.night） */
-function staysAtNight(id: string, roomId: string): boolean {
+function staysAtNight(id: string, roomId: string, s: GameState): boolean {
   const n = npc(id);
   if (!n || n.obj || n.night) return true;
   if (n.service?.some(x => x === '宿' || x === '医')) return true;
-  return S.yue.some(y => y.npc === id && y.at === roomId);
+  return s.yue.some(y => y.npc === id && y.at === roomId);
 }
 
 /**
@@ -38,22 +38,59 @@ function staysAtNight(id: string, roomId: string): boolean {
  * 世界先定（engine/shijie.ts 的 whereNow）：事件把人叫到别处的、伤着的、坐牢的、走了的，不在常待的地方；
  * 叫到这里的、关在这里的，不管作息都在。都没有，才照作息
  */
-function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string, obj: boolean): string[] {
-  const h = Math.floor(S.min / 60);
+function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string, obj: boolean, min: number): string[] {
+  // 查询视图：缺世界的旧状态只在视图上补默认值，不写回 S。
+  const s = { ...S, min };
+  const h = Math.floor(min / 60);
   const quiet = !!room(roomId).nightQuiet && (h >= NIGHT_HOME.from || h < NIGHT_HOME.to);
   const here = (list || []).filter(x => {
     const id = typeof x === 'string' ? x : x.id;
-    if (whereNow(id) !== undefined) return false;
-    if (typeof x !== 'string' && !test(x.if)) return false;
-    if (awayNow(id)) return false;
+    if (whereNow(id, s) !== undefined) return false;
+    if (typeof x !== 'string' && !test(x.if, s)) return false;
+    if (awayNow(id, s)) return false;
     // 入夜回家：自己写了作息（带时辰条件）的照作息走
-    return !quiet || (typeof x !== 'string' && timed(x.if)) || staysAtNight(id, roomId);
+    return !quiet || (typeof x !== 'string' && timed(x.if)) || staysAtNight(id, roomId, s);
   }).map(x => (typeof x === 'string' ? x : x.id));
-  return [...new Set([...here, ...placedHere(roomId, obj).filter(id => !awayNow(id))])];
+  return [...new Set([...here, ...placedHere(roomId, obj, s).filter(id => !awayNow(id, s))])];
 }
 
-export const roomNpcs = (id: string): string[] => present(room(id).npcs, id, false);
-export const roomObjs = (id: string): string[] => present(room(id).objs, id, true);
+/** min 是当日的分钟数；省略时查询此刻。查询不推进时间或世界。 */
+export const roomNpcs = (id: string, min: number = S.min): string[] => present(room(id).npcs, id, false, min);
+export const roomObjs = (id: string, min: number = S.min): string[] => present(room(id).objs, id, true, min);
+
+/** 指定钟点在这处的人物或物件。 */
+export const presentAt = (id: string, roomId: string, min: number = S.min): boolean =>
+  roomNpcs(roomId, min).includes(id) || roomObjs(roomId, min).includes(id);
+
+/** 人物或物件眼下在哪；世界调度也可能把他放到常住地之外。 */
+export function whereAt(id: string, min: number = S.min): string | null {
+  const placed = whereNow(id, { ...S, min });
+  if (placed === null) return null;
+  return ROOMS.find(r => {
+    const candidate = placed === undefined
+      ? [...r.npcs, ...(r.objs ?? [])].some(x => (typeof x === 'string' ? x : x.id) === id)
+      : r.id === placed;
+    return candidate && presentAt(id, r.id, min);
+  })?.id ?? null;
+}
+
+/** 十二时辰的在场时段；halves 为真时两个整点都试，保留见闻簿对子时前半段的判断。 */
+export function hoursAt(id: string, roomId: string, halves = false): string | null {
+  const on = Array.from({ length: 12 }, (_, k) =>
+    presentAt(id, roomId, k * 120) || (halves && presentAt(id, roomId, (k * 120 + 1380) % 1440)));
+  if (on.every(Boolean)) return '整日';
+  if (!on.some(Boolean)) return null;
+  // 从一个不在的时辰之后起算，跨子夜的段落也连得上。
+  const start = (on.indexOf(false) + 1) % 12, runs: [number, number][] = [];
+  for (let i = 0; i < 12; i++) {
+    const k = (start + i) % 12;
+    if (!on[k]) continue;
+    const last = runs[runs.length - 1];
+    if (last && (last[1] + 1) % 12 === k) last[1] = k; else runs.push([k, k]);
+  }
+  const name = (k: number): string => shichen(k * 120);
+  return runs.map(([a, b]) => a === b ? name(a) : `${name(a)}到${name(b)}`).join('、');
+}
 
 /** 地点描写；底下接这处地方的痕迹（engine/shijie.ts，最多两行）：码头换了主人、谁挨了打铺子上了门板…… */
 export function roomDesc(id: string): string {

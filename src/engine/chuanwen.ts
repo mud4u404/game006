@@ -12,7 +12,7 @@
  *
  * 注意：本文件和 engine/shijie.ts、core/state.ts 互相引用，顶层只放字面量常量，别的模块的东西只在函数里用。
  */
-import { S, pushFeed, type GameState } from '../core/state';
+import { S, markSeen, pushFeed, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
 import { NEWS, NPCS, ROOMS, npc, room, shiById } from '../content';
 import type { NpcLife, ShiDef, ShiStep } from '../content/types';
@@ -178,13 +178,9 @@ const drift = (lv: number, p: number): number => Math.min(2, lv + (worldRng() < 
 
 /* ---------- 生 ---------- */
 
-/** 某个钟点在这处的人（不算物件）：临时把时辰拨过去，看完拨回来 */
+/** 某个钟点在这处的人（不算物件）；不拨动游戏时钟。 */
 function presentAt(place: string, min: number): string[] {
-  const m0 = S.min;
-  try {
-    S.min = min;
-    return roomNpcs(place).filter(id => !npc(id)?.obj);
-  } finally { S.min = m0; }
+  return roomNpcs(place, min).filter(id => !npc(id)?.obj);
 }
 
 /**
@@ -331,14 +327,10 @@ function network(w: WorldState, day: number): void {
  */
 export function spreadDay(w: WorldState, day: number): void {
   forget(w, day);
-  const slots: { night: boolean; rooms: string[][] }[] = [];
-  const m0 = S.min;
-  try {
-    for (const sl of SLOTS) {
-      S.min = sl.min;
-      slots.push({ night: sl.k === 'night', rooms: lifeRooms().map(r => roomNpcs(r).filter(id => !npc(id)?.obj)) });
-    }
-  } finally { S.min = m0; }
+  const slots = SLOTS.map(sl => ({
+    night: sl.k === 'night',
+    rooms: lifeRooms().map(r => presentAt(r, sl.min))
+  }));
   for (const sl of slots) {
     for (const ids of sl.rooms) {
       if (ids.length < 2) continue;
@@ -364,7 +356,7 @@ function tellYou(r: RumorInst, text: string): void {
     else {
       const rp = stepRank(d, r.ph);
       // 比眼下这一步还靠后的，是上一回的旧事，不拿它改见闻簿
-      if (rp <= stepRank(d, st.at) && (st.seen === undefined || stepRank(d, st.seen) < rp)) st.seen = r.ph;
+      if (rp <= stepRank(d, st.at) && (st.seen === undefined || stepRank(d, st.seen) < rp)) markSeen(st, r.ph);
     }
   }
   // 当事人说的「我」话，记进见闻簿时改回旁人的说法，不然读起来像玩家自己的话

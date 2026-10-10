@@ -10,14 +10,14 @@ import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { TIELV_TEXT, XIEJIAO, checkYue, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
+import { TIELV_TEXT, XIEJIAO, checkYue, restLine, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
 import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
 import { act as settleAction, effectReq } from '../engine/xingdong';
 import { FAR_MIN, chufaLine } from '../engine/chufa';
 import { markEncounter, rollEncounter } from '../engine/encounter';
-import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
+import { TRAVEL_BUSY, afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
 import { kpBiguanTip } from '../engine/kaipian';
 import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
@@ -42,7 +42,7 @@ export const isTraveling = (): boolean => traveling;
  * 现在起步时画一次，途中只改顶栏的地名时辰和赶路条上的字；下面的按钮一律灰着，赶路条上只留「停下」。
  */
 export function travelTo(dest: string, onArrive?: () => void): void {
-  if (traveling) { toast('正在赶路……要停，点赶路条上的「停下」'); return; }
+  if (traveling) { toast(TRAVEL_BUSY); return; }
   if (dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
   const path = pathTo(S.loc, dest);
   if (!path.length) { toast(S.chapter === 0 ? '要下大雨了，码头今儿不开船。' : '从这里去不了那儿'); return; }
@@ -185,7 +185,8 @@ registerHandlers({
   mapRegion: v => { setMapRegion(v); render(); },
   // 地图点地名：先写明这趟路要多久、花多少钱，再由玩家决定走不走（地图审查第一条）
   travelAsk: v => {
-    if (!v || v === S.loc) return;
+    if (!v) return;
+    if (v === S.loc) { toast('你就在这里'); return; }
     const c = tripCost(v);
     if (!c) { toast('从这里去不了那儿'); return; }
     const short = c.fee > S.silver;
@@ -251,7 +252,8 @@ registerHandlers({
     const frac = Math.min(0.3, (m / 60) * 0.03);
     S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * frac));
     S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * frac));
-    pushFeed('江湖', `你找了个地方歇脚，一直歇到${label}，缓过了些气力。`);
+    // 歇脚那一句换几种说法，不进动态（动态里天天一模一样的一行，读着腻）
+    toast(restLine(S, label));
     const tip = kpBiguanTip(S, 'rest');
     if (tip) pushFeed('江湖', tip);
     render();

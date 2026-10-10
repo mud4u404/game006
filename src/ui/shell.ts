@@ -41,6 +41,9 @@ let swappedAt = 0;
 export const swapped = (): void => { swappedAt = performance.now(); };
 export const tooSoon = (ms = 350): boolean => performance.now() - swappedAt < ms;
 
+/** 赶路时点灰着的东西，提示这一句 */
+export const TRAVEL_BUSY = '正在赶路……要停，点赶路条上的「停下」';
+
 /** 统一处理一次动作产生的后果：先剧情，再开打，否则刷新画面 */
 /**
  * 动作的后果：开剧情、开打，或者重画。lead 是这个分支自己的那段文字：
@@ -93,6 +96,8 @@ export function buildShell(): void {
     if (e.detail !== 0 && fresh && down.el !== el) { down = { el: null, t: 0 }; return; }
     down = { el: null, t: 0 };
     if (!el || (el as HTMLButtonElement).disabled) return;
+    // 赶路途中，主画面和底部标签是灰的：点了要说一句，不能静悄悄没反应（赶路条上的「停下」照常，样式见 app.css 的 .traveling）
+    if (document.getElementById('app')?.classList.contains('traveling') && el.closest('#main, #tabs')) { toast(TRAVEL_BUSY); return; }
     // 只认点在自己身上的（弹层的遮罩：点在面板里的空白处不算点了遮罩）
     if (el.hasAttribute('data-self') && e.target !== el) return;
     const a = el.dataset.act || '';

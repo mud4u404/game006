@@ -398,6 +398,7 @@
    "side_yanhao",
    "smem_chao",
    "smhs_mo",
+   "smhs_yin",
    "smqz_bu",
    "smsl_shui",
    "smth_zhen",
@@ -649,15 +650,19 @@
    "kp_xun.bangwei",
    "kp_xun.cuo",
    "kp_xun.dangmian",
+   "kp_xun.dangmian_see",
    "kp_xun.duimian",
    "kp_xun.duye",
    "kp_xun.fang",
    "kp_xun.feng",
    "kp_xun.hubai",
    "kp_xun.pao",
+   "kp_xun.pao_see",
    "kp_xun.si",
+   "kp_xun.si_see",
    "kp_xun.tiaoting",
    "kp_xun.zou",
+   "kp_xun.zou_see",
    "lsm_bai",
    "lsm_bai.fang",
    "lsm_bai.luowang",
@@ -787,6 +792,7 @@
   "smth_zhen": 2,
   "smtz_shishi": 3,
   "smwd_zhuang": 2,
-  "smqz_bu": 2
+  "smqz_bu": 2,
+  "smhs_yin": 3
  }
 }
