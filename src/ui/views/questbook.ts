@@ -7,7 +7,7 @@ import { minLabel, shichen } from '../../core/time';
 import { cn } from '../../core/util';
 import { questNav, sectNav, whoNav, type NavState, type QuestNav } from '../../engine/daohang';
 import { test } from '../../engine/dsl';
-import { roomNpcs, roomObjs } from '../../engine/world';
+import { roomNpcs, roomObjs, stageText } from '../../engine/world';
 import { IC } from '../icons';
 import { closeSheet, openSheet, render } from '../shell';
 
@@ -47,7 +47,7 @@ export function partitionQuests(
     // 规则：当前阶段就是最后一个阶段、且最后一个阶段没有目的地，算已完成。
     // Issue #7：当前阶段就是最后一个阶段，算作已完成
     const isDone = lastIdx === total - 1;
-    const row: QuestRow = { id, name: def.name, stage: lastIdx, total, title: last.title, to: last.to, done: isDone };
+    const row: QuestRow = { id, name: def.name, stage: lastIdx, total, title: stageText(last).title, to: last.to, done: isDone };
     (isDone ? done : active).push(row);
   }
 
@@ -109,7 +109,7 @@ function questRow(n: QuestNav, trackId: string): string {
   const goBtn = live && n.to
     ? `<button class="qb-go${here ? ' dim' : ''}" data-act="qgo:${n.id}"${here ? ' disabled' : ''}>${here ? '就在此处' : '去'}${IC.chev}</button>` : '';
   const toLine = live && n.toName ? `<small class="qb-to">${n.toName} · ${here ? '就在此处' : '约' + minLabel(n.dist)}</small>` : '';
-  const memo = [live ? n.hint : '', ...n.memo].filter(Boolean).map(x => `<small class="qb-memo">${x}</small>`).join('');
+  const memo = [live ? n.hint : '', ...n.memo, ...n.notes].filter(Boolean).map(x => `<small class="qb-memo">${x}</small>`).join('');
   const past = n.past.length
     ? `<details class="qb-past"><summary>前情</summary><ul>${n.past.map(t => `<li>${t}</li>`).join('')}</ul></details>` : '';
   return `

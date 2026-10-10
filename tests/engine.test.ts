@@ -95,7 +95,7 @@ describe('世界', () => {
     S.silver = 25;
     act('yaopu', '购买');
     expect(S.silver).toBe(5);
-    expect(S.items.jcy).toBe(4);
+    expect(S.items.jcy).toBe(2);
     const { text } = act('yaopu', '购买');
     expect(text).toContain('一文都不能少');
   });

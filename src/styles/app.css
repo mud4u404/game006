@@ -421,6 +421,7 @@ svg{display:block}
 .sp{font-family:var(--f-serif);font-weight:600;font-size:16.5px;line-height:2;text-indent:2em}
 /* 剧情选完的结果：接着正文排，不像系统提示（docs/paiban.md H15） */
 .sres{font-family:var(--f-serif);font-weight:600;font-size:16.5px;line-height:2;text-indent:2em;color:var(--fg);animation:fin .3s ease-out}
+.sres-a{font-weight:400;font-size:15px;line-height:1.8;text-indent:0;color:var(--muted)}
 .gains{display:flex;flex-wrap:wrap;gap:6px}
 .choices{margin-top:auto;padding-top:8px;display:flex;flex-direction:column;gap:8px}
 .choice{min-height:56px;padding:10px 16px;border-radius:14px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line);text-align:left;display:flex;flex-direction:column;justify-content:center;gap:2px}

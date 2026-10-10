@@ -511,6 +511,8 @@ describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
     passKao('bs2_lsm_kao');
     expect(S.sect).toEqual({ school: '六扇门', rank: '记名' });
     expect(S.items.bs2_tiechi).toBe(1);
+    // 四门入门武功的历练开销按五百零六排；跳过序章已不比走完更肥（三百五十五），这里补足，只验六扇门的传授
+    S.lilian = Math.max(S.lilian, 506);
     for (let i = 0; i < 5; i++) act('bs2_qin', '请教');
     for (const id of ['jl_jishixinfa', 'jl_suolian', 'jl_tiechi', 'jl_zhuifeng']) expect(S.skills[id], id).toBeDefined();
     expect(S.skills.jl_fulong).toBeUndefined();

@@ -13,7 +13,7 @@ import { JOBS, NPCS, ROOMS, itemById, questById, room, skillById } from '../cont
 import { SECT_RANKS } from '../content/skills';
 import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
 import { lackOf, test } from './dsl';
-import { npcName, pathMin, roomNpcs, roomObjs, travelMin } from './world';
+import { npcName, pathMin, roomNpcs, roomObjs, stageText, travelMin } from './world';
 import { jobOpen } from './shenfen';
 
 /** 能做：去了就办得成；要等：只差时辰、人不在；卡住：差别的门槛；未竟：做不成了；了结：办完了 */
@@ -39,6 +39,8 @@ export interface QuestNav {
   past: string[];
   title: string;
   hint?: string;
+  /** 心里记着的线索（QuestDef.notes）：亲耳听见、亲眼看见的，条件成立的才有 */
+  notes: string[];
   /** 该去的地点：找的人眼下在哪就去哪，不然是这一步写的地点 */
   to?: string;
   toName?: string;
@@ -118,13 +120,15 @@ export function questNav(id: string): QuestNav | null {
   const total = q.stages.length;
   const stage = Math.min(S.quests[id], total - 1);
   const st = q.stages[stage];
-  const base = { id, name: q.name, stage, total, past: q.stages.slice(0, stage).map(s => s.title), title: st.title, hint: st.hint };
+  const tx = stageText(st);
+  const notes = (q.notes ?? []).filter(n => test(n.if)).map(n => n.text);
+  const base = { id, name: q.name, stage, total, past: q.stages.slice(0, stage).map(s => stageText(s).title), title: tx.title, hint: tx.hint, notes };
   if (stage === total - 1) return { ...base, dist: 0, needs: [], memo: [], state: '了结', why: '' };
   const fail = [q.fail, st.fail].find(f => f && test(f.if));
   const needs = needsOf(st);
   // 找的人点没点过名：标题、盘算里写了他的名字，玩家才算知道是谁
   const whoRaw = st.who ? whoNav(st.who, st.to) : undefined;
-  const who = whoRaw && `${st.title}${st.hint ?? ''}`.includes(whoRaw.name) ? whoRaw : undefined;
+  const who = whoRaw && `${tx.title}${tx.hint ?? ''}`.includes(whoRaw.name) ? whoRaw : undefined;
   const to = who?.now ?? st.to;
   const nav: QuestNav = { ...base, to, toName: to ? room(to).name : undefined, dist: to && to !== S.loc ? travelMin(pathMin(S.loc, to)) : 0, who, needs, memo: [], state: '能做', why: '' };
   if (fail) return { ...nav, state: '未竟', why: fail.text, memo: [fail.text] };

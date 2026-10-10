@@ -50,3 +50,26 @@ export function kpPick(s: GameState, id: string, cardCount: number, out: { fight
   else kpMark(s, null);
   return true;
 }
+
+/**
+ * 闭关的提示（docs/kaipian.md 第三稿第四条）：新开局序章了结时身上已攒了历练，可玩家往往不知道要闭关才化得开。
+ * 到扬州后，第一次歇脚，或者走满十步，还没闭关过，就在动态里提一句；只提一次（旗标 kp_tip_biguan 记着）。
+ * 走了多少步记在 kp_walk:N 这个旗标里，跟断点旗标一个办法（存档里没有别处可记）。
+ */
+const WALK = 'kp_walk:';
+const WALK_MAX = 10;
+export const BIGUAN_TIP = '这一路见的、打的，都攒在身上，还没化开。找个清净处闭关几日，把它化成自己的功夫（武功页「闭关修炼」）。';
+
+export function kpBiguanTip(s: GameState, how: 'rest' | 'walk'): string | null {
+  if (!s.flags.kp_xin || s.chapter < 1 || s.flags.kp_tip_biguan) return null;
+  // 闭关过了（出关邸报在动态里，或者修为日用过），不必再提
+  if ((s.real.grown ?? 0) > 0 || s.feed.some(f => f.t === '出关')) { s.flags.kp_tip_biguan = true; return null; }
+  if (how === 'walk') {
+    const key = Object.keys(s.flags).find(k => k.startsWith(WALK));
+    const n = key ? Number(key.slice(WALK.length)) + 1 : 1;
+    if (key) delete s.flags[key];
+    if (n < WALK_MAX) { s.flags[WALK + n] = true; return null; }
+  }
+  s.flags.kp_tip_biguan = true;
+  return BIGUAN_TIP;
+}

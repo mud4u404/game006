@@ -5,13 +5,16 @@
 import { describe, expect, it } from 'vitest';
 import { S, newGame, setState, skipToYangzhou } from '../src/core/state';
 import { dayNo, setNowMs } from '../src/core/time';
-import { foeById, storyById } from '../src/content';
+import { NPCS, foeById, itemById, storyById } from '../src/content';
 import { newOutcome, run, test as cond, type Outcome } from '../src/engine/dsl';
 import { Duel, RANDOM, SKILLED, simulate, type Policy } from '../src/engine/duel';
 import { activePrep, alliesOf, fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
 import { brace, settle, takeWounds } from '../src/engine/jiesuan';
 import { mulberry32 } from '../src/engine/rng';
-import { kpOpen, kpPick, kpPos } from '../src/engine/kaipian';
+import { kpBiguanTip, kpOpen, kpPick, kpPos } from '../src/engine/kaipian';
+import { act, roomNpcs } from '../src/engine/world';
+import { questNav } from '../src/engine/daohang';
+import { weaponReady } from '../src/engine/wuxue';
 
 setNowMs(() => 1_000_000_000_000);
 
@@ -97,7 +100,7 @@ describe('新开局：瓜洲夜雨', () => {
           expect(S.rel.jiangbo).not.toBe('阴阳两隔');
           expect(S.hp).toBeGreaterThan(0);
           expect(tr.stories[0]).toBe('p_open');
-          expect(tr.stories.at(-1)).toBe(`${path.flag}_hou`);
+          expect(tr.stories.at(-1)!.startsWith(`${path.flag}_hou`), `最后一段是 ${tr.stories.at(-1)}`).toBe(true);
         }
       }
     });
@@ -238,5 +241,279 @@ describe('新开局：瓜洲夜雨', () => {
     expect(xin).toContain('江伯向来不与官府沾边');
     expect(xin).toContain('他不见了？');
     expect(xin).not.toContain('临终');
+  });
+});
+
+
+/** 玩到扬州：第一夜选哪条路（bu_jiu：不渡的路上下水救人；bu_liu：留在船上，没救） */
+function arrive(which: 'du' | 'wen' | 'bu_jiu' | 'bu_liu'): void {
+  setState(newGame());
+  const tr: Trace = { stories: [], fights: [], clicks: 0, results: {} };
+  const at = { du: 0, wen: 1, bu_jiu: 2, bu_liu: 2 }[which];
+  walk('p_open', (t, ls) => t === '渡不渡' ? at : t === '落水的人' ? ls.findIndex(x => x.includes(which === 'bu_jiu' ? '下水救' : '留在船上')) : 0, SKILLED, 1, tr);
+  expect(S.chapter).toBe(1);
+}
+const atHour = (h: number): void => { S.min = h * 60; };
+const lifeOf = (id: string) => NPCS.find(n => n.id === id)?.life;
+
+describe('第三稿：序章的人进扬州，关系按路记账', () => {
+  it('渡：褚七在运河渡口入夜扛包，相谈甚欢，欠你一条命；卫衡白天在湖畔访人、夜里在广陵客栈，心存芥蒂', () => {
+    arrive('du');
+    expect(S.rel.kp_chu).toBe('相谈甚欢');
+    expect(S.relNote?.kp_chu).toBe('欠你一条命');
+    expect(S.rel.kp_wei).toBe('心存芥蒂');
+    expect(S.relNote?.kp_wei).toBe('你渡了他要找的人');
+    atHour(23); expect(roomNpcs('dukou')).toContain('kp_chu');
+    atHour(12); expect(roomNpcs('dukou')).not.toContain('kp_chu');
+    atHour(11); expect(roomNpcs('hu')).toContain('kp_wei');
+    atHour(19); expect(roomNpcs('jc_yz_kezhan')).toContain('kp_wei');
+    atHour(19); expect(roomNpcs('hu')).not.toContain('kp_wei');
+    // 头一回交谈：说卫家的人在找他；再谈一回，相谈甚欢以上才肯说「雇他的人左手使刀」
+    atHour(23);
+    const t1 = act('kp_chu', '交谈').text;
+    expect(t1).toContain('卫家');
+    expect(S.flags.kp_chu_zuo).toBeUndefined();
+    const t2 = act('kp_chu', '交谈').text;
+    expect(t2).toContain('左手');
+    expect(S.flags.kp_chu_zuo).toBe(true);
+    expect(act('kp_wei', '交谈').text).toContain('那人在哪里');
+  });
+
+  it('请二位上船：卫衡点头之交（那夜站在一边），褚七心存芥蒂（当着卫衡的面逼他认了旧账），不肯说左手的事', () => {
+    arrive('wen');
+    expect(S.rel.kp_wei).toBe('点头之交');
+    expect(S.relNote?.kp_wei).toBe('那夜你和他站在一边');
+    expect(S.rel.kp_chu).toBe('心存芥蒂');
+    expect(S.relNote?.kp_chu).toBe('当着卫衡的面，你逼他认了旧账');
+    atHour(23); expect(roomNpcs('dukou')).toContain('kp_chu');
+    expect(act('kp_chu', '交谈').text).toContain('各走各的路');
+    for (let i = 0; i < 3; i++) expect(act('kp_chu', '交谈').text).not.toContain('使刀的是左手');
+    expect(S.flags.kp_chu_zuo).toBeUndefined();
+    expect(act('kp_wei', '交谈').text).toContain('多亏你把两边拉住');
+  });
+
+  it('不渡、下水救了人：褚七在扬州，相谈甚欢，水里捞上来的命；卫衡素不相识，却认得你', () => {
+    arrive('bu_jiu');
+    expect(S.flags.kp_jiu).toBe(true);
+    expect(S.rel.kp_chu).toBe('相谈甚欢');
+    expect(S.relNote?.kp_chu).toBe('水里捞上来的命');
+    expect(S.rel.kp_wei).toBe('素不相识');
+    atHour(23); expect(roomNpcs('dukou')).toContain('kp_chu');
+    expect(act('kp_chu', '交谈').text).toContain('水里捞上来的命');
+    expect(act('kp_wei', '交谈').text).toContain('没渡人的那个');
+  });
+
+  it('不渡、没救：褚七不在扬州（夜里也不在码头），卫衡照旧认得你；卞婆婆提一句下游捞起过一个人，没说死活', () => {
+    arrive('bu_liu');
+    expect(S.flags.kp_jiu).toBeUndefined();
+    expect(S.rel.kp_chu).toBeUndefined();
+    atHour(23); expect(roomNpcs('dukou')).not.toContain('kp_chu');
+    atHour(19); expect(roomNpcs('jc_yz_kezhan')).toContain('kp_wei');
+    atHour(9); expect(roomNpcs('gz_home')).toContain('kp_bian');
+    const t = act('kp_bian', '交谈').text;
+    expect(t).toContain('捞起过一个人');
+    expect(t).not.toContain('死了');
+    expect(t).not.toContain('活着');
+    expect(t).not.toContain('船钱的事，不提了');
+  });
+
+  it('三条路上卞婆婆都在瓜洲，回瓜洲说焦船后来怎样；序章里不再有「船钱的事，不提了」那份好处', () => {
+    for (const w of ['du', 'wen', 'bu_jiu'] as const) {
+      arrive(w);
+      atHour(9);
+      expect(roomNpcs('gz_home'), w).toContain('kp_bian');
+      expect(act('kp_bian', '交谈').text, w).toContain('烧剩一副骨架');
+    }
+    const all = JSON.stringify(['kp_du_hou', 'kp_wen_hou', 'kp_bu_hou'].map(id => storyById(id)));
+    expect(all).not.toContain('船钱的事，不提了');
+  });
+
+  it('新人物都写了诉求和所知（want、knows）：褚七的 knows 里有「左手」，卫衡的 want 里有找褚七；idle 最后一条不带条件', () => {
+    expect(lifeOf('kp_chu')?.knows?.some(k => k.secret && k.text.includes('左手'))).toBe(true);
+    expect(lifeOf('kp_wei')?.want?.some(w => w.text.includes('独臂镖师'))).toBe(true);
+    for (const id of ['kp_chu', 'kp_wei', 'kp_bian']) expect(lifeOf(id)?.voice.idle.at(-1)?.if, `${id} 的 idle 最后一条要不带条件`).toBeUndefined();
+  });
+
+  it('腰牌有人读：卫衡、周捕头各说一句（不渡的路上才有这块牌子），各只说一回', () => {
+    arrive('bu_jiu');
+    expect(S.items.kp_yaopai).toBe(1);
+    expect(act('kp_wei', '交谈').text).toContain('没渡人的那个');
+    expect(act('kp_wei', '交谈').text).toContain('黑风寨');
+    expect(S.flags.kp_wei_pai).toBe(true);
+    expect(act('fuya_zhou', '交谈').text).toContain('黑风寨');
+    expect(S.flags.kp_zhou_pai).toBe(true);
+    expect(act('kp_wei', '交谈').text).not.toContain('水路，丙');
+    expect(act('fuya_zhou', '交谈').text).not.toContain('牌是真的');
+  });
+});
+
+describe('第三稿：三场打分胜负', () => {
+  const FOES3: [string, string][] = [['kp_jiading', 'kp_du_hou'], ['kp_biaoshi', 'kp_wen_hou'], ['kp_zhuibing', 'kp_bu_hou']];
+
+  it('打赢、打输、逃开各接一张不同的卡，三段后文都走到扬州', () => {
+    for (const [fid, story] of FOES3) {
+      const f = foeById(fid)!;
+      const to = (res: 'win' | 'lose' | 'flee'): string => {
+        setState(newGame());
+        const r = settle(f, res, []).r!;
+        return (r.then!.find(e => e.type === 'story') as { id: string }).id;
+      };
+      const ids = [to('win'), to('lose'), to('flee')];
+      expect(new Set(ids).size, `${fid} 三种收场接同一段`).toBe(3);
+      for (const id of ids) expect(id.startsWith(story), id).toBe(true);
+      const firsts = ids.map(id => JSON.stringify(storyById(id)!.cards[0]));
+      expect(new Set(firsts).size, `${fid} 三种收场第一张卡一样`).toBe(3);
+      for (const id of ids) {
+        const def = storyById(id)!;
+        expect(def.endChapter).toEqual({ small: '第一回', big: '扬州' });
+        expect(def.cards.at(-1)!.choices[0].label).toContain('登船');
+      }
+    }
+  });
+
+  it('逃开的那张卡不含「鱼叉」：江伯出手收场', () => {
+    for (const id of ['kp_du_hou_flee', 'kp_wen_hou_flee', 'kp_bu_hou_flee']) {
+      const def = storyById(id)!;
+      expect(JSON.stringify(def), id).not.toContain('鱼叉');
+      expect(JSON.stringify(def.cards[0]), id).toContain('江伯');
+    }
+    // 打赢的那张，鱼叉才落地
+    expect(JSON.stringify(storyById('kp_wen_hou')!.cards[0])).toContain('鱼叉');
+  });
+
+  it('对手的应对框和弱对手对得上：重招的判断句不写「快得惊人」「远在你之上」', () => {
+    for (const fid of ['kp_jiading', 'kp_biaoshi', 'kp_zhuibing']) {
+      for (const t of foeById(fid)!.tells) {
+        expect(t.judge, `${fid}「${t.name}」`).toBeTruthy();
+        expect(t.judge).not.toMatch(/快得惊人|远在你之上|内劲极沉/);
+      }
+    }
+  });
+
+  it('三场打的重招、破绽词、招式点缀各写各的，不共用', () => {
+    const fs = ['kp_jiading', 'kp_biaoshi', 'kp_zhuibing'].map(id => foeById(id)!);
+    const op = fs.flatMap(f => f.opening ?? []);
+    expect(new Set(op).size, '破绽词有重复').toBe(op.length);
+    const tl = fs.flatMap(f => f.tells.map(t => t.name));
+    expect(new Set(tl).size).toBe(tl.length);
+    const fl = fs.flatMap(f => f.flourish ?? []);
+    expect(new Set(fl).size, '招式点缀有重复').toBe(fl.length);
+  });
+
+  it('普通人的本领在开打前单写一行（先手在你）；「渡口长大的人」全篇只留一处', () => {
+    for (const id of ['kp_du', 'kp_wen', 'kp_bu']) {
+      for (const card of storyById(id)!.cards) for (const c of card.choices) {
+        if (/kp_(qiantan|lan|zhong)/.test(JSON.stringify(c.do ?? []))) {
+          expect(c.result, `${id}「${c.label}」`).toContain('\n先手在你：');
+          expect(c.sub ?? '').not.toContain('渡口长大的人');
+        }
+      }
+    }
+    const text = JSON.stringify([...['kp_du', 'kp_wen', 'kp_bu'].map(id => storyById(id)), ...['kp_jiading', 'kp_biaoshi', 'kp_zhuibing'].map(id => foeById(id))]);
+    expect(text.split('渡口长大的人').length - 1).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('第三稿：见闻簿、了尘、木剑、跳过序章、闭关提示', () => {
+  it('见闻簿：新档的心事是江伯的下落，三条路各记一条「那夜听来的」；旧档心事的写法不变', () => {
+    for (const [w, key] of [['du', '带路的人，就是他自己'], ['wen', '使左手的后生'], ['bu_jiu', '黑风']] as const) {
+      arrive(w);
+      const n = questNav('main1')!;
+      expect(n.title, w).toBe('江伯去了哪里');
+      expect(n.hint).toContain('扬州，大明寺，了尘');
+      expect(n.hint).toContain('没人说得准');
+      expect(n.notes.length, w).toBe(1);
+      expect(n.notes[0]).toContain('那夜听来的');
+      expect(n.notes[0]).toContain(key);
+    }
+    setState(skipToYangzhou());
+    delete S.flags.kp_xin; delete S.flags.kp_du;
+    const old = questNav('main1')!;
+    expect(old.title).toBe('寻访大明寺了尘大师');
+    expect(old.hint).toContain('这是你手里仅有的一条去路');
+    expect(old.notes).toEqual([]);
+  });
+
+  it('了尘：新档先白给一层，再把屠千山说成「线」，不再是价钱；主线进第一阶段不变；旧档一字不动', () => {
+    arrive('du');
+    S.loc = 'daming';
+    const t = act('liaochen', '交谈').text;
+    expect(t).toContain('旧识');
+    expect(t).toContain('旧账');
+    expect(t).toContain('顺着那夜的线往下找');
+    expect(t).toContain('木剑');
+    expect(t).not.toContain('你想知道的事');
+    expect(S.quests.main1).toBe(1);
+    expect(questNav('main1')!.hint).toContain('顺着那夜的线往下找');
+    // 旧档：没有 kp_xin，读到的是原来的话
+    setState(skipToYangzhou());
+    delete S.flags.kp_xin;
+    const o = act('liaochen', '交谈').text;
+    expect(o).toBe('了尘大师看见你腰间那半块玉佩，扫帚停在半空，良久才道：「江老三……终究还是走了么。」他双手合十：「黑风寨主屠千山这些日子霸着运河渡口，那三船盐是漕帮兄弟半年的血汗。施主若能截住他，老衲便把你想知道的事，原原本本说给你听。」他看了看你握剑的手，又道：「不必急在今日。那人刀下没有庸手，施主先掂一掂自己的斤两。」');
+    expect(S.quests.main1).toBe(1);
+  });
+
+  it('木剑：新档开局带的是木剑，不是青锋剑；兵器类、比青锋剑便宜，寒江剑法照样使得出来', () => {
+    setState(newGame());
+    expect(S.items.kp_mujian).toBe(1);
+    expect(S.items.qingfeng).toBeUndefined();
+    expect(S.gear).toEqual({ weapon: 'kp_mujian' });
+    const mu = itemById('kp_mujian')!, qing = itemById('qingfeng')!;
+    expect(mu.kind).toBe('装备');
+    expect(mu.equip).toMatchObject({ slot: '兵器', weapon: '剑' });
+    expect(mu.price!).toBeLessThan(qing.price!);
+    expect(S.loadout.weapon).toBe('hanjiang');
+    expect(weaponReady(S), '拿着木剑，寒江剑法使得出来').toBe(true);
+    setState(skipToYangzhou());
+    expect(S.gear).toEqual({ weapon: 'kp_mujian' });
+    expect(weaponReady(S)).toBe(true);
+    expect(S.items.qingfeng).toBeUndefined();
+    // 童年三忆里交代了木剑的来历
+    expect(JSON.stringify(storyById('p_open'))).toContain('江伯削的那柄木剑');
+  });
+
+  it('跳过序章与「渡」那条路走完的结果一致：银两、历练、侠义、药、兵器、旗标、关系和备注', () => {
+    arrive('du');
+    const played = JSON.parse(JSON.stringify(S));
+    const skip = skipToYangzhou();
+    expect(skip.silver).toBe(played.silver);
+    expect(skip.lilian).toBe(played.lilian);
+    expect(skip.xia).toBe(played.xia);
+    expect(skip.items).toEqual(played.items);
+    expect(skip.gear).toEqual(played.gear);
+    expect(skip.quests).toEqual(played.quests);
+    expect(skip.chapter).toBe(played.chapter);
+    expect(skip.loc).toBe(played.loc);
+    for (const f of ['kp_du', 'kp_xin', 'kp_chu_name']) expect(skip.flags[f], f).toBe(played.flags[f]);
+    expect(skip.rel.kp_chu).toBe(played.rel.kp_chu);
+    expect(skip.rel.kp_wei).toBe(played.rel.kp_wei);
+    expect(skip.relNote).toEqual(played.relNote);
+    // 跳过的也碰得到褚七
+    setState(skip);
+    atHour(23); expect(roomNpcs('dukou')).toContain('kp_chu');
+  });
+
+  it('闭关的提示只出一次：第一次歇脚（或走满十步）还没闭关过才提，提过不再提，闭关过的不提，旧档不提', () => {
+    setState(skipToYangzhou());
+    expect(kpBiguanTip(S, 'rest')).toContain('闭关');
+    expect(kpBiguanTip(S, 'rest')).toBeNull();
+    expect(kpBiguanTip(S, 'walk')).toBeNull();
+    // 走满十步
+    setState(skipToYangzhou());
+    for (let i = 0; i < 9; i++) expect(kpBiguanTip(S, 'walk'), `第 ${i + 1} 步`).toBeNull();
+    expect(kpBiguanTip(S, 'walk')).toContain('闭关');
+    for (let i = 0; i < 12; i++) expect(kpBiguanTip(S, 'walk')).toBeNull();
+    expect(kpBiguanTip(S, 'rest')).toBeNull();
+    // 闭关过了
+    setState(skipToYangzhou());
+    S.feed.unshift({ t: '出关', x: '闭关三日', n: 0 });
+    expect(kpBiguanTip(S, 'rest')).toBeNull();
+    // 旧档
+    setState(skipToYangzhou());
+    delete S.flags.kp_xin;
+    expect(kpBiguanTip(S, 'rest')).toBeNull();
+    // 序章里不提
+    setState(newGame());
+    expect(kpBiguanTip(S, 'rest')).toBeNull();
   });
 });

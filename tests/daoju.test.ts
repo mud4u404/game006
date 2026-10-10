@@ -209,7 +209,7 @@ describe('穿戴：六个装备位', () => {
     S.items.zb_douli = 1;
     expect(wear('body', 'zb_douli')).toContain('放不进');
     expect(wear('head', 'zb_pijia')).toContain('没有');
-    expect(S.gear).toEqual({ weapon: 'qingfeng' });
+    expect(S.gear).toEqual({ weapon: 'kp_mujian' });
     expect(wear('head', 'zb_douli')).toBeNull();
     expect(GEAR_SLOT.head).toBe('冠');
   });
@@ -244,7 +244,8 @@ describe('服用、饮用、细看', () => {
 
   it('金疮药回三成气血，满了不必吃；行囊里少一件', () => {
     S.hp = 100;
-    const n = S.items.jcy!;
+    S.items.jcy = 3;
+    const n = S.items.jcy;
     const r = useItem('jcy');
     expect(r.ok).toBe(true);
     expect(S.hp).toBe(100 + Math.round(S.hpMax * 0.3));
@@ -292,7 +293,7 @@ describe('赠礼、典当', () => {
     expect(giveGift(liu(), '柳寒舟', 'jade')).toBe('你身上没有合适的礼物。');
     expect(S.items.jade).toBe(1);
     // 身上穿着的那一件不送
-    expect(giftable(itemById('qingfeng')!)).toBe(false);
+    expect(giftable(itemById('kp_mujian')!)).toBe(false);
   });
 
   it('从人物身上点「赠礼」，挑好那一件：花掉一点时间，回话照人物写的来', () => {
@@ -318,9 +319,9 @@ describe('赠礼、典当', () => {
     expect(S.items.blade).toBe(0);
     expect(pawn('朝奉', 'jade')).toContain('不收');
     expect(S.items.jade).toBe(1);
-    expect(pawn('朝奉', 'qingfeng')).toContain('卸下');
-    expect(S.items.qingfeng).toBe(1);
+    expect(pawn('朝奉', 'kp_mujian')).toContain('卸下');
+    expect(S.items.kp_mujian).toBe(1);
     wear('weapon', null);
-    expect(pawn('朝奉', 'qingfeng')).toContain('银两 +600 文');
+    expect(pawn('朝奉', 'kp_mujian')).toContain('银两 +8 文');
   });
 });
