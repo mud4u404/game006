@@ -36,6 +36,7 @@ function choose(id: string, part: string, card = 0): Outcome {
   run(c!.do, out);
   return out;
 }
+const choose2 = (id: string, part: string, card = 0) => storyById(id)!.cards[card].choices.filter(x => cond(x.if)).find(x => x.label.includes(part))!;
 const labels = (id: string, card = 0): string[] => storyById(id)!.cards[card].choices.filter(x => cond(x.if)).map(x => x.label);
 
 /* ---------- 一、第二夜 ---------- */
@@ -190,12 +191,13 @@ describe('卫衡寻褚七：世事写对了', () => {
     const d = shi();
     expect(d.first).toBe('fang');
     expect(d.steps.fang.next).toEqual({ days: 3, to: 'feng' });
-    expect(d.steps.feng.next).toEqual({ days: 2, to: 'duimian' });
+    // 第五稿：指错了路的，原定对面那日改走 cuo；对面当夜二十三时结算（至少留九个多钟头），在场的走 *_see，安排过的走 zou、dangmian
+    expect(d.steps.feng.next).toEqual({ days: 2, to: 'duimian', route: [{ if: { flag: 'kp_wei_lied' }, to: 'cuo' }] });
     expect(d.steps.duimian.window).toBe(true);
-    expect(d.steps.duimian.next).toEqual({ days: 1, to: 'pao', alt: { to: 'si', p: 0.25 } });
+    expect(d.steps.duimian.next).toMatchObject({ days: 0.4, clock: 23, to: 'pao', alt: { to: 'si', p: 0.25 }, here: { pao: 'pao_see', si: 'si_see', zou: 'zou_see', dangmian: 'dangmian_see' } });
     expect(d.region).toBe('yz');
     expect(d.place).toBe('dukou');
-    for (const k of ['pao', 'si', 'zou', 'dangmian', 'tiaoting', 'bangwei', 'hubai', 'duye']) expect(d.steps[k].next, k).toBeUndefined();
+    for (const k of ['pao', 'pao_see', 'si', 'si_see', 'zou', 'zou_see', 'dangmian', 'dangmian_see', 'tiaoting', 'bangwei', 'hubai', 'duye']) expect(d.steps[k].next, k).toBeUndefined();
   });
 
   it('只在新档、褚七在扬州时起头：不渡又没救上来的那条路上不起', () => {
@@ -220,6 +222,8 @@ describe('卫衡寻褚七：世事写对了', () => {
     expect(S.feed.some(f => f.t === '传闻' && f.x === shi().steps.feng.news)).toBe(true);
     days(1); expect(step()).toBe('feng');
     days(1); expect(step()).toBe('duimian');
+    // 渡口那一行只在对面那夜的前半夜看得见（第五稿）
+    S.min = 21 * 60 + 30;
     expect(marksOf('dukou').join('')).toContain('按剑的外乡人');
     S.min = 23 * 60;
     expect(roomNpcs('dukou')).toContain('kp_wei');
@@ -251,11 +255,12 @@ describe('卫衡寻褚七：世事写对了', () => {
       expect(stOf('kp_wei')).toBe('ok');
       S.min = 23 * 60;
       expect(roomNpcs('dukou')).not.toContain('kp_chu');
-      expect(marksOf('dukou').join('')).toContain(at === 'pao' ? '旧铺盖' : '淡红');
+      expect(marksOf('dukou').join('')).toContain(at === 'pao' ? '旧铺盖' : '深色');
       // 卫衡说的话对得上
       S.min = 11 * 60;
       const said = act('kp_wei', '交谈').text;
-      expect(said).toContain(at === 'pao' ? '去迟了一步' : '躺在石阶下');
+      // 第五稿：了结以后卫衡的话随日子换，这里看的是第二天上午那一档
+      expect(said).toMatch(at === 'pao' ? /铺盖还(温着|是温的)/ : /躺在石阶下|点了一盏灯/);
     }
     expect(count.pao + count.si).toBe(40);
     expect(count.si, '少数').toBeGreaterThan(0);
@@ -273,19 +278,19 @@ describe('卫衡寻褚七：世事写对了', () => {
     expect(ends.size).toBe(2);
   });
 
-  it('离线补日子（一口气过了很多日）不替玩家了结：对面这一步从玩家回来起算，还有一个江湖日来得及赶到渡口', () => {
+  it('离线补日子（一口气过了很多日）不替玩家了结：对面这一步从玩家回来起算，当夜二十三时才结算，之前渡口上两人都在', () => {
     begin('离线');
     advanceDays(S, 15);
     tickShi();
     expect(step(), '一口气过了十五日，停在对面这一步等着').toBe('duimian');
-    // 玩家回来的这一刻起算：十二个钟头、十六个钟头以后还在，这一夜渡口上两人都在；过了一日才了结
-    advanceMin(S, 12 * 60); tickShi();
-    expect(step(), '半个江湖日以后还在').toBe('duimian');
-    advanceMin(S, 4 * 60); tickShi();
+    // 玩家回来的这一刻起算（早上七点四十）：十六点四十、二十二点，这一夜渡口上两人都在；过了二十三点才了结
+    advanceMin(S, 9 * 60); tickShi();
+    expect(step(), '白天还在').toBe('duimian');
+    advanceMin(S, 5 * 60 + 20); tickShi();
     expect(step()).toBe('duimian');
     expect(roomNpcs('dukou')).toContain('kp_chu');
     expect(roomNpcs('dukou')).toContain('kp_wei');
-    advanceMin(S, 9 * 60); tickShi();
+    advanceMin(S, 2 * 60); tickShi();
     expect(['pao', 'si']).toContain(step());
   });
 });
@@ -294,9 +299,9 @@ describe('卫衡寻褚七：玩家能做的，每条路各不相同', () => {
   it('对卫衡递话：知道褚七在哪里才有这个动作；告诉他（关系升、褚七记怨）、指错路（迟两日，他后来知道了降一档）、不说', () => {
     begin('递话');
     expect(verbsOf(npc('kp_wei')!)).toContain('递话');
-    // 没见过褚七（不知道人在哪里）没有这个动作
+    // 卫衡问了「那人在哪里」就有按钮：没见过褚七的也有（第五稿，选项是「没见过」，见 tests/kaipian5.test.ts）
     delete S.flags.kp_chu_met;
-    expect(verbsOf(npc('kp_wei')!)).not.toContain('递话');
+    expect(verbsOf(npc('kp_wei')!)).toContain('递话');
     S.flags.kp_chu_met = true;
     expect(labels('xun_wei')).toHaveLength(3);
     // 不说：什么也没变
@@ -315,18 +320,19 @@ describe('卫衡寻褚七：玩家能做的，每条路各不相同', () => {
     S.min = 23 * 60;
     expect(act('kp_chu', '交谈').text).toContain('递给了姓卫的');
     expect(S.flags.kp_chu_gripe).toBe(true);
-    expect(step(), '世事照常走，不会因此快或慢').toBe('fang');
+    expect(step(), '告诉了他，对面提前到次夜').toBe('duimian');
   });
 
-  it('指错路：世事转到「扑了空」，迟两日才到对面；他知道以后关系降一档，只说一回', () => {
+  it('指错路：世事不动，到原定那日转到「扑了空」，再晚两日才到对面；他那时才知道，关系降一档，只说一回', () => {
     begin('指错');
     days(3);
     expect(step()).toBe('feng');
     choose('xun_wei', '龙王庙');
-    expect(step()).toBe('cuo');
+    expect(step(), '当场不动').toBe('feng');
     expect(S.flags.kp_wei_lied).toBe(true);
     const wei = S.rel.kp_wei;
-    // 卫衡一回头就知道了
+    days(2);
+    expect(step()).toBe('cuo');
     S.min = 11 * 60;
     const said = act('kp_wei', '交谈').text;
     expect(said).toContain('一窝野猫');
@@ -338,17 +344,20 @@ describe('卫衡寻褚七：玩家能做的，每条路各不相同', () => {
     days(1); expect(step()).toBe('duimian');
   });
 
-  it('对褚七提醒：他连夜走了，欠你的又多一笔，卫衡知道是你递的话', () => {
+  it('对褚七提醒：他躲开了（去处走了），欠你的又多一笔；卫衡到对面那夜才扑空、才知道是你递的话', () => {
     begin('提醒');
     expect(verbsOf(npc('kp_chu')!)).toContain('劝告');
     choose('xun_chu', '卫家的人在找你');
-    expect(step()).toBe('zou');
+    expect(step(), '当场不收').toBe('fang');
     expect(S.rel.kp_chu).toBe('知交');
     expect(S.relNote?.kp_chu).toContain('欠你的又多一笔');
-    expect(S.rel.kp_wei).toBe('有隙');
+    expect(S.rel.kp_wei).toBe('心存芥蒂');
     expect(stOf('kp_chu')).toBe('gone');
+    for (let i = 0; i < 7 && step() !== 'zou'; i++) days(1);
+    expect(step()).toBe('zou');
     S.min = 11 * 60;
     expect(act('kp_wei', '交谈').text).toContain('有人递了话');
+    expect(S.rel.kp_wei).toBe('有隙');
   });
 
   it('劝他当面了结：关系到相谈甚欢才肯；不够的，话递出去，他说怕', () => {
@@ -363,8 +372,10 @@ describe('卫衡寻褚七：玩家能做的，每条路各不相同', () => {
     // 关系够了
     S.rel.kp_chu = '相谈甚欢';
     choose('xun_chu', '当面了结');
-    expect(step()).toBe('dangmian');
+    expect(step(), '约在对面那夜，当场不收').toBe('fang');
     expect(S.rel.kp_chu).toBe('知交');
+    for (let i = 0; i < 7 && step() !== 'dangmian'; i++) days(1);
+    expect(step()).toBe('dangmian');
     expect(stOf('kp_chu')).toBe('gone');
     expect(stOf('kp_wei'), '卫衡带着人回去见家父，十日不在').toBe('gone');
     expect(marksOf('jc_yz_kezhan').join('')).toContain('回家去见家父');
@@ -384,7 +395,7 @@ describe('卫衡寻褚七：玩家能做的，每条路各不相同', () => {
     expect(verbsOf(npc('kp_wei')!)).not.toContain('插手');
   });
 
-  it('调停：两人都不低于点头之交才坐得下来；否则这一句没人接', () => {
+  it('调停：两人都在相谈甚欢以上才坐得下来（另两种条件见 tests/kaipian5.test.ts）；否则这一句没人接', () => {
     scene('调停');
     // 渡口一路：卫衡心存芥蒂，这一句没人接
     expect(S.rel.kp_wei).toBe('心存芥蒂');
@@ -393,8 +404,11 @@ describe('卫衡寻褚七：玩家能做的，每条路各不相同', () => {
     const c = storyById('xun_dui')!.cards[0].choices.filter(x => cond(x.if)).find(x => x.label.includes('坐下说话'))!;
     expect(c.result).toContain('你的话没有人接');
     expect(c.do).toBeUndefined();
-    // 先告诉卫衡（他升一档到点头之交，褚七记怨降到点头之交），两人都够了
-    choose('xun_wei', '运河渡口');
+    // 点头之交还不够（第五稿：要相谈甚欢）
+    S.rel.kp_wei = '点头之交'; S.rel.kp_chu = '点头之交';
+    expect(choose2('xun_dui', '坐下说话').do).toBeUndefined();
+    // 两人都相谈甚欢，坐得下来
+    S.rel.kp_wei = '相谈甚欢'; S.rel.kp_chu = '相谈甚欢';
     const out = choose('xun_dui', '坐下说话');
     expect(out.story).toBe('xun_tiao');
     expect(labels('xun_dui').filter(l => l.includes('坐下说话'))).toHaveLength(1);
@@ -446,7 +460,7 @@ describe('卫衡寻褚七：玩家能做的，每条路各不相同', () => {
     expect(act('kp_wei', '交谈').text).toContain('这份情，晚辈欠着');
   });
 
-  it('撑船夜渡：认得浅滩、会放缆绳才有；褚七被送过江，欠你的；卫衡扑空，认不得是谁', () => {
+  it('撑船夜渡：认得浅滩、会放缆绳才有；褚七被送过江，欠你的；卫衡扑空，认得你的记一笔怨', () => {
     scene('夜渡');
     const c = (): string[] => labels('xun_dui').filter(l => l.includes('把船撑到石阶下'));
     expect(c()).toHaveLength(1);
@@ -462,7 +476,7 @@ describe('卫衡寻褚七：玩家能做的，每条路各不相同', () => {
       expect(step()).toBe('duye');
       expect(S.relNote?.kp_chu).toContain('撑船');
       expect(stOf('kp_chu')).toBe('gone');
-      expect(S.rel.kp_wei, '卫衡不知道是谁').toBe('心存芥蒂');
+      expect(S.rel.kp_wei, '卫衡认得你，记一笔怨（第五稿）').toBe('有隙');
     }
   });
 

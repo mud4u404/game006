@@ -108,7 +108,7 @@ var TTL=5*60*1000;          // 数据缓存五分钟
 var CKEY='kanban-cache-v1', KKEY='kanban-checks-v1';
 var AIS=[
  {k:'codex',n:'Codex'},{k:'codebuddy',n:'CodeBuddy'},{k:'qoder',n:'Qoder'},{k:'minimax',n:'MiniMax'},
- {k:'zcode',n:'zcode',tag:'整改观察'},{k:'trae',n:'Trae'},{k:'autoclaw',n:'autoclaw'},{k:'step5',n:'step5'},
+ {k:'zcode',n:'zcode',tag:'整改观察'},{k:'trae',n:'Trae'},{k:'autoclaw',n:'autoclaw'},{k:'workbuddy',n:'WorkBuddy',old:'step5'},
  {k:'claude',n:'维护者（Claude）',boss:true}
 ];
 var HOUR=3600*1000;
@@ -327,10 +327,10 @@ function render(){
   var issueByN={};issues.forEach(function(i){issueByN[i.n]=i});
   var list=el('div',{class:'card ais'});
   AIS.forEach(function(ai){
-    var myIssues=ai.boss?[]:issues.filter(function(i){return giveOf(i.labels)===ai.k&&isTask(i)&&!has(i.labels,'暂缓')});
+    var myIssues=ai.boss?[]:issues.filter(function(i){return (giveOf(i.labels)===ai.k||(ai.old&&giveOf(i.labels)===ai.old))&&isTask(i)&&!has(i.labels,'暂缓')});
     var waiting=myIssues.filter(function(i){return !prNums[i.n]});
-    var myPulls=pulls.filter(function(p){return prefixOf(p.ref)===ai.k});
-    var recent=d.pushes.filter(function(p){return prefixOf(p.ref)===ai.k});
+    var myPulls=pulls.filter(function(p){return (prefixOf(p.ref)===ai.k||(ai.old&&prefixOf(p.ref)===ai.old))});
+    var recent=d.pushes.filter(function(p){return (prefixOf(p.ref)===ai.k||(ai.old&&prefixOf(p.ref)===ai.old))});
     var lastPush=recent.reduce(function(a,p){return Math.max(a,p.t)},0);
     var last=Math.max(lastPush,myPulls.reduce(function(a,p){return Math.max(a,p.updated)},0));
     // 已领的任务分支：24 小时内有推送、还没有 PR、也没合并的分支
@@ -390,7 +390,7 @@ function render(){
       });
       if(!waiting.length)body.appendChild(el('div',{class:'empty',text:'没有'}));
     }
-    var merged48=d.merged.filter(function(m){return prefixOf(m.ref)===ai.k&&now-m.at<48*HOUR}).length;
+    var merged48=d.merged.filter(function(m){return (prefixOf(m.ref)===ai.k||(ai.old&&prefixOf(m.ref)===ai.old))&&now-m.at<48*HOUR}).length;
     body.appendChild(el('div',{class:'sub',text:'48 小时合了 '+merged48+' 件'}));
 
     var det=el('details',{class:'ai'},[sum,body]);
