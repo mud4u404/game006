@@ -597,6 +597,26 @@ describe('第五稿四：看得出事情在走', () => {
       expect(noteLines().some(n => n.includes(part)), flag).toBe(true);
     }
   });
+
+  it('交谈也按钟头分：下午告诉卫衡，当晚不点「今夜」，次日夜里才说「今夜」；褚七同理', () => {
+    begin('交谈钟头');
+    S.min = 15 * 60;
+    choose('xun_wei', '运河渡口');           // 告诉卫衡，step=duimian，结算在次日二十三时
+    expect(step()).toBe('duimian');
+    // 当晚 21:00、22:00：离结算还有一日多（left>=3），卫衡在客栈、褚七在渡口，都还不到「今夜」
+    for (const m of [21 * 60, 22 * 60]) {
+      S.loc = 'jc_yz_kezhan'; S.min = m; tickShi();
+      S.flags.kp_wei_told_said = false;
+      expect(act('kp_wei', '交谈').text, `卫衡当晚 ${m / 60}:00 不应说今夜`).not.toMatch(/今夜|今晚/);
+    }
+    S.loc = 'dukou'; S.min = 22 * 60; tickShi();
+    expect(act('kp_chu', '交谈').text, '褚七当晚不说今夜').not.toMatch(/今夜|今晚/);
+    // 次日 21:00：离结算只剩一两个钟头（TONIGHT），两人在渡口，才说「今夜」
+    S.loc = 'dukou'; S.min = 21 * 60 + DAY; tickShi();
+    S.flags.kp_wei_told_said = false;
+    expect(act('kp_wei', '交谈').text, '卫衡次日夜里才说今夜').toMatch(/今夜|今晚/);
+    expect(act('kp_chu', '交谈').text, '褚七次日夜里说今夜').toMatch(/今夜|今晚/);
+  });
 });
 
 /* ---------- 五、重复 ---------- */
