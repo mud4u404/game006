@@ -97,7 +97,7 @@ const NPCS: NpcDef[] = [
     actions: {
       劝告: [{ text: '褚七把盐包撂在垛上，抬头等你开口。', do: [{ type: 'story', id: 'xun_chu' }] }],
       插手: [
-        { if: { flag: 'kp_chu_meet' }, text: '褚七朝你点了点头，没有躲：「小哥，今夜我自己说。」', do: [{ type: 'story', id: 'xun_dui' }] },
+        { if: { flag: 'kp_chu_meet' }, text: '褚七朝你点了点头，没有躲：「小哥，到那夜我自己说。」', do: [{ type: 'story', id: 'xun_dui' }] },
         { text: '褚七把盐包放下了，目光在你和卫衡之间转了一转。', do: [{ type: 'story', id: 'xun_dui' }] }
       ],
       交谈: [
@@ -662,7 +662,7 @@ const STORIES: StoryDef[] = [
     { tag: '渡口夜话', title: '收剑',
       paras: [
         '卫衡的剑脱了手，当啷落在石阶上。他低头看了看，弯腰拾起，慢慢还入鞘中。',
-        '他没有看褚七，开口道：「你的功夫，晚辈输得服气。你要护他，晚辈不拦。只是今夜，晚辈想听一句实话。」'
+        '他没有看褚七，开口道：「你的功夫，晚辈输得服气。你要护他，晚辈不拦。只是那夜，晚辈想听一句实话。」'
       ],
       choices: [{ label: '请两人坐下' }] },
     tiaoCard()
