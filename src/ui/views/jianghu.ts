@@ -14,6 +14,7 @@ import { cn, fmt } from '../../core/util';
 import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
 import { verbChufa } from '../../engine/chufa';
+import { refuseOf, wantOf } from '../../engine/shijie';
 import { test, textVars } from '../../engine/dsl';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
@@ -110,8 +111,10 @@ function detail(id: string): string {
   const kr = foe ? kanren(S, foe) : undefined;
   if (foe) recordDiao(S, foe.id, whom === '他' ? npcName(id) : whom);
   const look = kr ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kr.say}</b>${kr.hurt ? `<br><span class="hurt">${kr.hurt}</span>` : ''}</p>` : '';
+  const want = !n.obj && ['相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'].includes(rel) ? wantOf(id) : undefined;
+  const wanting = want ? `<p class="muted">他眼下想${want.text}。</p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
-    <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
+    ${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
 }
 
 /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
@@ -121,7 +124,9 @@ const verbBtn = (id: string) => (v: Verb): string => {
   const poor = !p.ok;
   // 能挣钱的（揭榜的赏钱、零工的工钱）：报酬和耗时写在底下，点之前就知道
   const gain = price === null ? verbGain(id, v) : null;
-  const sub = price !== null ? `${poor && S.silver < price ? '囊中不足，要' : ''}${cn(price)}文` : poor ? p.why : gain;
+  const specificWhy = poor && p.why && (p.why === refuseOf(id, v) || p.why === '他手里没有');
+  const sub = specificWhy ? `${p.why}${price !== null ? ` · ${cn(price)}文` : ''}`
+    : price !== null ? `${poor && S.silver < price ? '囊中不足，要' : ''}${cn(price)}文` : poor ? p.why : gain;
   return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;
 };
 
