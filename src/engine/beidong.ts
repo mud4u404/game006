@@ -1,5 +1,5 @@
 /**
- * 被动与合璧：搭配在身上的武功给的常驻效果。模拟（build.ts 的 kitOf）和实战（zhaoshi.ts 的 heroSpec）共用这一套算法。
+ * 被动与合璧：搭配在身上的武功给的常驻效果。模拟（tests/balance-kit.ts 的 kitOf）和实战（zhaoshi.ts 的 heroSpec）共用这一套算法。
  *
  * - 内功的 passive：护体 guard、身法 haste、回血 heal、涨怒气 rage，一直生效；
  * - 轻功的 passive 里的身法，加在闪避上；
@@ -7,11 +7,14 @@
  *   「主」（写这条合璧的那门）若是外功，得是眼下出手的那门（activeOuter）；兵器类的那一门，不论当主还是当搭档，兵器都得在手；
  *   拳掌类的外功当搭档，搭配在身上就算，不必正在出手；
  *   合璧里的增益并进被动，减益（点穴、流血……）开战时施给对手；
- * - 内力低于一成五（MP_FLOOR），被动失效（见 combat.ts、duel.ts）。
+ * - 内力低于一成五（MP_FLOOR），被动失效（见 duel.ts）。
  */
 import { JIANGHU_RULE } from '../content/skills';
 import type { ComboDef, FxDef, FxKind, SkillDef } from '../content/types';
 import { rootsOn } from './shicheng';
+
+/** 内力低于一成五时，常驻被动失效。 */
+export const MP_FLOOR = 0.15;
 
 export const PASSIVE_KINDS: FxKind[] = ['guard', 'haste', 'heal', 'rage'];
 export type PassiveKind = 'guard' | 'haste' | 'heal' | 'rage';
