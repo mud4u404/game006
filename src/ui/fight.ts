@@ -798,7 +798,11 @@ function updFoe(): void {
 }
 
 function updMom(): void {
-  const m = Math.round(C!.d.mom);
+  // 开打前这一条按掂斤两的结论走（Issue #546）：d.mom 的初值只看胆魄、还钳在 35～65
+  // （engine/duel.ts 的构造），不入流打三流也显示「势均力敌」，十二合败了才知道。
+  // 开打以后还看实时的势，那是这一合的攻守，不是开打前的估量。
+  const 开打前 = C!.d.round === 0 && C!.odds !== undefined;
+  const m = Math.round(开打前 ? C!.odds! * 100 : C!.d.mom);
   $('#mMe')!.textContent = `你 ${m}%`;
   $('#mOp')!.textContent = `${100 - m}% 对手`;
   $('#mSt')!.textContent = '攻守之势 · ' + (m >= 75 ? '你压制对手' : m >= 56 ? '你占上风' : m > 44 ? '势均力敌' : m > 25 ? '对手占优' : '你被压制');

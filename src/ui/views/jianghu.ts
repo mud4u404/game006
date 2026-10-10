@@ -1,5 +1,5 @@
 import { S } from '../../core/state';
-import { dayNo, minLabel } from '../../core/time';
+import { absMin, dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
 import { npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
@@ -22,7 +22,8 @@ export function viewJianghu(): string {
   const all = roomNpcs(S.loc).concat(roomObjs(S.loc));
   if (!S.sel || !all.includes(S.sel)) S.sel = all[0] || null;
   // 刚说完话人就走了（世事推着他离场、跳了河、回去报信）：话留着，不然玩家只看到动态里一行小字（审查 C03）
-  const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id)
+  // 只留一小会儿：隔了一阵（歇脚、赶路、过夜）就收起，不让昨夜的话挂到第二天
+  const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id) && S.reply.at !== undefined && absMin(S) - S.reply.at <= 15
     ? `<section class="card here-card"><div class="detail"><div class="d-h"><b>${npcName(S.reply.id)}</b><small>${npc(S.reply.id)!.obj ? '' : '说完就走了'}</small></div><div class="reply">${S.reply.text}</div></div></section>` : '';
   // 眼下要紧：永远只有一件，写成动宾句；点了先赶路，到了把人和动作高亮（engine/jiemian.ts）
   const nav = S.track ? questNav(S.track) : null;

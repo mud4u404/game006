@@ -3,7 +3,7 @@
  * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
-import { advanceDays, dateStr } from '../core/time';
+import { absMin, advanceDays, dateStr } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
 import { room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
@@ -144,7 +144,7 @@ function doAct(verb: Verb): void {
   if (out.story || out.fight) { afterOutcome(out, text || undefined); return; }
   // 根基之眼：观察时根基够了多看出的那一层，跟在描写后面（engine/yan.ts）
   const seen = eyes.map(e => eyeLine(e)).join('');
-  S.reply = text || seen ? { id, text: text + seen } : null;
+  S.reply = text || seen ? { id, text: text + seen, at: absMin(S) } : null;
   render();
   const rp = document.querySelector('.reply');
   if (rp) rp.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
