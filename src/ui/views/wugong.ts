@@ -11,13 +11,16 @@ import { FOE_FX_TAG, passivesNow } from '../../engine/zhaoshi';
 import { RETREAT, gongliCeiling } from '../../engine/lilian';
 import { LODGING, ZHU_NAME, allowance, retreatBlock, zhuOf } from '../../engine/shiguang';
 import type { Zhu } from '../../core/state';
+import { canRetreat, retreatLabel, strongPaths } from '../../engine/jiemian';
 
 const GRADE_CLS: Record<string, string> = Object.fromEntries(GRADES);
 
 export function viewWugong(): string {
-  const opts: [string, string][] = [['1', '一日'], ['7', '七日'], ['30', '一月']];
+  // 按钮上直接写预估：「闭关一日：寒江剑法熟练 +9，战力约 +1」（engine/jiemian.ts 的 retreatLabel）
+  const opts: [string, string][] = [['1', retreatLabel(1, '一日')], ['7', retreatLabel(7, '七日')], ['30', retreatLabel(30, '一月')]];
   const learned = SKILLS.filter(k => S.skills[k.id]);
   return `
+  ${strongCard()}
   ${loadoutCard()}
   <section class="card here-card"><div class="sec-h"><h2>闭关修炼</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
     <p class="muted">功夫是在江湖上长的：实战、了结一件事、高人一句指点，都会攒下历练。闭关是把历练消化成功夫，一日最多消化 ${RETREAT[1].cap}，七日 ${RETREAT[7].cap}，一月 ${RETREAT[30].cap}。没有历练，闭门造车，进境有限。</p>
@@ -29,7 +32,7 @@ export function viewWugong(): string {
         const block = retreatBlock(S);
         const al = allowance(S);
         return `<p class="muted">${block ?? `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。下线就是静修，回来先读出关邸报。`}</p>
-        <div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
+        <div class="acts col">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
       })()}
   </section>
   <section class="card here-card"><div class="sec-h"><h2>见招拆招</h2></div>
@@ -169,4 +172,14 @@ function skillCard(k: SkillDef): string {
     ${(k.performs?.length || k.ult) && !canPerform(S, k) ? '<p class="muted">没有本门内功打底，绝招、杀招使不出来，只剩普通招式。</p>' : ''}
     ${resps.map(r => `<div class="d-h"><span class="tag accent">见招拆招 · ${r.act}</span><small>造诣 ${huohou(S, r.k)}</small></div>`).join('')}
   </section>`;
+}
+
+
+/** 变强的路：眼下走得通的几条（闭关、学艺、切磋、门派练功），各写代价；历练够闭关一日了，提一句「可去闭关」 */
+function strongCard(): string {
+  const ps = strongPaths();
+  if (!ps.length) return '';
+  const rows = ps.map(p => `<div class="bqrow"><div class="bqh"><b>${p.name}</b>${p.go ? `<button class="act spar" data-act="${p.go.act}">${p.go.label}</button>` : ''}</div><p class="muted">${p.say}</p><small class="cost">代价：${p.cost}</small></div>`).join('');
+  return `<section class="card here-card bq"><div class="sec-h"><h2>变强的路</h2><span class="count">历练 ${S.lilian ?? 0}</span></div>
+    ${canRetreat() ? '<p class="tip">历练够闭关一日了，可去闭关。</p>' : ''}${rows}</section>`;
 }
