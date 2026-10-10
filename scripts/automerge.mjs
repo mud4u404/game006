@@ -8,17 +8,17 @@ export function parseBranch(name) {
   return m ? { tool: m[1].toLowerCase(), issue: Number(m[2]) } : null;
 }
 
-/** Issue 正文「## 允许修改的文件」（也认「## 允许改的文件」）这一节的文字，到下一个「## 」标题为止；没有这一节返回空串 */
+/** Issue 正文「## 允许修改的文件」（也认「## 允许改的文件」，二、三级标题都认，Issue 表单渲染出来是「###」，标题后带括号说明也行）这一节的文字，到下一个二、三级标题为止；没有这一节返回空串 */
 export function allowedSection(body) {
   const lines = String(body ?? '').split(/\r?\n/);
-  const start = lines.findIndex(l => /^##\s*允许修?改的文件/.test(l));
+  const start = lines.findIndex(l => /^#{2,3}\s*允许修?改的文件/.test(l));
   if (start < 0) return '';
   const rest = lines.slice(start + 1);
-  const end = rest.findIndex(l => /^##\s/.test(l));
+  const end = rest.findIndex(l => /^#{2,3}\s/.test(l));
   return (end < 0 ? rest : rest.slice(0, end)).join('\n');
 }
 
-const FULL = /(?:src\/content\/packs|docs)\/[A-Za-z0-9_.-]+\.(?:ts|md)/g;
+const FULL = /(?<![A-Za-z0-9_./-])(?:src\/content\/packs|docs)\/[A-Za-z0-9_.-]+\.(?:ts|md)/g;
 // 裸名：前面不是路径字符，例如 `zhaoshi.ts`；写成路径的（src/engine/x.ts）不算裸名
 const BARE = /(?<![A-Za-z0-9_./-])[A-Za-z0-9_-][A-Za-z0-9_.-]*\.(?:ts|md)(?![A-Za-z0-9_])/g;
 

@@ -22,6 +22,18 @@ describe('自动合并：允许改的文件', () => {
     expect(allowedSection('没有这一节')).toBe('');
     expect([...allowedFiles(null)]).toEqual([]);
   });
+
+  it('Issue 表单渲染成「### 允许修改的文件」，标题后带括号说明也认；下一个「###」标题结束这一节', () => {
+    const form = '### 背景\n无\n\n### 允许修改的文件\n新建 `src/content/packs/foo.ts`\n\n### 验收标准\n- bar.ts';
+    expect([...allowedFiles(form)]).toEqual(['src/content/packs/foo.ts']);
+    expect([...allowedFiles('## 允许修改的文件（只许改这些）\n- foo.ts\n## 验收\n- bar.ts')]).toEqual(['src/content/packs/foo.ts']);
+    expect([...allowedFiles('### 允许改的文件 (必填)\nfoo.ts')]).toEqual(['src/content/packs/foo.ts']);
+  });
+
+  it('完整路径前面不能还有路径：src/engine/docs/bar.md 不放行 docs/bar.md', () => {
+    expect([...allowedFiles(body('- src/engine/docs/bar.md\n- x/src/content/packs/y.ts'))]).toEqual([]);
+    expect([...allowedFiles(body('- `docs/bar.md`、(src/content/packs/y.ts)'))].sort()).toEqual(['docs/bar.md', 'src/content/packs/y.ts']);
+  });
 });
 
 describe('自动合并：文件范围', () => {

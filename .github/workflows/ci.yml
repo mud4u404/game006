@@ -108,7 +108,7 @@ jobs:
             echo "分支名里没有 Issue 编号（应为 <工具名>/<编号>-<英文>），不自动建 PR。"
             exit 0
           fi
-          find_pr() { gh pr list --repo "$REPO" --head "$BRANCH" --state open --json number --jq '.[0].number // empty'; }
+          find_pr() { gh pr list --repo "$REPO" --base main --head "$BRANCH" --state open --json number --jq '.[0].number // empty'; }
           # 在 Issue 下留言，同一个原因只留一次（用隐藏标记认）
           issue_note() {
             mark="<!-- open-pr:$BRANCH:$1 -->"
@@ -126,11 +126,27 @@ jobs:
             echo "pr=$pr" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if ! info=$(gh issue view "$n" --repo "$REPO" --json state,title,labels 2> issue-err.txt); then
-            echo "::error::分支名里的 Issue #$n 不存在或读不到，不建 PR：$(head -c 300 issue-err.txt)。分支名里的编号要写对。"
+          # 读 Issue：真 404（不存在）和临时错误（网络、限流）分开。临时错误重试一次，仍失败只警告，这次不建 PR
+          info=""
+          for try in 1 2; do
+            if info=$(gh api "repos/$REPO/issues/$n" 2> issue-err.txt); then break; fi
+            info=""
+            if grep -q 'HTTP 404' issue-err.txt; then break; fi
+            sleep 5
+          done
+          if [ -z "$info" ]; then
+            if grep -q 'HTTP 404' issue-err.txt; then
+              echo "::error::分支名里的 Issue #$n 不存在，不建 PR。分支名里的编号要写对。"
+              exit 1
+            fi
+            echo "::warning::读 Issue #$n 连续失败（$(head -c 200 issue-err.txt)），这次不建 PR；重新运行这次 CI 即可。"
+            exit 0
+          fi
+          if jq -e '.pull_request != null' <<< "$info" > /dev/null; then
+            echo "::error::分支名里的 #$n 是个 PR，不是 Issue，不建 PR。分支名里的编号要写成 Issue 的编号。"
             exit 1
           fi
-          if [ "$(jq -r .state <<< "$info")" != OPEN ]; then
+          if [ "$(jq -r .state <<< "$info")" != open ]; then
             issue_note closed "分支 \`$BRANCH\` 对应的 Issue #$n 已经关闭，CI 不建 PR。如果任务确实要继续做，请在这里说一声，等维护者重新打开 Issue；否则可以删掉这个分支。"
             echo "Issue #$n 已关闭，不建 PR。"
             exit 0
