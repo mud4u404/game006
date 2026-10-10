@@ -1,6 +1,6 @@
-import { S, pushFeed } from '../core/state';
+import { S, pushFeed, type GameState } from '../core/state';
 import { cn, fmt } from '../core/util';
-import { itemById, jobById, npc, questById, room, skillById } from '../content';
+import { ROOMS, itemById, jobById, npc, questById, room, skillById } from '../content';
 import type { Branch, Cond, EyeDef, NpcDef, QuestStage, RoomDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, test, textVars, type Outcome } from './dsl';
 import { act as settleAction, actionBranch, effectReq, plan, VERB_MIN, type ActionPlan } from './xingdong';
@@ -8,29 +8,30 @@ import { advanceMin, dayNo, shichen, spanLabel } from '../core/time';
 import { attrEffects } from './gengu';
 import { tierNow } from './ren';
 import { eyesOn } from './yan';
-import { giveGift, have, isPawnshop, pawnPrice, wornAt } from './daoju';
+import { giftable, have, isPawnshop, pawnPrice, wornAt } from './daoju';
+import { warmer } from './renqing';
 import { seeShi } from './shishi';
 import { ask, panwen } from './chuanwen';
 import { jobGongxian, jobPay, shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
 import { minutesOf, passWarn } from './shiguang';
-import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
+import { facName, marksOf, placedHere, refuseOf, tollOf, whereNow } from './shijie';
 
 /** 江湖历的第几分钟（暂时走开的人什么时候回来） */
 export const nowMin = (): number => dayNo(S) * 1440 + S.min;
 
 /** 暂时走开了（效果 away）：跳了河、跑了，这几个时辰哪儿都见不到 */
-const awayNow = (id: string): boolean => (S.away?.[id] ?? 0) > nowMin();
+const awayNow = (id: string, s: GameState): boolean => (s.away?.[id] ?? 0) > dayNo(s) * 1440 + s.min;
 
 /** 入夜回家的时辰：亥时到寅时（RoomDef.nightQuiet） */
 export const NIGHT_HOME = { from: 21, to: 5 };
 const timed = (c?: Cond): boolean => !!c && (!!c.hour || !!c.any?.some(timed));
 /** 入夜了还在：住店、看病的铺子开着；手上有约在这儿等你的；住在这儿、守夜的（NpcDef.night） */
-function staysAtNight(id: string, roomId: string): boolean {
+function staysAtNight(id: string, roomId: string, s: GameState): boolean {
   const n = npc(id);
   if (!n || n.obj || n.night) return true;
   if (n.service?.some(x => x === '宿' || x === '医')) return true;
-  return S.yue.some(y => y.npc === id && y.at === roomId);
+  return s.yue.some(y => y.npc === id && y.at === roomId);
 }
 
 /**
@@ -38,22 +39,59 @@ function staysAtNight(id: string, roomId: string): boolean {
  * 世界先定（engine/shijie.ts 的 whereNow）：事件把人叫到别处的、伤着的、坐牢的、走了的，不在常待的地方；
  * 叫到这里的、关在这里的，不管作息都在。都没有，才照作息
  */
-function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string, obj: boolean): string[] {
-  const h = Math.floor(S.min / 60);
+function present(list: (string | { id: string; if: Cond })[] | undefined, roomId: string, obj: boolean, min: number): string[] {
+  // 查询视图：缺世界的旧状态只在视图上补默认值，不写回 S。
+  const s = { ...S, min };
+  const h = Math.floor(min / 60);
   const quiet = !!room(roomId).nightQuiet && (h >= NIGHT_HOME.from || h < NIGHT_HOME.to);
   const here = (list || []).filter(x => {
     const id = typeof x === 'string' ? x : x.id;
-    if (whereNow(id) !== undefined) return false;
-    if (typeof x !== 'string' && !test(x.if)) return false;
-    if (awayNow(id)) return false;
+    if (whereNow(id, s) !== undefined) return false;
+    if (typeof x !== 'string' && !test(x.if, s)) return false;
+    if (awayNow(id, s)) return false;
     // 入夜回家：自己写了作息（带时辰条件）的照作息走
-    return !quiet || (typeof x !== 'string' && timed(x.if)) || staysAtNight(id, roomId);
+    return !quiet || (typeof x !== 'string' && timed(x.if)) || staysAtNight(id, roomId, s);
   }).map(x => (typeof x === 'string' ? x : x.id));
-  return [...new Set([...here, ...placedHere(roomId, obj).filter(id => !awayNow(id))])];
+  return [...new Set([...here, ...placedHere(roomId, obj, s).filter(id => !awayNow(id, s))])];
 }
 
-export const roomNpcs = (id: string): string[] => present(room(id).npcs, id, false);
-export const roomObjs = (id: string): string[] => present(room(id).objs, id, true);
+/** min 是当日的分钟数；省略时查询此刻。查询不推进时间或世界。 */
+export const roomNpcs = (id: string, min: number = S.min): string[] => present(room(id).npcs, id, false, min);
+export const roomObjs = (id: string, min: number = S.min): string[] => present(room(id).objs, id, true, min);
+
+/** 指定钟点在这处的人物或物件。 */
+export const presentAt = (id: string, roomId: string, min: number = S.min): boolean =>
+  roomNpcs(roomId, min).includes(id) || roomObjs(roomId, min).includes(id);
+
+/** 人物或物件眼下在哪；世界调度也可能把他放到常住地之外。 */
+export function whereAt(id: string, min: number = S.min): string | null {
+  const placed = whereNow(id, { ...S, min });
+  if (placed === null) return null;
+  return ROOMS.find(r => {
+    const candidate = placed === undefined
+      ? [...r.npcs, ...(r.objs ?? [])].some(x => (typeof x === 'string' ? x : x.id) === id)
+      : r.id === placed;
+    return candidate && presentAt(id, r.id, min);
+  })?.id ?? null;
+}
+
+/** 十二时辰的在场时段；halves 为真时两个整点都试，保留见闻簿对子时前半段的判断。 */
+export function hoursAt(id: string, roomId: string, halves = false): string | null {
+  const on = Array.from({ length: 12 }, (_, k) =>
+    presentAt(id, roomId, k * 120) || (halves && presentAt(id, roomId, (k * 120 + 1380) % 1440)));
+  if (on.every(Boolean)) return '整日';
+  if (!on.some(Boolean)) return null;
+  // 从一个不在的时辰之后起算，跨子夜的段落也连得上。
+  const start = (on.indexOf(false) + 1) % 12, runs: [number, number][] = [];
+  for (let i = 0; i < 12; i++) {
+    const k = (start + i) % 12;
+    if (!on[k]) continue;
+    const last = runs[runs.length - 1];
+    if (last && (last[1] + 1) % 12 === k) last[1] = k; else runs.push([k, k]);
+  }
+  const name = (k: number): string => shichen(k * 120);
+  return runs.map(([a, b]) => a === b ? name(a) : `${name(a)}到${name(b)}`).join('、');
+}
 
 /** 地点描写；底下接这处地方的痕迹（engine/shijie.ts，最多两行）：码头换了主人、谁挨了打铺子上了门板…… */
 export function roomDesc(id: string): string {
@@ -127,11 +165,15 @@ export function pathMin(from: string, to: string): number {
 /**
  * 这趟路要多久、花多少钱（地图点地名前先给玩家看，负责人 10-09：「成本和时间消耗」要看得见）：
  * 总分钟、经过几处、沿途要付的船钱和过路钱（每上一处有船钱的地方付一回，同 payFare）。去不了返回 null
+ * 耗时按段累加 travelMin(hopMin)，和 travelTo 的实走同款（#285）：总程乘身法系数后只取整一次，
+ * 多段路会比实走少一两分钟
  */
 export function tripCost(to: string): { min: number; hops: number; fee: number } | null {
   const path = pathTo(S.loc, to);
   if (!path.length) return null;
-  return { min: travelMin(pathMin(S.loc, to)), hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
+  let cur = S.loc, min = 0;
+  for (const id of path) { min += travelMin(hopMin(cur, id)); cur = id; }
+  return { min, hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
 }
 
 /** 一步心事此刻的标题和盘算：写了 alt 的，第一条成立的生效（新旧两稿），没写的字段沿用 */
@@ -282,6 +324,8 @@ export function act(id: string, verb: Verb, arg?: string): { text: string; out: 
 function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outcome; timed?: boolean; eyes?: EyeDef[] } {
   const n = npc(id);
   if (!n) return { text: '', out: newOutcome() };
+  const refusal = refuseOf(id, verb);
+  if (refusal) return { text: refusal, out: newOutcome(), timed: true };
   if (verb === '观察') {
     // 先是外貌，再接上随条件变化的细节（例如拿到线索以后才看得出的东西）
     const b = pickBranch(n.actions['观察']);
@@ -317,7 +361,19 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
   const out = newOutcome();
   switch (verb) {
     // 赠礼、典当：从行囊里挑一件（engine/daoju.ts）。送了人物喜欢的，关系升一级
-    case '赠礼': return { text: giveGift(n, who, arg), out };
+    case '赠礼': {
+      const it = arg ? itemById(arg) : undefined;
+      if (!it || !giftable(it)) return { text: '你身上没有合适的礼物。', out };
+      const likes = n.likes?.includes(it.id);
+      const effects = [{ type: 'item' as const, id: it.id, delta: -1 },
+        ...(likes ? [{ type: 'rel' as const, npc: id, value: warmer(S.rel[id]) }] : []),
+        { type: 'time' as const, add: VERB_MIN.赠礼 }];
+      const result = settleAction(effectReq(verb, id, effects));
+      const text = !result.ok ? result.why ?? '' : likes
+        ? fmt(n.gift ?? `${who}收下了${it.name}，神色和缓了许多。`, textVars())
+        : `${who}客客气气地收下了${it.name}，道了声谢。`;
+      return { text, out: result.out, timed: true };
+    }
     case '典当': {
       const it = arg ? itemById(arg) : undefined, price = it ? pawnPrice(it) : 0;
       if (!it || !price || have(it.id) < 1) return { text: `${who}摇摇头：「这东西小号不收。」`, out, timed: true };

@@ -108,7 +108,7 @@ function playStory(id: string, depth: number): void {
   err(`剧情「${id}」走了两百张卡片还没完，可能死循环`);
 }
 
-function fight(fid: string, depth: number): void {
+function fight(fid: string, depth: number, policy?: Policy): DuelRes | undefined {
   const f = foeById(fid);
   if (!f) { err(`对手「${fid}」不存在`); return; }
   // 开打前掂斤两（engine/shang.ts）：打赢了比自己弱的，落的伤封顶。机器玩家少掂几回，省时间
@@ -118,12 +118,12 @@ function fight(fid: string, depth: number): void {
   const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, prep), { rng, allies: alliesOf(prep) });
   // 玩家各有各的打法：大多照「以己之长」应对，也有乱点的、不出招干挨打的、打不过就跑（认输）的
   const style = rng();
-  if (style < 0.08 && !f.script) {
+  if (!policy && style < 0.08 && !f.script) {
     for (let t = 0; t < 30 && !d.over; t++) d.tick(), f.spar ? d.yieldUp() : d.flee();
   }
   // 盯任务时更常打输（有的事要先输一场才开头）；盯世事时认真打（插手多半要打赢）
   const idle = cur?.focus ? 0.4 : cur?.shi ? 0.03 : 0.18;
-  if (!d.over) simulate(d, style < idle ? IDLE : style < idle + 0.27 ? RANDOM : SKILLED);
+  if (!d.over) simulate(d, policy ?? (style < idle ? IDLE : style < idle + 0.27 ? RANDOM : SKILLED));
   S.hp = Math.max(0, Math.round(d.hp));
   S.mp = Math.max(0, Math.round(d.mp));
   const res = d.res!;
@@ -141,6 +141,7 @@ function fight(fid: string, depth: number): void {
   if (st.out.fight || st.out.story) err(`对手「${fid}」的「${res}」结算：do 里的开打、开剧情不会生效，要写在 then 里`);
   if (S.hp <= 0) warn(`对手「${fid}」打「${res}」以后气血是零，结算没有回血`);
   if (st.r?.then) handle(run(st.r.then), depth);
+  return res;
 }
 
 /**
@@ -492,6 +493,48 @@ function play(r: Run): void {
   if (VERBOSE) console.log(`第 ${r.seed} 局：${tierNow(S).name}，银两 ${S.silver}，功力 ${S.gongli}，${Object.entries(S.skills).map(([k, v]) => k + (v?.r ?? 0)).join(' ')}，任务 ${JSON.stringify(S.quests)}，旗标 ${Object.keys(S.flags).length} 个${S.flags.boss ? '，打赢了屠千山' : ''}`);
 }
 
+/**
+ * 明确选择拦人、又打不过的一局（#333）：不练六个月，不靠百分之三的不出手策略碰巧抽中。
+ * 只定玩家的选择和应对；在场、动作、战果、输后剧情和世界结果都由真实规则判。
+ */
+function playXunLoss(): void {
+  cur = { start: 'skip', steps: 0, seed: 4000, shi: 'kp_xun' };
+  rng = mulberry32(cur.seed);
+  setState(skipToYangzhou());
+  cov.room.add(S.loc);
+  run([{ type: 'shi', id: 'kp_xun', to: shiById('kp_xun')!.first }]);
+  const path = pathTo(S.loc, 'dukou');
+  expect(path.length, '战败定向局能走到渡口').toBeGreaterThan(0);
+  for (const next of path) travel(next);
+  // 每半个钟头等待一次，等事情走到对面那夜；不到场的动作不伪造。
+  for (let i = 0; i < 14 * 48; i++) {
+    tickShi();
+    const left = shiLeftHours('kp_xun');
+    if (S.shi?.kp_xun.at === 'duimian' && left !== undefined && left > 0 && left < 3 && roomNpcs(S.loc).includes('kp_wei') && verbsOf(npc('kp_wei')!).includes('插手')) break;
+    advanceMin(S, 30);
+    checkYue(S);
+  }
+  expect(S.loc).toBe('dukou');
+  expect(roomNpcs(S.loc), '对面那夜卫衡真的在渡口').toContain('kp_wei');
+  expect(verbsOf(npc('kp_wei')!), '此刻确实可以插手').toContain('插手');
+  cov.branch.add(branchKey('kp_wei', '插手'));
+  const opened = act('kp_wei', '插手').out;
+  expect(opened.story).toBe('xun_dui');
+  const story = storyById(opened.story!)!;
+  const index = story.cards[0].choices.findIndex(c => c.label.includes('拦在褚七') && test(c.if));
+  expect(index, '玩家可以选择拦在褚七前头').toBeGreaterThanOrEqual(0);
+  cov.choice.add(`${story.id}#0#${index}`);
+  const out = run(story.cards[0].choices[index].do);
+  expect(out.fight).toBe('xun_weiheng');
+  expect(fight(out.fight!, 0, IDLE), '用真实不出手策略实际输掉').toBe('lose');
+  // fight 复用现有结算/剧情处理，站起来的选择也从真实输后卡片点；不直接写结局。
+  expect(cov.choice.has('xun_dui_lose#0#0')).toBe(true);
+  expect(S.shi?.kp_xun.at).toBe('hubai');
+  cov.shi.add(`kp_xun.${S.shi!.kp_xun.at}`);
+  check('战败定向局收尾');
+  if (VERBOSE) console.log('定向战败：种子 4000，渡口插手 → 拦在褚七前头 → 真实战败 → 站起来 → kp_xun.hubai');
+}
+
 describe('机器玩家走遍江湖', () => {
   setNowMs(() => 1_000_000_000_000);
   const t0 = Date.now();
@@ -507,6 +550,7 @@ describe('机器玩家走遍江湖', () => {
   // 卫衡寻褚七里夜里结算、要玩家守在渡口看着的那几步（*_see），和事先做过安排的结局，乱走撞不上：上面的局没走全，再补几局定向的
   const XUN_PLAN: Partial<Run>[] = [{ guard: true, arrange: 'meet' }, { guard: true, watch: true }, { arrange: 'warned' }];
   for (let j = 0; j < 12 && shiLeft('kp_xun'); j++) play({ start: 'skip', steps: 3000, seed: 3000 + j, shi: 'kp_xun', ...XUN_PLAN[j % 3] });
+  playXunLoss();
   const ms = Date.now() - t0;
 
   // 覆盖报告

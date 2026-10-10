@@ -12,59 +12,79 @@
   --bg:#f4f1ea; --card:#ffffff; --ink:#1f2328; --sub:#667085; --line:#e4dfd3;
   --ok:#1a7f37; --okbg:#dcf3e1; --warn:#9a6700; --warnbg:#fff1c2; --bad:#c62828; --badbg:#fde0dd;
   --run:#0b5fc5; --runbg:#dbeafe; --gray:#8a8f98; --graybg:#ececec; --acc:#8c3b2a;
-  --bar-done:#2e9e55; --bar-doing:#e0a526; --bar-todo:#cfcabd;
+  --c-done:#2e9e55; --c-doing:#e0a526; --c-wait:#5b8bd6; --track:#e9e5da; --bar-todo:#cfcabd;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#14161a; --card:#1e2127; --ink:#e8e8ea; --sub:#9aa1ad; --line:#2f333b;
     --ok:#5fd486; --okbg:#173823; --warn:#f0c040; --warnbg:#3b3012; --bad:#ff8a80; --badbg:#401c19;
     --run:#7db3ff; --runbg:#16304f; --gray:#9aa1ad; --graybg:#2a2d33; --acc:#e8a08c;
-    --bar-done:#3fb86b; --bar-doing:#d8a21f; --bar-todo:#3b3f47;
+    --c-done:#3fb86b; --c-doing:#d8a21f; --c-wait:#6f9ae0; --track:#2b2f37; --bar-todo:#3b3f47;
   }
 }
 :root[data-theme="dark"]{
   --bg:#14161a; --card:#1e2127; --ink:#e8e8ea; --sub:#9aa1ad; --line:#2f333b;
   --ok:#5fd486; --okbg:#173823; --warn:#f0c040; --warnbg:#3b3012; --bad:#ff8a80; --badbg:#401c19;
   --run:#7db3ff; --runbg:#16304f; --gray:#9aa1ad; --graybg:#2a2d33; --acc:#e8a08c;
-  --bar-done:#3fb86b; --bar-doing:#d8a21f; --bar-todo:#3b3f47;
+  --c-done:#3fb86b; --c-doing:#d8a21f; --c-wait:#6f9ae0; --track:#2b2f37; --bar-todo:#3b3f47;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;overflow-x:hidden;font-variant-numeric:tabular-nums}
 main{max-width:760px;margin:0 auto;padding:12px 16px 48px}
 a{color:inherit}
 .meta{color:var(--sub);font-size:12px;overflow-wrap:anywhere}
+.meta.old{color:var(--bad)}
 button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px;min-height:44px;min-width:44px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}
 .banner{margin:6px 0;padding:10px 12px;border-radius:10px;font-size:13px;background:var(--warnbg);color:var(--warn)}
 .banner.bad{background:var(--badbg);color:var(--bad)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 10px;min-width:0}
-.ms{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.ms b{font-size:16px;min-width:0;overflow-wrap:anywhere}
-.ms span{color:var(--acc);font-weight:600;white-space:nowrap}
-.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--bar-todo);margin:8px 0 6px}
-.bar i{display:block;height:100%;background:var(--bar-done)}
 .sub{color:var(--sub);font-size:12px}
+.mrem{margin-top:8px;text-align:left;font-size:12px;overflow-wrap:anywhere}
+.mrow{padding:3px 0;border-top:1px solid #8883}
+.mrow.bad{color:var(--bad)}
+.ctitle{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:14px;font-weight:600;margin:0 0 4px}
+.ctitle small{font-weight:400;color:var(--sub);font-size:12px}
 .chip{display:inline-block;font-size:12px;line-height:1.4;padding:1px 8px;border-radius:999px;background:var(--graybg);color:var(--sub);margin:2px 4px 2px 0;max-width:100%;overflow-wrap:anywhere}
 .chip.ok{background:var(--okbg);color:var(--ok)}
 .chip.warn{background:var(--warnbg);color:var(--warn)}
 .chip.bad{background:var(--badbg);color:var(--bad)}
 .chip.run{background:var(--runbg);color:var(--run)}
 .chip.acc{background:transparent;border:1px solid var(--acc);color:var(--acc)}
+
+/* 图一：里程碑进度环 */
+.ringcard{text-align:center}
+.ringcard .mname{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.ring{display:block;width:132px;height:132px;margin:6px auto 2px}
+.ring .rt{fill:none;stroke:var(--track);stroke-width:12}
+.ring .rp{fill:none;stroke:var(--c-done);stroke-width:12;stroke-linecap:round}
+.ring .r1{fill:var(--sub);font-size:11px;text-anchor:middle}
+.ring .r2{fill:var(--ink);font-size:30px;font-weight:700;text-anchor:middle}
+
+/* 图二：九家的活 */
 .ais{padding:0 14px}
 .ai{border-top:1px solid var(--line)}
-.ai:first-child{border-top:0}
-.ai>summary{display:grid;grid-template-columns:84px 10px minmax(0,1fr) 60px;align-items:center;gap:6px;min-height:44px;cursor:pointer;list-style:none;font-size:14px}
+.ai:first-of-type{border-top:0}
+.ai>summary{display:grid;grid-template-columns:88px minmax(0,1fr) 58px;grid-template-areas:"nm bar tm" "nm tk tk";align-items:center;column-gap:8px;row-gap:1px;min-height:48px;padding:4px 0;cursor:pointer;list-style:none;font-size:14px}
 .ai>summary::-webkit-details-marker{display:none}
-.ai .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lamp{width:10px;height:10px;border-radius:50%;background:var(--gray)}
-.lamp.g{background:var(--bar-done)}
-.lamp.y{background:var(--bar-doing)}
-.lamp.r{background:var(--bad)}
-.ai .tk{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.ai .tk.none{color:var(--sub)}
-.ai .tm{font-size:12px;color:var(--sub);text-align:right;white-space:nowrap}
+.ai .nm{grid-area:nm;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai .bar{grid-area:bar;display:block;width:100%;height:14px}
+.ai .bar .tk0{fill:var(--track)}
+.ai .bar .sd{fill:var(--c-done)}
+.ai .bar .sg{fill:var(--c-doing)}
+.ai .bar .sw{fill:var(--c-wait)}
+.ai .tk{grid-area:tk;font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ai .tk .lamp{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;background:var(--gray)}
+.ai .tk .lamp.g{background:var(--c-done)}
+.ai .tk .lamp.y{background:var(--c-doing)}
+.ai .tk .lamp.r{background:var(--bad)}
+.ai .tm{grid-area:tm;font-size:12px;color:var(--sub);text-align:right;white-space:nowrap}
 .ai .tm.late{color:var(--bad);font-weight:600}
+.ai.idle .nm,.ai.idle .tk,.ai.idle .tm{color:var(--gray)}
+.ai.idle{opacity:.78}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--sub);padding:6px 0 8px;border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .detail{padding:0 0 8px 0}
 .detail h4{margin:6px 0 0;font-size:12px;font-weight:400;color:var(--sub)}
 .row{display:block;text-decoration:none;padding:8px 0;border-top:1px solid var(--line);min-width:0;min-height:44px}
@@ -72,6 +92,16 @@ button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(-
 .row .t{display:block;overflow-wrap:anywhere}
 .row .s{display:block;font-size:12px;color:var(--sub);overflow-wrap:anywhere}
 .n{color:var(--acc);font-weight:600;margin-right:6px}
+
+/* 图三：合并节奏 */
+.rhythm{display:block;width:100%;height:auto}
+.rhythm .bx{fill:var(--c-done)}
+.rhythm .bz{fill:var(--track)}
+.rhythm .ax{stroke:var(--line);stroke-width:1}
+.rhythm text{fill:var(--sub);font-size:10px}
+.rhythm .bv{fill:var(--ink);text-anchor:middle}
+.rhythm .tx{text-anchor:middle}
+
 .fold{padding:0 14px}
 .fold>summary,.sfold>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;list-style:none}
 .fold>summary::-webkit-details-marker,.sfold>summary::-webkit-details-marker,.ai>summary::-webkit-details-marker{display:none}
@@ -84,8 +114,8 @@ button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(-
 .jd{font-size:13px;padding:6px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
 .jd:first-of-type{border-top:0}
 .jd .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--bar-todo)}
-.jd.done .dot{background:var(--bar-done)}
-.jd.doing .dot{background:var(--bar-doing)}
+.jd.done .dot{background:var(--c-done)}
+.jd.doing .dot{background:var(--c-doing)}
 .empty{color:var(--sub);font-size:13px;padding:4px 0}
 .err{color:var(--bad);font-size:13px}
 </style>
@@ -97,420 +127,422 @@ button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(-
     <button id="refresh" type="button">刷新</button>
   </div>
   <div id="banners"></div>
-  <div id="root"><div class="card empty">正在向 GitHub 取数据……</div></div>
+  <div id="wake"></div>
+  <div id="root"><div class="card empty">正在读数据……</div></div>
 </main>
-<script>
-(function(){
-'use strict';
-var REPO='mud4u404/game006';
-var API='https://api.github.com/repos/'+REPO;
-var TTL=5*60*1000;          // 数据缓存五分钟
-var CKEY='kanban-cache-v1', KKEY='kanban-checks-v1';
-var AIS=[
- {k:'codex',n:'Codex'},{k:'codebuddy',n:'CodeBuddy'},{k:'qoder',n:'Qoder'},{k:'minimax',n:'MiniMax'},
- {k:'zcode',n:'zcode',tag:'整改观察'},{k:'trae',n:'Trae'},{k:'autoclaw',n:'autoclaw'},{k:'workbuddy',n:'WorkBuddy',old:'step5'},
- {k:'claude',n:'维护者（Claude）',boss:true}
-];
-var HOUR=3600*1000;
+<script type="module">
+import {
+  REPO, has, nameOfRef, giveOf, isTask, ago,
+  processRaw, sumRuns, computeBoard
+} from './core.mjs';
+
+var API = 'https://api.github.com/repos/' + REPO;
+// 数据由 GitHub Actions（.github/workflows/kanban-data.yml）每十分钟算好，推到 kanban-data 分支；页面先读这个
+var DATA_URL = 'https://raw.githubusercontent.com/' + REPO + '/kanban-data/data.json';
+var TTL = 5 * 60 * 1000;          // 直连 API 时，数据缓存五分钟
+var CKEY = 'kanban-cache-v2', KKEY = 'kanban-checks-v2';
+var STALE = 60 * 60 * 1000;       // 预算数据超过一小时没更新，提醒一下
 
 /* ---------- 小工具 ---------- */
-function lsGet(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
-function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-function el(tag,attrs,kids){
-  var e=document.createElement(tag);
-  if(attrs){for(var a in attrs){
-    if(a==='class')e.className=attrs[a];
-    else if(a==='text')e.textContent=attrs[a];
-    else e.setAttribute(a,attrs[a]);
-  }}
-  (kids||[]).forEach(function(c){ if(c==null)return; e.appendChild(typeof c==='string'?document.createTextNode(c):c); });
+function lsGet(k) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 存不了就算了 */ } }
+function el(tag, attrs, kids) {
+  var e = document.createElement(tag);
+  if (attrs) {
+    for (var a in attrs) {
+      if (a === 'class') e.className = attrs[a];
+      else if (a === 'text') e.textContent = attrs[a];
+      else e.setAttribute(a, attrs[a]);
+    }
+  }
+  (kids || []).forEach(function (c) { if (c == null) return; e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
   return e;
 }
-function chip(text,cls){return el('span',{class:'chip'+(cls?' '+cls:''),text:text})}
-function ago(t){
-  if(!t)return '未知';
-  var s=Math.max(0,(Date.now()-t)/1000);
-  if(s<90)return '刚刚';
-  if(s<3600)return Math.round(s/60)+' 分钟前';
-  if(s<86400)return (s/3600).toFixed(s<36000?1:0).replace(/\.0$/,'')+' 小时前';
-  return Math.round(s/86400)+' 天前';
-}
-function prefixOf(ref){var i=(ref||'').indexOf('/');return i>0?ref.slice(0,i):''}
-function aiOf(ref){var p=prefixOf(ref);for(var i=0;i<AIS.length;i++)if(AIS[i].k===p)return AIS[i];return null}
-function nameOfRef(ref){var a=aiOf(ref);return a?a.n:(prefixOf(ref)||'其他')}
-function has(labels,x){return labels.indexOf(x)>=0}
-function giveOf(labels){
-  for(var i=0;i<labels.length;i++){var m=/^给[:：](.+)$/.exec(labels[i]);if(m)return m[1].trim().toLowerCase()}
-  return '';
-}
+function chip(text, cls) { return el('span', { class: 'chip' + (cls ? ' ' + cls : ''), text: text }); }
+// SVG 只用数字和固定文字拼，不含外来字符串，所以直接 innerHTML
+function svgBox(html) { var d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
 
 /* ---------- 取数 ---------- */
-var rl={remaining:null,reset:null};   // 限流信息，来自响应头
-function gh(path){
-  return fetch(API+path,{headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
-    var rem=r.headers.get('x-ratelimit-remaining'),rs=r.headers.get('x-ratelimit-reset');
-    if(rem!=null){rl.remaining=+rem;rl.reset=rs?+rs*1000:null}
-    if(r.status===403||r.status===429){
-      var e=new Error('limit');e.limit=true;
-      var ra=r.headers.get('retry-after');
-      if(ra&&!rl.reset)rl.reset=Date.now()+(+ra)*1000;
+var state = { data: null, checks: {}, jindu: null, when: 0, source: '', err: null, limitMsg: '', note: '' };
+
+// 一、预先算好的 data.json
+function fetchDataFile() {
+  return fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+    if (!r.ok) throw new Error('data.json ' + r.status);
+    return r.json();
+  }).then(function (j) {
+    if (!j || !Array.isArray(j.pulls) || !Array.isArray(j.merged) || !Array.isArray(j.issues) || !j.generatedAt) throw new Error('data.json 格式不对');
+    return j;
+  });
+}
+
+// 二、退路：浏览器直连 API（匿名，每小时 60 次，保留额度保护）
+var rl = { remaining: null, reset: null };   // 限流信息，来自响应头
+function gh(path) {
+  return fetch(API + path, { headers: { 'Accept': 'application/vnd.github+json' } }).then(function (r) {
+    var rem = r.headers.get('x-ratelimit-remaining'), rs = r.headers.get('x-ratelimit-reset');
+    if (rem != null) { rl.remaining = +rem; rl.reset = rs ? +rs * 1000 : null; }
+    if (r.status === 403 || r.status === 429) {
+      var e = new Error('limit'); e.limit = true;
+      var ra = r.headers.get('retry-after');
+      if (ra && !rl.reset) rl.reset = Date.now() + (+ra) * 1000;
       throw e;
     }
-    if(!r.ok){var e2=new Error('HTTP '+r.status);throw e2}
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   });
 }
-function fetchJindu(){
-  return fetch('jindu.json?t='+Math.floor(Date.now()/60000)).then(function(r){
-    if(!r.ok)throw new Error('jindu '+r.status);return r.json();
+function fetchJindu() {
+  return fetch('jindu.json?t=' + Math.floor(Date.now() / 60000)).then(function (r) {
+    if (!r.ok) throw new Error('jindu ' + r.status); return r.json();
   });
 }
-function slimIssue(x){
-  var labels=(x.labels||[]).map(function(l){return l.name});
-  var dep='';
-  var m=/依赖[：:]\s*([^\n\r]*)/.exec(x.body||'');
-  if(m)dep=(m[1].match(/#\d+/g)||[]).join(' ');
-  return {n:x.number,title:x.title,labels:labels,created:Date.parse(x.created_at),dep:dep};
-}
-function slimPull(x){
-  return {n:x.number,title:x.title,ref:x.head&&x.head.ref,sha:x.head&&x.head.sha,
-    labels:(x.labels||[]).map(function(l){return l.name}),updated:Date.parse(x.updated_at),draft:!!x.draft};
-}
-function loadAll(){
-  // 五个接口：开着的 Issue（含 PR，要剔掉）、开着的 PR、已关的 PR、仓库事件两页（推送时间）
+function loadAll() {
   return Promise.all([
     gh('/issues?state=open&per_page=100'),
     gh('/pulls?state=open&per_page=50'),
     gh('/pulls?state=closed&sort=updated&direction=desc&per_page=100'),
     gh('/events?per_page=100'),
     gh('/events?per_page=100&page=2')
-  ]).then(function(r){
-    var ev=r[3].concat(r[4]);
-    var data={t:Date.now()};
-    data.issues=r[0].filter(function(x){return !x.pull_request}).map(slimIssue);
-    data.pulls=r[1].map(slimPull);
-    data.closedFull=r[2].length>=100;
-    data.closedOldest=r[2].length?Date.parse(r[2][r[2].length-1].updated_at):0;
-    data.merged=r[2].filter(function(x){return x.merged_at}).map(function(x){
-      return {n:x.number,title:x.title,ref:x.head&&x.head.ref,at:Date.parse(x.merged_at)};
-    }).sort(function(a,b){return b.at-a.at});
-    data.pushes=ev.filter(function(e){return e.type==='PushEvent'&&e.payload&&e.payload.ref})
-      .map(function(e){return {ref:e.payload.ref.replace('refs/heads/',''),t:Date.parse(e.created_at)}});
-    data.evOldest=ev.length?Date.parse(ev[ev.length-1].created_at):Date.now();
-    data.evFull=ev.length>=100;
-    return data;
+  ]).then(function (r) {
+    return processRaw({ issues: r[0], openPulls: r[1], closedPulls: r[2], events1: r[3], events2: r[4] }, Date.now());
   });
 }
 /* 检查结果：只对开着的 PR 的最新提交查，结果按提交缓存（跑完的永久有效，没跑完的五分钟） */
-function sumRuns(runs){
-  var out={};
-  ['check','smoke'].forEach(function(nm){
-    var best=null;
-    runs.forEach(function(r){ if(r.name===nm&&(!best||r.id>best.id))best=r; });
-    if(!best){out[nm]='none';return}
-    if(best.status!=='completed'){out[nm]='run';return}
-    out[nm]=(best.conclusion==='success'||best.conclusion==='neutral'||best.conclusion==='skipped')?'ok':'fail';
-  });
-  return out;
-}
-function loadChecks(pulls){
-  var cache=lsGet(KKEY)||{};
-  var now=Date.now(),todo=[];
-  pulls.forEach(function(p){
-    var c=cache[p.sha];
-    var fresh=c&&(c.done||now-c.t<TTL);
-    if(!fresh)todo.push(p);
+function loadChecks(pulls) {
+  var cache = lsGet(KKEY) || {};
+  var now = Date.now(), todo = [];
+  pulls.forEach(function (p) {
+    var c = cache[p.sha];
+    var fresh = c && (c.done || now - c.t < TTL);
+    if (!fresh) todo.push(p);
   });
   // 限流紧的时候少查：剩余不足 12 次就不查检查结果
-  if(rl.remaining!=null&&rl.remaining<12)todo=[];
-  todo=todo.sort(function(a,b){return b.updated-a.updated}).slice(0,10);
-  return Promise.all(todo.map(function(p){
-    return gh('/commits/'+p.sha+'/check-runs?per_page=30').then(function(j){
-      var res=sumRuns(j.check_runs||[]);
-      var done=res.check!=='run'&&res.smoke!=='run'&&res.check!=='none'&&res.smoke!=='none';
-      cache[p.sha]={t:Date.now(),done:done,res:res};
-    }).catch(function(e){ if(e&&e.limit)throw e; });
-  })).catch(function(e){/* 限流：用已有的 */ }).then(function(){
+  if (rl.remaining != null && rl.remaining < 12) todo = [];
+  todo = todo.sort(function (a, b) { return b.updated - a.updated; }).slice(0, 10);
+  return Promise.all(todo.map(function (p) {
+    return gh('/commits/' + p.sha + '/check-runs?per_page=30').then(function (j) {
+      var res = sumRuns(j.check_runs || []);
+      var done = res.check !== 'run' && res.smoke !== 'run' && res.check !== 'none' && res.smoke !== 'none';
+      cache[p.sha] = { t: Date.now(), done: done, res: res };
+    }).catch(function (e) { if (e && e.limit) throw e; });
+  })).catch(function () { /* 限流：用已有的 */ }).then(function () {
     // 只保留还在用的提交，免得缓存越积越大
-    var keep={};pulls.forEach(function(p){if(cache[p.sha])keep[p.sha]=cache[p.sha]});
-    lsSet(KKEY,keep);
-    return keep;
+    var keep = {}, out = {};
+    pulls.forEach(function (p) { if (cache[p.sha]) { keep[p.sha] = cache[p.sha]; out[p.sha] = cache[p.sha].res; } });
+    lsSet(KKEY, keep);
+    return out;
   });
+}
+function cachedChecks() {
+  var c = lsGet(KKEY) || {}, out = {};
+  for (var k in c) out[k] = c[k].res;
+  return out;
 }
 
 /* ---------- 渲染 ---------- */
-var state={data:null,jindu:null,checks:{},err:null,limitMsg:'',fromCache:false};
-
-function prState(res){
-  if(!res)return {cls:'',txt:'未查'};
-  var v=[res.check,res.smoke];
-  if(v.indexOf('fail')>=0)return {cls:'bad',txt:'红'};
-  if(v.indexOf('run')>=0)return {cls:'run',txt:'在跑'};
-  if(v[0]==='ok'&&v[1]==='ok')return {cls:'ok',txt:'绿'};
-  if(v.indexOf('none')>=0&&v.indexOf('ok')>=0)return {cls:'run',txt:'未跑全'};
-  return {cls:'',txt:'无结果'};
+/* 折叠块：开合状态在重新渲染后保留 */
+var openKeys = {};
+function fold(key, cls, title, count, kids) {
+  var sm = el('summary', {}, [title, count == null ? null : el('small', { text: String(count) })]);
+  var d = el('details', { class: cls }, [sm, el('div', { class: 'body' }, kids)]);
+  if (openKeys[key]) d.open = true;
+  d.addEventListener('toggle', function () { openKeys[key] = d.open; });
+  return d;
 }
-function prChips(res){
-  var box=[];
-  var names={ok:'✓',fail:'✗',run:'…',none:'–'};
-  var cls={ok:'ok',fail:'bad',run:'run',none:''};
-  if(!res){box.push(chip('检查未查'));return box}
-  ['check','smoke'].forEach(function(nm){box.push(chip(nm+' '+names[res[nm]],cls[res[nm]]))});
+function prChips(res) {
+  var box = [];
+  var names = { ok: '✓', fail: '✗', run: '…', none: '–' };
+  var cls = { ok: 'ok', fail: 'bad', run: 'run', none: '' };
+  if (!res) { box.push(chip('检查未查')); return box; }
+  ['check', 'smoke'].forEach(function (nm) { box.push(chip(nm + ' ' + names[res[nm]], cls[res[nm]])); });
   return box;
 }
 
-/* 折叠块：开合状态在重新渲染后保留 */
-var openKeys={};
-function fold(key,cls,title,count,kids){
-  var sm=el('summary',{},[title,count==null?null:el('small',{text:String(count)})]);
-  var d=el('details',{class:cls},[sm,el('div',{class:'body'},kids)]);
-  if(openKeys[key])d.open=true;
-  d.addEventListener('toggle',function(){openKeys[key]=d.open});
-  return d;
-}
-/* 短标题：去掉 [#N] 前缀，取第一个冒号/逗号前的一段，最多 12 字 */
-function shortTitle(t){
-  t=(t||'').replace(/^\s*\[#?\d+\]\s*/,'');
-  var m=/^(.{2,}?)[：:，,（(]/.exec(t);
-  if(m)t=m[1];
-  var a=Array.from(t);
-  return a.length>12?a.slice(0,12).join('')+'…':t;
-}
-function taskNo(p){var m=/\[#(\d+)/.exec(p.title||'');return m?m[1]:String(p.n)}
-var SEV={r:3,y:2,g:1};
-function prLamp(p){
-  var st=prState(state.checks[p.sha]&&state.checks[p.sha].res);
-  if(st.cls==='bad')return 'r';
-  if(has(p.labels,'要改'))return 'y';
-  return 'g';
-}
-
-function render(){
-  var root=document.getElementById('root');
-  root.textContent='';
-  var d=state.data;
-  if(!d){
-    root.appendChild(el('div',{class:'card err',text:state.limitMsg||state.err||'没有数据'}));
-    return;
+/* 图一：里程碑进度环 */
+function ringCard(J, board, M) {
+  var card = el('div', { class: 'card ringcard' });
+  var mtxt = '近 24 小时合 ' + (board.sat24 ? '至少 ' : '') + board.merged24 + ' 件';
+  if (!(J && J.items && J.milestone)) {
+    card.appendChild(el('div', { class: 'err', text: '读不到 jindu.json' }));
+    card.appendChild(el('div', { class: 'sub', text: mtxt }));
+    return card;
   }
-  var now=Date.now();
-  var pulls=d.pulls,issues=d.issues;
-  var prNums={};   // 已经有 PR 在做的 Issue 编号
-  pulls.forEach(function(p){var m=/\[#(\d+)/.exec(p.title);if(m)prNums[m[1]]=p.n});
-  var isTask=function(i){return has(i.labels,'内容')||has(i.labels,'功能')};
-
-  /* —— 第一屏之一：里程碑 + 进度条 —— */
-  var J=state.jindu;
-  var m24=d.merged.filter(function(m){return now-m.at<24*HOUR}).length;
-  // 接口一次最多给 100 件已关的 PR；若最老的一件还在窗口里，说明窗口没取全，数字只是下限
-  var sat24=d.closedFull&&now-d.closedOldest<24*HOUR;
-  var mtxt='近 24 小时合了 '+(sat24?'至少 ':'')+m24+' 件';
-  var ms=el('div',{class:'card'});
-  if(J&&J.items&&J.milestone){
-    var done=J.items.filter(function(i){return i.status==='done'}).length,tot=J.items.length||1;
-    var rem=(J.milestone.remaining||[]).length;
-    ms.appendChild(el('div',{class:'ms'},[
-      el('b',{text:String(J.milestone.name||'').replace(/（[^）]*）\s*$/,'')}),
-      el('span',{text:rem?'还差 '+rem+' 件':'已做完'})
-    ]));
-    var bar=el('div',{class:'bar'});var bi=el('i');bi.style.width=(done/tot*100)+'%';bar.appendChild(bi);
-    ms.appendChild(bar);
-    ms.appendChild(el('div',{class:'sub',text:'做完 '+done+'/'+tot+' · '+mtxt}));
-  }else{
-    ms.appendChild(el('div',{class:'err',text:'读不到 jindu.json'}));
-    ms.appendChild(el('div',{class:'sub',text:mtxt}));
-  }
-  root.appendChild(ms);
-
-  /* —— 第一屏之二：九家 AI，每家一行 —— */
-  var mergedRef={};d.merged.forEach(function(m){if(m.ref)mergedRef[m.ref]=1});
-  var issueByN={};issues.forEach(function(i){issueByN[i.n]=i});
-  var list=el('div',{class:'card ais'});
-  AIS.forEach(function(ai){
-    var myIssues=ai.boss?[]:issues.filter(function(i){return (giveOf(i.labels)===ai.k||(ai.old&&giveOf(i.labels)===ai.old))&&isTask(i)&&!has(i.labels,'暂缓')});
-    var waiting=myIssues.filter(function(i){return !prNums[i.n]});
-    var myPulls=pulls.filter(function(p){return (prefixOf(p.ref)===ai.k||(ai.old&&prefixOf(p.ref)===ai.old))});
-    var recent=d.pushes.filter(function(p){return (prefixOf(p.ref)===ai.k||(ai.old&&prefixOf(p.ref)===ai.old))});
-    var lastPush=recent.reduce(function(a,p){return Math.max(a,p.t)},0);
-    var last=Math.max(lastPush,myPulls.reduce(function(a,p){return Math.max(a,p.updated)},0));
-    // 已领的任务分支：24 小时内有推送、还没有 PR、也没合并的分支
-    var openRef={};myPulls.forEach(function(p){openRef[p.ref]=1});
-    var claimed=[];
-    recent.forEach(function(p){
-      if(now-p.t<24*HOUR&&!openRef[p.ref]&&!mergedRef[p.ref]&&claimed.indexOf(p.ref)<0)claimed.push(p.ref);
+  var done = M ? M.done : J.items.filter(function (i) { return i.status === 'done'; }).length;
+  var tot = M ? (M.total || 1) : (J.items.length || 1);
+  var rem = M ? M.remaining.length : (J.milestone.remaining || []).length;
+  var C = 2 * Math.PI * 48, dash = (C * done / tot).toFixed(1);
+  card.appendChild(el('div', { class: 'mname', text: String(J.milestone.name || '').replace(/（[^）]*）\s*$/, '') }));
+  card.appendChild(svgBox(
+    '<svg class="ring" viewBox="0 0 120 120" role="img" aria-label="里程碑进度：做完 ' + done + ' 件，共 ' + tot + ' 件">' +
+    '<circle class="rt" cx="60" cy="60" r="48"/>' +
+    '<circle class="rp" cx="60" cy="60" r="48" stroke-dasharray="' + dash + ' ' + C.toFixed(1) + '" transform="rotate(-90 60 60)"/>' +
+    (rem ? '<text class="r1" x="60" y="50">还差</text><text class="r2" x="60" y="80">' + rem + '</text><text class="r1" x="60" y="96">件</text>'
+         : '<text class="r2" x="60" y="70" style="font-size:20px">做完了</text>') +
+    '</svg>'));
+  card.appendChild(el('div', { class: 'sub', text: '做完 ' + done + '/' + tot + ' · ' + mtxt }));
+  if (M && M.remaining.length) {
+    var ul = el('div', { class: 'mrem' });
+    M.remaining.forEach(function (r) {
+      var why = r.noIssue ? '没有任务单' : '等 ' + r.open.map(function (n) { return '#' + n; }).join('、');
+      ul.appendChild(el('div', { class: 'mrow' + (r.noIssue ? ' bad' : ''), text: '第 ' + String(r.id).padStart(3, '0') + ' 项 ' + r.title + ' · ' + why }));
     });
+    card.appendChild(ul);
+  }
+  return card;
+}
 
-    var lamp='',txt='',none=false;
-    if(myPulls.length){
-      var ranked=myPulls.slice().sort(function(a,b){return SEV[prLamp(b)]-SEV[prLamp(a)]||b.updated-a.updated});
-      lamp=prLamp(ranked[0]);
-      txt='#'+taskNo(ranked[0])+' '+shortTitle(ranked[0].title);
-    }else if(claimed.length){
-      lamp='g';
-      var tail=claimed[0].slice(claimed[0].indexOf('/')+1),mm=/^(\d+)/.exec(tail);
-      var is=mm&&issueByN[mm[1]];
-      txt=mm?('#'+mm[1]+' '+(is?shortTitle(is.title):tail.replace(/^\d+-/,''))):tail;
-    }else{
-      if(waiting.length){var w0=waiting.slice().sort(function(a,b){return a.n-b.n})[0];txt='#'+w0.n+' '+shortTitle(w0.title)+' · 没开工';}else{txt='没活';none=true;}
-    }
-    var late=last&&now-last>6*HOUR;
-    var tm=last?ago(last):(d.evFull?'>'+Math.round((now-d.evOldest)/HOUR)+' 小时':'—');
-    if(!last&&d.evFull&&now-d.evOldest>6*HOUR)late=true;
+/* 图二：九家的活。一根横条三段，同一刻度：做完（48 小时内合并）｜在做（开着的 PR + 已领分支）｜排着（指给它的待领 Issue） */
+function aisCard(d, board) {
+  var list = el('div', { class: 'card ais' });
+  var scale = 4;
+  board.ais.forEach(function (a) { scale = Math.max(scale, a.done48 + a.doing + a.waiting); });
+  var W = 200, u = W / scale;
+  var issueByN = {}; d.issues.forEach(function (i) { issueByN[i.n] = i; });
+  var pullByN = {}; d.pulls.forEach(function (p) { pullByN[p.n] = p; });
 
-    var sum=el('summary',{},[
-      el('span',{class:'nm',text:ai.boss?'维护者':ai.n}),
-      el('span',{class:'lamp'+(lamp?' '+lamp:'')}),
-      el('span',{class:'tk'+(none?' none':''),text:txt}),
-      el('span',{class:'tm'+(late?' late':''),text:tm})
+  board.ais.forEach(function (a) {
+    var x = 0, segs = '';
+    [['sd', a.done48], ['sg', a.doing], ['sw', a.waiting]].forEach(function (s) {
+      if (!s[1]) return;
+      var w = s[1] * u;
+      segs += '<rect class="' + s[0] + '" x="' + x.toFixed(1) + '" y="0" width="' + Math.max(w - 1, 1).toFixed(1) + '" height="14" rx="1.5"/>';
+      x += w;
+    });
+    var bar = svgBox('<svg class="bar" viewBox="0 0 ' + W + ' 14" preserveAspectRatio="none" role="img" aria-label="' +
+      a.n + '：48 小时做完 ' + a.done48 + '，在做 ' + a.doing + '，排着 ' + a.waiting + '">' +
+      '<rect class="tk0" x="0" y="0" width="' + W + '" height="14" rx="2"/>' + segs + '</svg>');
+    var sum = el('summary', {}, [
+      el('span', { class: 'nm', text: a.boss ? '维护者' : a.n }),
+      bar,
+      el('span', { class: 'tm' + (a.late ? ' late' : ''), text: a.lastTxt }),
+      el('span', { class: 'tk' }, [a.lamp ? el('span', { class: 'lamp ' + a.lamp }) : null, a.txt])
     ]);
 
     /* 展开后的细节：PR 带检查结果、排着的 Issue */
-    var body=el('div',{class:'detail'});
-    if(ai.tag)body.appendChild(el('div',{},[chip(ai.tag,'acc')]));
-    if(claimed.length)body.appendChild(el('div',{class:'sub',text:'已领分支：'+claimed.map(function(b){return b.slice(b.indexOf('/')+1)}).join('、')}));
-    body.appendChild(el('h4',{text:'开着的 PR（'+myPulls.length+'）'}));
-    myPulls.slice().sort(function(a,b){return b.updated-a.updated}).forEach(function(p){
-      var kids=prChips(state.checks[p.sha]&&state.checks[p.sha].res);
-      if(has(p.labels,'要改'))kids.push(chip('要改','bad'));
-      if(p.draft)kids.push(chip('草稿'));
-      kids.push(el('span',{class:'s',text:' '+ago(p.updated)+'更新'}));
-      body.appendChild(el('a',{class:'row',href:'https://github.com/'+REPO+'/pull/'+p.n,target:'_blank',rel:'noopener'},[
-        el('span',{class:'t'},[el('span',{class:'n',text:'#'+p.n}),p.title]),
-        el('span',{class:'s'},kids)
+    var body = el('div', { class: 'detail' });
+    if (a.tag) body.appendChild(el('div', {}, [chip(a.tag, 'acc')]));
+    body.appendChild(el('div', { class: 'sub', text: '48 小时做完 ' + a.done48 + ' · 在做 ' + a.doing + ' · 排着 ' + a.waiting }));
+    if (a.claimed.length) body.appendChild(el('div', { class: 'sub', text: '已领分支：' + a.claimed.map(function (b) { return b.slice(b.indexOf('/') + 1); }).join('、') }));
+    body.appendChild(el('h4', { text: '开着的 PR（' + a.myPulls.length + '）' }));
+    a.myPulls.forEach(function (n) {
+      var p = pullByN[n];
+      var kids = prChips(state.checks[p.sha]);
+      if (has(p.labels, '要改')) kids.push(chip('要改', 'bad'));
+      if (p.draft) kids.push(chip('草稿'));
+      kids.push(el('span', { class: 's', text: ' ' + ago(p.updated) + '更新' }));
+      body.appendChild(el('a', { class: 'row', href: 'https://github.com/' + REPO + '/pull/' + p.n, target: '_blank', rel: 'noopener' }, [
+        el('span', { class: 't' }, [el('span', { class: 'n', text: '#' + p.n }), p.title]),
+        el('span', { class: 's' }, kids)
       ]));
     });
-    if(!myPulls.length)body.appendChild(el('div',{class:'empty',text:'没有'}));
-    if(!ai.boss){
-      body.appendChild(el('h4',{text:'排着的 Issue（'+waiting.length+'）'}));
-      waiting.forEach(function(i){
-        body.appendChild(el('a',{class:'row',href:'https://github.com/'+REPO+'/issues/'+i.n,target:'_blank',rel:'noopener'},[
-          el('span',{class:'t'},[el('span',{class:'n',text:'#'+i.n}),i.title]),
-          el('span',{class:'s',text:(i.dep?'依赖 '+i.dep+' · ':'')+ago(i.created)+'开'})
+    if (!a.myPulls.length) body.appendChild(el('div', { class: 'empty', text: '没有' }));
+    if (!a.boss) {
+      body.appendChild(el('h4', { text: '排着的 Issue（' + a.waiting + '）' }));
+      a.waitingIssues.forEach(function (n) {
+        var i = issueByN[n];
+        body.appendChild(el('a', { class: 'row', href: 'https://github.com/' + REPO + '/issues/' + i.n, target: '_blank', rel: 'noopener' }, [
+          el('span', { class: 't' }, [el('span', { class: 'n', text: '#' + i.n }), i.title]),
+          el('span', { class: 's', text: (i.dep ? '依赖 ' + i.dep + ' · ' : '') + ago(i.created) + '开' })
         ]));
       });
-      if(!waiting.length)body.appendChild(el('div',{class:'empty',text:'没有'}));
+      if (!a.waiting) body.appendChild(el('div', { class: 'empty', text: '没有' }));
     }
-    var merged48=d.merged.filter(function(m){return (prefixOf(m.ref)===ai.k||(ai.old&&prefixOf(m.ref)===ai.old))&&now-m.at<48*HOUR}).length;
-    body.appendChild(el('div',{class:'sub',text:'48 小时合了 '+merged48+' 件'}));
 
-    var det=el('details',{class:'ai'},[sum,body]);
-    if(openKeys['ai-'+ai.k])det.open=true;
-    det.addEventListener('toggle',function(){openKeys['ai-'+ai.k]=det.open});
+    var det = el('details', { class: 'ai' + (a.none ? ' idle' : '') }, [sum, body]);
+    if (openKeys['ai-' + a.k]) det.open = true;
+    det.addEventListener('toggle', function () { openKeys['ai-' + a.k] = det.open; });
     list.appendChild(det);
   });
-  root.appendChild(list);
 
-  /* —— 折叠区：开着的 PR、待领任务池、最近合并、一百任务明细 —— */
-  var link=function(kind,n,title,sub){
-    return el('a',{class:'row',href:'https://github.com/'+REPO+'/'+kind+'/'+n,target:'_blank',rel:'noopener'},[
-      el('span',{class:'t'},[el('span',{class:'n',text:'#'+n}),title]),
-      el('span',{class:'s'},typeof sub==='string'?[sub]:sub)
+  var lg = el('div', { class: 'legend' });
+  lg.innerHTML = '<span><i style="background:var(--c-done)"></i>48 小时做完</span><span><i style="background:var(--c-doing)"></i>在做</span>' +
+    '<span><i style="background:var(--c-wait)"></i>排着</span><span style="color:var(--bad)">红字：超 6 小时没动静</span>';
+  list.appendChild(lg);
+  return list;
+}
+
+/* 图三：合并节奏，最近 24 小时每小时合并几件 */
+function rhythmCard(board) {
+  var h = board.hourly, total = h.reduce(function (a, b) { return a + b; }, 0);
+  var max = Math.max(3, Math.max.apply(null, h));
+  var W = 340, H = 96, L = 4, top = 14, base = 78, bw = (W - L * 2) / 24, ph = base - top;
+  var s = '<svg class="rhythm" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="最近 24 小时每小时合并数，共 ' + total + ' 件">';
+  h.forEach(function (v, i) {
+    var x = L + i * bw + 1, w = bw - 2;
+    if (v) {
+      var bh = Math.max(2, v / max * ph);
+      s += '<rect class="bx" x="' + x.toFixed(1) + '" y="' + (base - bh).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="1.5"><title>' + (24 - i) + ' 小时前那一小时：合 ' + v + ' 件</title></rect>';
+      s += '<text class="bv" x="' + (x + w / 2).toFixed(1) + '" y="' + (base - bh - 3).toFixed(1) + '">' + v + '</text>';
+    } else {
+      s += '<rect class="bz" x="' + x.toFixed(1) + '" y="' + (base - 2) + '" width="' + w.toFixed(1) + '" height="2" rx="1"/>';
+    }
+  });
+  s += '<line class="ax" x1="' + L + '" y1="' + base + '" x2="' + (W - L) + '" y2="' + base + '"/>';
+  [0, 6, 12, 18, 24].forEach(function (k) {
+    // k 是「几小时前」：24 在最左，0 在最右
+    var x = L + (24 - k) * bw;
+    s += '<line class="ax" x1="' + x + '" y1="' + base + '" x2="' + x + '" y2="' + (base + 4) + '"/>';
+    s += '<text class="tx" x="' + Math.min(W - 6, Math.max(6, x)) + '" y="' + (base + 15) + '">' + k + '</text>';
+  });
+  s += '</svg>';
+  var card = el('div', { class: 'card' });
+  card.appendChild(el('div', { class: 'ctitle' }, [el('span', { text: '合并节奏' }), el('small', { text: '近 24 小时共 ' + total + ' 件' })]));
+  card.appendChild(svgBox(s));
+  card.appendChild(el('div', { class: 'sub', text: '横轴：几小时前（0 = 现在）；一格一小时，柱上是合并件数' }));
+  return card;
+}
+
+function render() {
+  var root = document.getElementById('root');
+  root.textContent = '';
+  var d = state.data;
+  if (!d) {
+    root.appendChild(el('div', { class: 'card err', text: state.limitMsg || state.err || '没有数据' }));
+    return;
+  }
+  var now = Date.now();
+  var board = computeBoard(d, state.checks, now);
+  // 要叫醒：手上有活却一个半钟头没动静的，红字列在最上面，负责人一眼看到该叫谁
+  var wk = document.getElementById('wake'); wk.textContent = '';
+  if (board.wake && board.wake.length) wk.appendChild(el('div', { class: 'banner bad', text: '要叫醒：' + board.wake.map(function (w) { return w.n + (w.no ? '（手上有 #' + w.no + '，' + w.lastTxt + '没动静）' : ''); }).join('；') }));
+  var J = state.jindu;
+  var link = function (kind, n, title, sub) {
+    return el('a', { class: 'row', href: 'https://github.com/' + REPO + '/' + kind + '/' + n, target: '_blank', rel: 'noopener' }, [
+      el('span', { class: 't' }, [el('span', { class: 'n', text: '#' + n }), title]),
+      el('span', { class: 's' }, typeof sub === 'string' ? [sub] : sub)
     ]);
   };
-  // 开着的 PR
-  var pk=[];
-  pulls.slice().sort(function(a,b){return b.updated-a.updated}).forEach(function(p){
-    var kids=prChips(state.checks[p.sha]&&state.checks[p.sha].res);
-    if(has(p.labels,'要改'))kids.push(chip('要改','bad'));
-    if(p.draft)kids.push(chip('草稿'));
-    kids.push(el('span',{class:'s',text:' '+(p.ref||'')+' · '+ago(p.updated)+'更新'}));
-    pk.push(link('pull',p.n,p.title,kids));
-  });
-  if(!pk.length)pk.push(el('div',{class:'empty',text:'没有开着的 PR'}));
-  root.appendChild(fold('f-pr','card fold','开着的 PR',pulls.length,pk));
 
-  // 待领任务池
-  var groups=[['可领',[]],['暂缓',[]],['其他',[]]];
-  issues.slice().sort(function(a,b){return b.created-a.created}).forEach(function(i){
-    if(isTask(i)&&has(i.labels,'暂缓'))groups[1][1].push(i);
-    else if(isTask(i))groups[0][1].push(i);
+  /* —— 第一屏：三块图 —— */
+  root.appendChild(ringCard(J, board, d.derived && d.derived.milestone));
+  root.appendChild(aisCard(d, board));
+  root.appendChild(rhythmCard(board));
+
+  /* —— 四个折叠区：开着的 PR、待领任务池、最近合并、一百任务明细 —— */
+  var pk = [];
+  d.pulls.slice().sort(function (a, b) { return b.updated - a.updated; }).forEach(function (p) {
+    var kids = prChips(state.checks[p.sha]);
+    if (has(p.labels, '要改')) kids.push(chip('要改', 'bad'));
+    if (p.draft) kids.push(chip('草稿'));
+    kids.push(el('span', { class: 's', text: ' ' + (p.ref || '') + ' · ' + ago(p.updated) + '更新' }));
+    pk.push(link('pull', p.n, p.title, kids));
+  });
+  if (!pk.length) pk.push(el('div', { class: 'empty', text: '没有开着的 PR' }));
+  root.appendChild(fold('f-pr', 'card fold', '开着的 PR', d.pulls.length, pk));
+
+  var groups = [['可领', []], ['暂缓', []], ['其他', []]];
+  d.issues.slice().sort(function (a, b) { return b.created - a.created; }).forEach(function (i) {
+    if (isTask(i) && has(i.labels, '暂缓')) groups[1][1].push(i);
+    else if (isTask(i)) groups[0][1].push(i);
     else groups[2][1].push(i);
   });
-  var gk=groups.map(function(g,gi){
-    var box=g[1].map(function(i){
-      var who=giveOf(i.labels),meta=[who?('给：'+who):'没指定给谁'];
-      if(i.dep)meta.push('依赖 '+i.dep);
-      if(prNums[i.n])meta.push('已有 PR #'+prNums[i.n]);
-      meta.push(ago(i.created)+'开');
-      return link('issues',i.n,i.title,meta.join(' · '));
+  var gk = groups.map(function (g, gi) {
+    var box = g[1].map(function (i) {
+      var who = giveOf(i.labels), meta = [who ? ('给：' + who) : '没指定给谁'];
+      if (i.dep) meta.push('依赖 ' + i.dep);
+      if (board.prNums[i.n]) meta.push('已有 PR #' + board.prNums[i.n]);
+      meta.push(ago(i.created) + '开');
+      return link('issues', i.n, i.title, meta.join(' · '));
     });
-    if(!box.length)box.push(el('div',{class:'empty',text:'没有'}));
-    return fold('g-'+gi,'sfold',g[0],g[1].length,box);
+    if (!box.length) box.push(el('div', { class: 'empty', text: '没有' }));
+    return fold('g-' + gi, 'sfold', g[0], g[1].length, box);
   });
-  root.appendChild(fold('f-pool','card fold','待领任务池',issues.length,gk));
+  root.appendChild(fold('f-pool', 'card fold', '待领任务池', d.issues.length, gk));
 
-  // 最近合并
-  var mk=d.merged.slice(0,20).map(function(m){return link('pull',m.n,m.title,nameOfRef(m.ref)+' · '+ago(m.at))});
-  if(!mk.length)mk.push(el('div',{class:'empty',text:'没有数据'}));
-  root.appendChild(fold('f-merged','card fold','最近合并',Math.min(20,d.merged.length),mk));
+  var mk = d.merged.slice(0, 20).map(function (m) { return link('pull', m.n, m.title, nameOfRef(m.ref) + ' · ' + ago(m.at)); });
+  if (!mk.length) mk.push(el('div', { class: 'empty', text: '没有数据' }));
+  root.appendChild(fold('f-merged', 'card fold', '最近合并', Math.min(20, d.merged.length), mk));
 
   // 一百任务明细（按批次）
-  if(J&&J.items){
-    var batches=[],bmap={};
-    J.items.forEach(function(i){
-      if(!bmap[i.batch]){bmap[i.batch]={name:i.batch,list:[]};batches.push(bmap[i.batch])}
+  if (J && J.items) {
+    var batches = [], bmap = {};
+    J.items.forEach(function (i) {
+      if (!bmap[i.batch]) { bmap[i.batch] = { name: i.batch, list: [] }; batches.push(bmap[i.batch]); }
       bmap[i.batch].list.push(i);
     });
-    var bk=batches.map(function(b,bi){
-      var nd=b.list.filter(function(i){return i.status==='done'}).length;
-      var rows=b.list.map(function(i){
-        var r=el('div',{class:'jd '+i.status},[el('span',{class:'dot'}),el('span',{class:'n',text:String(i.id).padStart(3,'0')}),i.title]);
-        if(i.note)r.appendChild(el('div',{class:'sub',text:i.note}));
+    var bk = batches.map(function (b, bi) {
+      var nd = b.list.filter(function (i) { return i.status === 'done'; }).length;
+      var rows = b.list.map(function (i) {
+        var r = el('div', { class: 'jd ' + i.status }, [el('span', { class: 'dot' }), el('span', { class: 'n', text: String(i.id).padStart(3, '0') }), i.title]);
+        if (i.note) r.appendChild(el('div', { class: 'sub', text: i.note }));
         return r;
       });
-      return fold('b-'+bi,'sfold',b.name,nd+'/'+b.list.length,rows);
+      return fold('b-' + bi, 'sfold', b.name, nd + '/' + b.list.length, rows);
     });
-    root.appendChild(fold('f-100','card fold','一百任务明细',J.items.length,bk));
+    root.appendChild(fold('f-100', 'card fold', '一百任务明细', J.items.length, bk));
   }
 }
 
-function renderMeta(){
-  var parts=[];
-  if(state.data)parts.push('取自 '+ago(state.data.t)+(state.fromCache?'（缓存）':''));
-  if(rl.remaining!=null)parts.push('额度 '+rl.remaining+'/60');
-  document.getElementById('meta').textContent=parts.join(' · ')||'加载中……';
-  var b=document.getElementById('banners');b.textContent='';
-  if(state.limitMsg)b.appendChild(el('div',{class:'banner bad',text:state.limitMsg}));
-  else if(state.err)b.appendChild(el('div',{class:'banner',text:state.err}));
+function renderMeta() {
+  var m = document.getElementById('meta');
+  var parts = [], old = false;
+  if (state.data && state.when) {
+    parts.push(Date.now() - state.when < 90000 ? "数据刚刚更新" : "数据 " + ago(state.when));
+    if (state.source === 'api') parts.push('（直连 GitHub）');
+    if (state.source === 'cache') parts.push('（缓存）');
+    if (state.source === 'file' && Date.now() - state.when > STALE) old = true;
+  }
+  if (state.source !== 'file' && rl.remaining != null) parts.push('额度 ' + rl.remaining + '/60');
+  m.textContent = parts.join(' ') || '加载中……';
+  m.className = 'meta' + (old ? ' old' : '');
+  var b = document.getElementById('banners'); b.textContent = '';
+  if (old) b.appendChild(el('div', { class: 'banner', text: '预先算好的数据已经超过一小时没更新，可能是定时任务停了' }));
+  if (state.limitMsg) b.appendChild(el('div', { class: 'banner bad', text: state.limitMsg }));
+  else if (state.err) b.appendChild(el('div', { class: 'banner', text: state.err }));
+  else if (state.note) b.appendChild(el('div', { class: 'banner', text: state.note }));
 }
 
-var busy=false;
-function load(force){
-  if(busy)return;
-  var cached=lsGet(CKEY);
-  var fresh=cached&&cached.data&&Date.now()-cached.data.t<(force?60*1000:TTL);
-  state.limitMsg='';state.err=null;
-  var jp=fetchJindu().then(function(j){state.jindu=j},function(){state.jindu=null});
-  if(fresh){
-    state.data=cached.data;state.checks=lsGet(KKEY)||{};state.fromCache=true;
-    return jp.then(function(){render();renderMeta()});
+/* 退路：直连 API */
+function loadDirect(force, why) {
+  var cached = lsGet(CKEY);
+  var fresh = cached && cached.data && Date.now() - cached.data.t < (force ? 60 * 1000 : TTL);
+  state.note = why || '';
+  if (fresh) {
+    state.data = cached.data; state.when = cached.data.t; state.checks = cachedChecks(); state.source = 'cache';
+    return Promise.resolve();
   }
-  busy=true;
-  var btn=document.getElementById('refresh');btn.disabled=true;btn.textContent='刷新中';
-  if(cached&&cached.data){state.data=cached.data;state.checks=lsGet(KKEY)||{};state.fromCache=true;render();renderMeta()}
-  return loadAll().then(function(data){
-    state.data=data;state.fromCache=false;
-    lsSet(CKEY,{data:data});
-    return loadChecks(data.pulls).then(function(chk){state.checks=chk});
-  }).catch(function(e){
-    if(e&&e.limit){
-      var mins=rl.reset?Math.max(1,Math.ceil((rl.reset-Date.now())/60000)):null;
-      state.limitMsg='GitHub 限流，'+(mins?mins+' 分钟后':'稍后')+'再刷新'+(state.data?'；下面是上次缓存的数据':'');
-    }else{
-      state.err='读 GitHub 失败（'+(e&&e.message||'网络')+'）'+(state.data?'；下面是上次缓存的数据':'');
+  if (cached && cached.data) {
+    state.data = cached.data; state.when = cached.data.t; state.checks = cachedChecks(); state.source = 'cache';
+    render(); renderMeta();
+  }
+  return loadAll().then(function (data) {
+    state.data = data; state.when = data.t; state.source = 'api';
+    lsSet(CKEY, { data: data });
+    return loadChecks(data.pulls).then(function (chk) { state.checks = chk; });
+  }).catch(function (e) {
+    if (e && e.limit) {
+      var mins = rl.reset ? Math.max(1, Math.ceil((rl.reset - Date.now()) / 60000)) : null;
+      state.limitMsg = 'GitHub 限流，' + (mins ? mins + ' 分钟后' : '稍后') + '再刷新' + (state.data ? '；下面是上次缓存的数据' : '');
+    } else {
+      state.err = '读 GitHub 失败（' + (e && e.message || '网络') + '）' + (state.data ? '；下面是上次缓存的数据' : '');
     }
-    if(!state.data&&cached&&cached.data){state.data=cached.data;state.fromCache=true}
-  }).then(function(){return jp}).then(function(){
-    busy=false;btn.disabled=false;btn.textContent='刷新';
-    render();renderMeta();
   });
 }
-document.getElementById('refresh').addEventListener('click',function(){load(true)});
-// 页面开着时每五分钟自动看一次（缓存没过期就不会真的调接口）；切走时不刷
-setInterval(function(){if(!document.hidden)load(false)},TTL+5000);
-document.addEventListener('visibilitychange',function(){if(!document.hidden)load(false)});
+
+var busy = false;
+function load(force) {
+  if (busy) return Promise.resolve();
+  busy = true;
+  var btn = document.getElementById('refresh'); btn.disabled = true; btn.textContent = '刷新中';
+  state.limitMsg = ''; state.err = null; state.note = '';
+  var jp = fetchJindu().then(function (j) { state.jindu = j; }, function () { state.jindu = null; });
+  return fetchDataFile().then(function (j) {
+    state.data = j; state.when = Date.parse(j.generatedAt); state.source = 'file';
+    state.checks = j.checks || {};
+  }, function (e) {
+    return loadDirect(force, '没读到预先算好的数据（' + (e && e.message || '网络') + '），改为直连 GitHub，有额度限制');
+  }).then(function () { return jp; }).then(function () {
+    busy = false; btn.disabled = false; btn.textContent = '刷新';
+    render(); renderMeta();
+  });
+}
+document.getElementById('refresh').addEventListener('click', function () { load(true); });
+// 页面开着时每五分钟自动看一次；切走时不刷
+// 预先算好的数据读起来不限流：页面开着时每分钟看一次
+setInterval(function () { if (!document.hidden) load(false); }, 60 * 1000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) load(false); });
 load(false);
-})();
 </script>
 </body>
 </html>

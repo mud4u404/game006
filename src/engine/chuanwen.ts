@@ -18,9 +18,9 @@ import { NEWS, NPCS, ROOMS, npc, room, shiById } from '../content';
 import type { Cond } from '../content/types';
 import type { NpcLife, ShiDef, ShiStep } from '../content/types';
 import { pickBranch, test } from './dsl';
-import { seedOf } from './rng';
+import { mulberry32, seedOf } from './rng';
 import { learnShi } from './shishi';
-import { worldOf, worldPick, worldRng, type Know, type WorldState } from './shijie';
+import { worldOf, worldRng, type Know, type WorldState } from './shijie';
 import { npcName, roomNpcs } from './world';
 
 /** 一条传闻（存档里）：出自哪件事的哪一步、哪日、在哪、多耸动、牵涉谁 */
@@ -64,9 +64,55 @@ const RUMOR_KEEP = 60;
 /** 传闻池一日冒出几条；人人都忘了的老话，隔多少日才再被翻出来 */
 const NEWS_PER_DAY = 2;
 const NEWS_REVIVE = 30;
-/** 打听时开口前的样子（没写声口的人用）：一圈问下来别都一个腔调 */
-const DATING_LEAD = ['压低了声音', '左右看了看', '凑近了些', '想了想', '往四下里瞟了一眼', '咂了咂嘴', '叹了口气', '把声音放得很低',
-  '朝你招招手', '先摆摆手说不该多嘴，到底没忍住', '掰着指头数了数', '吐掉嘴里的草棍'];
+/** 打听时开口前的样子，按身份分几组：没写声口的人开口也不该都一个腔调（Issue #263）。
+ * 一组里只放合身份的动作：出家人不掰指头、不吐草棍，做买卖的不咂嘴充江湖。推不出身份就归市井。 */
+type Gang = 'sengdao' | 'guanchai' | 'shanghu' | 'jianghu' | 'shijing';
+export const DATING_LEAD: Record<Gang, string[]> = {
+  sengdao: ['双手合十又松开', '拨了两下念珠', '袍袖轻轻一收', '先念了一声佛号', '木鱼敲了半下又停住',
+    '扫帚在石阶上顿了顿', '往院里瞟了一眼', '把香炉里的香灰拨平'],
+  guanchai: ['清了清嗓子', '往门外扫了一眼', '手指在案上敲了两下', '把簿子合上', '上下打量了你一遍',
+    '把帽檐扶了扶', '咳了一声', '朝门外的差役点了点头'],
+  shanghu: ['把算盘拨了两下', '掂了掂秤砣', '从柜下摸出一本旧账', '把货单翻了一页', '朝后头的伙计招了招手',
+    '把算筹收拢成一堆', '在袖口擦了擦手', '朝门口那挂幌子抬了抬下巴'],
+  jianghu: ['手掌在刀柄上按了按', '往后退了半步', '眼睛在四周一扫', '把袖子往上捋了捋',
+    '啐了一口', '肩膀一沉站住了脚', '朝同伴歪了歪头'],
+  shijing: ['压低了声音', '左右看了看', '凑近了些', '想了想', '往四下里瞟了一眼', '咂了咂嘴', '叹了口气', '把声音放得很低',
+    '朝你招招手', '先摆摆手说不该多嘴，到底没忍住', '掰着指头数了数', '吐掉嘴里的草棍']
+};
+/** 行当字样，先看人：名与 brief 里的说法拿得准 */
+const GANG_WORD: [Gang, RegExp][] = [
+  ['sengdao', /僧|尼|师太|长老|禅师|道人|道长|居士|佛号|禅|抄经|木鱼|念珠|合十|香灰|了尘/],
+  ['guanchai', /捕头|巡检|衙|差役|税吏|书办|库吏|粮官|官兵|关卡|案卷|文书|捕快|兵丁/],
+  ['shanghu', /掌柜|朝奉|账房|算盘|秤砣|行商|货担|点货|理货|绸缎|布庄|盐行|货栈/]
+];
+/** 其次看他常待的地方是什么市面 */
+const GANG_TAG: [Gang, string][] = [
+  ['sengdao', '寺观'], ['sengdao', '破庙'], ['guanchai', '衙门'],
+  ['shanghu', '铺子'], ['jianghu', '码头'], ['jianghu', '官道'], ['jianghu', '荒地']
+];
+/** 走江湖相的，最后才看这一路（刀剑拳掌帮寨，这类字眼松，谁身上都沾） */
+const GANG_LOOSE: [Gang, RegExp] = ['jianghu', /刀|剑|拳|掌|镖|帮|寨|贼|汉子|兄弟|地痞|猎户|掌门|弟子|护船|刃|货栈/];
+/** 他属于哪一拨：行当字样，其次地点的 life.tags，最后江湖相；都看不出来归市井 */
+export function gangOf(id: string): Gang {
+  const n = npc(id);
+  if (n) {
+    const s = `${n.name}${n.brief ?? ''}`;
+    for (const [g, re] of GANG_WORD) if (re.test(s)) return g;
+    const tags = new Set(roomsOf(id).flatMap(r => room(r)?.life?.tags ?? []));
+    for (const [g, t] of GANG_TAG) if (tags.has(t)) return g;
+    if (GANG_LOOSE[1].test(s)) return GANG_LOOSE[0];
+  }
+  return 'shijing';
+}
+/** 这一天已经说过的老话。记在 S.asked 里（同一个字段、同样按日清），前缀别撞上人物 id */
+const SAID = '旧话:';
+function saidToday(): Set<string> {
+  const asked = S.asked, out = new Set<string>();
+  if (!asked) return out;
+  const today = dayNo(S);
+  for (const k of Object.keys(asked)) if (asked[k] === today && k.startsWith(SAID)) out.add(k.slice(SAID.length));
+  return out;
+}
 /** 关系：说多少 */
 const REL_WARM = ['相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'];
 const REL_NOD = ['点头之交'];
@@ -179,13 +225,9 @@ const drift = (lv: number, p: number): number => Math.min(2, lv + (worldRng() < 
 
 /* ---------- 生 ---------- */
 
-/** 某个钟点在这处的人（不算物件）：临时把时辰拨过去，看完拨回来 */
+/** 某个钟点在这处的人（不算物件）；不拨动游戏时钟。 */
 function presentAt(place: string, min: number): string[] {
-  const m0 = S.min;
-  try {
-    S.min = min;
-    return roomNpcs(place).filter(id => !npc(id)?.obj);
-  } finally { S.min = m0; }
+  return roomNpcs(place, min).filter(id => !npc(id)?.obj);
 }
 
 /**
@@ -269,7 +311,7 @@ function forget(w: WorldState, day: number): void {
     p.know = p.know.filter(k => { const r = w.rumor[k[0]]; return !!r && day - k[2] < 8 + r.juice * 30; });
     if (p.know.length) { for (const k of p.know) known.add(k[0]); continue; }
     delete p.know;
-    if (!p.st && !p.at) delete w.ppl[id];
+    if (!p.st && !p.at && !p.has) delete w.ppl[id];
   }
   // 传闻池的不清：一条留一个底，免得条件一直成立时反复生
   for (const [id, r] of Object.entries(w.rumor)) if (!isNews(r) && !known.has(id) && day - r.day > RUMOR_KEEP) delete w.rumor[id];
@@ -332,14 +374,10 @@ function network(w: WorldState, day: number): void {
  */
 export function spreadDay(w: WorldState, day: number): void {
   forget(w, day);
-  const slots: { night: boolean; rooms: string[][] }[] = [];
-  const m0 = S.min;
-  try {
-    for (const sl of SLOTS) {
-      S.min = sl.min;
-      slots.push({ night: sl.k === 'night', rooms: lifeRooms().map(r => roomNpcs(r).filter(id => !npc(id)?.obj)) });
-    }
-  } finally { S.min = m0; }
+  const slots = SLOTS.map(sl => ({
+    night: sl.k === 'night',
+    rooms: lifeRooms().map(r => presentAt(r, sl.min))
+  }));
   for (const sl of slots) {
     for (const ids of sl.rooms) {
       if (ids.length < 2) continue;
@@ -410,6 +448,15 @@ export interface AskResult {
 }
 
 /**
+ * 开场白的挑法：只由（世界种子、人、日子）算出，不取世界的随机数（worldRng）。
+ * 纯文字的挑选动了世界随机流，世界里别的随机跟着挪位（世事的时点、传闻的走样），同一个种子就不一字不差了；
+ * 给谁补上声口、改了几句开场白，都不该改变江湖的走向
+ */
+function leadPick<T>(arr: readonly T[], npcId: string): T {
+  return arr[Math.floor(mulberry32(seedOf(worldOf().seed, 'lead', npcId, dayNo(S)))() * arr.length)];
+}
+
+/**
  * 打听：问这个人知道什么（engine/world.ts 的「打听」，人人都有）。一个人一天只问一回（force 不管，也不管关系）。
  * 写了声口的人：{名}{开口前的样子}，道：「{说法}」，听来的再接一句（听某某说的）；什么都没有就说他自己的日子。
  * 没写声口的人：先说他自己知道的，再说这一带传开的，都没有说「太平得很」
@@ -424,7 +471,10 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
     asked[npcId] = today;
   }
   const life = lifeOf(npcId);
-  const open = (): string => (life ? `${who}${worldPick(life.voice.lead)}，道：` : `${who}${worldPick(DATING_LEAD)}：`);
+  // 取法都用 leadPick：只由（世界种子、人、日子）算出，不抽世界随机数（main 的 8180335）。
+  // 分组是 Issue #263 的那层：没写声口的人按身份落进自己那一组，动作不跟市井混在一起。
+  const open = (): string => (life ? `${who}${leadPick(life.voice.lead, npcId)}，道：` : `${who}${leadPick(DATING_LEAD[gangOf(npcId)], npcId)}：`);
+
   const got = pickFor(npcId, !!opt.force);
   if (got) {
     tellYou(got.r, got.text);
@@ -435,9 +485,22 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
     const idle = pickBranch(life.voice.idle)?.text;
     if (idle) return { text: `${open()}「${idle}」`, src: 'idle' };
   }
-  const line = hearsay();
-  if (line) return { text: `${open()}「${inner(line)}」`, src: 'old' };
-  return { text: `${who}想了想：「这几日太平得很，没听说什么。」`, src: 'none' };
+  const line = hearsay({ skip: saidToday() });
+  if (line) {
+    (S.asked ||= {})[SAID + line] = dayNo(S);
+    return { text: `${open()}「${inner(line)}」`, src: 'old' };
+  }
+  // 没得说也要按身份开口：从前这里写死了「想了想」，僧人官差商人都一个腔调（Issue #263）
+  // 这一句不取世界随机：开口的样子只是句面上的动作，worldRng 是给传闻和世事用的。
+  // 多抽一次不要紧，一多抽就等于伸手推了世事的骰子（tests/zoubian 走遍江湖那一条会跟着偏）。
+  return { text: `${who}${plainPick(DATING_LEAD[gangOf(npcId)], npcId)}：「这几日太平得很，没听说什么。」`, src: 'none' };
+}
+
+/** 不动世界种子的挑法：同一个人同一天总挑到同一个，隔天换一个 */
+function plainPick<T>(arr: T[], id: string): T {
+  let h = dayNo(S);
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return arr[h % arr.length];
 }
 
 /** 盘问：捕快亮出腰牌，谁都得答话（docs/lizu.md：六扇门的特权）。不像打听那样一天一回，也不看交情 */
@@ -452,8 +515,11 @@ export function panwen(npcId: string, who: string = npcName(npcId)): string {
 /**
  * 江湖上的话：玩家所在地区传开的、你还不知道的、最耸动的一条（原样）。说书人的打赏、效果 news、没写声口的人的打听都用它。
  * 返回那句话，没得说为空（不再从传闻池里随手抽）
+ *
+ * opt.skip 是给「打听」用的（Issue #263）：今日已经有人说过的老话别再拿给下一个人，说过的记在 S.asked。
+ * 只在 ask() 里传，别的调用一律不传 —— 说书人的打赏和效果 news 那两句兼着把见闻簿上那件事往前推一步
+ * （tellYou → learnShi），在那里换一句说，就等于替玩家改世事的进度。所以这一层不替它们做主。
  */
-
 /* ---------- 打听去处（docs/sheji-021-026.md 023 节） ---------- */
 
 /** 时辰（24 小时制）对应的时辰名：子0 丑2 寅4 卯6 辰8 巳10 午12 未14 申16 酉18 戌20 亥22 */
@@ -469,33 +535,45 @@ function hourLabel(from: number, to: number): string {
   return `${shichenOf(from)}到${shichenOf(to)}`;
 }
 
-/** 去掉条件里的时辰（含 any 里的时辰），剩下的条件此刻成立的，才算「公开的去处」——带 shi/job/flag/quest 的，剧情没到不说（docs/sheji-021-026.md 023 节） */
-function restCond(c?: Cond): Cond | undefined {
-  if (!c) return undefined;
-  const out: Record<string, unknown> = {};
-  for (const k of Object.keys(c) as (keyof Cond)[]) {
-    if (k === 'hour') continue;
-    const v = (c as Record<string, unknown>)[k];
-    if (k === 'any' && Array.isArray(v)) {
-      const arr = (v as Cond[]).map(s => { const { hour, ...rest } = s; return rest; }).filter(s => Object.keys(s).length > 0);
-      if (arr.length) out.any = arr;
-      continue;
-    }
-    out[k] = v;
+/**
+ * 这个条件是不是「只按时辰、平日就能成立」——不依赖旗标/世事/差事/关系等。带别的条件的去处不公开，免得漏出不该知道的下落（docs/sheji-021-026.md 023 节）。
+ * any 里只要有一条「只含时辰（或为空）」的分支，整条平日就成立（纯时辰分支去掉时辰代表真，不能丢掉）；嵌套 any 递归处理。
+ */
+function onlyHour(c?: Cond): boolean {
+  if (!c) return true;
+  const keys = Object.keys(c) as (keyof Cond)[];
+  if (keys.length === 0) return true;
+  if (keys.length === 1 && keys[0] === 'hour') return true;
+  if (keys.includes('any') && Array.isArray((c as { any?: Cond[] }).any)) {
+    return (c as { any: Cond[] }).any.some(onlyHour);
   }
-  return out as Cond;
+  return false;
 }
 
-/** 这个人的公开作息（at 里不标 secret、且除了时辰外其余条件此刻成立的）拼成一句去处；没有为空 */
+/** 从条件里取出用于显示的时辰段：优先顶层 hour；否则取 any 里第一条「只含时辰」的分支（嵌套 any 递归） */
+function hourOf(c?: Cond): { from: number; to: number } | undefined {
+  if (!c) return undefined;
+  if (c.hour) return c.hour;
+  if (Array.isArray((c as { any?: Cond[] }).any)) {
+    for (const s of (c as { any: Cond[] }).any) {
+      const h = hourOf(s);
+      if (h) return h;
+    }
+  }
+  return undefined;
+}
+
+/** 这个人的公开作息（at 里不标 secret、且只按时辰、平日就能成立的）拼成一句去处；带旗标/世事/差事等条件的不说。没有为空 */
 export function whereaboutsOf(id: string): string {
   const n = npc(id);
   if (!n?.at) return '';
-  const list = (Array.isArray(n.at) ? n.at : [n.at]).filter(a => !a.secret && test(restCond(a.if)));
+  const list = (Array.isArray(n.at) ? n.at : [n.at]).filter(a => !a.secret && onlyHour(a.if));
   if (!list.length) return '';
   return list.map(a => {
     const name = room(a.room)?.name ?? a.room;
-    if (!a.if?.hour) return `常在${name}`;
-    return `${hourLabel(a.if.hour.from, a.if.hour.to)}在${name}`;
+    const h = hourOf(a.if);
+    if (!h) return `常在${name}`;
+    return `${hourLabel(h.from, h.to)}在${name}`;
   }).join('，');
 }
 
@@ -545,7 +623,12 @@ export function askWhere(npcId: string, targetId: string): WhereResult {
   const p = worldOf().ppl[targetId];
   const today = dayNo(S);
   if (p?.at && p.at.until > today) {
-    const knows = knowsOf(worldOf(), npcId).some(k => worldOf().rumor[k[0]]?.subj.includes(targetId));
+    // 只有确切知道「这次移位、新去处」的传闻（传闻的 place 就是新地方）的人才说得出；同一个人别处的无关旧闻不泄露新位置
+    const newRoom = p.at.room;
+    const knows = knowsOf(worldOf(), npcId).some(k => {
+      const r = worldOf().rumor[k[0]];
+      return !!r && r.subj.includes(targetId) && r.place === newRoom;
+    });
     if (knows) {
       const where = room(p.at.room)?.name ?? p.at.room;
       const text = `${who}压低声音：「${tname}这几日不在常待的地方——${where}那边的人说，他叫事绊住了，在那儿能寻着。」`;
@@ -560,13 +643,13 @@ export function askWhere(npcId: string, targetId: string): WhereResult {
 }
 
 
-export function hearsay(): string | null {
+export function hearsay(opt: { skip?: ReadonlySet<string> } = {}): string | null {
   const w = worldOf(), today = dayNo(S), region = room(S.loc).region, heard = new Set(S.heard ?? []);
   let best: { r: RumorInst; text: string; s: number } | null = null;
   for (const r of Object.values(w.rumor)) {
     if (r.far || regionOf(r) !== region || youKnow(r, S, heard)) continue;
     const text = rumorText(r, 0);
-    if (text === null) continue;
+    if (text === null || opt.skip?.has(text)) continue;
     const s = r.juice - 0.03 * (today - r.day);
     if (!best || s > best.s) best = { r, text, s };
   }

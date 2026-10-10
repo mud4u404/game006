@@ -9,6 +9,11 @@ describe('接力：挑下一个任务', () => {
     expect(pickWork([issue(30, ['内容']), issue(21, ['功能']), issue(25, ['内容'])])?.number).toBe(21);
   });
 
+  it('带「调研」的排在一切正经活之后，没有别的活才领', () => {
+    expect(pickWork([issue(21, ['内容', '调研']), issue(30, ['内容']), issue(25, ['功能'])])?.number).toBe(25);
+    expect(pickWork([issue(31, ['内容', '调研']), issue(21, ['内容', '调研'])])?.number).toBe(21);
+  });
+
   it('已有开着的 PR 的任务跳过', () => {
     expect(pickWork([issue(21, ['内容']), issue(22, ['内容']), pr(40, '[#21] 丐帮武功')])?.number).toBe(22);
   });
@@ -39,6 +44,12 @@ describe('接力：挑下一个任务', () => {
     expect(pickWork([issue(23, ['内容'], '依赖：#106'), pr(106, '大换血五')])).toBeNull();
     expect(pickWork([issue(23, ['内容'], '依赖：#106')])?.number).toBe(23);
   });
+  it('依赖行里括号中的备注编号、「依赖：无」都不算依赖', () => {
+    expect(deps('依赖：无（只动 a.ts；#146 动的是 b.ts，不冲突）')).toEqual([]);
+    expect(deps('依赖：#311 已合入（本件不动它；#312、#316 正在改）')).toEqual([311]);
+    expect(deps('依赖：#282（同改 x.ts，等它合）、#384(R2)')).toEqual([282, 384]);
+  });
+
   it('读出依赖编号', () => {
     expect(deps('背景\n依赖：#12、#13\n其他 #99')).toEqual([12, 13]);
     expect(deps(null)).toEqual([]);
