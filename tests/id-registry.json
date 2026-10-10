@@ -397,6 +397,7 @@
    "side_yanhao",
    "smem_chao",
    "smhs_mo",
+   "smhs_yin",
    "smqz_bu",
    "smsl_shui",
    "smth_zhen",
@@ -790,6 +791,7 @@
   "smth_zhen": 2,
   "smtz_shishi": 3,
   "smwd_zhuang": 2,
-  "smqz_bu": 2
+  "smqz_bu": 2,
+  "smhs_yin": 3
  }
 }

@@ -5,11 +5,10 @@
  * 看完整的胜率矩阵：npm run balance
  */
 import { describe, expect, it } from 'vitest';
+import { fightKit } from '../src/engine/zhaoshi';
 import { SKILLS } from '../src/content';
 import { SCHOOL_STYLE, STYLE_PENDING, styleBeats } from '../src/content/skills';
-import { STAGES, bestBuild, kitOf, mixedBuilds } from '../src/engine/build';
-import type { Kit } from '../src/engine/combat';
-import { duel, formatMatrix, matrix, type Matrix } from '../src/engine/sim';
+import { STAGES, bestBuild, kitOf, mixedBuilds, duel, formatMatrix, matrix, type Kit, type Matrix } from './balance-kit';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const MID = STAGES[1];
@@ -49,8 +48,8 @@ describe('对战模拟', () => {
     if (!ACTIVE) { console.log(`对战模拟：改造完的门派只有 ${done.length} 个（${done.join('、') || '无'}），凑满六个、覆盖四种主打法后硬性检查。npm run balance 看当前矩阵。`); return; }
     const m = matrix(kits(done), 200, 'ci');
     expect(balanceProblems(m), '\n' + formatMatrix(m)).toEqual([]);
-    // 出招策略不偏心：招牌权重拉平后重跑，各派胜率变化不超过三个点
-    const flat = matrix(kits(done).map(k => ({ ...k, bias: {} })), 200, 'ci');
+    // 同一套 SKILLED 不按门派名字偏心：匿名后重跑，各派胜率变化不超过三个点
+    const flat = matrix(kits(done).map((k, i) => ({ ...k, name: `匿名${i}`, state: { ...k.state, name: `匿名${i}` } })), 200, 'ci');
     m.overall.forEach((x, i) => expect(Math.abs(x - flat.overall[i]), `${m.names[i]} 的胜率靠策略偏心`).toBeLessThanOrEqual(0.03));
   }, 60000);
 
@@ -68,7 +67,7 @@ describe('对战模拟', () => {
   it('混搭不独大：最好的混搭总胜率不超过 60%，比同根基的纯修高不出五个点', () => {
     if (!ACTIVE) return;
     const field = kits(done);
-    const vsField = (k: Kit, n: number): number => field.filter(f => f.name !== k.name).reduce((a, f) => a + duel(k, f, n, 'mix'), 0) / (field.length - 1);
+    const vsField = (k: Kit, n: number): number => field.filter(f => f.build.school !== k.build.school).reduce((a, f) => a + duel(k, f, n, 'mix'), 0) / (field.length - 1);
     const errs: string[] = [];
     for (const root of done) {
       const pure = vsField(field[done.indexOf(root)], 60);
@@ -76,7 +75,7 @@ describe('对战模拟', () => {
       const best = mixes.map(k => ({ k, r: vsField(k, 12) })).sort((a, b) => b.r - a.r)[0];
       if (!best) continue;
       const r = vsField(best.k, 60);
-      if (r > 0.6 || r > pure + 0.05) errs.push(`${root}：混搭「${best.k.moves.map(x => x.name).join('、')}」总胜率 ${Math.round(r * 100)}%，纯修 ${Math.round(pure * 100)}%`);
+      if (r > 0.6 || r > pure + 0.05) errs.push(`${root}：混搭「${fightKit(best.k.state).performs.map(x => x.name).join('、')}」总胜率 ${Math.round(r * 100)}%，纯修 ${Math.round(pure * 100)}%`);
     }
     expect(errs).toEqual([]);
   }, 60000);
@@ -86,7 +85,10 @@ describe('对战模拟', () => {
       for (const st of STAGES) {
         const m = matrix(kits(withSkills, st), 1000, 'full');
         console.log(`\n== ${st.name}（境界 ${st.realm}）。待改造：${STYLE_PENDING.filter(s => withSkills.includes(s)).join('、')}\n${formatMatrix(m)}`);
-        if (st === MID) console.log('达标检查（只看改造完的门派才算数）：\n' + (balanceProblems(m).join('\n') || '全部达标'));
+        if (st === MID) {
+          const assessed = matrix(kits(done, st), 1000, 'full');
+          console.log('达标检查（只看改造完的门派才算数）：\n' + (balanceProblems(assessed).join('\n') || '全部达标'));
+        }
       }
     }, 600000);
   }
