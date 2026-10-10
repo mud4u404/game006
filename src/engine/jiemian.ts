@@ -7,11 +7,12 @@
  * 战力、评语、闭关、导航都是现成的（engine/zhanli.ts、lilian.ts、daohang.ts），这里只拼，不另造公式。
  */
 import { S } from '../core/state';
-import { NPCS, REALMS, REALM_NEED, ROOMS, foeById, npc, room, skillById } from '../content';
+import { storyById, NPCS, REALMS, REALM_NEED, ROOMS, foeById, npc, room, skillById } from '../content';
 import type { Verb } from '../content/types';
 import { RETREAT, retreatPlan } from './lilian';
 import { LODGING, restDays, restEff, retreatBlock, skillName, zhuOf } from './shiguang';
 import { type Lead, jobStep, leadsNear, questNav, sectHome, sectNav, yueNow } from './daohang';
+import { kpPos } from './kaipian';
 import { pickBranch, test } from './dsl';
 import { profMul } from './gengu';
 import { jinduLine, personOf, tierNow } from './ren';
@@ -81,6 +82,9 @@ export const arrivalHot = (): Target | undefined => (arrival && arrival.loc === 
 export function targetAt(dest: string): Target | undefined {
   const nav = S.track ? questNav(S.track) : null;
   if (nav && nav.state === '能做' && nav.to === dest && nav.who) return { npc: nav.who.id, verb: advanceVerb(nav.who.id, nav.id, nav.stage) };
+  // 手上的差事此刻该走的那一步（揭了差事以后 leadsNear 不再列它，要认差事线头）
+  const js = S.job ? jobStep(S.job.id) : null;
+  if (js && js.to === dest) return { npc: js.who.id };
   const l = leadsNear(8).find(x => x.to === dest && x.who);
   if (l) return { npc: l.who!, verb: l.verb };
   const y = S.yue.find(x => x.at === dest && x.npc);
@@ -98,6 +102,16 @@ export function markVisit(): void {
 export const visitsOf = (id: string): number => S.ui?.visits?.[id] ?? 0;
 
 /* ---------- 眼下要紧 ---------- */
+
+/** 新序章天明以后（焦船、去路两张卡）此刻真能做的事；不在这两步为空 */
+function prologueLate(): string | null {
+  const at = kpPos(S);
+  if (!at || at.kind !== 'story' || !/^kp_(du|wen|bu)_hou(_win|_lose|_flee)?$/.test(at.id)) return null;
+  const len = storyById(at.id)?.cards.length ?? 0;
+  if (at.i === len - 2) return '在焦船边收拾东西，戴上江伯的斗笠';
+  if (at.i >= len - 1) return '登船，去扬州大明寺找了尘大师';
+  return null;
+}
 
 export interface Also { text: string; to: string; toName: string; min: number }
 export interface YaoJin {
@@ -180,9 +194,37 @@ function helpOf(wait: boolean, ls: Lead[]): Pick<YaoJin, 'text' | 'to' | 'toName
   return wander();
 }
 
+/** 闭关此刻真能长进：闭关一日或七日预估，战力能涨（熟练够进一重）才算；住处挡着、历练化不动都不算 */
+export function retreatWorks(): boolean {
+  if (S.chapter === 0 || retreatBlock(S)) return false;
+  return [1, 7].some(d => { const p = retreatPreview(d); return !!p.gain && p.power1 > p.power0; });
+}
+
+/**
+ * 「先变强」挡着主线时指一条走得通的路（10-10 老玩家试玩：历练只有 54，指着闭关，闭关一日、七日、一月都写「一时不见长进」）：
+ * 手上有差事，差事当前一步本身就是变强的路（挣历练）；闭关真能长进才指闭关；
+ * 其次去切磋（sparWilling 筛过、真肯打的人）、去办差事；都没有，四处走走打听
+ */
+function strongHelp(ls: Lead[]): Pick<YaoJin, 'text' | 'to' | 'toName' | 'tab' | 'tag' | 'hot'> & { here?: boolean } {
+  const js = S.job ? jobStep(S.job.id) : null;
+  if (S.job && js) {
+    const here = js.to === S.loc;
+    return { tag: '差事', text: here ? `找${js.who.name}（手上的差事，办差挣历练）` : `去${js.toName}，找${js.who.name}（手上的差事，办差挣历练）`, to: js.to, toName: js.toName, here, hot: here && roomNpcs(S.loc).includes(js.who.id) ? { npc: js.who.id } : undefined };
+  }
+  if (retreatWorks()) return { tag: '不妨', text: '寻个清净处闭关，把这几日见的打的化开', tab: 'wugong' };
+  const sp = sparTarget();
+  if (sp) return { tag: '先变强', text: sp.here ? `找${sp.name}切磋，练练手` : `去${sp.at}，找${sp.name}切磋`, to: sp.to, toName: sp.at, here: sp.here, hot: sp.here ? { npc: sp.id, verb: '切磋' } : undefined };
+  const l = ls[0];
+  if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName };
+  return { ...wander(), tag: '先变强' };
+}
+
 export function yaoJin(): YaoJin {
   const nav = S.track ? questNav(S.track) : null;
   const ls = S.chapter === 0 ? [] : leadsNear(3);
+  // 序章后期（焦船、去路）：江伯已经不在了，不再指「去渡口小屋，找江伯」
+  const late = S.track === 'prologue' ? prologueLate() : null;
+  if (late) return { tag: '序章', text: late, here: true, also: [] };
   const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
   // 「也可以」只留一条（首屏减负）：有已揭的差事就是它的当前一步，主线在前也不挤掉正在做的事
   const jy0 = S.job ? S.yue.find(y => y.id === 'job_' + S.job!.id) : undefined;
@@ -194,8 +236,8 @@ export function yaoJin(): YaoJin {
   if (nav && weak) {
     const mainAt: Also = { text: nav.who ? `去${nav.toName}，找${nav.who.name}（${kind}，眼下还打不过）` : `办「${nav.title}」`, to: nav.to ?? S.loc, toName: nav.toName ?? room(S.loc).name, min: nav.to && nav.to !== S.loc ? travelMin(pathMin(S.loc, nav.to)) : 0 };
     const why = `${weak.name}${weak.gap >= 2 ? '的功夫高出你两三层' : '功夫在你之上'}，${nav.to === S.loc ? '他不理你，' : '现在去也是送死，'}你得先变强`;
-    const h = (S.lilian ?? 0) > 0 ? helpOf(false, ls) : ls[0] ? helpOf(true, ls) : { tag: '先变强', text: '先去闭关，攒够历练再回来', tab: 'wugong' as Tab, to: undefined, toName: undefined };
-    return { ...h, tag: '先变强', here: false, why, also: [mainAt] };
+    const h = strongHelp(ls);
+    return { ...h, tag: h.tag === '差事' ? '差事' : '先变强', here: h.here ?? false, why, also: [mainAt] };
   }
   // 主线有下一步：就是它
   if (nav && nav.state === '能做') {
@@ -303,11 +345,28 @@ function retreatNote(topId: string, d: number, eff: number, power0: number): str
   return `战力暂不涨：「${sk.name}」还差 ${lack} 熟练进下一重，一月之内难见涨`;
 }
 
+/**
+ * 闭关预估里提前告知的两句：钱不够住店要露宿（参悟慢几分）；比短一档的多闭也化不动更多历练了。
+ * 都是出关前就能算出来的事，不等出关才说
+ */
+export function retreatWarns(days: number): string[] {
+  const out: string[] = [];
+  const r = restDays(S, days);
+  if (r.days > 0 && zhuOf(S) === 'inn' && restEff(S, r.days).innDays < r.days) out.push('钱不够，要露宿，参悟慢几分');
+  const prev = days >= 30 ? 7 : days >= 7 ? 1 : 0;
+  if (prev && (S.lilian ?? 0) > 0) {
+    const a = retreatPreview(days), b = retreatPreview(prev);
+    if (a.used > 0 && a.used === b.used && a.used >= (S.lilian ?? 0)) out.push('历练只够化这么多，再久也化不动了');
+  }
+  return out;
+}
+
 /** 闭关按钮上的预估：正文「闭关一日，约有长进」，数字放进小字「（寒江剑法熟练 +9，战力约 +1）」；战力没涨，小字写还差多少熟练、约几日 */
 export function retreatLabel(days: number, name: string): string {
   const p = retreatPreview(days);
-  if (!p.gain) return `闭关${name}`;
-  return `闭关${name}，${p.power1 > p.power0 ? '约有长进' : '一时不见长进'}<small>（${p.gain[0]}熟练 +${p.gain[1]}，${p.note}）</small>`;
+  const warns = retreatWarns(days);
+  if (!p.gain) return `闭关${name}${warns.length ? `<small>（${warns.join('；')}）</small>` : ''}`;
+  return `闭关${name}，${p.power1 > p.power0 ? '约有长进' : '一时不见长进'}<small>（${p.gain[0]}熟练 +${p.gain[1]}，${[p.note, ...warns].join('；')}）</small>`;
 }
 
 
@@ -339,8 +398,8 @@ export function strongPaths(): StrongPath[] {
   // 切磋：只推荐此刻点了真会打的人（和切磋动作同一套判定，sparWilling）；要先混熟的，写明「要先混熟」
   const sp = sparNear();
   if (sp) out.push({
-    name: '切磋', say: `${sp.here ? `此处的${sp.name}` : `${sp.at}的${sp.name}`}肯指点几招。点到为止，输赢都不伤和气。`,
-    cost: sp.here ? '一场切磋的工夫；赢了熟练有长，每日有额度' : `路上约${sp.min}分钟；赢了熟练有长，每日有额度`,
+    name: '切磋', say: `${sp.here ? `此处的${sp.name}` : `${sp.at}的${sp.name}`}肯指点几招。点到为止，不下死手，可拳脚无眼，气血会掉到三成上下。`,
+    cost: sp.here ? '一场切磋的工夫，打完气血要歇一歇才回得来；赢了熟练有长，每日有额度' : `路上约${sp.min}分钟；打完气血要歇一歇才回得来；赢了熟练有长，每日有额度`,
     go: sp.here ? { act: 'tab:jianghu', label: '去江湖页' } : { act: `travel:${sp.to}`, label: `去${sp.at}` }
   });
   else {
@@ -369,6 +428,20 @@ export function sparWilling(id: string): boolean {
   if (!n || n.obj || !verbsOf(n).includes('切磋') || refuseOf(id, '切磋')) return false;
   const b = pickBranch(n.actions['切磋']);
   return !!b?.do?.some(e => e.type === 'fight') && verbPlan(id, '切磋').ok;
+}
+
+/**
+ * 切磋按钮事先看得出：点了不会开打的，写一句缘故（按钮置灰用）；肯打的返回空。
+ * 和推荐是同一套判定（sparWilling），说话算数（10-10 试玩：佩刀汉子的「切磋」亮着，点了只得「今天没空陪你玩」）
+ */
+export function sparWhy(id: string): string | null {
+  if (sparWilling(id)) return null;
+  const n = npc(id);
+  if (!n || n.obj) return null;
+  // 选中的分支不是开打、也不是推剧情的（只回一句推辞）才算不肯
+  if (pickBranch(n.actions['切磋'])?.do?.some(e => e.type === 'story')) return null;
+  if (n.actions['切磋']?.some(b => b.if?.rel && b.do?.some(e => e.type === 'fight'))) return '交情不够，要先混熟才肯动手';
+  return (S.rel[id] || '素不相识') === '素不相识' ? '素不相识，不肯动手' : '眼下不肯陪你过招';
 }
 
 /** 有开打的分支，只是交情不够（分支条件里有 rel）：此刻不肯，混熟了肯。返回他的名字 */

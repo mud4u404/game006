@@ -97,6 +97,7 @@ svg{display:block}
 .mb.rage .tr{background:var(--accent-soft)} .mb.rage .tr i{background:var(--accent)}
 .pb.low .mb.hp .tr i{animation:lowhp 1s ease-in-out infinite}
 .pb.low .mb.hp .v{color:var(--hp);font-weight:700}
+.pb.mplow .mb.mp .v{color:var(--danger);font-weight:700}
 @keyframes lowhp{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.pb.low .mb.hp .tr i{animation:none}}
 .mb .v{min-width:28px;text-align:right;color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
