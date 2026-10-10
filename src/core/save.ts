@@ -8,6 +8,7 @@
  * - 每天留一份备份，最多三份；重新开始前也先留一份。
  * - 内容里的 id 只增不删（tests/ids.test.ts 把关）；万一存档里的地点已经不存在，送回安全的地方。
  */
+import { mergedRoom } from '../content/room-alias';
 import { ROOMS, SKILLS, itemById, jobById, npc, shiById } from '../content';
 import { applyWorld, fillWorld, initWorld, setOwner, type WorldState } from '../engine/shijie';
 import { defaultLoadout, fits } from '../engine/wuxue';
@@ -146,6 +147,18 @@ export function migrate(input: unknown): GameState {
   return repair(o as unknown as GameState);
 }
 
+/** 世界状态里按地点 id 记的东西（地方的痕迹、势力占的地方、人被事件打断后去的地方）：旧 id 并到新 id */
+function mergeRoomIds(w: WorldState): void {
+  for (const id of Object.keys(w.place)) {
+    const to = mergedRoom(id);
+    if (to === id) continue;
+    if (!w.place[to]) w.place[to] = w.place[id];
+    delete w.place[id];
+  }
+  for (const f of Object.values(w.fac)) if (Array.isArray(f.holds)) f.holds = [...new Set(f.holds.map(mergedRoom))];
+  for (const p of Object.values(w.ppl)) if (p?.at) p.at.room = mergedRoom(p.at.room);
+}
+
 function repair(s: GameState): GameState {
   const def = newGame() as unknown as Record<string, unknown>;
   const rec = s as unknown as Record<string, unknown>;
@@ -182,6 +195,10 @@ function repair(s: GameState): GameState {
   if (fr.mpFrac !== undefined) { s.mp = Math.round(s.mpMax * fr.mpFrac); delete fr.mpFrac; }
   // 世事：内容改过、认不得的事或步，丢掉（下一回按条件重新起头）
   if (s.shi) for (const [id, st] of Object.entries(s.shi)) if (!shiById(id)?.steps[st?.at]) delete s.shi[id];
+  // 被并掉的场景（content/room-alias.ts）：所在、差事的交差处、世界里指着旧 id 的地方，改到并入的那一处
+  s.loc = mergedRoom(s.loc);
+  for (const y of s.yue ?? []) y.at = mergedRoom(y.at);
+  mergeRoomIds(s.w);
   // 地点没了，送回这一回的起点
   if (!ROOMS.some(r => r.id === s.loc)) s.loc = s.chapter === 0 ? newGame().loc : skipToYangzhou().loc;
   // 差事的约：交差的人、交差的地方照当前的差事定义重写（负责人 10-09 拆府衙：悬赏改到照壁下的书办那里交差，

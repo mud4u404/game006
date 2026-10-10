@@ -64,6 +64,15 @@ describe('自动合并：文件范围', () => {
     expect(judgeFiles([f('renamed', 'src/content/packs/x.ts')], allowed).ok).toBe(false);
   });
 
+  it('新增的测试文件点名了就合；改已有测试不合；id 登记表只许加行', () => {
+    const a = allowedFiles(body('- `src/content/packs/foo.ts`\n- `tests/foo.test.ts`'));
+    expect(judgeFiles([{ status: 'added', filename: 'tests/foo.test.ts' }, { status: 'modified', filename: 'src/content/packs/foo.ts' }], a).ok).toBe(true);
+    expect(judgeFiles([{ status: 'added', filename: 'tests/bar.test.ts' }], a).bad).toEqual(['tests/bar.test.ts']);
+    expect(judgeFiles([{ status: 'modified', filename: 'tests/foo.test.ts' }], a).ok).toBe(false);
+    expect(judgeFiles([{ status: 'modified', deletions: 0, filename: 'tests/id-registry.json' }], a).ok).toBe(true);
+    expect(judgeFiles([{ status: 'modified', deletions: 2, filename: 'tests/id-registry.json' }], a).ok).toBe(false);
+  });
+
   it('forbidden-names 只许加词，不许删；没有改动文件不合', () => {
     expect(judgeFiles([f('modified', 'tests/forbidden-names.ts', 0)], allowed).ok).toBe(true);
     expect(judgeFiles([f('modified', 'tests/forbidden-names.ts', 2)], allowed).ok).toBe(false);

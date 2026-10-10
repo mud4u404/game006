@@ -8,7 +8,7 @@ import type { ContentPack, FoeDef, NpcDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_chuanwu', name: '虹桥船坞', area: '瘦西湖 · 虹桥', region: 'yz', t: 10, map: [34, 32],
+    id: 'yz_chuanwu', name: '虹桥船坞', area: '扬州 · 瘦西湖', region: 'yz', t: 10, map: [34, 32],
     desc: [
       { if: { hour: { from: 5, to: 18 } },
         text: '虹桥底下是一片废弃的旧船坞，半沉的破船歪在泥里，桅杆斜指着天。日头底下水光粼粼，看什么都是明明白白，只有船坞深处黑洞洞的。' },

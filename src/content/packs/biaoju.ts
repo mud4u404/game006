@@ -20,7 +20,7 @@ import type { ContentPack, FoeDef, FightResult, JobDef, NewsDef, NpcDef, PrepDef
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'biaoju', name: '威远镖局', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [64, 94], nightQuiet: true,
+    id: 'biaoju', name: '威远镖局', area: '扬州 · 东关街', region: 'yz', t: 5, map: [64, 94], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '镖局的黑漆大门上了闩，门缝里漏出一线灯光。院里两辆镖车蒙着油布，看门的老狗趴在石狮子底下，听见脚步声抬了抬眼皮。要见镖头，明儿一早再来。' },
