@@ -1,8 +1,8 @@
 import { sectHome } from '../../engine/daohang';
 import { S, fullName } from '../../core/state';
 import type { AttrKey } from '../../content/types';
-import { npcName, roomNpcs } from '../../engine/world';
-import { ROOMS } from '../../content';
+import { npcName, whereAt } from '../../engine/world';
+import { room } from '../../content';
 import { attrLines } from '../../engine/gengu';
 import { relGroup, type RelGroup } from '../../engine/renqing';
 import { gongliText, houtianOf, nextTierLine, tierNow } from '../../engine/ren';
@@ -23,9 +23,11 @@ function renqingHTML(): string {
   const groups: Record<RelGroup, [string, string][]> = { 至亲至交: [], 交好: [], 恩怨: [], 萍水相逢: [] };
   for (const [id, v] of Object.entries(S.rel)) groups[relGroup(v)].push([id, v]);
   const row = ([id, v]: [string, string]): string => {
-    const where = ROOMS.find(r => roomNpcs(r.id).includes(id))?.name;
+    // 眼下在哪：走统一作息查询（含世事挪人、睡下、外出），查不到就不写这一行
+    const wid = whereAt(id);
+    const where = wid ? room(wid).name : null;
     const note = S.relNote?.[id];
-    return `<div class="rq"><div class="rq-h"><b>${npcName(id)}</b><span class="tag">${v}</span></div>${where ? `<small>常在${where}</small>` : ''}${note ? `<p>${note}</p>` : ''}</div>`;
+    return `<div class="rq"><div class="rq-h"><b>${npcName(id)}</b><span class="tag">${v}</span></div>${where ? `<small>眼下在${where}</small>` : ''}${note ? `<p>${note}</p>` : ''}</div>`;
   };
   const shown = (['至亲至交', '交好', '恩怨'] as RelGroup[]).filter(g => groups[g].length)
     .map(g => `<div class="rq-g">${g}</div>${groups[g].map(row).join('')}`).join('');
