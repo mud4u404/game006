@@ -3,6 +3,7 @@ import { buildShell, previewBar } from './ui/shell';
 import './ui/explore';
 import './ui/fight';
 import './ui/savecard';
+import './ui/wushi';
 import { showTitle } from './ui/story';
 import { reconcile } from './ui/account';
 import { startAutoSync } from './net/sync';
