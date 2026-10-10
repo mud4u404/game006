@@ -102,10 +102,11 @@ export function openMuren(): { ok: boolean; why?: string; foe?: FoeDef } {
   if (why) return { ok: false, why };
   const school = room(S.loc).lianzhuang!, day = dayNo(S), daily = murenId(school, murenCount(S, school));
   const key = `${daily}:${day}`, person = structuredClone(personOf(S)), outer = activeOuter(S);
+  const moves = outer?.moves?.filter(m => (m.realm ?? 0) <= (S.skills[outer.id]?.r ?? 0)).map(m => m.name);
   const f: FoeDef = {
     id: key, name: '木人', title: '练功木人', ini: '木', tone: 'gray', weapon: '木臂', ws: '掌',
     rank: tierCont(person), spar: true, nature: outer?.nature, reach: outer?.reach,
-    tag: '练手', moves: outer?.moves?.map(m => m.name) ?? ['平推'], flourish: ['木臂一转'],
+    tag: '练手', moves: moves?.length ? moves : ['平推'], flourish: ['木臂一转'],
     tells: [
       { name: '直推', text: '木臂向前直推。', dom: 'li', after: '桩身一晃。' },
       { name: '横扫', text: '木臂横着扫来。', dom: 'su', after: '桩身一转。' },

@@ -12,6 +12,7 @@ import { foeSpec, fightKit, heroSpec, personOf } from '../src/engine/zhaoshi';
 import { settle } from '../src/engine/jiesuan';
 import { mulberry32 } from '../src/engine/rng';
 import { setMapRegion, viewDitu } from '../src/ui/views/ditu';
+import { viewJianghu } from '../src/ui/views/jianghu';
 
 // 内容的索引在导入时建好；测试夹具只补查询入口，所有行动、时间、成长和地图规则仍用真实实现。
 vi.mock('../src/content', async importOriginal => {
@@ -23,7 +24,9 @@ vi.mock('../src/content', async importOriginal => {
 });
 
 const school = '试验门';
-const skill: SkillDef = { id: 'test_zhudi_palm', name: '试验掌法', school, grade: '凡品', category: '掌法', nature: '中正', reach: '徒手', desc: '测试夹具', learn: '测试夹具', teach: '入门' };
+const skill: SkillDef = { id: 'test_zhudi_palm', name: '试验掌法', school, grade: '凡品', category: '掌法', nature: '中正', reach: '徒手', desc: '测试夹具', learn: '测试夹具', teach: '入门', moves: [
+  { name: '起手', text: '测试夹具', realm: 0 }, { name: '后招', text: '测试夹具', realm: 4 }
+] };
 const rooms: RoomDef[] = [
   { id: 'test_zhudi_hall', name: '试验正堂', area: '扬州 · 试验门', region: 'yz', t: 1, desc: '测试夹具', npcs: [], map: [50, 15], exits: [['南', 'test_zhudi_yard']] },
   { id: 'test_zhudi_yard', name: '试验练功场', area: '扬州 · 试验门', region: 'yz', t: 1, desc: '测试夹具', npcs: [], map: [50, 50], exits: [['北', 'test_zhudi_hall'], ['南', 'test_zhudi_dorm']], lianzhuang: school, lianzhuangBase: 'jh_tuna' },
@@ -127,6 +130,19 @@ describe('练桩的真实行动结算', () => {
 });
 
 describe('师门住处和地图', () => {
+  it('练桩和木人放在现有场景动作区，门外的人仍看得见拒绝理由', () => {
+    const html = viewJianghu();
+    const scene = html.match(/<section class="card scene">[\s\S]*?<\/section>/)?.[0];
+    expect(scene).toContain('data-act="lianzhuang"');
+    expect(scene).toContain('data-act="muren"');
+    expect(html).not.toContain('<h2>练手</h2>');
+    delete S.sect;
+    const outside = viewJianghu();
+    expect(outside).toContain('这是本门弟子练手的地方');
+    expect(outside).toContain('data-act="lianzhuang"');
+    S.loc = rooms[0].id;
+    expect(viewJianghu()).not.toContain('data-act="lianzhuang"');
+  });
   it('同样的七日闭关，住师门的功力比住客栈多一成，额度照扣七日', () => {
     S.silver = 10000; S.zhu = 'inn';
     const before = structuredClone(S), inn = jingxiu(S, 7, () => 1);
@@ -169,6 +185,7 @@ describe('木人的真实切磋和每日名额', () => {
     S.hp = Math.round(S.hpMax * 0.2);
     const before = structuredClone(personOf(S)), hp = S.hp, max = S.hpMax;
     const f = openMuren().foe!, spec = foeSpec(f, []);
+    expect(f.moves).toEqual(['起手']);
     expect(spec.person).toEqual(before);
     expect([spec.hp, spec.hpMax]).toEqual([hp, max]);
     S.gongli += 1; S.attr.体魄 += 3;

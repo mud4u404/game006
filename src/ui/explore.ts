@@ -23,6 +23,8 @@ import { kpBiguanTip } from '../engine/kaipian';
 import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
+import { inFight, startFight } from './fight';
+import { openMuren, zhuangReq } from '../engine/zhudi';
 import { eyeLine } from './views/jianghu';
 import { pickItemFirst } from './daoju';
 
@@ -168,6 +170,20 @@ function retreat(want: number): void {
 }
 
 registerHandlers({
+  lianzhuang: () => {
+    if (traveling) { toast(TRAVEL_BUSY); return; }
+    if (inFight()) return;
+    const result = settleAction(zhuangReq());
+    if (!result.ok) { toast(result.why ?? '眼下还练不了。'); return; }
+    lateYue(); render();
+  },
+  muren: () => {
+    if (traveling) { toast(TRAVEL_BUSY); return; }
+    if (inFight()) return;
+    const result = openMuren();
+    if (!result.ok) { toast(result.why ?? '眼下还练不了。'); return; }
+    startFight(result.foe!);
+  },
   // 搭配：点一个位置，列出能放进去的武功；战斗中不能换（战斗界面盖住了武功页）
   slotPick: v => openSheet(slotSheet(v as Slot), true),
   slotSet: v => {

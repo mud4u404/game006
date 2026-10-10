@@ -15,6 +15,8 @@ import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine
 import { shenfenOf } from '../../engine/shenfen';
 import { verbChufa } from '../../engine/chufa';
 import { test, textVars } from '../../engine/dsl';
+import { plan } from '../../engine/xingdong';
+import { murenWhy, zhuangReq } from '../../engine/zhudi';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
 
@@ -55,7 +57,7 @@ export function viewJianghu(): string {
   ${questBar}
   ${yueBar}
   ${leadsCard()}
-  <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
+  <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${zhudiHTML()}${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
   ${gone}
   ${all.length ? `<section class="card here-card">
     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
@@ -131,3 +133,13 @@ function exitBtn(d: string, id: string, solo: boolean, questTo?: string): string
 
 /** 根基之眼的一行：根基名做标签，后面是看出来的东西（engine/yan.ts） */
 export const eyeLine = (e: EyeDef): string => `<p class="eye"><span class="tag eye-${e.attr}">${e.attr}</span><span>${fmt(e.text, textVars())}</span></p>`;
+
+/** 场所的器械一直看得见；门外的人点了也走行动协议的回绝。 */
+function zhudiHTML(): string {
+  if (!room(S.loc).lianzhuang) return '';
+  const p = plan(zhuangReq()), why = murenWhy(S);
+  return `<div class="acts">
+    <button class="act priced" data-act="lianzhuang">练桩<small>${p.ok ? '两个时辰，一日一回' : p.why}</small></button>
+    <button class="act spar priced" data-act="muren">打木人<small>${why ?? '照你当下本事，一日四回'}</small></button>
+    </div>`;
+}
