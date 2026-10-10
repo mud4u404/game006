@@ -19,7 +19,7 @@
 - 产业放在第二卷：它需要第一版的经济收支检查（第 059 项）先站稳。
 - 每卷的地区都照同一个顺序做：地区矛盾 → 人物关系 → 地点结构 → 可行动的机会 → 任务与对白 → 场景表现。
 
-人手：O＝维护者（Opus），S＝Sonnet，H＝Haiku，Cx＝Codex，Mm＝minimax，CB＝CodeBuddy，Qd＝Qoder，Tr＝Trae，小＝zcode、autoclaw、step5 等。每项控制在半天到三个人日。
+人手：O＝维护者（Opus），S＝Sonnet，H＝Haiku，Cx＝Codex，Mm＝minimax，CB＝CodeBuddy，Qd＝Qoder，Tr＝Trae，小＝zcode、autoclaw、WorkBuddy 等。每项控制在半天到三个人日。
 
 ---
 
