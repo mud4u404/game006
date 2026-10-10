@@ -28,7 +28,7 @@ const SHI_DEF: ShiDef[] = [
     id: SHI, name: '乱石阵困船', region: 'gz', start: { flag: 'ssgz_seen' }, first: 'qi',
     steps: {
       qi: {
-        now: '江滩上多了一片乱石阵，渔家的船进去就出不来，转半天又回到原处。石头摆的方位透着古怪——是有人按阵法摆的。',
+        now: '听潮小筑前的江滩上多了一片乱石阵，渔家的船进去就出不来，转半天又回到原处。石头摆的方位透着古怪——是有人按阵法摆的。',
         news: '江滩上多了一片乱石阵，渔船进去就出不来，石头摆的方位透着古怪。',
         next: { days: 2, to: 'huo' }
       },
@@ -188,7 +188,7 @@ const NPCS: NpcDef[] = [
           do: [{ type: 'quest', id: 'smth_zhen', stage: 0 }, { type: 'flag', flag: 'smth_asked' }] },
         { if: { noSect: true, attr: { key: '悟性', atLeast: 24 } },
           text: '曲蘅看了看你：「上回说了不行，这回还来？」他把你上下打量了一遍，「……嗯。心窍比上回开了些。也罢，阵再走一回。」',
-          do: [{ type: 'flag', flag: 'smth_refused', value: false }, { type: 'flag', flag: 'smth_asked' }] },
+          do: [{ type: 'flag', flag: 'smth_refused', value: false }, { type: 'flag', flag: 'smth_asked' }, { type: 'quest', id: 'smth_zhen', stage: 0 }] },
         { if: { noSect: true },
           text: '曲蘅摇了摇头，话很平，不刺人：「岛主的功夫，笨人学了是糟蹋——你现在的悟性，学了是害你。」他把一册手抄的药性赋推过来，「拿去。什么时候把这本读通了，什么时候心窍开了，再来叩门。这条路过两年也作数。」',
           do: [{ type: 'flag', flag: 'smth_refused' }] },

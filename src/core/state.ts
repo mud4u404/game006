@@ -134,7 +134,8 @@ export interface GameState {
   /** 战后说书，供说书人复述 */
   story: string;
   sel: string | null;
-  reply: { id: string; text: string } | null;
+  /** at：说这句话时的江湖分钟（core/time absMin）；人走了以后「说完就走了」那张卡只留一小会儿，不隔夜 */
+  reply: { id: string; text: string; at?: number } | null;
   tab: Tab;
 }
 
