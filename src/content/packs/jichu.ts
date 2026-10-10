@@ -62,21 +62,21 @@ const ITEMS: ItemDef[] = [
 const ROOMS: RoomDef[] = [
   /* ---------- 扬州 ---------- */
   {
-    id: 'jc_yz_yiguan', name: '济生堂', area: '扬州城 · 医馆', region: 'yz', t: 5, map: [55, 66],
+    id: 'jc_yz_yiguan', name: '济生堂', area: '扬州 · 东关街', region: 'yz', t: 5, map: [55, 66],
     desc: '门脸不大的医馆，檐下一块旧匾「济生堂」，墨色洗得发白。堂上一股艾草和药酒的味道，竹榻上躺着个脚夫，腿上绑着夹板直哼哼。墙上挂着一张铜人图，针眼密密麻麻。',
     npcs: ['jc_yz_langzhong'],
     exits: [['街', 'cheng', '医']],
     road: '你拐进东关街边的一条窄巷，药香一阵浓过一阵……'
   },
   {
-    id: 'jc_yz_kezhan', name: '广陵客栈', area: '扬州 · 东关', region: 'yz', t: 5, map: [66, 32],
+    id: 'jc_yz_kezhan', name: '广陵客栈', area: '扬州 · 运河渡口', region: 'yz', t: 5, map: [66, 32],
     desc: '运河边一座两层木楼，楼下大堂摆着七八张方桌，楼上是客房。门口挑着一盏「广陵」灯笼，夜里也不熄。等船的客商就着咸菜喝粥，眼睛不时往河上瞟。',
     npcs: ['jc_yz_ruanniang'],
     exits: [['渡', 'dukou', '店']],
     road: '你沿着运河往北走了一段，一盏「广陵」灯笼在河风里晃……'
   },
   {
-    id: 'jc_yz_yuanmen', name: '辕门桥', area: '扬州城 · 辕门桥', region: 'yz', t: 10, map: [13, 68], nightQuiet: true,
+    id: 'jc_yz_yuanmen', name: '辕门桥', area: '扬州 · 东关街', region: 'yz', t: 10, map: [13, 68], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '夜里的辕门桥静下来了。铁匠铺封了炉，当铺上了门板，只剩桥洞底下小秦淮的水声。桥头一盏风灯晃来晃去，照见门板上贴的「明日请早」。' },
@@ -88,7 +88,7 @@ const ROOMS: RoomDef[] = [
   },
   /* ---------- 瓜洲 ---------- */
   {
-    id: 'jc_gz_kedian', name: '江口客店', area: '瓜洲 · 老街', region: 'gz', t: 5, map: [62, 14],
+    id: 'jc_gz_kedian', name: '江口客店', area: '瓜洲 · 镇上', region: 'gz', t: 5, map: [62, 14],
     desc: [
       { if: { shi: { id: 'ssgz_du', at: ['qi'] } },
         text: '老街北头的客店门口拴着两头驴，店里头却热闹得反常——骰子声、骂牌声混着酒气，从板壁缝里往外冒。' },
@@ -108,21 +108,21 @@ const ROOMS: RoomDef[] = [
   },
   /* ---------- 镇江 ---------- */
   {
-    id: 'jc_zj_yiguan', name: '宁家医馆', area: '镇江 · 城中', region: 'zj', t: 5, map: [20, 56],
+    id: 'jc_zj_yiguan', name: '宁家医馆', area: '镇江 · 大市口', region: 'zj', t: 5, map: [20, 56],
     desc: '大市口西边一间小医馆，门口晒着几簸箕草药。堂上收拾得干干净净，药柜的抽屉上贴着工工整整的小楷。里间隐约有人在哼，是前日抬进来的一个兵丁。',
     npcs: ['jc_zj_ning'],
     exits: [['东', 'zj_shi', '西']],
     road: '你从大市口往西拐，一股煎药的苦味飘了过来……'
   },
   {
-    id: 'jc_zj_kezhan', name: '京口客栈', area: '镇江 · 城中', region: 'zj', t: 5, map: [80, 56],
+    id: 'jc_zj_kezhan', name: '京口客栈', area: '镇江 · 大市口', region: 'zj', t: 5, map: [80, 56],
     desc: '大市口东边的老字号客栈，三层的木楼，楼上推窗就是北固山。大堂里南来北往的客人说着各地的口音，掌柜坐在柜上，眯着眼听，也不知是醒是睡。',
     npcs: ['jc_zj_bao'],
     exits: [['西', 'zj_shi', '东']],
     road: '你顺着大市口往东走，一面「京口」的酒招在檐下飘……'
   },
   {
-    id: 'jc_zj_datie', name: '打铁巷', area: '镇江 · 城中', region: 'zj', t: 10, map: [50, 88], nightQuiet: true,
+    id: 'jc_zj_datie', name: '打铁巷', area: '镇江 · 大市口', region: 'zj', t: 10, map: [50, 88], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '入夜的打铁巷没了叮当声，炉膛里只剩一点暗红的火。兵器铺和当铺都上了门板，巷子里黑得看不见脚下的铁渣。' },

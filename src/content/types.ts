@@ -777,7 +777,16 @@ export interface StoryDef {
  * - far：外地的事，只从跑码头的（船夫、镖师、外乡人）嘴里出来，本地人不知道
  * - about：说的是玩家自己的事迹（写了旗标条件、说「少年」「少侠」的），只在玩家做过之后、由目击者说起
  */
-export interface NewsDef { if?: Cond; text: string; who?: string[]; far?: true; about?: 'you' }
+export interface NewsDef {
+  if?: Cond;
+  text: string;
+  who?: string[];
+  far?: true;
+  about?: 'you';
+  /** 这条话出在哪个地区、哪处地方（RoomDef id）：只发给这一带的人。不写的，引擎按话里提到的地名、地点名认；认不出来按 who 里头一个人所在的地区 */
+  region?: string;
+  at?: string;
+}
 
 /** 地区；order 是地图上地区标签的先后，小的在前 */
 export interface RegionDef { name: string; note: string; order?: number }

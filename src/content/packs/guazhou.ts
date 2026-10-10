@@ -13,7 +13,7 @@ const AFTER = { quest: { id: 'prologue', atLeast: 3 } };
 const NEW = { quest: { id: 'prologue', atLeast: 3 }, flag: 'kp_xin' };
 
 const ROOMS: RoomDef[] = [
-  { id: 'gz_home', name: '渡口小屋', area: '瓜洲渡', region: 'gz', t: 10, map: [24, 40],
+  { id: 'gz_home', name: '渡口小屋', area: '瓜洲 · 镇上', region: 'gz', t: 10, map: [24, 40],
     desc: [
       { if: NEW, text: '小屋还立着，门没有闩。床上的被褥叠得整整齐齐，早冷透了；凳上搭着补了一半的船篷，针还别在布边。江风从门缝里钻进来，吹得针线轻轻晃。' },
       { if: AFTER, text: '小屋只剩几根烧黑的柱子，渔网烧成了灰，散在泥地里。江风从没了顶的屋里穿过去，还带着一股焦糊味。' },
@@ -30,7 +30,7 @@ const ROOMS: RoomDef[] = [
       { text: '你沿着江堤走回小屋……' }
     ],
     onEnter: [{ if: { quest: { id: 'prologue', is: 2 } }, do: [{ type: 'story', id: 'p_night' }] }] },
-  { id: 'gz_town', name: '瓜洲镇', area: '瓜洲 · 老街', region: 'gz', t: 0, map: [62, 40], nightQuiet: true,
+  { id: 'gz_town', name: '瓜洲镇', area: '瓜洲 · 镇上', region: 'gz', t: 0, map: [62, 40], nightQuiet: true,
     desc: [
       { if: { hour: { from: 19, to: 5 } },
         text: '老街上了门板，茶摊的炉子封了火，鱼市口的鱼担也收回了家。街上只有打更的梆子声，一下，一下，敲得夜更长。' },
@@ -49,7 +49,7 @@ const ROOMS: RoomDef[] = [
         do: [{ type: 'flag', flag: 'ssgz_seen' }, { type: 'feed', tag: '江湖', text: '瓜洲的老街还是老样子，鱼腥味混着药香。渡口的船来来去去，镇上人的日子照旧过。' }] }
     ] },
   // 负责人 10-09「场景不许像派出所审犯人」：卖鱼阿婆、拎鱼的六斤从老街挪到拐角的鱼市口
-  { id: 'gz_yushi', name: '鱼市口', area: '瓜洲 · 老街拐角', region: 'gz', t: 5, map: [42, 58], nightQuiet: true,
+  { id: 'gz_yushi', name: '鱼市口', area: '瓜洲 · 镇上', region: 'gz', t: 5, map: [42, 58], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 4 } },
         text: '鱼市口空了，鱼担都收了回去，只剩一地鱼鳞和几只翻过来的竹筐。江风从堤那头吹过来，带着一股潮腥气。' },
@@ -60,7 +60,7 @@ const ROOMS: RoomDef[] = [
     npcs: [],
     exits: [['街', 'gz_town', '市']],
     road: '你拐过老街的墙角，鱼腥味扑面而来……' },
-  { id: 'gz_pier', name: '瓜洲码头', area: '瓜洲渡', region: 'gz', t: 5, map: [62, 78],
+  { id: 'gz_pier', name: '瓜洲码头', area: '瓜洲 · 渡口', region: 'gz', t: 5, map: [62, 78],
     desc: [
       // 序章里不开船（engine/world.ts 的 openExits）：江伯在床上等药
       { if: { chapter: 0 },
@@ -85,7 +85,7 @@ const ROOMS: RoomDef[] = [
     exits: [['北', 'gz_town']],
     road: '你穿过老街，走到江边码头……' },
   // 序章里这里只是江堤上一株老柳。旧存档序章以后多了一座坟；新开局没有坟，只有江伯坐过的那截树根
-  { id: 'gz_fen', name: '江堤老柳', area: '瓜洲 · 江堤', region: 'gz', t: 5, map: [24, 70],
+  { id: 'gz_fen', name: '江堤老柳', area: '瓜洲 · 镇上', region: 'gz', t: 5, map: [24, 70],
     desc: [
       { if: { quest: { id: 'prologue', below: 3 } },
         text: '江堤下游一株老柳，枝条垂到了水面。江伯补网的时候爱坐在这截树根上，说这里风顺，听得见上游来船。树根叫他坐得发亮。' },

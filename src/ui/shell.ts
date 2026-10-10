@@ -22,6 +22,7 @@ import { refreshGreet } from '../engine/yingmian';
 import { tickWorld } from '../engine/shijie';
 import { dropFailedTrack } from '../engine/daohang';
 import { isPreview } from '../core/preview';
+import { recordClick, wushiOn } from '../core/wushi';
 
 type Handler = (v: string, el: HTMLElement) => void;
 const handlers: Record<string, Handler> = {};
@@ -70,7 +71,9 @@ export function buildShell(): void {
     <div id="chapLayer" hidden></div>
     <div id="sheetLayer" hidden></div>
     <div id="titleLayer" hidden></div>
-    <div id="toast" class="toast" role="status" hidden></div>`;
+    <div id="toast" class="toast" role="status" hidden></div>
+    <button id="wushiFb" class="wushi-fb" data-act="wushiOpen" hidden>反馈</button>`;
+  syncWushi();
   if (built) return;
   built = true;
   // 手指按下时底下是哪个按钮（负责人 10-09：「点着点着会卡住，个别选项点不中」）。
@@ -102,12 +105,22 @@ export function buildShell(): void {
     // 只认点在自己身上的（弹层的遮罩：点在面板里的空白处不算点了遮罩）
     if (el.hasAttribute('data-self') && e.target !== el) return;
     const a = el.dataset.act || '';
+    // 巫师模式：记最近 10 次点击（动作名 + 按钮上的字），反馈时附上
+    recordClick(a + ((el.textContent || '').trim() ? '「' + (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 10) + '」' : ''));
     const i = a.indexOf(':');
     const k = i < 0 ? a : a.slice(0, i);
     const v = i < 0 ? '' : a.slice(i + 1);
     handlers[k]?.(v, el);
   });
   on('toast', toast);
+}
+
+/** 巫师模式：右上角的「反馈」按钮显隐（普通玩家这个按钮一直是藏着的） */
+export function syncWushi(): void {
+  const on = wushiOn();
+  const b = $('#wushiFb');
+  if (b) b.hidden = !on;
+  $('#app')?.classList.toggle('wushi', on);
 }
 
 /** 试玩预览（/preview/）：页面顶上挂一行提示，画面整体往下让出这一行，不盖住任何按钮（样式见 app.css「试玩预览」） */
