@@ -4,7 +4,7 @@ import type { ContentPack, NpcDef, QuestDef, RoomDef, StoryDef } from '../types'
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'daming_cangjing', name: '藏经阁', area: '大明寺 · 藏经阁', region: 'yz', t: 15, map: [68, 12],
+    id: 'daming_cangjing', name: '藏经阁', area: '扬州 · 大明寺', region: 'yz', t: 15, map: [68, 12],
     // 第 45 条：结案以后不再照着「三人各忙各的」写，也不枚举已经走了的人
     desc: [
       { if: { flag: 'cangjing_juan' },

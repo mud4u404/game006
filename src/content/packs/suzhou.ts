@@ -131,7 +131,7 @@ const SHI: ShiDef[] = [
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'sz_matou', name: '枫桥码头', area: '苏州 · 运河', region: 'sz', t: 10, map: [30, 62],
+    id: 'sz_matou', name: '枫桥码头', area: '苏州 · 枫桥', region: 'sz', t: 10, map: [30, 62],
     desc: [
       { if: { hour: { from: 21, to: 4 }, shi: { id: JUAN, at: ['feng'] } },
         text: '夜里的枫桥码头封得死死的，封条在灯笼底下白得扎眼。兵丁提着灯在跳板上来回走，堵在河上的商船一艘挨一艘黑下去，只剩几星桅灯。' },
@@ -160,7 +160,7 @@ const ROOMS: RoomDef[] = [
     ]
   },
   {
-    id: 'sz_changmen', name: '阊门', area: '苏州 · 城门', region: 'sz', t: 5, map: [42, 52],
+    id: 'sz_changmen', name: '阊门', area: '苏州 · 枫桥', region: 'sz', t: 5, map: [42, 52],
     desc: [
       { if: { hour: { from: 20, to: 4 } },
         text: '阊门的城门夜里关了，两扇门板比船板还厚。门洞里留一道小门进出，守门的兵丁抱着枪打盹，火把烧到后半夜，火苗矮得快看不见。门洞边那张药摊还点着一盏小油灯，半夜有人敲门，老郎中也起来看。' },
@@ -171,7 +171,7 @@ const ROOMS: RoomDef[] = [
     road: '你沿着运河堤进城，阊门的门洞里人声嗡嗡的……'
   },
   {
-    id: 'sz_shantang', name: '山塘街', area: '苏州 · 街市', region: 'sz', t: 10, map: [52, 44], nightQuiet: true,
+    id: 'sz_shantang', name: '山塘街', area: '苏州 · 山塘街', region: 'sz', t: 10, map: [52, 44], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } }, text: '二更过后，山塘街的铺子都上了门板，河上的画舫也收了灯笼。只有几只夜航船从桥洞底下摇过去，橹声咿呀，惊起岸边一只野猫。' },
       { if: { shi: { id: HUA, at: ['huo'] } },
@@ -186,7 +186,7 @@ const ROOMS: RoomDef[] = [
   },
   {
     // 负责人 10-09「场景不许像派出所审犯人」：画舫两家、夜市的馄饨担子、夜里巡河的严捕头，从山塘街挪到星桥埠头
-    id: 'sz_xingqiao', name: '星桥埠头', area: '苏州 · 山塘河', region: 'sz', t: 5, map: [74, 52], nightQuiet: true,
+    id: 'sz_xingqiao', name: '星桥埠头', area: '苏州 · 山塘街', region: 'sz', t: 5, map: [74, 52], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '二更以后，埠头上的灯笼一盏盏熄了，画舫都收了灯，泊在桥洞两边，船篷里偶尔透出一点烛光。星桥上空落落的，河水拍着石阶，一声一声。' },
@@ -205,14 +205,19 @@ const ROOMS: RoomDef[] = [
     road: '你顺着山塘街往东走到头，星桥的石拱从柳梢后头露了出来……'
   },
   {
-    id: 'sz_yamen', name: '苏州府衙', area: '苏州 · 衙门', region: 'sz', t: 10, map: [62, 32],
-    desc: '苏州府衙坐北朝南，仪门前的照壁上画着贪吃太阳的兽。头门开处，告示挂了两排，书办抱着案卷进进出出，脚步都带着小跑。',
+    id: 'sz_yamen', name: '苏州府衙', area: '苏州 · 山塘街', region: 'sz', t: 10, map: [62, 32], nightQuiet: true,
+    // Issue #173 第 8 条：府衙没写夜景。入夜清街，差役打灯笼关门，只留角门一人。
+    desc: [
+      { if: { hour: { from: 21, to: 5 } },
+        text: '入夜清街。仪门前的灯笼熄了一半，差役打着梆子一趟趟催，告示墙前只剩一个人还在揭旧纸。头门合上，角门留了一个缝，门房里坐着个打瞌睡的书办。' },
+      { text: '苏州府衙坐北朝南，仪门前的照壁上画着贪吃太阳的兽。头门开处，告示挂了两排，书办抱着案卷进进出出，脚步都带着小跑。' }
+    ],
     npcs: [],
     exits: [['南', 'sz_shantang', '北']],
     road: '你往山塘街北头走，照壁上的兽张着大嘴迎面而来……'
   },
   {
-    id: 'sz_chaguan', name: '山塘茶馆', area: '苏州 · 茶馆', region: 'sz', t: 5, map: [58, 38],
+    id: 'sz_chaguan', name: '山塘茶馆', area: '苏州 · 山塘街', region: 'sz', t: 5, map: [58, 38],
     desc: [
       { if: { hour: { from: 21, to: 7 } },
         text: '茶馆打了烊，门板上着一半。炉子封了火，堂倌扫着地，万掌柜的算盘声从里间传出来，一下一下，不紧不慢。' },
@@ -438,7 +443,10 @@ const NPCS: NpcDef[] = [
     } },
   {
     id: 'sz_wentiejiang', name: '闻铁匠', ini: '闻', tone: 'red', brief: '抡着锤打铁', service: ['兵'],
-    at: { room: 'sz_shantang' },
+    // Issue #173 第 9 条：贡绢案里他应下补钟的活，人在寒山寺支炉那几天不该还坐在山塘街。
+    // 用条件作息，不用死 npcs。
+    at: [{ room: 'sz_hanshan', if: { shi: { id: ZHONG, at: ['xiangzhu'] } } },
+         { room: 'sz_shantang' }],
     look: '黑壮的铁匠，抡锤不换气，一炉铁从头打到尾——这份气息，铸过钟的人才有。铺子里挂满了刀枪，墙上却挂着一枚旧钟钮，擦得一尘不染。',
     verbs: ['交谈', '观察', '买刀', '买剑', '买枪'],
     actions: {

@@ -1,4 +1,4 @@
-import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, NewsDef, NpcDef, QuestDef, RoomDef } from '../types';
+import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, JobDef, NewsDef, NpcDef, QuestDef, RoomDef } from '../types';
 
 /**
  * 少林的江南道据点（Issue #116）：镇江金山寺，云游长老寂照在此挂单，收俗家弟子。
@@ -25,7 +25,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, NewsDef, N
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smsl_jinshan', name: '金山寺', area: '镇江 · 金山', region: 'zj', t: 15, map: [26, 8],
+    id: 'smsl_jinshan', name: '金山寺', area: '镇江 · 金山寺', region: 'zj', t: 15, map: [26, 8],
     desc: [
       { if: { flag: 'smsl_in' },
         text: '金山立在江心，寺在山上，黄墙碧瓦，江风里全是香火气。你上山不用看知客僧的脸色——殿前的知客僧远远看见你，板着的脸松了松，侧身让你进去了。' },
@@ -70,13 +70,14 @@ const NPCS: NpcDef[] = [
       { verb: '拜师', if: { notFlag: 'smsl_in' } },
       { verb: '领考', if: { flag: 'smsl_asked', notFlag: 'smsl_shui', noSect: true } },
       { verb: '请教', if: { sect: SMSL } },
+      { verb: '讨差事', if: { sect: SMSL } },
       { verb: '考校', if: { sect: SMSL, notFlag: 'smsl_wai' } }],
     actions: {
       交谈: [
         { if: { sect: SMSL_OUT },
-          text: '长老点点头：「外门弟子，出门在外，报的是少林的名。名是护身的，不是护短的——记着。」他把抄好的经页吹了吹，「寺里的功夫，你能学的都学得起了。」' },
+          text: '长老点点头：「外门弟子，出门在外，报的是少林的名。」他把抄好的经页吹了吹：「寺里的功夫，你能学的都学得起了。」' },
         { if: { sect: SMSL },
-          text: '长老抄经的手没停：「门规记着：不杀生，不偷盗，不饮酒。在门期间，别派的功夫不许碰——不是防你，是护你，练岔了，神仙难救。」他抬了抬眼，「罗汉拳、混元一气功都练到略有小成，再行几件侠义的事，我给你升外门。」' },
+          text: '长老抄经的手没停：「门规记着：不杀生，不偷盗，不饮酒。在门期间，别派的功夫不许碰——练岔了，神仙难救。」他抬了抬眼：「罗汉拳打熟了，混元一气坐出暖意了，再去替人挡几回事，老衲考你。」' },
         { if: { flag: 'smsl_ju' },
           text: '长老抄经的手停了停：「冤孽没清，寺里的门槛你跨不得。回去多行善事，多积阴德——不为进这扇门，为你自己。」' },
         { if: { flag: 'smsl_asked', notFlag: 'smsl_shui' },
@@ -86,14 +87,14 @@ const NPCS: NpcDef[] = [
       观察: [{ text: '廊下那壶茶斟了三回，壶嘴离杯半尺，水线细得像一炷香，一滴也没洒在案上。' }],
       领考: [
         { if: { hour: { from: 20, to: 5 } },
-          text: '长老搁下笔：「天黑了。佛门不夜战——明儿一早，日头上山门，你来。」' },
+          text: '长老搁下笔：「天黑了，山门要静。明儿一早，日头上山门，你来。」' },
         { text: '长老搁下笔，走到殿前的月台上，双掌合十：「来。三十招，点到为止。」', do: [{ type: 'fight', foe: 'smsl_kao' }] }
       ],
       拜师: [
         { if: { pastSect: { school: '少林' } },
           text: '长老睁开了眼：「山门出去容易，回来难。戒律上写着：叛出山门的，要跪着进来。你先想清楚，再来叩这扇门。」' },
         { if: { any: [{ flag: 'huafang_guard_dead' }, { flag: 'jy_sun_sha' }, { flag: 'cw_sha' }] },
-          text: '长老的目光落在你的手上，看了半晌：「老衲在江湖上走了一遭，看得出来——你手上，有过人命。」他合十低眉，「我佛慈悲。戒杀是本门第一戒。冤孽未清，这扇门就不开。回去多行善事——不为进这扇门，为你自己。」',
+          text: '长老的目光落在你的手上，看了半晌：「老衲在江湖上走了一遭，看得出来——你手上，有过人命。」他合十低眉：「戒杀是本门第一戒。冤孽未清，这扇门就不开。」他把念珠转过一格：「山脚下有间破庙，漏雨三年了，去补补瓦。」',
           do: [{ type: 'flag', flag: 'smsl_ju' }] },
         { if: { eming: 12 },
           text: '长老摇了摇头：「俗家弟子出门在外，报的是少林的名。你这个名，少林担不起。先把这些事了一了。」' },
@@ -114,7 +115,7 @@ const NPCS: NpcDef[] = [
           text: '「罗汉拳，一十八手，手手都是最笨的直拳拙掌。」长老一招一式拆给你看，掌出无风，「笨功夫练到不用想，就是罗汉。」你在殿前的青石板上，打了一整个下午。',
           do: [{ type: 'time', add: 120 }, { type: 'learn', skill: 'sl_luohan', prof: 60 }] },
         { if: { sect: SMSL_OUT, canLearn: 'sl_yiwei', notLearned: 'sl_yiwei' },
-          text: '长老指着寺前那一段院墙：「一苇渡江，渡的不是江，是自己的身子。先在墙头上走。走得稳了，江水自会渡你。」你在墙头上来来回回走了两个时辰，鞋底磨穿了一层。',
+          text: '长老指着寺前那一段院墙：「一苇渡江，先在墙头上走。」他看了看墙头：「走得稳了，再说江水。」你在墙头上来来回回走了两个时辰，鞋底磨穿了一层。',
           do: [{ type: 'time', add: 240 }, { type: 'learn', skill: 'sl_yiwei', prof: 60 }] },
         { if: { sect: SMSL_OUT, canLearn: 'sl_jinzhong', notLearned: 'sl_jinzhong' },
           text: '长老拿起木鱼槌，在你身上从肩到背一处一处地敲：「金钟罩，不是硬挨，是把气布在皮里。槌到哪儿，气到哪儿。钟罩住了，槌就只是响。」敲完一轮，你浑身热得像刚出过一身大汗。',
@@ -123,7 +124,7 @@ const NPCS: NpcDef[] = [
           text: '「韦陀掌，掌出如合十——合十是敬人，出掌是护人。」长老双掌一合一推，殿前的香灰被掌风带起一线，「这一掌打出去，先想想替谁打。」',
           do: [{ type: 'time', add: 180 }, { type: 'learn', skill: 'sl_weituo', prof: 60 }] },
         { if: { sect: SMSL_OUT, canLearn: 'sl_fengmo', notLearned: 'sl_fengmo' },
-          text: '长老从殿后取出一根齐眉木杖，塞到你手里：「疯魔杖法，仗的不是疯，是忘。忘了我，忘了胜负，杖就是手，手就是杖。」他只演了一遍，你握着杖的手心，全是汗。',
+          text: '长老从殿后取出一根齐眉木杖，塞到你手里：「疯魔杖法，要忘。」他只演了一遍，杖头在青砖上点了三点，你握着杖的手心，全是汗。',
           do: [{ type: 'time', add: 180 }, { type: 'learn', skill: 'sl_fengmo', prof: 60 }] },
         { if: { sect: SMSL_OUT, notLearned: 'sl_yiwei' },
           text: '长老摇头：「混元一气功还没练到融会贯通，接不住一苇渡江。气是根，身法是梢。先把根养足。」' },
@@ -136,22 +137,36 @@ const NPCS: NpcDef[] = [
         { if: { sect: SMSL_OUT },
           text: '长老合十：「外门能传的，都传给你了。拈花指、燃木刀法，是内门的功夫；易筋经、狮子吼，是镇山的宝贝——机缘不到，老衲也做不了主。」' },
         { if: { sect: SMSL },
-          text: '长老摆摆手：「记名弟子，学到这儿。罗汉拳、混元一气功练到略有小成，来考校。韦陀掌、疯魔杖法、金钟罩、一苇渡江——升了外门再传。」' },
+          text: '长老搁下笔：「记名弟子，先学罗汉拳，再学混元一气。拳打得殿上的罗汉肯认，气坐得住一炷香，来见老衲。这一关过了，后头四门功夫，一门一门都是你的。」' },
         { text: '长老合十：「少林的功夫，不传外人。」' }
       ],
+      讨差事: [
+        { if: { job: 'smsl_job_xun' }, text: '寂照长老敲了敲木鱼：「山门还没巡？后半夜露重，僧衣多穿一件。」' },
+        { if: { jobOpen: 'smsl_job_xun' },
+          text: '寂照长老把一盏灯笼递给你：「近来山下有毛贼，夜里替寺里巡山门。三更一遍，五更一遍。」',
+          do: [{ type: 'job', id: 'smsl_job_xun' }] },
+        { if: { jobOpen: 'smsl_job_shui' },
+          text: '寂照长老把扁担递给你：「灶房的水缸见底了。后山泉眼挑两担回来。石阶滑，脚底下留神。」',
+          do: [{ type: 'job', id: 'smsl_job_shui' }] },
+        { text: '寂照长老合十：「这几日寺里没有差事。」' }
+      ],
       考校: [
-        // 两重境界的条件：realm 只能写一个，第二个放进只有一项的 any 里
-        { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }], xia: 15 },
-          text: '长老叫你在殿前打一趟罗汉拳，打完了，问你：「这一趟拳，打的是谁？」你答不上来。长老替你答：「护人的时候，打的是拳头；救人拔刀的时候，打的是分寸。你护过人，拳也就有了分寸。」他起身，亲手把你扶起来：「从今天起，你是少林的外门弟子。」',
+        // 两重境界的条件：realm 只能写一个，第二个放进只有一项的 any 里；外门要替寺里办过差（贡献一百）
+        { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }], xia: 15, gongxian: 100 },
+          text: '长老翻了翻你的差事簿，翻到末页，见寺里的朱印落在上头，手指在印上按了按。他放下簿子，转头叫圆慧去库房取一件灰布僧衣，亲手搭在你臂上：「外门的衣裳，明早穿着上殿。」',
           do: [{ type: 'sect', school: '少林', rank: '外门' }, { type: 'flag', flag: 'smsl_wai' }, { type: 'time', add: 60 },
             { type: 'feed', tag: '江湖', text: '你升了少林外门。寂照长老说，韦陀掌、疯魔杖法、金钟罩、一苇渡江，都可以学了。' },
             { type: 'toast', text: '少林 · 升外门弟子' }] },
+        { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }], xia: 15 },
+          text: '长老翻了翻差事簿：「拳打熟了，人护过了，簿子上替寺里办的差还空着。差事天天有，去讨一件，办扎实了再来见老衲。」' },
+        { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }], gongxian: 100 },
+          text: '长老叫你在殿前打一趟罗汉拳，打完了，也不评，只拿扫帚把你脚边踩乱的落叶拢到一处：「这拳还没替谁挡过事。山下渡口常有人欺人，去站一站。」' },
         { if: { sect: SMSL, realm: { skill: 'sl_luohan', atLeast: 1 }, any: [{ realm: { skill: 'sl_hunyuan', atLeast: 1 } }] },
-          text: '长老点了点头：「拳和气，都有了三成的样子。可佛门的功夫是护人的——你还没护过什么人。侠义的事，再多做几件，再来。」' },
+          text: '长老点了点头：「拳和气都上了身，下过苦功。」他往山下一指：「渡口常有人受欺，寺里的差事簿上也还空着。两头走走，再来。」' },
         { if: { sect: SMSL, xia: 15 },
-          text: '长老看了看你的手：「心是有的。拳和气还浮着——罗汉拳、混元一气功，都练到略有小成，再来考校。」' },
+          text: '长老看了看你的手：「心是有的，拳和气还没长进手里。罗汉拳打给殿上的罗汉看过，混元一气坐得住一支香，再来考校。」' },
         { if: { sect: SMSL },
-          text: '长老摇头：「外门考两样：罗汉拳、混元一气功都练到略有小成；再行几件侠义的事。缺哪样，补哪样。」' },
+          text: '长老摇头，拿笔杆点了点案上的经卷：「你进门日子还浅。拳练熟，气坐稳，山下行些善事，再替寺里办几件差，一样一样来。」' },
         { text: '长老合十：「你不是少林的人，考校什么？」' }
       ]
     }
@@ -159,9 +174,16 @@ const NPCS: NpcDef[] = [
   {
     id: 'smsl_yuanhui', name: '圆慧', ini: '慧', tone: 'gray', brief: '守在山门口',
     look: '三十来岁的知客僧，眉毛浓黑，一张脸冷得像山门前的石阶。左耳缺了一小块，僧帽遮着，露出来的耳廓上是一道旧刀疤。',
-    verbs: ['交谈', '观察'],
+    verbs: ['交谈', '观察',
+      { verb: '交差', if: { job: 'smsl_job_xun' } }],
     actions: {
+      交差: [
+        { text: '圆慧验了你的纱帽和灯笼，往山门内外各看一眼：「一宿干净。」他在差事簿上勾了一笔，笔搁下，又替你把灯笼里的残烛剪了剪。',
+          do: [{ type: 'time', add: 30 }, { type: 'jobDone', id: 'smsl_job_xun' }] }
+      ],
       交谈: [
+        { if: { job: 'smsl_job_xun' },
+          text: '圆慧把门钥匙往腰上一挂：「巡山的？三更走一遍山门，五更再走一遍。前几夜毛贼翻过墙——受了惊就走，没敢进殿。你巡你的，撞上了，佛祖也不会怪你动手。」' },
         { if: { flag: 'smsl_in' },
           text: '圆慧侧身让你进门，脸上还是没什么表情：「兵刃留在山门外，酒肉不许沾。守得住，寺里没人再给你冷脸。」他顿了顿，「守不住——我照旧把你架出去。」' },
         { if: { flag: 'smsl_asked' },
@@ -175,7 +197,8 @@ const NPCS: NpcDef[] = [
     id: 'smsl_laoge', name: '老葛', ini: '葛', tone: 'jade', brief: '往灶房挑水',
     look: '五十来岁的火工，腰弯得像他的扁担，两条小腿却粗得吓人。一身灰布短打打了十几块补丁，笑起来一口豁牙。',
     verbs: ['交谈', '观察',
-      { verb: '挑水', if: { flag: 'smsl_asked', notFlag: 'smsl_shui', noSect: true } }],
+      { verb: '挑水', if: { flag: 'smsl_asked', notFlag: 'smsl_shui', noSect: true } },
+      { verb: '交水', if: { job: 'smsl_job_shui' } }],
     actions: {
       交谈: [
         { if: { flag: 'smsl_shui' },
@@ -185,6 +208,10 @@ const NPCS: NpcDef[] = [
         { text: '老葛往灶膛里添着柴：「来拜师的？」他咧嘴一笑，「我当年也想拜在山门下，根骨叫人驳了。舍不得走，就留下来挑水——一挑二十年。」他拍了拍扁担，「这条门槛多高，我比谁都清楚。长老看人不看根骨，看心。」' }
       ],
       观察: [{ text: '他的两只水桶不一样大，一只底厚一只帮高——是拿两只破桶自己箍的。灶房里的水缸，擦得比斋堂的桌子还亮。' }],
+      交水: [
+        { text: '老葛掀开缸盖看了水平线，咧开豁牙笑：「两担，不多不少。这一缸，灶房明天一天不用再去挑。」他往你手里塞了个烤芋头，芋皮还烫手。',
+          do: [{ type: 'time', add: 20 }, { type: 'jobDone', id: 'smsl_job_shui' }] }
+      ],
       挑水: [
         { if: { attr: { key: '体魄', atLeast: 25 } },
           text: '老葛把两只桶的绳扣往扁担两头一系：「你这肩膀，双桶一趟就够。」你挑着满满两桶水上山，肩不晃，水不洒，一口气到了灶房。老葛看着水缸里的涟漪，直点头：「稳。比我自己挑得都稳。」',
@@ -223,14 +250,61 @@ const KAO: FoeDef = {
       story: '长老收了掌，合十还礼：「点到为止，你收得住。乱世要来了，少林要在江南留个落脚的地方——从今往后，你是老衲门下的记名弟子。门规三条：不杀生，不偷盗，不饮酒；在门期间，不学别派的武功。门规严，是护你，不是困你。」圆慧在月门口，把拢着的袖子放了下来。',
       do: SM_JOIN },
     lose: { tag: '考校', title: '差着火候', growth: true, button: '合十告退',
-      story: '长老把你从地上扶起来：「拳是好拳，心是好心，就是差着火候。想动手的再来接三十招，不想动手的，替老葛挑水去——那条路，一样到山顶。」',
+      story: '长老把你从地上扶起来：「拳是好拳，心是好心，就是差着火候。想动手的再来接三十招，不想动手的，替老葛挑水去。水挑够了，来寻老衲。」',
       do: [{ type: 'heal', hpAtLeast: 0.5 }] },
     yield: yieldOf('长老', '合十告退'),
     flee: yieldOf('长老', '合十告退')
   }
 };
 
+/* ---------- 师门差事：夜里巡山门 ---------- */
+
+const YE = { from: 20, to: 5 };
+
+const ZEI: FoeDef = {
+  id: 'smsl_zei', name: '毛贼', title: '打寺院主意的贼', ini: '贼', tone: 'red',
+  weapon: '短棍', ws: '棍', tag: '护寺',
+  nature: '阴', reach: '短', rank: 0.6, build: 'outer', weak: 0.8, firstTell: 3,
+  moves: ['翻墙式', '闷棍', '摸包', '撒腿跑'],
+  flourish: ['短棍抡得没有章法', '眼睛一直往殿门瞟', '脚下踩着墙根的影走', '一个劲往你袖口摸'],
+  tells: [
+    { name: '闷棍', text: '毛贼从墙影里窜出，短棍闷着头砸下来……', dom: 'li', after: '棍头砸在石阶上，崩了一角！' },
+    { name: '摸包', text: '他忽然贴上来，一只手往你腰间摸……', dom: 'qiao', after: '袖口被撕开一道口子，铜扣蹦到了石阶上！' }
+  ],
+  asides: ['山门里的灯笼一动不动。', '远处村落传来两声犬吠。', '夜风把香灰吹起一线。'],
+  opening: ['棍子脱了手', '踩上了自己的裤脚', '翻墙时挂破了衣裳'],
+  intro: '毛贼把短棍横在胸前：「和尚庙里也有值钱的——别多管闲事！」',
+  win: '毛贼的短棍脱手飞进了草丛。他连滚带爬翻出墙去，再没敢回头。山门里，灯笼安安稳稳地亮着。',
+  lose: '短棍扫在你的腿上，你跌坐在山门台阶下。毛贼翻墙走了，山门里外的灯笼晃了一夜。',
+  results: {
+    win: { tag: '护寺 · 胜', title: '山门清净', button: '回去交差',
+      story: '毛贼跑了，山门内外的灯笼一盏没灭。圆慧验了山门，在差事簿上记了一行，难得没有冷脸：「没惊动佛祖。行了。」',
+      do: [{ type: 'jobDone', id: 'smsl_job_xun' }] },
+    lose: { tag: '护寺', title: '叫贼打了', button: '爬起来',
+      story: '毛贼跑了，你的灯笼也灭了。圆慧出来查看，把差事簿合上：「护寺护成这样……回去吧，这一趟不算。」',
+      do: [{ type: 'jobFail', id: 'smsl_job_xun' }, { type: 'heal', hpAtLeast: 0.5 }] }
+  }
+};
+
+const NPCS_EXTRA: NpcDef[] = [
+  {
+    id: 'smsl_yzei', name: '毛贼', ini: '贼', tone: 'red', brief: '在墙根探头',
+    look: '缩在山门墙根的黑影，抱着短棍，一有动静就缩成一团。',
+    at: { room: 'smsl_jinshan', if: { hour: YE, job: 'smsl_job_xun' } },
+    verbs: ['交谈', '动手'],
+    actions: {
+      交谈: [{ text: '黑影压着嗓子：「巡山的？今夜就我一个——识相的，绕着殿门走。」' }],
+      动手: [{ do: [{ type: 'fight', foe: 'smsl_zei' }] }]
+    }
+  }
+];
+
 /* ---------- 任务：挑水的考验 ---------- */
+
+const JOBS: JobDef[] = [
+  { id: 'smsl_job_xun', sect: '少林', tier: 1, title: '夜里替寺里巡山门', npc: 'smsl_yuanhui', at: 'smsl_jinshan', days: 2, again: 2 },
+  { id: 'smsl_job_shui', sect: '少林', tier: 1, title: '从后山泉眼挑两担水回灶房', npc: 'smsl_laoge', at: 'smsl_jinshan', days: 2, again: 2 }
+];
 
 const QUESTS: QuestDef[] = [
   { id: 'smsl_shui', name: '少林 · 挑水上山', stages: [
@@ -266,8 +340,9 @@ const NEWS: NewsDef[] = [
 
 const pack: ContentPack = {
   rooms: ROOMS,
-  npcs: NPCS,
-  foes: [KAO],
+  npcs: [...NPCS, ...NPCS_EXTRA],
+  foes: [KAO, ZEI],
+  jobs: JOBS,
   quests: QUESTS,
   eyes: EYES,
   news: NEWS

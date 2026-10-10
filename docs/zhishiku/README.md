@@ -9,7 +9,7 @@
 - 每份笔记三段：**它怎么做的** → **我们能借什么**（对照 `CLAUDE.md` 第二节的原则和北极星） → **不借什么、为什么**。末尾列「建议进设计的三到五条」，每条带出处。
 - 笔记放本目录，一个来源一份，文件名用拼音或英文。写完在下面的「索引」里加一行。
 - 好点子同时记进 `docs/linggan.md`（灵感本）。
-- **谁来做**（负责人 10-10：「调研的事情只能是你或 codex 做，其他人不碰」）：只由维护者（派自己的 sonnet 助手）或 Codex 做，协作者不领。调研 Issue 一律带「调研」和「给:claude」（交 Codex 的改成「给:codex」），接活脚本不会派给别人。
+- **谁来做**（负责人 10-10：「调研的事情只能是你或 codex 做，其他人不碰」）：只由维护者（派自己的 sonnet 助手）或 Codex 做；拆开源 MUD 源码、消化资料这一类可交 zcode（负责人 10-10 补：「你可以让它去拆源码，帮你消化资料」），笔记由维护者审。其余协作者不领。调研 Issue 一律带「调研」和「给:claude」（交 Codex 的改成「给:codex」），接活脚本不会派给别人。
 - **节拍**：每日巡视至少推进一件；挑和眼下要做的设计最相关的那件先做（例：要做世事重来，先读环世界）。
 - **第一批**（10-10）：#335 炎黄、#336 侠客行 100、#337 Evennia、#338 CoffeeMUD、#339 太吾绘卷、#340 环世界、#341 骑砍、#342 矮人要塞、#343 金庸名场面倒推、#344 Sunless Sea 与侠客风云传。
 
@@ -28,7 +28,7 @@
 |---|---|
 | 门派驻地、练功、门派生活、晋升 | `mud-xiakexing.md`、`mud-xkx100.md`；师门任务、贡献、叛师另见 `mud-yanhuang.md` |
 | 世界自己生事、世事会不会重来、导演 | `sandbox-rimworld.md`（环世界导演：保底、间隔、分级）、`evennia.md`（定时器、NPC 作息零件、游戏时间开关、停机补算）；待读：#342 矮人要塞 |
-| 声望、恶名、势力好恶 | `coffeemud.md`（派系数据表、店家用好恶定价、执法四档）；待读：#341 骑砍 |
+| 声望、恶名、势力好恶 | `mud-coffeemud.md`（事件触发的涨跌、势力互牵系数表、涨落按对象分快慢）、`coffeemud.md`（同一来源的另一份，可对照：派系数据表、店家用好恶定价、执法四档）；待读：#341 骑砍 |
 | 人物关系、让玩家惦记一个人 | 待读：#339 太吾绘卷 |
 | 代价、日程、不变成苦差 | 待读：#344 |
 | 大事件、名场面 | 待读：#343 |
@@ -42,7 +42,7 @@
 | 侠客行 100 | https://github.com/mudchina/xkx100 | 无明确许可 | 读过：五派布局、门禁四式、戒律院审问、门人日常（`mud-xkx100.md`） |
 | 炎黄 | https://github.com/oiuv/mud | MIT | 读过：师门任务全程、贡献/威望/阅历/声望、辈分、叛师（`mud-yanhuang.md`） |
 | Evennia（Python MUD 框架） | https://github.com/evennia/evennia | BSD | 读过：Script/Ticker/Task 三套定时器、NPC 作息零件、gametime、存档补算（`evennia.md`） |
-| CoffeeMUD | https://github.com/bozimmerman/CoffeeMud | Apache-2.0 | 读过：Factions 数据表、物价三道闸、Behaviors 拼装、laws.ini 司法（`coffeemud.md`） |
+| CoffeeMUD | https://github.com/bozimmerman/CoffeeMud | Apache-2.0 | 读过：两份笔记可对照——`mud-coffeemud.md`（派系档位与事件触发的涨跌、势力互牵系数、NPC 行为拼装）、`coffeemud.md`（Factions 数据表、物价三道闸、Behaviors 拼装、laws.ini 司法） |
 | Discworld mudlib（及其他 LPC 库） | GitHub 搜「discworld mudlib」 | 各异 | 未读 |
 
 北大侠客行不开源，读它的同源（侠客行系）。
@@ -61,4 +61,4 @@
 | 师门任务、门派贡献、辈分、叛师 | `mud-yanhuang.md`（炎黄，#335） |
 | 世事重来、路遇不重复、导演节奏、人物心绪 | `sandbox-rimworld.md`（环世界，#340） |
 | 定时器、NPC 作息、游戏时间、停机补算 | `evennia.md`（Evennia，#337） |
-| 派系好恶、势力相撞、店家经济、执法 | `coffeemud.md`（CoffeeMUD，#338） |
+| 派系好恶、势力相撞、店家经济、执法 | `mud-coffeemud.md`（CoffeeMUD，#338）、`coffeemud.md`（同上另一份，可对照） |

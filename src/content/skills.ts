@@ -36,7 +36,7 @@ export const JOB_GONGXIAN = [10, 20, 35, 50, 70, 90];
  * 还没有师门差事的门派：考校不看贡献、学外门武功不收贡献，免得玩家卡在那里。
  * 补了师门差事、考校接上了贡献门槛，就从这里删掉（tests/content.test.ts「门派贡献」查）
  */
-export const GONGXIAN_PENDING: string[] = ['少林', '峨眉', '华山', '武当'];
+export const GONGXIAN_PENDING: string[] = [];
 
 /** 拳脚：徒手功夫 */
 export const FIST: SkillCategory[] = ['拳法', '掌法', '指法', '爪法', '腿法', '手法'];

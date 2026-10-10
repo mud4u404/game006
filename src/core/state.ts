@@ -142,6 +142,14 @@ export interface GameState {
   gongxian?: Record<string, number>;
   /** 打听：每个人今天问过没有（江湖日）；范围：个人；写入口：engine/xingdong.ts */
   asked?: Record<string, number>;
+  /** 打听：今天对这个人问到第几句了、哪几句已经说过（engine/chuanwen.ts）；隔日清掉；范围：个人；写入口：engine/chuanwen.ts */
+  askLog?: Record<string, { d: number; u: string[] }>;
+  /** 迎面（engine/yingmian.ts）：每个人最近一次主动开口是哪一日（江湖日）；过了日子的自动清掉。旧档可缺省；范围：个人；写入口：engine/yingmian.ts */
+  greeted?: Record<string, number>;
+  /** 场景里眼下的迎面：key 是「地点|日|时辰段」，同一个 key 不再挑第二个人；id 是开口的人，i 是第几条，used 表示话头已经点过。旧档可缺省；范围：个人；写入口：engine/yingmian.ts */
+  greet?: { key: string; id?: string; i?: number; used?: true };
+  /** 最近一次对谁做了动作（江湖日），迎面挑人时「刚做过与他有关的事」排前头。旧档可缺省；范围：个人；写入口：ui/explore.ts */
+  lastWith?: { id: string; day: number };
   /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts）；范围：世界；写入口：engine/xingdong.ts（经 engine/dsl.ts 结算） */
   away?: Record<string, number>;
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts）；范围：世界；写入口：engine/encounter.ts、engine/xingdong.ts */
@@ -162,10 +170,16 @@ export interface GameState {
   story: string;
   /** 范围：界面；写入口：ui */
   sel: string | null;
-  /** 范围：界面；写入口：ui */
-  reply: { id: string; text: string } | null;
+  /** 范围：界面；写入口：ui。at：说这句话时的江湖分钟（core/time absMin）；人走了以后「说完就走了」那张卡只留一小会儿，不隔夜 */
+  reply: { id: string; text: string; at?: number } | null;
   /** 范围：界面；写入口：ui */
   tab: Tab;
+  /**
+   * 界面记的小账（engine/jiemian.ts），可缺省，旧档没有也读得出来：
+   * power 上次在江湖页角色卡上显示的战力；from 变了以后的旧值（卡上显示「旧 → 新」，离开江湖页就清）；went 到过的地点
+   * 范围：界面；写入口：engine/jiemian.ts
+   */
+  ui?: { power?: number; from?: number; went?: string[] };
 }
 
 /** 字段归属约定（docs/sheji-012-013.md 第 012 节），不在此强制拦截旧写入点。
@@ -223,6 +237,10 @@ export const FIELD_OWNER = Object.freeze({
   shi: { scope: '世界', writer: 'engine/shishi.ts、engine/xingdong.ts' },
   gongxian: { scope: '个人', writer: 'engine/xingdong.ts' },
   asked: { scope: '个人', writer: 'engine/xingdong.ts' },
+  askLog: { scope: '个人', writer: 'engine/chuanwen.ts' },
+  greeted: { scope: '个人', writer: 'engine/yingmian.ts' },
+  greet: { scope: '个人', writer: 'engine/yingmian.ts' },
+  lastWith: { scope: '个人', writer: 'ui/explore.ts' },
   away: { scope: '世界', writer: 'engine/xingdong.ts（经 engine/dsl.ts 结算）' },
   encLog: { scope: '世界', writer: 'engine/encounter.ts、engine/xingdong.ts' },
   lastEnc: { scope: '世界', writer: 'engine/encounter.ts、engine/xingdong.ts' },
@@ -233,6 +251,7 @@ export const FIELD_OWNER = Object.freeze({
   sel: { scope: '界面', writer: 'ui' },
   reply: { scope: '界面', writer: 'ui' },
   tab: { scope: '界面', writer: 'ui' },
+  ui: { scope: '界面', writer: 'engine/jiemian.ts' },
 } as const satisfies Record<keyof GameState, FieldOwner>);
 for (const owner of Object.values(FIELD_OWNER)) Object.freeze(owner);
 

@@ -9,7 +9,7 @@ const optional = {
   sect: undefined, pastSects: undefined, lightSince: undefined, tierTop: undefined,
   zhu: undefined, storyAt: undefined, dayLog: undefined, relNote: undefined,
   foeLog: undefined, diao: undefined, shi: undefined, gongxian: undefined,
-  asked: undefined, away: undefined
+  asked: undefined, askLog: undefined, greeted: undefined, greet: undefined, lastWith: undefined, away: undefined, ui: undefined
 } satisfies Record<OptionalKey, undefined>;
 
 describe('存档字段归属', () => {

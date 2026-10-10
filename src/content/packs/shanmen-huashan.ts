@@ -1,4 +1,4 @@
-import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, ItemDef, NewsDef, NpcDef, QuestDef, RoomDef } from '../types';
+import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RoomDef } from '../types';
 
 /**
  * 华山的江南道据点（Issue #119）：镇江北固山下的剑庐，华山剑客柏舟先生隐居在此，有人引荐才见得到。
@@ -26,7 +26,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, ItemDef, N
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smhs_jianlu', name: '剑庐', area: '镇江 · 北固山下', region: 'zj', t: 15, map: [74, 12],
+    id: 'smhs_jianlu', name: '剑庐', area: '镇江 · 北固山', region: 'zj', t: 15, map: [74, 12],
     desc: [
       { if: { flag: 'smhs_in' },
         text: '北固山下一座三间的小院，柴门虚掩，院里一方磨剑石，一块旧匾上「剑庐」两个字剥了大半。你进门不用叩门——哑叔听见你的脚步，早把门拉开了。' },
@@ -72,13 +72,14 @@ const NPCS: NpcDef[] = [
       { verb: '拜师', if: { notFlag: 'smhs_in' } },
       { verb: '领考', if: { flag: 'smhs_asked', notFlag: 'smhs_mo', noSect: true } },
       { verb: '请教', if: { sect: HS } },
+      { verb: '讨差事', if: { sect: HS } },
       { verb: '考校', if: { sect: HS, notFlag: 'smhs_wai' } }],
     actions: {
       交谈: [
         { if: { sect: HS_OUT },
-          text: '先生把鸡食盆放下：「外门弟子。出了这道柴门，剑是护人的，名是招灾的——分清楚。」他朝廊下那口剑抬了抬下巴，「华山的外门功夫，你学得起了。独孤九剑那种机缘，不归我管。」' },
+          text: '先生把鸡食盆放下：「外门弟子。出了这道柴门，剑别轻易亮，名号也别轻易报。」他朝廊下那口剑抬了抬下巴，「华山的外门功夫，你学得起了。独孤九剑那种剑，不归我管。」' },
         { if: { sect: HS },
-          text: '先生拍拍手上的糠：「门规记着：不欺师灭祖，不仗剑伤人。在门期间，只学本门的功夫和江湖散学。」他看了看你的手，「华山剑法、华山心法都练到略有小成，再行几件侠义的事，我给你升外门。」' },
+          text: '先生拍拍手上的糠：「门规记着：不欺师灭祖，不仗剑伤人。在门期间，只学本门的功夫和江湖散学。」他看了看你的手：「剑走齐了，气沉住了，再替人出几回剑，我来考你。」' },
         { if: { flag: 'smhs_ju' },
           text: '先生喂鸡的手停了停：「我这辈子，就毁在剑下出过人命上头。你手上也有命债——我收徒，头一条就是不让你走我的老路。你走吧，走远点。」' },
         { if: { flag: 'smhs_asked', notFlag: 'smhs_mo' },
@@ -108,8 +109,10 @@ const NPCS: NpcDef[] = [
       ],
       领考: [
         { if: { hour: { from: 20, to: 5 } },
-          text: '先生把廊下的剑摘都没摘：「天黑了。剑客不夜战——明儿一早，日头上柴门，你来。」' },
-        { text: '先生从廊下摘下那口连鞘的剑，抽出一尺，霜一样的光在鞘口亮了一亮：「来。三十招——剑上无眼，点到为止。」', do: [{ type: 'fight', foe: 'smhs_kao' }] }
+          text: '先生把廊下的剑摘都没摘：「天黑了。剑收了鞘，人也该收工。明儿一早，日头上柴门，你来。」' },
+        // Issue #173 第 12 条：这一场对话里（约考、让哑叔领去磨剑）说的是「我那口剑钝了」，
+        // 这里却抽出来「霜一样的光」，前后打架。改成与「钝」一致：出鞘时先见的是多年没开的锋。
+        { text: '先生从廊下摘下那口连鞘的剑，抽出一尺。刃上一层暗黄，映着天光才泛出一点白：「来。三十招——剑上无眼，点到为止。」', do: [{ type: 'fight', foe: 'smhs_kao' }] }
       ],
       请教: [
         { if: { sect: HS, canLearn: 'eh_huashanxinfa', notLearned: 'eh_huashanxinfa' },
@@ -119,29 +122,43 @@ const NPCS: NpcDef[] = [
           text: '先生拿一根烧火棍在院里比划：「华山剑法，二十四字诀，字字都笨。笨功夫练到不用想，剑就快了——不是手快，是念头快。」他一式一式喂招，喂到你手腕发酸，才收了棍。',
           do: [{ type: 'time', add: 120 }, { type: 'learn', skill: 'eh_huashan', prof: 60 }] },
         { if: { sect: HS_OUT, canLearn: 'eh_kuangfeng', notLearned: 'eh_kuangfeng' },
-          text: '先生头一回把剑抽出了半截：「狂风快剑。华山剑法练到融会贯通，才接得住这一门——快不是招出来的，是笨功夫熬出来的。」他演了一遍，院里的药草被剑风压倒了一片。你照着练，练到手心磨出泡。',
+          text: '先生头一回把剑抽出了半截：「狂风快剑。华山剑法练到融会贯通，才接得住这一门。」他演了一遍，院里的药草被剑风压倒了一片。你照着练，练到手心磨出泡。',
           do: [{ type: 'time', add: 240 }, { type: 'learn', skill: 'eh_kuangfeng', prof: 60 }] },
         { if: { sect: HS_OUT, notLearned: 'eh_kuangfeng' },
           text: '先生摇头：「狂风快剑接不住——华山剑法还没到融会贯通。快剑是笨功夫开的花，根还没扎稳，先别想开花。」' },
         { if: { sect: HS_OUT },
           text: '先生把剑推回鞘里：「外门就这一门了。紫霞神功是内门的心法，机缘不到不传；独孤九剑——那是撞大运的机缘，不在山门传。你把剑练扎实，比什么都强。」' },
         { if: { sect: HS },
-          text: '先生摆摆手：「记名弟子，学到这儿。华山剑法、华山心法练到略有小成，来考校。狂风快剑——升了外门再传。」' },
+          text: '先生用剑鞘敲了敲磨剑石：「记名弟子，两样：剑法，心法。剑走得齐，气沉得稳，站出来给我看。看过了，狂风快剑才轮得到你。」' },
         { text: '先生背着手：「华山的剑，不传外人。」' }
+      ],
+      讨差事: [
+        { if: { job: 'smhs_job_pu' }, text: '柏舟先生把笔搁下：「抄本还没送到？北固山的潮气重，抄本淋了墨，罪过。」' },
+        { if: { jobOpen: 'smhs_job_pu' },
+          text: '柏舟先生从案头取过一册手抄的本子，封好：「华山剑法的抄本，送去山下渡口，交给北上的信使。路上淋不得雨，也落不得人手。」',
+          do: [{ type: 'job', id: 'smhs_job_pu' }] },
+        { if: { jobOpen: 'smhs_job_ke' },
+          text: '柏舟先生合上书：「山下有个自称『快剑』的游剑师，放了话要会一会华山。你替我去接他几招——点到为止，赢了输了，都是华山的体面。」',
+          do: [{ type: 'job', id: 'smhs_job_ke' }] },
+        { text: '柏舟先生背着手：「这几日庐里没有差事。」' }
       ],
       考校: [
         // 两重境界的条件：realm 只能写一个，第二个放进只有一项的 any 里
-        { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }], xia: 15 },
-          text: '先生叫你在院里走一趟华山剑法，走完了，问：「这一趟剑，最要紧的一剑是哪一剑？」你答不上来。先生替你答：「收回去的那一剑。你护过人——知道什么时候收剑，比知道怎么出剑金贵。」他点点头：「从今天起，你是华山的外门弟子。」',
+        { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }], xia: 15, gongxian: 100 },
+          text: '先生叫你在院里走一趟华山剑法，走完了，翻了翻你的差事簿。他把簿子一页页翻到底，合上，往廊柱的钉子上一挂，从剑架上取下一口无字的旧鞘，掷给你：「接着。外门用的。」',
           do: [{ type: 'sect', school: '华山', rank: '外门' }, { type: 'flag', flag: 'smhs_wai' }, { type: 'time', add: 60 },
             { type: 'feed', tag: '江湖', text: '你升了华山外门。柏舟先生说，狂风快剑可以学了；紫霞神功是内门的心法，独孤九剑是撞机缘的东西。' },
             { type: 'toast', text: '华山 · 升外门弟子' }] },
+        { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }], xia: 15 },
+          text: '先生点了点头：「剑走齐了，人也护过了，差事簿上替庐里办的还空着。去讨一件，办扎实了再来。」' },
+        { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }], gongxian: 100 },
+          text: '先生叫你在院里走一趟华山剑法，走完了，他把手里的鸡食瓢往盆里一磕：「剑倒是齐了。你那口剑还没替人出过鞘，下山去，渡口总有不平事。」' },
         { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }] },
-          text: '先生点了点头：「剑和气，都有了三成。可华山的剑是护人的剑——你还没护过什么人。侠义的事，再多做几件，再来。」' },
+          text: '先生点了点头：「剑和气都上了手。」他朝山下抬了抬下巴：「出几回剑，庐里再办几件差。柴门给你留着。」' },
         { if: { sect: HS, xia: 15 },
-          text: '先生看了看你的手腕：「心是正的。剑和气还浮着——华山剑法、华山心法，都练到略有小成，再来考校。」' },
+          text: '先生看了看你的手腕：「心是正的，剑还飘。二十四字诀走圆了，气沉到剑尖了，再来考校。」' },
         { if: { sect: HS },
-          text: '先生摇头：「外门考两样：华山剑法、华山心法都练到略有小成；再行几件侠义的事。缺哪样，补哪样。」' },
+          text: '先生摇头：「剑还没走齐，人也没护过。」他转身去喂鸡：「想好了再来。」' },
         { text: '先生背着手：「你不是华山的人，考校什么？」' }
       ]
     }
@@ -150,19 +167,24 @@ const NPCS: NpcDef[] = [
     id: 'smhs_yashu', name: '哑叔', ini: '哑', tone: 'gray', brief: '在院里劈柴',
     look: '六十开外的老仆，左脸一道烧疤，说不出话。劈柴的斧头钝得卷了刃，他却劈得极匀——一把斧头用熟了，跟剑是一样的。',
     verbs: ['交谈', '观察',
-      { verb: '磨剑', if: { flag: 'smhs_asked', notFlag: 'smhs_mo', noSect: true } }],
+      { verb: '磨剑', if: { flag: 'smhs_asked', notFlag: 'smhs_mo', noSect: true } },
+      { verb: '交差', if: { job: 'smhs_job_ke' } }],
     actions: {
       交谈: [
         { if: { flag: 'smhs_mo' },
-          text: '哑叔攥着你的手翻过来看了看，冲你竖起两根大拇指，又指了指先生的屋子。老魏在墙外接了话：「他说你这双手，能使得好剑。」' },
+          text: '哑叔攥着你的手翻过来看了看，在你手背上拍了两下，又指了指先生的屋子。老魏在墙外接了话：「他说你这双手，能使得好剑。」' },
         { if: { flag: 'smhs_asked' },
           text: '哑叔放下斧头，把你领到磨剑石前，比划了半天：磨石要先洒水，剑刃要顺着石头走，手要稳，心要平。末了他拍拍你的肩，指了指先生的屋子，又摇了摇头——意思是：先生那口剑，十几年没开过锋了，你要磨出个亮来。' },
         { text: '哑叔朝你咧嘴一笑，比了个「茶」的手势，又指了指先生的屋子，摆了摆手——意思是：茶有，先生不见生人。他转身接着劈柴，斧头起落，眼睛却往你腰间的兵刃上瞟了一眼。' }
       ],
       观察: [{ text: '他的耳朵是好的。你的脚步重半分，他的斧头就停半拍。院里的柴码得方方正正，连柴刀都挂在同一个钩上，钩柄磨得发亮。' }],
+      交差: [
+        { text: '哑叔听完，重重地点了点头，又朝山下的方向摆了摆手。他都看见了。他在差事簿上按了个手印，按得方方正正。',
+          do: [{ type: 'time', add: 20 }, { type: 'jobDone', id: 'smhs_job_ke' }] }
+      ],
       磨剑: [
         { if: { attr: { key: '身法', atLeast: 25 } },
-          text: '哑叔替你把磨石洒上水。你的手又稳又匀，剑刃贴着石头走，一遍是一遍，约一个时辰，那口十几年的钝剑在日头底下亮得晃眼。哑叔捧着剑看了半天，冲你竖起两根大拇指，转身进屋去了——不多时，先生的声音从屋里传出来：「磨亮了？手稳的人，心也稳。」',
+          text: '哑叔替你把磨石洒上水。你的手又稳又匀，剑刃贴着石头走，一遍是一遍，约一个时辰，那口十几年的钝剑在日头底下亮得晃眼。哑叔捧着剑看了半天，指腹在刃口上轻轻一拭，转身进屋去了——不多时，先生的声音从屋里传出来：「磨亮了？拿来我看。」',
           do: [{ type: 'time', add: 120 }, { type: 'flag', flag: 'smhs_mo' }, { type: 'quest', id: 'smhs_mo', stage: 1 }] },
         { text: '你挽起袖子磨剑。剑刃贴着磨石走，一遍又一遍，手心磨出了泡，那口剑才见了亮。哑叔在边上看着，时不时替你把磨石洒水。日头偏西，剑终于亮了。哑叔捧着剑对着天照了照，郑重地点了点头，进屋去了——不多时，先生的声音传出来：「磨了半日？肯下笨功夫，比聪明难得。」',
           do: [{ type: 'time', add: 240 }, { type: 'flag', flag: 'smhs_mo' }, { type: 'quest', id: 'smhs_mo', stage: 1 }] }
@@ -172,8 +194,13 @@ const NPCS: NpcDef[] = [
   {
     id: 'smhs_lawei', name: '老魏', ini: '魏', tone: 'red', brief: '挑着柴下山',
     look: '四十来岁的樵夫，扁担压得肩膀一边高一边低，见了生人先把柴担往身前横一横。',
-    verbs: ['交谈', '观察'],
+    verbs: ['交谈', '观察',
+      { verb: '交差', if: { job: 'smhs_job_pu' } }],
     actions: {
+      交差: [
+        { text: '老魏接过抄本，往柴担最里层塞好，又拿油布盖了一层：「山道上我走了三十年，淋过雨的柴都认得。信使在渡口——包在我身上。」他挑起柴：「回去告诉先生：庐里的东西，老魏一趟是一趟。」',
+          do: [{ type: 'time', add: 20 }, { type: 'jobDone', id: 'smhs_job_pu' }] }
+      ],
       交谈: [
         { if: { flag: 'smhs_in' },
           text: '老魏把柴担放下，看了你半天：「先生收了你？」他咧了咧嘴，「行。往后再有生面孔上山，我替你多看一眼。」他顿了顿，「不是信你——是先生的眼力，我信。」' },
@@ -245,14 +272,59 @@ const KAO: FoeDef = {
       story: '先生收剑入鞘，把鞘口的穗子正了正：「收得住，就有资格谈快。华山的剑传到我这辈，只剩我一人——从今往后，你是老朽门下的记名弟子。门规三条：不欺师灭祖，不仗剑伤人；在门期间，只学本门的功夫和江湖散学。门规严，是护你，不是困你。」哑叔在柴门边，把斧头轻轻放下了。',
       do: HS_JOIN },
     lose: { tag: '考校', title: '差着火候', growth: true, button: '抱拳告退',
-      story: '先生收了剑：「手是好手，剑还差着熬。想动手的，改日再来接三十招；不想动手的，让哑叔领你去磨剑——那条路，一样到山顶。」',
+      story: '先生收了剑：「手是好手，剑还差着熬。想动手的，改日再来接三十招；不想动手的，让哑叔领你去磨剑。剑见了亮，来叩柴门。」',
       do: [{ type: 'heal', hpAtLeast: 0.5 }] },
     yield: yieldOf('先生', '抱拳告退'),
     flee: yieldOf('先生', '抱拳告退')
   }
 };
 
+/* ---------- 师门差事：送剑谱、会踢馆 ---------- */
+
+const KUAIJIAN: FoeDef = {
+  id: 'smhs_kuaijian', name: '游剑师', title: '自称「快剑」的踢馆人', ini: '游', tone: 'red',
+  weapon: '薄背快剑', ws: '剑', tag: '踢馆',
+  nature: '刚', reach: '短', rank: 0.9, build: 'outer', firstTell: 2,
+  moves: ['抢攻三剑', '撩腕', '封喉式', '虚指实刺'],
+  flourish: ['剑尖挑得又平又直', '脚步滑得像踩了油', '嘴里报着招名，招比名还快', '剑脊在指间弹了两下'],
+  tells: [
+    { name: '抢攻三剑', text: '游剑师抢步进身，连环三剑一剑快过一剑……', dom: 'su', after: '第三剑擦着你的袖口削过，布丝纷飞！' },
+    { name: '虚指实刺', text: '他剑尖虚点你的咽喉，手腕忽然一沉……', dom: 'qiao', after: '实刺的是你的手腕，好险！' }
+  ],
+  asides: ['哑叔的斧头，在柴堆上磕了一响。', '老魏的柴担远远地撂在了山道口。', '山风把剑庐的旧匾吹得轻响。'],
+  opening: ['抢攻抢过了头，剑收回慢半拍', '滑步滑到湿苔上，滑了半寸', '报招名报岔了气'],
+  intro: '游剑师把剑一横：「听闻华山剑法名满天下——今日我以『快剑』会一会！接得下，我下山；接不下，把这『剑庐』的匾借我挂一年！」',
+  win: '游剑师的剑叫你磕上了半空，转了三圈插在泥里。他盯着自己的空手看了半晌，抱拳：「剑庐的匾，是我不自量力了。华山的剑，我领教了。」他拾剑下山，一路没回头。',
+  lose: '他的剑尖停在你的衣襟前，一寸，收了。他把剑收回鞘里。先生在廊下没动，差事簿上，这一趟是空的。',
+  results: {
+    win: { tag: '会剑 · 胜', title: '剑庐的匾保住了', button: '回去交差',
+      story: '先生在廊下点了一句：「你那一剑，收得比他早半寸。」哑叔把柴堆上的斧头拿开——他方才一直攥着。',
+      do: [{ type: 'jobDone', id: 'smhs_job_ke' }] },
+    lose: { tag: '会剑', title: '技差一筹', button: '抱拳认负',
+      story: '先生没有出来。老魏把柴担挑走了，走前扔下一句：「他还在山下客栈住着。」',
+      do: [{ type: 'jobFail', id: 'smhs_job_ke' }, { type: 'heal', hpAtLeast: 0.5 }] }
+  }
+};
+
+const NPCS_EXTRA: NpcDef[] = [
+  {
+    id: 'smhs_kuaijian_ren', name: '游剑师', ini: '游', tone: 'red', brief: '在庐外叫阵',
+    look: '瘦高的游剑师，剑挂在腰上，人靠在庐外的老槐树上，嘴里报着招名。',
+    at: { room: 'smhs_jianlu', if: { job: 'smhs_job_ke' } },
+    verbs: ['交谈', '动手'],
+    actions: {
+      交谈: [{ text: '游剑师把剑一弹：「华山的弟子？叫你们先生出来——不出来，接我几招也行。接得住，我走；接不住，匾留下。」' }],
+      动手: [{ do: [{ type: 'fight', foe: 'smhs_kuaijian' }] }]
+    }
+  }
+];
+
 /* ---------- 任务：磨剑的考验 ---------- */
+
+const JOBS: JobDef[] = [
+  { id: 'smhs_job_pu', sect: '华山', tier: 1, title: '把剑谱抄本送到山下渡口', npc: 'smhs_lawei', at: 'smhs_jianlu', days: 2, again: 2 },
+  { id: 'smhs_job_ke', sect: '华山', tier: 1, k: 1.5, title: '替师门会一会踢馆的游剑师', npc: 'smhs_yashu', at: 'smhs_jianlu', days: 2, again: 3 }
+];
 
 const QUESTS: QuestDef[] = [
   { id: 'smhs_mo', name: '华山 · 磨剑', stages: [
@@ -292,7 +364,7 @@ const EYES: EyeDef[] = [
 /* ---------- 传闻 ---------- */
 
 const NEWS: NewsDef[] = [
-  { text: '北固山下的剑庐住着一位华山的剑客，十几年没下山。听说他收徒，要有人引荐才见得到。', who: ['书吏', '货郎', '渔家'] },
+  { region: 'zj', text: '北固山下的剑庐住着一位华山的剑客，十几年没下山。听说他收徒，要有人引荐才见得到。', who: ['书吏', '货郎', '渔家'] },
   { if: { flag: 'smhs_ju' },
     text: '有人带着引荐信上北固山拜师，叫剑客挡了驾——听说手上有人命的，他一概不收。', who: ['书吏', '猎户', '货郎'], about: 'you' },
   { if: { flag: 'smhs_in' },
@@ -303,8 +375,9 @@ const NEWS: NewsDef[] = [
 
 const pack: ContentPack = {
   rooms: ROOMS,
-  npcs: NPCS,
-  foes: [KAO],
+  npcs: [...NPCS, ...NPCS_EXTRA],
+  foes: [KAO, KUAIJIAN],
+  jobs: JOBS,
   quests: QUESTS,
   items: ITEMS,
   eyes: EYES,

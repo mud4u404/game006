@@ -127,7 +127,9 @@ const NPCS: NpcDef[] = [
         { if: { job: 'zb_yao', any: [{ flag: 'zb_jie_fang' }, { flag: 'zb_jie_guan' }, { flag: 'zb_jie_gone' }] },
           text: '老蔡把镖车赶到百草堂门口。街口一个蒙面刀客拦住车辕，朴刀压在油布上。老蔡抄起扁担道：「断云虎走了，你又是哪里来的？」那人不答，伸手便去割捆箱的绳子。',
           do: [{ type: 'fight', foe: 'zb_jie_daoke' }] },
-        { if: { job: 'zb_yao' },
+        // Issue #173 第 4 条：送官（zb_yao_done）之后断云虎不该再拦。差事做完还能重接（again: 5），
+        // 这一支原先只卡 job，于是送过官再接一趟，还会被他拦一遍白拿历练。
+        { if: { job: 'zb_yao', notFlag: 'zb_yao_done' },
           text: '老蔡把镖车赶到百草堂门口，张掌柜刚掀开油布，街口就有人冷笑了一声。一个提着厚背鬼头刀的汉子拨开人群走过来，刀背往肩上一搁。',
           do: [{ type: 'fight', foe: 'zb_jie_fei' }] },
         { text: '张掌柜摆摆手：「没有镖单，交什么镖？」' }

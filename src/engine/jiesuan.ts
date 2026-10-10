@@ -146,7 +146,7 @@ const ZONE_COST: Record<Zone, string> = { hand: '使兵刃、拆招要差一截'
 function gapWord(g: number): string {
   const h = Math.max(0.5, Math.round(g * 2) / 2);
   const w = (n: number): string => (n === 2 ? '两' : cn(n));
-  return h < 1 ? '半档' : Number.isInteger(h) ? `${w(h)}档` : `${w(Math.floor(h))}档半`;
+  return h < 1 ? '半层' : Number.isInteger(h) ? `${w(h)}层` : `${w(Math.floor(h))}层半`;
 }
 
 /**
@@ -172,12 +172,12 @@ export function loseNote(x: LoseFacts): LoseNote {
 
   if (best === 'tier') {
     const mine = tierName(x.tier), his = tierName(x.foeTier);
-    const why = mine === his ? `对手比你高出${gapWord(gap)}，同在${his}里，他更拔尖。` : `对手是${his}，你眼下是${mine}，他高出你${gapWord(gap)}。`;
+    const why = mine === his ? `他的功夫比你高着${gapWord(gap)}，同是${his}，他更拔尖。` : `他是${his}的功夫，你眼下是${mine}，比你高着${gapWord(gap)}。`;
     const need = Math.max(Math.floor(x.maxR) + 1, Math.ceil(1 + 1.5 * (x.foeTier - 0.4) - 1e-9));
     // 克他那一路的功夫（柔克刚、刚克阴、阴克阳、阳克柔）；中正没有谁克，不写这句
     const ke = x.nature ? COUNTER[x.nature] : undefined;
     const alt = [ke ? `换一门${ke}路的功夫克他` : '', x.prepIdle ? '先把他的底细打听清楚、帮手请来' : ''].filter(Boolean);
-    return { kind: 'tier', why, mend: `最高的一门功夫练到第${cn(need)}重再来领教${alt.length ? `；也可${alt.join('，或')}` : ''}。` };
+    return { kind: 'tier', why, mend: `你这一门练到第${cn(need)}重，再来领教不迟${alt.length ? `；也可${alt.join('，或')}` : ''}。` };
   }
   if (best === 'wound') {
     const heavy = hurt.some(z => isHeavy(x.wounds[z]));

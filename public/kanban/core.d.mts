@@ -9,3 +9,13 @@ export function milestoneOf(
   openIssues: { n: number; refs?: number[]; closed?: boolean }[],
   closedIssues: { n: number; refs?: number[]; closed?: boolean }[],
 ): { name: string; upto: number; done: number; total: number; remaining: { id: number; title: string; open: number[]; noIssue: boolean }[] };
+export type YaoqiuLink = { n: number; kind: string; state: string; label: string; cls: string; done: boolean };
+export function yaoqiuLink(n: number, data: unknown, checks?: unknown): YaoqiuLink;
+export function yaoqiuStatus(
+  item: { status?: string; links?: number[] },
+  data: unknown,
+): { status: 'done' | 'doing' | 'todo'; auto: boolean; note: string; links: YaoqiuLink[] };
+export function yaoqiuSummary(
+  items: { status?: string; links?: number[] }[],
+  data: unknown,
+): { total: number; done: number; doing: number; todo: number; pct: number };
