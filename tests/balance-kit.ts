@@ -1,16 +1,21 @@
 /**
- * 对战模拟用的搭配：给一个门派、一个时期，按师承规则配出这一期能拿出来的最好搭配，算成战斗内核的 Kit。
- * 「同等投入」：同一时期，所有门派的境界、气血、内力相同，能用的武功由传授方式（teach）决定。
+ * 对战模拟用的搭配：给一个门派、一个时期，按师承规则配出这一期能拿出来的最好搭配，复用试算台和实战的搭配输入。
+ * 「同等投入」：同一时期，所有门派的境界、先天根基、功力和品级额度相同（气血由实战人物模型计算），能用的武功由传授方式（teach）决定。
  */
-import { SKILLS } from '../content';
-import { FIST, JIANGHU_RULE, OUTER, SCHOOL_STYLE, STYLES, WEAPON } from '../content/skills';
-import type { FxKind, SkillDef, SkillGrade, SkillTeach } from '../content/types';
-import type { Kit, Move } from './combat';
-import { passivesOf } from './beidong';
-import { rootsOn } from './shicheng';
-import { passiveCost, performBudget, skillPower, ultBudget } from './wuxue';
+import { SKILLS } from '../src/content';
+import { FIST, JIANGHU_RULE, OUTER, SCHOOL_STYLE, WEAPON } from '../src/content/skills';
+import type { FoeDef, SkillDef, SkillGrade, SkillTeach } from '../src/content/types';
+import { rootsOn } from '../src/engine/shicheng';
+import { passiveCost, performBudget, skillPower, ultBudget } from '../src/engine/wuxue';
+import type { GameState } from '../src/core/state';
+import { buildState } from '../src/lab/calc';
+import { Duel, SKILLED, simulate, type FoeSpec } from '../src/engine/duel';
+import { COMMON, hpMaxOf, mpMaxOf } from '../src/engine/person';
+import { personOf } from '../src/engine/ren';
+import { mulberry32, seedOf } from '../src/engine/rng';
+import { fightKit, foeSpec, heroSpec } from '../src/engine/zhaoshi';
 
-export interface Stage { name: string; realm: number; teach: SkillTeach[]; qiyu: SkillGrade; hp: number; mp: number; budget: number }
+export interface Stage { name: string; realm: number; teach: SkillTeach[]; qiyu: SkillGrade; mp: number; budget: number }
 
 /**
  * 前期：入门、外门的武功练到略有小成；中期：加上内门，登堂入室；后期：真传都有，返璞归真。
@@ -18,9 +23,9 @@ export interface Stage { name: string; realm: number; teach: SkillTeach[]; qiyu:
  * 品级额度（docs/menpai.md 第六节「同等投入」）：五个槽位的品级点数加起来不超过 budget，凡品 0、良品 1、上品 2、绝品 3、神品 4、禁品 5。
  */
 export const STAGES: Stage[] = [
-  { name: '前期', realm: 2, teach: ['入门', '外门'], qiyu: '良品', hp: 1500, mp: 600, budget: 7 },
-  { name: '中期', realm: 4, teach: ['入门', '外门', '内门'], qiyu: '绝品', hp: 2000, mp: 800, budget: 11 },
-  { name: '后期', realm: 7, teach: ['入门', '外门', '内门', '真传'], qiyu: '禁品', hp: 2600, mp: 1000, budget: 16 }
+  { name: '前期', realm: 2, teach: ['入门', '外门'], qiyu: '良品', mp: 600, budget: 7 },
+  { name: '中期', realm: 4, teach: ['入门', '外门', '内门'], qiyu: '绝品', mp: 800, budget: 11 },
+  { name: '后期', realm: 7, teach: ['入门', '外门', '内门', '真传'], qiyu: '禁品', mp: 1000, budget: 16 }
 ];
 const RANK: SkillGrade[] = ['凡品', '良品', '上品', '绝品', '神品', '禁品'];
 
@@ -49,13 +54,6 @@ export const outerOf = (b: Pick<Build, 'fist' | 'weapon'>): SkillDef | undefined
 /** 把一门外功放进它该去的位置 */
 const withOuter = <T extends Pick<Build, 'fist' | 'weapon'>>(b: T, k: SkillDef | undefined): T =>
   ({ ...b, fist: k && FIST.includes(k.category) ? k : undefined, weapon: k && WEAPON.includes(k.category) ? k : undefined });
-
-/** 绝招算成战斗内核的一招（实战和模拟共用） */
-export const toMove = (k: SkillDef, p: NonNullable<SkillDef['performs']>[number]): Move => ({
-  name: `${k.name}「${p.name}」`, mp: p.mp, cd: p.cd, hits: p.hits, dmg: p.dmg, acc: p.acc, fx: p.fx || [],
-  // 蓄势的重招（只有刚猛的门派写，docs/menpai.md 第五节）
-  heavy: !!p.charge && p.hits === 1
-});
 
 /** 一门外功在这一期、这门内功下的分量：解锁了的、使得出的绝招预算之和，加普通招式 */
 function outerScore(k: SkillDef, ng: SkillDef | undefined, st: Stage): number {
@@ -100,32 +98,6 @@ export function bestBuild(school: string, st: Stage): Build {
   return best;
 }
 
-/** 把搭配算成战斗内核的 Kit */
-export function kitOf(b: Build): Kit {
-  const st = b.stage, ng = b.neigong;
-  const rooted = (k: SkillDef): boolean => (ng ? rootsOn(k, ng) : k.school === JIANGHU_RULE.school);
-  // 被动与合璧：和实战共用一套算法（beidong.ts）
-  const pv = passivesOf(b, { outer: outerOf(b), weaponReady: !!b.weapon });
-  const { sum: passive, openers, hit } = pv;
-  const outer = outerOf(b);
-  const moves: Move[] = [];
-  if (outer && rooted(outer)) for (const p of outer.performs || []) if ((p.realm ?? 0) <= st.realm) moves.push(toMove(outer, p));
-  const mainPow = outer ? skillPower(outer, st.realm) : 0;
-  const avg = 60 + mainPow * 1.2;
-  const basic: Move = { name: outer ? `${outer.name}的普通招式` : '拳脚', mp: 0, cd: 0, hits: 1, dmg: [avg * 0.8, avg * 1.2], acc: 0.85, fx: [] };
-  const ult = b.ult?.ult && rooted(b.ult) ? { name: `${b.ult.name}（杀招）`, mp: 0, cd: 0, hits: 1, dmg: b.ult.ult.dmg, acc: 1, fx: b.ult.ult.fx || [], sure: true } : undefined;
-  const qg = b.qinggong;
-  const dodge = 0.08 + (qg ? skillPower(qg, st.realm) / 400 : 0) + pv.qinggongHaste / 100;
-  const pos = SCHOOL_STYLE[b.school];
-  const bias: Partial<Record<FxKind, number>> = {};
-  if (pos) for (const f of [...STYLES[pos.main].sig, ...STYLES[pos.sub].sig]) bias[f] = 1.15;
-  return {
-    name: b.school, hpMax: st.hp, mpMax: st.mp,
-    mpRegen: Math.round(st.mp * 0.04 + (ng ? skillPower(ng, st.realm) / 2 : 0)),
-    nature: outer?.nature, dodge, hit, passive, openers, moves, basic, ult, bias
-  };
-}
-
 /**
  * 混搭：以 root 为根基门派（内功、绝技不动），出手的外功换成一门外来的武功。
  * 不是本门弟子，只学得到别派的奇遇武功和江湖散学（docs/menpai.md 第七节）；门规严的门派只能兼修江湖散学，禁修的打法不能碰。
@@ -143,4 +115,68 @@ export function mixedBuilds(root: string, st: Stage): Build[] {
     return !(style && pos?.forbid?.includes(style));
   });
   return foreign.map(k => withOuter(base, k));
+}
+
+/** 保留选配结果；战斗数值与招式输入由实战转换器生成，不另写战斗规则。 */
+export interface Kit { name: string; build: Build; state: GameState }
+export function kitOf(b: Build): Kit {
+  const loadout = Object.fromEntries(['neigong', 'qinggong', 'fist', 'weapon', 'ult'].flatMap(k => {
+    const skill = b[k as keyof Build] as SkillDef | undefined;
+    return skill ? [[k, skill.id]] : [];
+  }));
+  const state = buildState(loadout, Object.fromEntries(Object.values(loadout).map(id => [id, b.stage.realm])));
+  state.name = b.school;
+  state.attr = Object.fromEntries(Object.keys(state.attr).map(k => [k, COMMON])) as GameState['attr'];
+  state.gongli = b.stage.mp / 100;
+  const person = personOf(state);
+  state.hp = state.hpMax = hpMaxOf(person);
+  state.mp = state.mpMax = mpMaxOf(person);
+  return { name: b.school, build: b, state };
+}
+
+/** FoeSpec 的原生对手流程不带玩家绝招、被动；轮换角色，另报双方作玩家时的原始胜率。 */
+function opponent(k: Kit): FoeDef {
+  const outer = outerOf(k.build);
+  return { id: 'balance', name: k.name, rank: 0, nature: outer?.nature, reach: outer?.reach,
+    title: '', ini: '', tone: 'gray', weapon: '', ws: '', tag: '', moves: [], flourish: [],
+    tells: (['li', 'su', 'qiao'] as const).map(dom => ({ name: '', text: '', dom, after: '' })),
+    asides: [], opening: [], intro: '', win: '', lose: '', results: { win: {} } };
+}
+function match(a: Kit, b: Kit, n: number, salt: string): { score: number; aHero: number; bHero: number } {
+  if (n <= 0 || n % 2) throw new Error('轮换角色的场数必须为正偶数');
+  const specs = [a, b].map((k, i) => {
+    const other = opponent(i ? a : b);
+    const f: FoeSpec = { ...foeSpec(opponent(k), []), person: personOf(k.state) };
+    return { hero: heroSpec(k.state, fightKit(k.state), other), foe: f };
+  });
+  const names = [a.build.school, b.build.school].sort();
+  let aw = 0, bw = 0;
+  for (let i = 0; i < n / 2; i++) {
+    const seed = seedOf(...names, salt, i);
+    if (simulate(new Duel(specs[0].hero, specs[1].foe, { rng: mulberry32(seed) }), SKILLED).res === 'win') aw++;
+    if (simulate(new Duel(specs[1].hero, specs[0].foe, { rng: mulberry32(seed) }), SKILLED).res === 'win') bw++;
+  }
+  return { score: (aw + n / 2 - bw) / n, aHero: aw / (n / 2), bHero: bw / (n / 2) };
+}
+export const duel = (a: Kit, b: Kit, n: number, salt = ''): number => match(a, b, n, salt).score;
+export interface Matrix { names: string[]; rate: number[][]; overall: number[]; heroRate: number[][] }
+export function matrix(kits: Kit[], n: number, salt = ''): Matrix {
+  const k = kits.length;
+  const rate = Array.from({ length: k }, () => Array<number>(k).fill(0.5));
+  const heroRate = Array.from({ length: k }, () => Array<number>(k).fill(NaN));
+  for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++) {
+    const r = match(kits[i], kits[j], n, salt);
+    rate[i][j] = r.score; rate[j][i] = 1 - r.score;
+    heroRate[i][j] = r.aHero; heroRate[j][i] = r.bHero;
+  }
+  const overall = rate.map((row, i) => row.reduce((a, x, j) => a + (i === j ? 0 : x), 0) / Math.max(1, k - 1));
+  return { names: kits.map(x => x.name), rate, overall, heroRate };
+}
+export function formatMatrix(m: Matrix): string {
+  const pct = (x: number): string => String(Math.round(x * 100)).padStart(4);
+  const head = '          ' + m.names.map(n => n.slice(0, 2).padStart(3)).join('') + '   总胜率';
+  const rows = m.names.map((n, i) => n.padEnd(5, '　').slice(0, 5) + ' ' + m.rate[i].map((x, j) => i === j ? '   —' : pct(x)).join('') + '   ' + pct(m.overall[i]) + '%');
+  const raw = m.names.map((n, i) => n.padEnd(5, '　').slice(0, 5) + ' ' + m.heroRate[i].map((x, j) => i === j ? '   —' : pct(x)).join(''));
+  return ['双方轮换玩家/对手角色后的得分率：', head, ...rows,
+    '各行作为玩家、各列作为原生对手的胜率（对手不使用玩家绝招和被动）：', head, ...raw].join('\n');
 }
