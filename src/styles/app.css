@@ -148,6 +148,11 @@ svg{display:block}
 .act.spar{background:var(--accent-soft);color:var(--accent);font-weight:700}
 .reply{padding:10px 12px;border-radius:12px;background:var(--bg);font-family:var(--f-serif);font-size:14.5px;line-height:1.8;white-space:pre-line;animation:fin .3s ease-out}
 
+/* 迎面：场景里有人先开口（engine/yingmian.ts） */
+.greet{display:flex;flex-direction:column;gap:10px;animation:fin .3s ease-out}
+.greet .gt{font-family:var(--f-serif);font-size:14.5px;line-height:1.8}
+.greet .greet-btn{align-self:flex-start;padding:0 18px;background:var(--accent-soft);color:var(--accent);font-weight:700}
+
 .go{display:flex;flex-direction:column;gap:8px;padding-top:4px}
 .go h2{font-size:15px;font-weight:700}
 .exits{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}

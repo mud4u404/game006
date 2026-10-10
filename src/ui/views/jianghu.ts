@@ -15,6 +15,7 @@ import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine
 import { verbChufa } from '../../engine/chufa';
 import { refuseOf, wantOf } from '../../engine/shijie';
 import { test, textVars } from '../../engine/dsl';
+import { greetNow } from '../../engine/yingmian';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
 
@@ -41,7 +42,8 @@ export function viewJianghu(): string {
   ${jueseHTML()}
   ${yaoJinHTML(yj)}
   ${yueBar}
-  <section class="card scene">${greetCard()}<p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
+  ${greetCard()}
+  <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
   ${gone}
   ${all.length ? `<section class="card here-card">
     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
@@ -52,12 +54,12 @@ export function viewJianghu(): string {
   ${xiejiaoHTML()}`;
 }
 
-/**
- * 迎面：场景里的人物先开口（另一路在做，规则好了接到这里）。
- * 位置在场景描写的最上面；没有人开口就返回空字符串
- */
-export function greetCard(): string {
-  return '';
+/** 迎面（engine/yingmian.ts）：场景里有人先开口，一句话加一个话头，点了就对他做对应的动作 */
+function greetCard(): string {
+  if (S.chapter === 0) return '';
+  const g = greetNow();
+  if (!g) return '';
+  return `<section class="card greet"><p class="gt">${fmt(g.text, textVars())}</p><button class="act greet-btn" data-act="greet">${g.topic}</button></section>`;
 }
 
 /** 角色卡：名字、称号、战力（变了写「旧 → 新」）、一句武学评价、气血内力银两（engine/jiemian.ts） */
