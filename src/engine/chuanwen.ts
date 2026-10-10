@@ -12,7 +12,7 @@
  *
  * 注意：本文件和 engine/shijie.ts、core/state.ts 互相引用，顶层只放字面量常量，别的模块的东西只在函数里用。
  */
-import { S, pushFeed, type GameState } from '../core/state';
+import { S, markSeen, pushFeed, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
 import { NEWS, NPCS, ROOMS, npc, room, shiById } from '../content';
 import type { Cond } from '../content/types';
@@ -365,7 +365,7 @@ function tellYou(r: RumorInst, text: string): void {
     else {
       const rp = stepRank(d, r.ph);
       // 比眼下这一步还靠后的，是上一回的旧事，不拿它改见闻簿
-      if (rp <= stepRank(d, st.at) && (st.seen === undefined || stepRank(d, st.seen) < rp)) st.seen = r.ph;
+      if (rp <= stepRank(d, st.at) && (st.seen === undefined || stepRank(d, st.seen) < rp)) markSeen(st, r.ph);
     }
   }
   // 当事人说的「我」话，记进见闻簿时改回旁人的说法，不然读起来像玩家自己的话

@@ -70,6 +70,7 @@ function shiRow(r: ShiRow): string {
           <b>${r.name}</b>
           ${where ? `<span class="qb-stage">${where}${r.round > 1 ? ` · 第${cn(r.round)}回` : ''}</span>` : ''}
           <p>${r.now}</p>
+          ${r.before ? `<small class="qb-memo">此前：${r.before}</small>` : ''}
           ${r.stale ? '<small class="qb-to">这是你上回听说的，后来怎样，得再去打听。</small>' : ''}
           ${r.missed ? `<small class="qb-memo">这一回你没赶上。${r.again ? '这样的事，过些日子还会有。' : ''}</small>` : ''}
         </div>

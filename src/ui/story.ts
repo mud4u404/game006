@@ -1,6 +1,7 @@
 /**
  * 剧情卡片、标题画面、章回题字。
  */
+import { tupoClear } from '../engine/tupo';
 import { titleAccountHTML } from './views/account-link';
 import { S, load, newGame, save, saveBroken, setState, skipToYangzhou, type GameState } from '../core/state';
 import { dateStr } from '../core/time';
@@ -8,14 +9,15 @@ import { $, cleanName, fmt } from '../core/util';
 import { room, storyById } from '../content';
 import type { StoryDef } from '../content/types';
 import { gainTags, leanText } from './qingxiang';
-import { lackOf, newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
+import { lackOf, newOutcome, test, textVars, type Outcome } from '../engine/dsl';
+import { act, plan, storyCheckpoint, storyOpen, storyReq } from '../engine/xingdong';
 import { kpOpen, kpPick, kpPos } from '../engine/kaipian';
 import { afterOutcome, hooks, registerHandlers, render, swapped, toast, tooSoon } from './shell';
 import { welcomeBack } from './chuguan';
 
 /* ---------- 剧情卡片 ---------- */
 
-interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void; lead?: string; picked?: string }
+interface Playing { def: StoryDef; i: number; started: string; result?: string; next?: number; out: Outcome; onDone?: () => void; lead?: string; picked?: string }
 let cur: Playing | null = null;
 /** 已经开着剧情时又来的剧情：排队，读完这一段再读（原来直接顶掉，旧剧情的收尾丢了，赶路停在半路） */
 const queue: [string, (() => void) | undefined, string | undefined][] = [];
@@ -27,7 +29,9 @@ export function openStory(id: string, onDone?: () => void, lead?: string, at = 0
   if (!def) { onDone?.(); return; }
   const i = at >= 0 && at < def.cards.length ? at : 0;
   kpOpen(S, id, i);
-  cur = { def, i, out: newOutcome(), onDone, lead };
+  const { started } = storyOpen(id, i);
+  cur = { def, i, started, out: newOutcome(), onDone, lead };
+  save();
   draw();
   $('#storyLayer')!.hidden = false;
 }
@@ -47,7 +51,11 @@ function draw(): void {
     : card.choices.map((c, k) => {
       // 选之前只写倾向，不写数（ui/qingxiang.ts）
       const sub = c.sub ? leanText(c.sub) : '';
-      if (test(c.if)) return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
+      if (test(c.if)) {
+        const p = plan(storyReq({ id: cur!.def.id, i: cur!.i, started: cur!.started }, c.do, c.if));
+        if (!p.ok) return `<button class="choice locked" data-act="stLocked:${k}" aria-disabled="true"><b>${c.label}</b><small>${p.why ?? ''}</small></button>`;
+        return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
+      }
       // 够不着的路也摆出来、写明差什么（钱、根基、侠义……）；剧情上的条件不成立的照旧藏着
       const lack = lackOf(c.if);
       return lack ? `<button class="choice locked" data-act="stLocked:${k}" aria-disabled="true"><b>${c.label}</b><small>${lack}</small></button>` : '';
@@ -70,18 +78,25 @@ function draw(): void {
 }
 
 function pick(k: number): void {
-  if (!cur) return;
+  if (!cur || cur.result !== undefined) return;
   const card = cur.def.cards[cur.i];
   const c = card.choices[k];
   if (!c || !test(c.if)) return;
+  const pos = { id: cur.def.id, i: cur.i, started: cur.started };
+  const req = storyReq(pos, c.do, c.if);
+  const p = plan(req);
+  if (!p.ok) { toast(p.why ?? '眼下还办不了。'); draw(); return; }
   if (card.input === 'name') {
     const raw = ($('#nameIn') as HTMLInputElement | null)?.value || '';
     S.name = cleanName(raw) || '孤舟';
   }
-  run(c.do, cur.out);
-  const next = c.next ?? cur.i + 1;
-  // 新序章：选完就记下一站并存档，刷新、关了再开都接回这一屏（engine/kaipian.ts）
-  if (kpPick(S, cur.def.id, cur.def.cards.length, cur.out, next)) save();
+  const playing = cur, next = c.next ?? cur.i + 1;
+  // 奖励和下一站在同一次结算里存下，刷新不会回到已经领过好处的选项。
+  const result = act(req, cur.out, out => {
+    kpPick(S, playing.def.id, playing.def.cards.length, out, next);
+    storyCheckpoint(pos, playing.def.cards.length, out, next);
+  });
+  if (!result.ok) { toast(result.why ?? '眼下还办不了。'); draw(); return; }
   if (c.result) { cur.result = c.result; cur.next = next; cur.picked = c.sub; draw(); return; }
   // 没有结果文字的选项：加了什么，提示条里说一句
   if (gainTags(c.sub).length) toast(gainTags(c.sub).join('　'));
@@ -194,10 +209,16 @@ registerHandlers({
   stName: v => { const el = $('#nameIn') as HTMLInputElement | null; if (el) el.value = v; },
   chapDone: () => finishChapter(),
   // 够不着的选项：点了说清差什么
-  stLocked: v => { const c = cur?.def.cards[cur.i].choices[Number(v)]; const lack = c && lackOf(c.if); if (lack) toast(`还走不了这条路：${lack}`); },
+  stLocked: v => {
+    const c = cur?.def.cards[cur.i].choices[Number(v)];
+    if (!c || !cur) return;
+    const lack = lackOf(c.if) ?? plan(storyReq({ id: cur.def.id, i: cur.i, started: cur.started }, c.do, c.if)).why;
+    if (lack) toast(`还走不了这条路：${lack}`);
+  },
   tContinue: () => {
     const saved = load();
     if (!saved) return;
+    tupoClear(); // 换存档：旧档攒着没弹的突破卡不带过去
     setState(saved);
     hideTitle();
     // 停在新序章中途的：接回那一屏（打到一半的，从头再打这一场）
@@ -206,6 +227,11 @@ registerHandlers({
       render();
       if (at.kind === 'fight') hooks.startFight(at.id);
       else openStory(at.id, undefined, undefined, at.i);
+      return;
+    }
+    if (saved.storyAt) {
+      render();
+      openStory(saved.storyAt.id, undefined, undefined, saved.storyAt.i);
       return;
     }
     // 下线就是静修：离开的时辰算成静修的日子，先读出关邸报（ui/chuguan.ts）。要在 render 之前算：render 会存档，把「上次在线」记成现在

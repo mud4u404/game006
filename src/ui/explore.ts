@@ -10,13 +10,13 @@ import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { TIELV_TEXT, XIEJIAO, checkYue, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
+import { TIELV_TEXT, XIEJIAO, checkYue, restLine, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
 import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
 import { askWhere, askableTargets } from '../engine/chuanwen';
 import { npcName } from '../engine/world';
-import { run } from '../engine/dsl';
+import { act as settleAction, effectReq } from '../engine/xingdong';
 import { FAR_MIN, chufaLine } from '../engine/chufa';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
@@ -237,7 +237,7 @@ registerHandlers({
     if (!S.sect || (v !== '辞别' && v !== '叛门')) return;
     if (v === '辞别' && S.pastSects?.some(x => x.how === '辞别')) return;
     const school = S.sect.school;
-    run([{ type: 'leaveSect', how: v }]);
+    settleAction(effectReq(v, S.sect?.school ?? '', [{ type: 'leaveSect', how: v }]));
     pushFeed('江湖', v === '辞别' ? `你向${school}的师长磕了三个头，辞别下山。` : `你叛出了${school}。`);
     closeSheet();
     render();
@@ -273,7 +273,8 @@ registerHandlers({
     const frac = Math.min(0.3, (m / 60) * 0.03);
     S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * frac));
     S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * frac));
-    pushFeed('江湖', `你找了个地方歇脚，一直歇到${label}，缓过了些气力。`);
+    // 歇脚那一句换几种说法，不进动态（动态里天天一模一样的一行，读着腻）
+    toast(restLine(S, label));
     const tip = kpBiguanTip(S, 'rest');
     if (tip) pushFeed('江湖', tip);
     render();

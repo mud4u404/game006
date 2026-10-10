@@ -1,13 +1,14 @@
 import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
-import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPoor, verbPrice, verbsOf } from '../../engine/world';
+import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
 import { askableTargets } from '../../engine/chuanwen';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
 import { leadsNear, questNav } from '../../engine/daohang';
 import { kanren } from '../../engine/zhaoshi';
+import { recordDiao } from '../../engine/zhanli';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef, Verb } from '../../content/types';
 import { cn, fmt } from '../../core/util';
@@ -107,7 +108,9 @@ function detail(id: string): string {
   const whom = foe && foe.id !== id && foe.name !== npcName(id) ? foe.name : '他';
   // 揭榜、接镖、接差事：点之前先说一声眼下的状态（带伤、气血、内力、钱），只提示，不拦（engine/chufa.ts）
   const chufa = verbChufa(id);
-  const look = foe ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kanren(S, foe).say}</b></p>` : '';
+  const kr = foe ? kanren(S, foe) : undefined;
+  if (foe) recordDiao(S, foe.id, whom === '他' ? npcName(id) : whom);
+  const look = kr ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kr.say}</b>${kr.hurt ? `<br><span class="hurt">${kr.hurt}</span>` : ''}</p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
     <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}${n.obj ? '' : askBtn()}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
 }
@@ -120,10 +123,11 @@ function askBtn(): string {
 /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
 const verbBtn = (id: string) => (v: Verb): string => {
   const price = verbPrice(id, v);
-  const poor = price !== null && S.silver < price && verbPoor(id, v);
+  const p = verbPlan(id, v);
+  const poor = !p.ok;
   // 能挣钱的（揭榜的赏钱、零工的工钱）：报酬和耗时写在底下，点之前就知道
   const gain = price === null ? verbGain(id, v) : null;
-  const sub = price !== null ? `${poor ? '囊中不足，要' : ''}${cn(price)}文` : gain;
+  const sub = price !== null ? `${poor && S.silver < price ? '囊中不足，要' : ''}${cn(price)}文` : poor ? p.why : gain;
   return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;
 };
 
