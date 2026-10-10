@@ -17,7 +17,7 @@ import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } fr
 import { act as settleAction, effectReq } from '../engine/xingdong';
 import { FAR_MIN, chufaLine } from '../engine/chufa';
 import { markEncounter, rollEncounter } from '../engine/encounter';
-import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
+import { TRAVEL_BUSY, afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
 import { kpBiguanTip } from '../engine/kaipian';
 import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
@@ -42,7 +42,7 @@ export const isTraveling = (): boolean => traveling;
  * 现在起步时画一次，途中只改顶栏的地名时辰和赶路条上的字；下面的按钮一律灰着，赶路条上只留「停下」。
  */
 export function travelTo(dest: string, onArrive?: () => void): void {
-  if (traveling) { toast('正在赶路……要停，点赶路条上的「停下」'); return; }
+  if (traveling) { toast(TRAVEL_BUSY); return; }
   if (dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
   const path = pathTo(S.loc, dest);
   if (!path.length) { toast(S.chapter === 0 ? '要下大雨了，码头今儿不开船。' : '从这里去不了那儿'); return; }
@@ -185,7 +185,8 @@ registerHandlers({
   mapRegion: v => { setMapRegion(v); render(); },
   // 地图点地名：先写明这趟路要多久、花多少钱，再由玩家决定走不走（地图审查第一条）
   travelAsk: v => {
-    if (!v || v === S.loc) return;
+    if (!v) return;
+    if (v === S.loc) { toast('你就在这里'); return; }
     const c = tripCost(v);
     if (!c) { toast('从这里去不了那儿'); return; }
     const short = c.fee > S.silver;

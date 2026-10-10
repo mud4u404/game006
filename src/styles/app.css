@@ -244,9 +244,9 @@ svg{display:block}
 
 .travel{position:absolute;left:16px;right:16px;bottom:72px;z-index:15;padding:12px 14px;border-radius:14px;background:var(--fg);color:var(--bg);display:flex;align-items:center;gap:12px;box-shadow:var(--lift);animation:fin .2s ease-out;pointer-events:none}
 .travel .tinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
-/* 赶路条上只有「停下」能点；底下的地点画面灰着、点不了（ui/explore.ts 的 travelTo） */
+/* 赶路条上只有「停下」能点；底下的地点画面灰着，点了弹一句「正在赶路」（ui/shell.ts 的点击分发）。不用 pointer-events:none：那样点了没有任何反应 */
 .travel .tstop{pointer-events:auto;flex:0 0 auto;min-height:44px;padding:0 16px;border-radius:12px;background:color-mix(in srgb,var(--bg) 18%,transparent);color:var(--bg);font-size:14px;font-weight:700}
-#app.traveling #main,#app.traveling #tabs{opacity:.45;pointer-events:none;transition:opacity .2s}
+#app.traveling #main,#app.traveling #tabs{opacity:.45;transition:opacity .2s}
 .travel b{font-size:14px}
 .travel small{font-size:13px;opacity:.8}
 .travel .tb{height:3px;border-radius:2px;background:color-mix(in srgb,var(--bg) 25%,transparent);overflow:hidden}
@@ -255,7 +255,12 @@ svg{display:block}
 
 #sheetLayer{position:absolute;inset:0;z-index:75}
 .scrim{position:absolute;inset:0;background:var(--scrim);display:flex;align-items:flex-end;animation:fade .2s}
+/* iPhone 的 Safari：点在没有 cursor:pointer 的 div 上，不会触发 document 上代理的 click，「点外面关弹层」就点不动（审查 docs/diandong-shencha.md） */
+.scrim[data-act]{cursor:pointer}
+.scrim[data-act] .panel{cursor:auto}
 .panel{width:100%;max-height:90%;overflow-y:auto;overscroll-behavior:contain;background:var(--card);border-radius:20px 20px 0 0;padding:22px 16px 18px;display:flex;flex-direction:column;gap:14px;animation:up .3s cubic-bezier(.2,.8,.2,1)}
+/* 弹层里的东西内容多了只许滚动，不许被压扁：小屏上「关闭」被压成二十来像素高，点不准 */
+.panel>*{flex-shrink:0}
 .r-h{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
 .r-h h2{font-size:22px;font-weight:900;line-height:1.3}
 .r-sub{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:2px}
@@ -272,6 +277,8 @@ svg{display:block}
 .news{display:flex;flex-direction:column;gap:8px}
 .news div{display:flex;align-items:flex-start;gap:8px;font-size:14px;line-height:1.7}
 .news .tag{margin-top:2px}
+/* 「去」这类按钮在一行里不许被挤成一条缝（小屏上只剩十几像素宽） */
+.news .act{flex:0 0 auto;min-width:64px;padding:0 16px}
 .btn{height:48px;border-radius:14px;background:var(--accent);color:var(--on-accent);font-size:15px;font-weight:700;width:100%}
 .btn.ghost{background:var(--chip);color:var(--fg)}
 .btn.warn{background:var(--danger-fill);color:var(--on-danger)}
@@ -423,6 +430,7 @@ svg{display:block}
 .t-link{min-height:44px;font-size:13px;color:var(--night-muted);text-decoration:underline;text-underline-offset:3px}
 .t-warn{font-size:13px;color:var(--night-muted);text-align:center}
 .story-l{position:absolute;inset:0;background:var(--bg);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:16px;padding:28px 20px 24px}
+.story-l>*{flex-shrink:0}
 .story-l>*{animation:fin .35s ease-out both}
 /* 选项不做淡入：淡入的那一下看不清却点得着，连点的第二下就落在下一张卡的选项上 */
 .story-l>.choices{animation:none}
@@ -574,7 +582,7 @@ html.preview #app{height:calc(100% - var(--pv-h))}
 .qb-need li.ok{color:var(--muted)}
 .qb-need li.no{color:var(--danger)}
 .qb-past{font-size:12px;color:var(--muted);margin-top:2px}
-.qb-past summary{min-height:32px;display:flex;align-items:center;cursor:pointer}
+.qb-past summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
 .qb-past ul{list-style:none;margin:0;padding:0 0 0 4px;display:flex;flex-direction:column;gap:2px}
 .quest .qs{display:block;font-size:12px;font-weight:400;line-height:1.45;margin-top:2px}
 .quest .qs.warn{color:var(--warn)} .quest .qs.danger{color:var(--danger)}
