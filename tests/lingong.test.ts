@@ -42,7 +42,10 @@ describe('悬赏交差后复位：冷却一过再揭，不能马上交差', () =
       expect(S.job).toBeNull();
       expect(S.flags[flag]).toBeFalsy();
       // 冷却一过再揭：旗标已经清了，书办那里没有「交」的按钮；硬点也领不到钱
-      advanceDays(S, 6);
+      const cd = jobById(job)!.again ?? 3;
+      advanceDays(S, cd - 1);
+      expect(jobOpen(S, job)).toBe(false);
+      advanceDays(S, 1);
       expect(jobOpen(S, job)).toBe(true);
       act('xsb_zhuren', jie);
       expect(S.job?.id).toBe(job);
