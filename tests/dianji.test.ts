@@ -77,4 +77,14 @@ describe('点动：每个按钮都有人接', () => {
     expect(css).toMatch(/\.scrim\[data-act\]\s*\{[^}]*cursor:\s*pointer/);
     expect(css).toMatch(/\.chap\s*\{[^}]*cursor:\s*pointer/);
   });
+
+  it('巫师的「反馈」按钮（绝对定位在右上角）层级必须低于打斗、剧情、弹层，否则盖住打斗的「暂停」', () => {
+    const z = (sel: string): number => {
+      const m = css.match(new RegExp(sel.replace(/[.#]/g, '\\$&') + '\\{[^}]*z-index:\\s*(\\d+)'));
+      return m ? Number(m[1]) : NaN;
+    };
+    const fb = z('.wushi-fb');
+    expect(fb).toBeGreaterThan(0);
+    for (const layer of ['#fightLayer', '#sheetLayer']) expect(fb, layer).toBeLessThan(z(layer));
+  });
 });

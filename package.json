@@ -15,6 +15,7 @@
     "smoke": "vite build && node scripts/smoke.mjs",
     "ditu-liang": "node scripts/ditu-shot.mjs",
     "luandian": "vite build && node scripts/luandian.mjs",
+    "diandong": "vite build && node scripts/diandong.mjs",
     "ids": "UPDATE_IDS=1 vitest run tests/ids.test.ts",
     "retune": "RETUNE=1 vitest run tests/retune.test.ts --silent=false",
     "menpai": "MENPAI=1 vitest run tests/menpai.test.ts --silent=false",
