@@ -452,6 +452,82 @@ export function panwen(npcId: string, who: string = npcName(npcId)): string {
  * 江湖上的话：玩家所在地区传开的、你还不知道的、最耸动的一条（原样）。说书人的打赏、效果 news、没写声口的人的打听都用它。
  * 返回那句话，没得说为空（不再从传闻池里随手抽）
  */
+
+/* ---------- 打听去处（docs/sheji-021-026.md 023 节） ---------- */
+
+/** 时辰（24 小时制）对应的时辰名：子0 丑2 寅4 卯6 辰8 巳10 午12 未14 申16 酉18 戌20 亥22 */
+const SHICHEN = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时', '午时', '未时', '申时', '酉时', '戌时', '亥时'];
+const shichenOf = (h: number): string => SHICHEN[Math.floor(h / 2) % 12];
+/** 一段时辰（from 到 to，可跨午夜）说成一句：整段白天→白日，整段夜里→入夜，否则「时辰到时辰」 */
+function hourLabel(from: number, to: number): string {
+  const wrap = to < from;
+  if (wrap) return '入夜';
+  if (from >= 5 && to <= 19) return '白日';
+  if (from >= 19) return '入夜';
+  if (from <= 5) return '清早';
+  return `${shichenOf(from)}到${shichenOf(to)}`;
+}
+
+/** 这个人的公开作息（at 里不标 secret 的）拼成一句去处；没有作息为空 */
+export function whereaboutsOf(id: string): string {
+  const n = npc(id);
+  if (!n?.at) return '';
+  const list = (Array.isArray(n.at) ? n.at : [n.at]).filter(a => !a.secret);
+  if (!list.length) return '';
+  return list.map(a => {
+    const name = room(a.room)?.name ?? a.room;
+    if (!a.if?.hour) return `常在${name}`;
+    return `${hourLabel(a.if.hour.from, a.if.hour.to)}在${name}`;
+  }).join('，');
+}
+
+/** 这人能不能答得出 target 的去处：同势力、常待同一处、眼下同处一室，或关系在点头之交以上 */
+export function canTell(npcId: string, targetId: string): boolean {
+  if (npcId === targetId) return false;
+  const a = lifeOf(npcId), b = lifeOf(targetId);
+  if (a?.faction && b?.faction && a.faction === b.faction) return true;
+  const ra = new Set(roomsOf(npcId)), rb = new Set(roomsOf(targetId));
+  for (const r of ra) if (rb.has(r)) return true;
+  if (roomNpcs(S.loc).includes(targetId)) return true;
+  const rel = S.rel[targetId];
+  if (rel && (REL_NOD.includes(rel) || REL_WARM.includes(rel))) return true;
+  return false;
+}
+
+/** 玩家认识、又有作息的人（人物详情里「问人」弹窗只列这些） */
+export function askableTargets(): string[] {
+  return NPCS.filter(n => n.at && (S.rel[n.id] && (REL_NOD.includes(S.rel[n.id]) || REL_WARM.includes(S.rel[n.id])))).map(n => n.id);
+}
+
+export interface WhereResult { text: string; /** know=答得出，unknown=不认识这人，nosched=这人没个准地方 */ src: 'know' | 'unknown' | 'nosched' }
+
+/**
+ * 问 npcId：「某某平日在哪」。答的是作息的公开部分，事件打断时只有关心这事的人才说得出新去处（读他知道的传闻）。
+ * 答得出来记进见闻簿（docs/sheji-021-026.md 023 节）。
+ */
+export function askWhere(npcId: string, targetId: string): WhereResult {
+  const who = npcName(npcId), tname = npcName(targetId);
+  if (!npc(targetId)?.at) return { text: `${who}摇摇头：「${tname}？他没个准地方，我可说不上来。」`, src: 'nosched' };
+  if (!canTell(npcId, targetId)) return { text: `${who}想了想：「${tname}面生得很，他平日在哪，我哪知道。」`, src: 'unknown' };
+  // 事件打断作息：知道这件事（他知道的传闻牵涉 target）的人才说得出新去处
+  const p = worldOf().ppl[targetId];
+  const today = dayNo(S);
+  if (p?.at && p.at.until > today) {
+    const knows = knowsOf(worldOf(), npcId).some(k => worldOf().rumor[k[0]]?.subj.includes(targetId));
+    if (knows) {
+      const where = room(p.at.room)?.name ?? p.at.room;
+      const text = `${who}压低声音：「${tname}这几日不在常待的地方——${where}那边的人说，他叫事绊住了，在那儿能寻着。」`;
+      pushFeed('江湖', text);
+      return { text, src: 'know' };
+    }
+  }
+  const base = whereaboutsOf(targetId);
+  const text = base ? `${who}道：「${tname}平日的去处我知道——${base}。」` : `${who}道：「${tname}啊，他没个准地方，街面上常碰得着。」`;
+  pushFeed('江湖', text);
+  return { text, src: 'know' };
+}
+
+
 export function hearsay(): string | null {
   const w = worldOf(), today = dayNo(S), region = room(S.loc).region, heard = new Set(S.heard ?? []);
   let best: { r: RumorInst; text: string; s: number } | null = null;
