@@ -17,10 +17,16 @@ export const ROUTE_PREFIX = '给:';
 
 const labelNames = item => (item.labels ?? []).map(l => (typeof l === 'string' ? l : l.name));
 
-/** Issue 正文里「依赖：#12、#13」这一行列出的编号 */
+/** Issue 正文里「依赖：#12、#13」这一行列出的编号。括号里是备注（「依赖：无（#146 动的是别的文件）」），不算依赖；「依赖：无」开头的一件也不算 */
+export function depLine(text) {
+  let t = text.trim();
+  if (/^无/.test(t)) return '';
+  for (let k = 0; k < 5; k++) t = t.replace(/（[^（）]*）|\([^()]*\)/g, '');
+  return t;
+}
 export function deps(body) {
   const m = (body ?? '').match(/依赖[:：]([^\n]*)/);
-  return m ? [...m[1].matchAll(/#(\d+)/g)].map(x => Number(x[1])) : [];
+  return m ? [...depLine(m[1]).matchAll(/#(\d+)/g)].map(x => Number(x[1])) : [];
 }
 
 /** 远端分支名里的 Issue 编号：<工具名>/<编号>-<英文>，维护者的 claude/ 分支不算 */
