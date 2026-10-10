@@ -52,7 +52,6 @@ button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(-
 .chip.bad{background:var(--badbg);color:var(--bad)}
 .chip.run{background:var(--runbg);color:var(--run)}
 .chip.acc{background:transparent;border:1px solid var(--acc);color:var(--acc)}
-
 /* 图一：里程碑进度环 */
 .ringcard{text-align:center}
 .ringcard .mname{font-size:14px;font-weight:600;overflow-wrap:anywhere}
@@ -116,6 +115,28 @@ button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(-
 .jd .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--bar-todo)}
 .jd.done .dot{background:var(--c-done)}
 .jd.doing .dot{background:var(--c-doing)}
+
+/* 负责人要求 */
+.yq-sum{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;margin:2px 0 6px}
+.yq-sum b{font-size:15px}
+.yq-bar{height:10px;border-radius:5px;background:var(--track);overflow:hidden;display:flex;margin-bottom:8px}
+.yq-bar i{display:block;height:100%}
+.yq-bar .d{background:var(--c-done)}
+.yq-bar .g{background:var(--c-doing)}
+.yq{border-top:1px solid var(--line);padding:8px 0;min-width:0}
+.yq-list .yq:first-child{border-top:0}
+.yq .h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.yq .id{color:var(--acc);font-weight:600}
+.yq .say{margin:2px 0;overflow-wrap:anywhere}
+.yq .what,.yq .who{font-size:13px;color:var(--sub);overflow-wrap:anywhere}
+.yq .lk{margin-top:4px}
+.yq .lk a{display:inline-block;text-decoration:none;font-size:12px;line-height:1.4;padding:3px 8px;margin:2px 4px 2px 0;border-radius:999px;background:var(--graybg);color:var(--sub);max-width:100%;overflow-wrap:anywhere}
+.yq .lk a.ok{background:var(--okbg);color:var(--ok)}
+.yq .lk a.bad{background:var(--badbg);color:var(--bad)}
+.yq .lk a.run{background:var(--runbg);color:var(--run)}
+.chip.st-done{background:var(--okbg);color:var(--ok)}
+.chip.st-doing{background:var(--warnbg);color:var(--warn)}
+.chip.st-todo{background:var(--graybg);color:var(--sub)}
 .empty{color:var(--sub);font-size:13px;padding:4px 0}
 .err{color:var(--bad);font-size:13px}
 </style>
@@ -133,7 +154,7 @@ button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(-
 <script type="module">
 import {
   REPO, has, nameOfRef, giveOf, isTask, ago,
-  processRaw, sumRuns, computeBoard
+  processRaw, sumRuns, computeBoard, yaoqiuStatus, yaoqiuSummary
 } from './core.mjs';
 
 var API = 'https://api.github.com/repos/' + REPO;
@@ -163,7 +184,7 @@ function chip(text, cls) { return el('span', { class: 'chip' + (cls ? ' ' + cls 
 function svgBox(html) { var d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
 
 /* ---------- 取数 ---------- */
-var state = { data: null, checks: {}, jindu: null, when: 0, source: '', err: null, limitMsg: '', note: '' };
+var state = { yaoqiu: null, data: null, checks: {}, jindu: null, when: 0, source: '', err: null, limitMsg: '', note: '' };
 
 // 一、预先算好的 data.json
 function fetchDataFile() {
@@ -195,6 +216,11 @@ function gh(path) {
 function fetchJindu() {
   return fetch('jindu.json?t=' + Math.floor(Date.now() / 60000)).then(function (r) {
     if (!r.ok) throw new Error('jindu ' + r.status); return r.json();
+  });
+}
+function fetchYaoqiu() {
+  return fetch('yaoqiu.json?t=' + Math.floor(Date.now() / 60000)).then(function (r) {
+    if (!r.ok) throw new Error('yaoqiu ' + r.status); return r.json();
   });
 }
 function loadAll() {
@@ -257,6 +283,46 @@ function prChips(res) {
   if (!res) { box.push(chip('检查未查')); return box; }
   ['check', 'smoke'].forEach(function (nm) { box.push(chip(nm + ' ' + names[res[nm]], cls[res[nm]])); });
   return box;
+}
+
+
+/* 负责人要求：逐条的执行和进度 */
+var YQ_TXT = { done: '完成', doing: '进行中', todo: '未开始' };
+function yaoqiuCard(Y, d) {
+  var card = el('div', { class: 'card' });
+  if (!(Y && Array.isArray(Y.items))) {
+    card.appendChild(el('div', { class: 'err', text: '读不到 yaoqiu.json' }));
+    return card;
+  }
+  var sm = yaoqiuSummary(Y.items, d);
+  card.appendChild(el('div', { class: 'ctitle' }, [el('span', { text: Y.title || '负责人的要求' }), el('small', { text: (Y.updated || '') })]));
+  var line = el('div', { class: 'yq-sum' });
+  [['共 ', sm.total, ' 条'], ['已完成 ', sm.done, ' 条'], ['进行中 ', sm.doing, ' 条'], ['未开始 ', sm.todo, ' 条']].forEach(function (x) {
+    line.appendChild(el('span', {}, [x[0], el('b', { text: String(x[1]) }), x[2]]));
+  });
+  card.appendChild(line);
+  var t = sm.total || 1;
+  card.appendChild(svgBox('<div class="yq-bar" role="img" aria-label="完成 ' + sm.done + '，进行中 ' + sm.doing + '，未开始 ' + sm.todo + '">' +
+    '<i class="d" style="width:' + (sm.done / t * 100).toFixed(1) + '%"></i><i class="g" style="width:' + (sm.doing / t * 100).toFixed(1) + '%"></i></div>'));
+  var list = el('div', { class: 'yq-list' });
+  Y.items.forEach(function (it) {
+    var r = yaoqiuStatus(it, d);
+    var row = el('div', { class: 'yq' });
+    row.appendChild(el('div', { class: 'h' }, [el('span', { class: 'id', text: it.id }), chip(YQ_TXT[r.status], 'st-' + r.status), r.auto ? el('span', { class: 'sub', text: r.note }) : null]));
+    row.appendChild(el('div', { class: 'say', text: '“' + it.say + '”' }));
+    row.appendChild(el('div', { class: 'what', text: '怎么办：' + it.what }));
+    row.appendChild(el('div', { class: 'who', text: '谁做：' + it.who }));
+    if (r.links.length) {
+      var lk = el('div', { class: 'lk' });
+      r.links.forEach(function (l) {
+        lk.appendChild(el('a', { class: l.cls, href: 'https://github.com/' + REPO + '/' + (l.kind === 'pr' ? 'pull' : 'issues') + '/' + l.n, target: '_blank', rel: 'noopener', text: '#' + l.n + (l.label ? ' ' + l.label : '') }));
+      });
+      row.appendChild(lk);
+    }
+    list.appendChild(row);
+  });
+  card.appendChild(list);
+  return card;
 }
 
 /* 图一：里程碑进度环 */
@@ -398,6 +464,7 @@ function render() {
   root.textContent = '';
   var d = state.data;
   if (!d) {
+    root.appendChild(yaoqiuCard(state.yaoqiu, null));
     root.appendChild(el('div', { class: 'card err', text: state.limitMsg || state.err || '没有数据' }));
     return;
   }
@@ -413,6 +480,9 @@ function render() {
       el('span', { class: 's' }, typeof sub === 'string' ? [sub] : sub)
     ]);
   };
+
+  /* —— 最上面：负责人的要求 —— */
+  root.appendChild(yaoqiuCard(state.yaoqiu, d));
 
   /* —— 第一屏：三块图 —— */
   root.appendChild(ringCard(J, board, d.derived && d.derived.milestone));
@@ -527,12 +597,13 @@ function load(force) {
   var btn = document.getElementById('refresh'); btn.disabled = true; btn.textContent = '刷新中';
   state.limitMsg = ''; state.err = null; state.note = '';
   var jp = fetchJindu().then(function (j) { state.jindu = j; }, function () { state.jindu = null; });
+  var yp = fetchYaoqiu().then(function (j) { state.yaoqiu = j; }, function () { state.yaoqiu = null; });
   return fetchDataFile().then(function (j) {
     state.data = j; state.when = Date.parse(j.generatedAt); state.source = 'file';
     state.checks = j.checks || {};
   }, function (e) {
     return loadDirect(force, '没读到预先算好的数据（' + (e && e.message || '网络') + '），改为直连 GitHub，有额度限制');
-  }).then(function () { return jp; }).then(function () {
+  }).then(function () { return Promise.all([jp, yp]); }).then(function () {
     busy = false; btn.disabled = false; btn.textContent = '刷新';
     render(); renderMeta();
   });

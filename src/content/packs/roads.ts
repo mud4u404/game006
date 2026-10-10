@@ -27,7 +27,7 @@ const ROOMS: RoomDef[] = [
     npcs: ['gz_dc_chuanjia'],
     exits: [['北岸', 'gz_pier', '渡'], ['南岸', 'zj_xijin', '渡']],
     road: '你踏上跳板，渡船晃了一晃……' },
-  { id: 'zj_xijin', name: '西津渡', area: '镇江 · 京口', region: 'zj', t: 10, map: [50, 16], nightQuiet: true,
+  { id: 'zj_xijin', name: '西津渡', area: '镇江 · 西津渡', region: 'zj', t: 10, map: [50, 16], nightQuiet: true,
     desc: [
       { if: { hour: { from: 23, to: 5 } }, text: '夜里的西津渡没了人声。泊位上的船挤在一处，桅灯一盏一盏地晃；石阶上头的待渡亭黑着灯，江风灌进去，隐约听得见柱上的旧告示哗哗响。' },
       { if: { shi: { id: 'sszj_du', at: ['zhangjia'] } },
@@ -52,7 +52,7 @@ const ROOMS: RoomDef[] = [
     exits: [],
     road: '渡船靠了岸，你跳上西津渡的石阶……' },
   // 负责人 10-09「场景不许像派出所审犯人」：何税吏、许嫂、夜里的说书先生从渡口挪进待渡亭
-  { id: 'zj_daiting', name: '待渡亭', area: '镇江 · 西津渡口', region: 'zj', t: 5, map: [30, 30], nightQuiet: true,
+  { id: 'zj_daiting', name: '待渡亭', area: '镇江 · 西津渡', region: 'zj', t: 5, map: [30, 30], nightQuiet: true,
     desc: [
       { if: { hour: { from: 23, to: 5 } },
         text: '夜深了，待渡亭里空荡荡的，江风灌进来，吹得柱上的旧告示哗哗地响。亭柱上那些刻字，叫月光照得一道一道发白。' },

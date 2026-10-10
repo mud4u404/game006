@@ -23,7 +23,7 @@ const HUNTING: Cond = { quest: { id: Q, is: 1 } };
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'zhuyuwan', name: '茱萸湾', area: '扬州 · 运河', region: 'yz', t: 20, map: [90, 26], nightQuiet: true,
+    id: 'zhuyuwan', name: '茱萸湾', area: '扬州 · 运河渡口', region: 'yz', t: 20, map: [90, 26], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } }, text: '夜里的茱萸湾只剩芦苇沙沙地响。渔家的矮屋都熄了灯，晾网的竹竿在夜色里排成一列，像一排瘦长的人影。' },
       { text: '运河在这里拐了个大弯，岸边一片芦苇荡，十几户渔家的矮屋挤在堤下，墙上还留着齐腰高的水痕。网晾在竹竿上，滴着水。芦苇深处歪着一条破船，船篷塌了半边。' }

@@ -4,7 +4,7 @@ import type { ContentPack, FoeDef, NpcDef, QuestDef, RoomDef } from '../types';
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'huafang', name: '画舫', area: '瘦西湖 · 湖上月', region: 'yz', t: 5, map: [34, 70],
+    id: 'huafang', name: '画舫', area: '扬州 · 瘦西湖', region: 'yz', t: 5, map: [34, 70],
     desc: [
       { if: { notFlag: 'huafang_gone', hour: { from: 5, to: 18 } },
         text: '一条精致的花篷画舫泊在湖心，湖面上飘着细碎的荷花香。船头挂着半幅写了「云娘」二字的绸帘，几位船娘正擦洗着舷窗。' },

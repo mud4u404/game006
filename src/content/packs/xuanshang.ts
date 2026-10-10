@@ -11,8 +11,15 @@ const NPCS: NpcDef[] = [
     id: 'xsb_zhuren', name: '书办', ini: '书', tone: 'blue', brief: '抄着文书',
     look: '府衙的老书办，五十来岁，一笔馆阁体写得端正。管着海捕文书的张贴和撤换，也管登记领赏。',
     at: { room: 'yz_zhaobi' },
-    verbs: ['交谈', '观察', { verb: '揭寻人', if: { jobOpen: 'xsb_xunren' } }, { verb: '揭寻物', if: { jobOpen: 'xsb_xunwu' } }, { verb: '揭缉凶', if: { jobOpen: 'xsb_xiong', notFlag: 'xsb_xiong_done' } }, { verb: '揭剿匪', if: { jobOpen: 'xsb_jiaofei' } }, { verb: '揭河贼', if: { jobOpen: 'xs_hezei' } }, { verb: '交寻人', if: { job: 'xsb_xunren', flag: 'xsb_xr_found' } }, { verb: '交寻物', if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' } }, { verb: '交缉凶', if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat', notFlag: 'xsb_xiong_gone', any: [{ flag: 'xsb_xiong_sent' }, { flag: 'xsb_xiong_self' }] } }, { verb: '交剿匪', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' } }, { verb: '交河贼', if: { job: 'xs_hezei', flag: 'xs_hezei_caught' } }],
+    verbs: ['交谈', '观察', '打听', { verb: '揭寻人', if: { jobOpen: 'xsb_xunren' } }, { verb: '揭寻物', if: { jobOpen: 'xsb_xunwu' } }, { verb: '揭缉凶', if: { jobOpen: 'xsb_xiong', notFlag: 'xsb_xiong_done' } }, { verb: '揭剿匪', if: { jobOpen: 'xsb_jiaofei' } }, { verb: '揭河贼', if: { jobOpen: 'xs_hezei' } }, { verb: '交寻人', if: { job: 'xsb_xunren', flag: 'xsb_xr_found' } }, { verb: '交寻物', if: { job: 'xsb_xunwu', flag: 'xsb_xw_found' } }, { verb: '交缉凶', if: { job: 'xsb_xiong', flag: 'xsb_xiong_beat', notFlag: 'xsb_xiong_gone', any: [{ flag: 'xsb_xiong_sent' }, { flag: 'xsb_xiong_self' }] } }, { verb: '交剿匪', if: { job: 'xsb_jiaofei', flag: 'xsb_jf_beat' } }, { verb: '交河贼', if: { job: 'xs_hezei', flag: 'xs_hezei_caught' } }],
     actions: {
+      打听: [
+        { if: { any: [{ job: 'xsb_xunren' }, { job: 'xsb_xunwu' }, { job: 'xsb_xiong' }, { job: 'xsb_jiaofei' }, { job: 'xs_hezei' }] },
+          text: '书办拿笔杆点了点：「你揭的榜，寻人去东圈门布庄问掌柜，寻物去找绣娘阿蕙，缉凶去问周氏，剿匪上蜀冈找猎户老韩，河贼夜里在渡口盐包后头。」' },
+        { if: { hour: { from: 9, to: 16 } },
+          text: '「手头紧？码头扛包找常把头，书摊抄写找席先生，后厨帮厨找葛师傅。这个时辰都开着，赶早去。」' },
+        { text: '「照壁上四张榜，赏格都在这本底册上。要揭，在我这儿画押。」', do: [{ type: 'news' }] }
+      ],
       交谈: [
         { if: { flag: 'xsb_xr_done' }, text: '书办翻了翻册子：「寻人的那桩，学徒找到了。他师父已经领人回去了——多亏公子帮着打听。」' },
         { if: { flag: 'xsb_xw_done' }, text: '书办在册子上画了个勾，道：「寻物的那桩也结了，阿蕙已经领回玉佩。」' },

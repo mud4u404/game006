@@ -39,7 +39,7 @@ import type { Cond, ContentPack, Effect, FightResult, FoeDef, ItemDef, NewsDef, 
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'bs2_wuguan', name: '广陵武馆', area: '扬州城 · 东关街', region: 'yz', t: 5, map: [38, 94], nightQuiet: true,
+    id: 'bs2_wuguan', name: '广陵武馆', area: '扬州 · 东关街', region: 'yz', t: 5, map: [38, 94], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '武馆的院门虚掩着，馆主早回家了。院里的木桩、石锁黑黢黢地立着，只有廊下一盏油灯，石墩就着灯光给自己手上的裂口抹药油。' },
@@ -50,7 +50,7 @@ const ROOMS: RoomDef[] = [
     road: '你从东关街拐进窄巷，老远就听见院里砰砰的砸桩声……'
   },
   {
-    id: 'bs2_longwang', name: '龙王庙', area: '扬州 · 运河堤', region: 'yz', t: 15, map: [92, 52],
+    id: 'bs2_longwang', name: '龙王庙', area: '扬州 · 运河渡口', region: 'yz', t: 15, map: [92, 52],
     desc: [
       { if: { flag: 'bs2_gb_in' },
         text: '运河堤下的破庙，龙王爷的金身剥得只剩泥胎。叫化子们挤在稻草堆里烤火，见你进来，往旁边挪了挪，给你让出火边一块地方。铁锅里的粥咕嘟咕嘟冒着泡。' },
@@ -416,12 +416,19 @@ const NPCS: NpcDef[] = [
   {
     id: 'bs2_han', name: '韩什长', ini: '韩', tone: 'red', brief: '在帐前操练新兵', at: { room: 'yz_mubing' },
     look: '四十来岁，半边脸上一大块烧伤的疤，一只耳朵没了。站着像一杆枪，脚边立着一根去了枪头的白蜡杆。',
-    verbs: ['交谈', '观察',
+    verbs: ['交谈', '观察', '打听',
       { verb: '投军', if: { notFlag: 'bs2_jw_in' } },
       { verb: '请教', if: { sect: JW } },
       { verb: '考校', if: { sect: JW, notFlag: 'bs2_jw_wai' } },
       { verb: '讨差事', if: { sect: JW } }],
     actions: {
+      打听: [
+        { if: { shi: { id: 'lsm_xiong', at: ['zaitao', 'zuoan'] } },
+          text: '「逃兵熊大，改名换姓在镇江打铁巷抡锤。那家铁铺一打听就找得到，他右臂上刺着『忠勇』二字。」' },
+        { if: { any: [{ job: 'smcs_jw_xun' }, { job: 'smcs_jw_liang' }] },
+          text: '「巡夜的差事，交令找官道驿亭的哨兵；押粮的，找瓜洲码头的粮官。按令行事，别误了时辰。」' },
+        { text: '「当兵的只管操练、巡营。江湖上的事，我这儿没有；码头上跑一趟，什么都有人讲。」', do: [{ type: 'news' }] }
+      ],
       交谈: [
         // 海捕文书 · 逃兵熊大（packs/liushanmen.ts）：识破他的一条路，也是一桩两难
         { if: { shi: { id: 'lsm_xiong', at: ['zaitao', 'zuoan'] }, notFlag: 'lsm_xiong_shipo' },

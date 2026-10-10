@@ -27,14 +27,14 @@ const ROOMS: RoomDef[] = [
     npcs: ['caobang', 'liu'], objs: ['bei'],
     exits: [['北', 'daming'], ['东', 'dukou'], ['南', 'cheng'], ['西', 'jinshan']],
     road: '你折回湖畔，柳丝拂过肩头……' },
-  { id: 'daming', name: '大明寺', area: '扬州 · 蜀冈', region: 'yz', t: 30, map: [50, 14],
+  { id: 'daming', name: '大明寺', area: '扬州 · 大明寺', region: 'yz', t: 30, map: [50, 14],
     desc: [
       { if: { hour: NIGHT_H }, text: '古寺掩了山门，只有大殿里一盏长明灯。蜀冈上风大，古木在黑暗里沙沙地响，禅房那头传来一两声木鱼。' },
       { text: '古寺依冈而建，晨钟初歇，香烟缭绕。平山堂前古木参天，一位白眉老僧正不疾不徐地扫着石阶上的落花。' }
     ],
     npcs: ['liaochen', 'zhike'], exits: [['南', 'hu']],
     road: '你沿着湖堤向北，拾级登上蜀冈……' },
-  { id: 'dukou', name: '运河渡口', area: '扬州 · 东关', region: 'yz', t: 15, map: [79, 50], nightQuiet: true,
+  { id: 'dukou', name: '运河渡口', area: '扬州 · 运河渡口', region: 'yz', t: 15, map: [79, 50], nightQuiet: true,
     desc: [
       // 夜里：脚夫、船夫都回去了，屠千山也回了船上
       { if: { hour: NIGHT_H, ...BOSS_HERE },
@@ -54,7 +54,7 @@ const ROOMS: RoomDef[] = [
     ],
     npcs: [{ id: 'tu', if: BOSS_HERE }, 'chuanfu', 'guanshi'], exits: [['西', 'hu']],
     road: '你穿过几条小巷，河风里带着咸腥的盐味……' },
-  { id: 'cheng', name: '东关街', area: '扬州城', region: 'yz', t: 15, map: [50, 86], nightQuiet: true,
+  { id: 'cheng', name: '东关街', area: '扬州 · 东关街', region: 'yz', t: 15, map: [50, 86], nightQuiet: true,
     desc: [
       // 夜里（packs/shishi-yangzhou.ts 的更夫、黑影只在夜里出来）
       { if: { hour: { from: 21, to: 5 }, shi: { id: 'ss_zei', at: ['qi', 'bang'] } },
@@ -70,14 +70,14 @@ const ROOMS: RoomDef[] = [
     npcs: ['yaopu', 'xiaoer'], exits: [['北', 'hu']],
     road: '你穿过高高的城门洞，市声渐渐近了……' },
   // 负责人 10-09「场景不许像派出所审犯人」：房牙子、布庄掌柜、跑腿的阿七从东关街挪进东圈门
-  { id: 'yz_dongquan', name: '东圈门', area: '扬州城 · 东关街北', region: 'yz', t: 5, map: [70, 92], nightQuiet: true,
+  { id: 'yz_dongquan', name: '东圈门', area: '扬州 · 东关街', region: 'yz', t: 5, map: [70, 92], nightQuiet: true,
     desc: [
       { if: { hour: NIGHT_H }, text: '圈门洞里黑魆魆的，两边的高墙挡住了月光，深院里偶尔一声狗叫。巷子尽头挂着一盏灯笼，照着谁家门上的一对铜环。' },
       { text: '东关街往北一拐，穿过一道砖砌的老圈门，便是东圈门。巷子窄窄的，两边高墙深院，墙头探出几枝枇杷、几丛修竹。巷口一家布庄半开着门板，过往的多是住在里头的人家。' }
     ],
     npcs: [], exits: [['街', 'cheng', '巷']],
     road: '你从东关街往北一拐，钻进了老圈门的门洞……' },
-  { id: 'jinshan', name: '小金山', area: '瘦西湖 · 湖心', region: 'yz', t: 10, map: [20, 50], nightQuiet: true,
+  { id: 'jinshan', name: '小金山', area: '扬州 · 瘦西湖', region: 'yz', t: 10, map: [20, 50], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } }, text: '湖心岛上黑沉沉的，风亭里没有灯。石桌上那局残棋还摆着，棋子叫夜露打湿了，泛着微光。四下里只有湖水拍岸的声音。' },
       { text: '湖心小岛上亭台错落，风亭立在山顶，凭栏可望尽一湖烟雨。亭中石桌上摆着一局残棋，一个老人对着棋盘出神。' }
@@ -167,8 +167,15 @@ const NPCS: NpcDef[] = [
     look: '须眉皆白，扫地时步子不疾不徐，落叶却都自己往簸箕里飘。',
     gift: '了尘大师合十一笑：「阿弥陀佛，拈花一笑，施主有心了。」',
     likes: ['flower'],
-    verbs: ['交谈', '观察', '请教', '赠礼'],
+    verbs: ['交谈', '观察', '打听', '请教', '赠礼'],
     actions: {
+      打听: [
+        { if: { shi: { id: 'kp_xun', at: ['fang', 'feng'] } },
+          text: '「卫家的公子在城里寻人，白天常在瘦西湖一带访，夜里歇在广陵客栈。要找的那个人，运河渡口的船家兴许见过。」' },
+        { if: { quest: { id: 'side_cangjing', atLeast: 1, below: 3 } },
+          text: '「藏经阁丢了经卷，守阁的是法空，常去转的是书贩张四。要寻眉目，先看阁里那几样东西。」' },
+        { text: '「寺里的日子简单：晨钟、早课、扫地、晚钟。施主要听世间的消息，山下的茶馆里多。」', do: [{ type: 'news' }] }
+      ],
       交谈: [
         // 新开局：先白给一层（江伯是他旧识，那夜的人冲着旧账来的），再把屠千山说成一条线，不是价钱
         { if: { quest: { id: 'main1', is: 0 }, item: { id: 'jade' }, flag: 'kp_xin', any: [{ item: { id: 'kp_mujian' } }] },
