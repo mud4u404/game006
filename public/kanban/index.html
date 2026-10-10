@@ -41,6 +41,9 @@ button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(-
 .banner.bad{background:var(--badbg);color:var(--bad)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 10px;min-width:0}
 .sub{color:var(--sub);font-size:12px}
+.mrem{margin-top:8px;text-align:left;font-size:12px;overflow-wrap:anywhere}
+.mrow{padding:3px 0;border-top:1px solid #8883}
+.mrow.bad{color:var(--bad)}
 .ctitle{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:14px;font-weight:600;margin:0 0 4px}
 .ctitle small{font-weight:400;color:var(--sub);font-size:12px}
 .chip{display:inline-block;font-size:12px;line-height:1.4;padding:1px 8px;border-radius:999px;background:var(--graybg);color:var(--sub);margin:2px 4px 2px 0;max-width:100%;overflow-wrap:anywhere}
@@ -257,7 +260,7 @@ function prChips(res) {
 }
 
 /* 图一：里程碑进度环 */
-function ringCard(J, board) {
+function ringCard(J, board, M) {
   var card = el('div', { class: 'card ringcard' });
   var mtxt = '近 24 小时合 ' + (board.sat24 ? '至少 ' : '') + board.merged24 + ' 件';
   if (!(J && J.items && J.milestone)) {
@@ -265,8 +268,9 @@ function ringCard(J, board) {
     card.appendChild(el('div', { class: 'sub', text: mtxt }));
     return card;
   }
-  var done = J.items.filter(function (i) { return i.status === 'done'; }).length, tot = J.items.length || 1;
-  var rem = (J.milestone.remaining || []).length;
+  var done = M ? M.done : J.items.filter(function (i) { return i.status === 'done'; }).length;
+  var tot = M ? (M.total || 1) : (J.items.length || 1);
+  var rem = M ? M.remaining.length : (J.milestone.remaining || []).length;
   var C = 2 * Math.PI * 48, dash = (C * done / tot).toFixed(1);
   card.appendChild(el('div', { class: 'mname', text: String(J.milestone.name || '').replace(/（[^）]*）\s*$/, '') }));
   card.appendChild(svgBox(
@@ -277,6 +281,14 @@ function ringCard(J, board) {
          : '<text class="r2" x="60" y="70" style="font-size:20px">做完了</text>') +
     '</svg>'));
   card.appendChild(el('div', { class: 'sub', text: '做完 ' + done + '/' + tot + ' · ' + mtxt }));
+  if (M && M.remaining.length) {
+    var ul = el('div', { class: 'mrem' });
+    M.remaining.forEach(function (r) {
+      var why = r.noIssue ? '没有任务单' : '等 ' + r.open.map(function (n) { return '#' + n; }).join('、');
+      ul.appendChild(el('div', { class: 'mrow' + (r.noIssue ? ' bad' : ''), text: '第 ' + String(r.id).padStart(3, '0') + ' 项 ' + r.title + ' · ' + why }));
+    });
+    card.appendChild(ul);
+  }
   return card;
 }
 
@@ -403,7 +415,7 @@ function render() {
   };
 
   /* —— 第一屏：三块图 —— */
-  root.appendChild(ringCard(J, board));
+  root.appendChild(ringCard(J, board, d.derived && d.derived.milestone));
   root.appendChild(aisCard(d, board));
   root.appendChild(rhythmCard(board));
 
