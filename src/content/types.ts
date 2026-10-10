@@ -197,6 +197,8 @@ export type Effect =
   | { type: 'jobDone'; id: string }
   /** 差事办砸了（镖丢了、人跑了）：不给钱，地位降一级 */
   | { type: 'jobFail'; id: string }
+  /** 放弃手上的差事：约作废，记一条「放弃」，冷却照 jobLog；不扣贡献、不降地位 */
+  | { type: 'jobQuit'; id: string }
   /** 开打：战斗结束后由对手定义里的 results 决定后续 */
   | { type: 'fight'; foe: string }
   /** 打开一段剧情卡片 */
@@ -905,6 +907,8 @@ export interface JobDef {
   xian?: { npc: string; at?: string; if?: Cond; text: string }[];
   /** 办完以后隔几个江湖日才能再接（不写为三日） */
   again?: number;
+  /** 收场的一句话，见闻簿「了结的事」里用；哪种结局没写，就用通用说法（engine/shenfen.ts 的 jobEndText） */
+  end?: Partial<Record<'办成' | '办砸' | '放弃' | '误期', string>>;
   /** 报酬的倍数（难办的差事多给些），不写为一 */
   k?: number;
   /**
