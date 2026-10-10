@@ -15,6 +15,7 @@ import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
 import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
 import { run } from '../engine/dsl';
+import { FAR_MIN, chufaLine } from '../engine/chufa';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
@@ -188,9 +189,11 @@ registerHandlers({
     const c = tripCost(v);
     if (!c) { toast('从这里去不了那儿'); return; }
     const short = c.fee > S.silver;
+    // 出远门（赶路超过一个时辰）：带伤、气血、内力、过夜的店钱，点之前说一声（engine/chufa.ts）。船钱不够的另有一句，不重复
+    const warn = c.min > FAR_MIN ? chufaLine(S, short ? undefined : c) : null;
     openSheet(`<h2>去${room(v).name}</h2>
       <p>路上约 <b>${minLabel(c.min)}</b>，经过 ${cn(c.hops)} 处${c.fee ? `；船钱和过路钱共 <b>${cn(c.fee)} 文</b>` : '；一路不花钱'}。</p>
-      ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}
+      ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}${warn ? `<p class="muted chufa">${warn}</p>` : ''}
       <div class="acts"><button class="btn" data-act="travelGo:${v}">出发</button><button class="btn ghost" data-act="sheetClose">再看看</button></div>`, true);
   },
   travelGo: v => { closeSheet(); travelTo(v); },

@@ -125,7 +125,8 @@ export type Effect =
   | { type: 'shi'; id: string; to?: string }
   | { type: 'feed'; tag: FeedTag; text: string }
   | { type: 'toast'; text: string }
-  | { type: 'silver'; delta: number }
+  /** if：条件成立才生效（失物赎回：上回被摸去的钱袋，这回赢了拿回来）；note：生效时记一条见闻 */
+  | { type: 'silver'; delta: number; if?: Cond; note?: string }
   /** max：加完不超过这个数（只给一件的东西，断点接回时重做一遍也不多给） */
   | { type: 'item'; id: string; delta: number; max?: number }
   /** 把行囊里这件装备穿上（放进它该在的位置，原来的挤回行囊）；行囊里没有、不是装备的，什么也不做 */

@@ -12,6 +12,7 @@ import type { EyeDef, Verb } from '../../content/types';
 import { cn, fmt } from '../../core/util';
 import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
+import { verbChufa } from '../../engine/chufa';
 import { test, textVars } from '../../engine/dsl';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
@@ -103,9 +104,11 @@ function detail(id: string): string {
   const foe = fid && fid.type === 'fight' ? foeById(fid.foe) : undefined;
   // 对手就是眼前这人时一律写「他」：不认识的「青衫书生」不能先漏出「柳寒舟」（审查 G41）
   const whom = foe && foe.id !== id && foe.name !== npcName(id) ? foe.name : '他';
+  // 揭榜、接镖、接差事：点之前先说一声眼下的状态（带伤、气血、内力、钱），只提示，不拦（engine/chufa.ts）
+  const chufa = verbChufa(id);
   const look = foe ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kanren(S, foe).say}</b></p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
-    <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${reply}</div>`;
+    <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
 }
 
 /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
