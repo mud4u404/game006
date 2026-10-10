@@ -8,7 +8,8 @@ import { $, cleanName, fmt } from '../core/util';
 import { room, storyById } from '../content';
 import type { StoryDef } from '../content/types';
 import { gainTags, leanText } from './qingxiang';
-import { lackOf, newOutcome, run, test, textVars, type Outcome } from '../engine/dsl';
+import { lackOf, newOutcome, test, textVars, type Outcome } from '../engine/dsl';
+import { act, effectReq, plan } from '../engine/xingdong';
 import { kpOpen, kpPick, kpPos } from '../engine/kaipian';
 import { afterOutcome, hooks, registerHandlers, render, swapped, toast, tooSoon } from './shell';
 import { welcomeBack } from './chuguan';
@@ -47,7 +48,11 @@ function draw(): void {
     : card.choices.map((c, k) => {
       // 选之前只写倾向，不写数（ui/qingxiang.ts）
       const sub = c.sub ? leanText(c.sub) : '';
-      if (test(c.if)) return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
+      if (test(c.if)) {
+        const p = plan(effectReq('抉择', cur!.def.id, c.do, c.if, `story:${cur!.def.id}:${cur!.i}`));
+        if (!p.ok) return `<button class="choice locked" data-act="stLocked:${k}" aria-disabled="true"><b>${c.label}</b><small>${p.why ?? ''}</small></button>`;
+        return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
+      }
       // 够不着的路也摆出来、写明差什么（钱、根基、侠义……）；剧情上的条件不成立的照旧藏着
       const lack = lackOf(c.if);
       return lack ? `<button class="choice locked" data-act="stLocked:${k}" aria-disabled="true"><b>${c.label}</b><small>${lack}</small></button>` : '';
@@ -74,14 +79,17 @@ function pick(k: number): void {
   const card = cur.def.cards[cur.i];
   const c = card.choices[k];
   if (!c || !test(c.if)) return;
+  const req = effectReq('抉择', cur.def.id, c.do, c.if, `story:${cur.def.id}:${cur.i}`);
+  const p = plan(req);
+  if (!p.ok) { toast(p.why ?? '眼下还办不了。'); draw(); return; }
   if (card.input === 'name') {
     const raw = ($('#nameIn') as HTMLInputElement | null)?.value || '';
     S.name = cleanName(raw) || '孤舟';
   }
-  run(c.do, cur.out);
-  const next = c.next ?? cur.i + 1;
-  // 新序章：选完就记下一站并存档，刷新、关了再开都接回这一屏（engine/kaipian.ts）
-  if (kpPick(S, cur.def.id, cur.def.cards.length, cur.out, next)) save();
+  const playing = cur, next = c.next ?? cur.i + 1;
+  // 奖励和下一站在同一次结算里存下，刷新不会回到已经领过好处的选项。
+  const result = act(req, cur.out, out => { kpPick(S, playing.def.id, playing.def.cards.length, out, next); });
+  if (!result.ok) { toast(result.why ?? '眼下还办不了。'); draw(); return; }
   if (c.result) { cur.result = c.result; cur.next = next; cur.picked = c.sub; draw(); return; }
   // 没有结果文字的选项：加了什么，提示条里说一句
   if (gainTags(c.sub).length) toast(gainTags(c.sub).join('　'));
@@ -194,7 +202,12 @@ registerHandlers({
   stName: v => { const el = $('#nameIn') as HTMLInputElement | null; if (el) el.value = v; },
   chapDone: () => finishChapter(),
   // 够不着的选项：点了说清差什么
-  stLocked: v => { const c = cur?.def.cards[cur.i].choices[Number(v)]; const lack = c && lackOf(c.if); if (lack) toast(`还走不了这条路：${lack}`); },
+  stLocked: v => {
+    const c = cur?.def.cards[cur.i].choices[Number(v)];
+    if (!c || !cur) return;
+    const lack = lackOf(c.if) ?? plan(effectReq('抉择', cur.def.id, c.do, c.if, `story:${cur.def.id}:${cur.i}`)).why;
+    if (lack) toast(`还走不了这条路：${lack}`);
+  },
   tContinue: () => {
     const saved = load();
     if (!saved) return;
