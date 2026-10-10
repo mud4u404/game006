@@ -39,6 +39,7 @@ jobs:
   smoke:
     if: github.event.deleted != true
     runs-on: ubuntu-latest
+    timeout-minutes: 20   # 兜底：卡在装浏览器、拉代码上时别占满默认的六小时
     steps:
       - uses: actions/checkout@v4
         with:

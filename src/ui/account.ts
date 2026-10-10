@@ -2,6 +2,7 @@
  * 账号：登录、注册、退出，本机和云上进度不一致时让玩家选，云上的备份。
  * 规则在 net/cloud.ts、net/sync.ts；由 main.ts 引入。
  */
+import { tupoClear } from '../engine/tupo';
 import { setState, type GameState } from '../core/state';
 import { migrate, readSave, replaceSave, summary } from '../core/save';
 import { $ } from '../core/util';
@@ -72,6 +73,7 @@ function useCloud(cloud: CloudSave): void {
   let st: GameState;
   try { st = migrate(cloud.data); } catch { toast('云上的存档读不出来，先用本机的'); return; }
   replaceSave(st);
+  tupoClear(); // 换存档：旧档攒着没弹的突破卡不带过去
   setState(st);
   if (s) markSynced(s.uid, st);
   closeSheet();

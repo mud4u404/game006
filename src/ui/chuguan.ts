@@ -10,8 +10,10 @@ import { ZONE_NAME } from '../engine/duel';
 import { gongliText } from '../engine/ren';
 import { gongliCeiling } from '../engine/lilian';
 import { TIELV_TEXT, nextYue, settleAway, skillName, xinmoLine, yueText, type RestReport } from '../engine/shiguang';
+import { tierCheck, tupoAdd, tupoTake } from '../engine/tupo';
 import { inFight } from './fight';
 import { openSheet, render } from './shell';
+import { tupoBlockHTML } from './tupo';
 
 const hoursText = (h: number): string => {
   // 现实一小时是半个时辰；说「几个时辰」
@@ -21,11 +23,15 @@ const hoursText = (h: number): string => {
 
 /** 邸报的正文；head 是开头的一句 */
 export function chuguanHTML(r: RestReport, head: string, title: string, stop?: string): string {
+  // 这一回出关长的境界、档次、新学的武功，攒在 engine/tupo.ts 里，合成最上面的一块「突破」；
+  // 这里取走，出关后就不会再另外弹一张卡
+  tierCheck();
+  r.breaks.forEach(x => tupoAdd('zhong', x));
+  const tupo = tupoBlockHTML(tupoTake());
   const healTxt = Object.entries(r.healed).map(([z, n]) => `${ZONE_NAME[z as 'hand']}伤好了${liang(n as number)}级`).join('、');
   const chips = [
     `<span class="tag ${r.used ? 'accent' : ''}">${r.used ? `消化历练 ${r.used}` : r.grow === 0 ? '这几日修为没有长进，伤照样养' : '没有历练可消化，闭门造车'}</span>`,
     ...r.gains.map(([k, v]) => `<span class="tag accent">${skillName(k)} +${v}</span>`),
-    ...r.breaks.map(x => `<span class="tag info">${x}</span>`),
     // 写长了多少：原来三回出关都写「功力深到三年」，看着像一点没长（审查 G12）
     r.gongli > 0 ? `<span class="tag accent">功力深了${r.gongli >= 1 ? gongliText(r.gongli) : `${cn(Math.max(1, Math.round(r.gongli * 12)))}个月`}（如今${gongliText(S.gongli)}）</span>`
       // 功力熬到了这一重内功的顶：写明白，别让人以为白闭关了（审查 G11）
@@ -47,6 +53,7 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
   if (y) lines.push(`<div><span class="tag warn">有约</span><span>${yueText(S, y)}</span></div>`);
   for (const n of r.news) lines.push(`<div><span class="tag warn">传闻</span><span>${n}</span></div>`);
   return `<div class="r-h"><span class="tag accent">出关</span><h2>${title}</h2></div>
+    ${tupo}
     <p class="story">${head}</p>
     ${stop ? `<p class="muted">${stop}</p>` : ''}
     <div class="rewards">${chips.join('')}</div>
@@ -67,9 +74,11 @@ export function welcomeBack(): boolean {
   // 约的内容下面「有约」那一行会写，这里不再重复（审查 G27）
   const stop = rep.why === 'yue' && rep.yue ? '约期到了，今日一早出关。' : rep.why === 'tielv' ? (rep.grow ? `其中${liang(rep.grow)}日修为有长进；余下的日子，${TIELV_TEXT}` : TIELV_TEXT) : undefined;
   pushFeed('出关', `静修${liang(rep.days)}日${rep.used ? `，消化历练 ${rep.used}` : ''}${rep.gongli > 0 ? `，功力深到${gongliText(S.gongli)}` : ''}。`);
+  // 先拼邸报（取走这回的突破），再画页面：不然 render 先把突破弹成另一张卡
+  const html = chuguanHTML(rep, awayHead(rep), `静修${liang(rep.days)}日`, stop);
   save();
   render();
-  openSheet(chuguanHTML(rep, awayHead(rep), `静修${liang(rep.days)}日`, stop));
+  openSheet(html);
   return true;
 }
 

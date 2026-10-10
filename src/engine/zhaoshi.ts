@@ -130,13 +130,24 @@ export const FX_SAY: Partial<Record<FxKind, (foe: string) => string>> = {
  */
 /** 掂斤两的说法：主语写清是谁强（原来「稍逊一筹」「略胜一筹」一字之差、意思相反，扫一眼就看反，审查 H23） */
 const KANREN: [number, string][] = [[0.95, '他不堪一击'], [0.75, '他远不如你'], [0.55, '你胜面大些'], [0.45, '旗鼓相当'], [0.25, '他略强于你'], [0.05, '他远在你之上'], [-1, '深浅看不透']];
-export function kanren(s: GameState, f: FoeDef, n = 40): { p: number; say: string } {
-  const prep = activePrep(f), kit = fightKit(s);
+export function kanren(s: GameState, f: FoeDef, n = 40, now = false): { p: number; say: string; hurt: string } {
+  const prep = activePrep(f);
+  // 掂斤两比的是实力：按玩家满状态（气血、内力回满，伤全好）来算，带着伤不会让「远不如你」变成「远在你之上」；
+  // 此刻的吃亏另用 hurt 一句话说。now 为真时按此刻的状态算（开打前给落伤封顶用，engine/shang.ts）
+  const hero: GameState = now ? s : { ...s, hp: s.hpMax, mp: s.mpMax, wounds: { hand: 0, foot: 0, inner: 0 } };
+  const kit = fightKit(hero);
   let w = 0;
   for (let i = 0; i < n; i++) {
-    const d = new Duel(heroSpec(s, kit, f), foeSpec(f, prep), { rng: mulberry32(9001 + i * 7919), allies: alliesOf(prep) });
+    const d = new Duel(heroSpec(hero, kit, f), foeSpec(f, prep), { rng: mulberry32(9001 + i * 7919), allies: alliesOf(prep) });
     if (simulate(d, SKILLED).res === 'win') w++;
   }
   const p = w / n;
-  return { p, say: KANREN.find(([lo]) => p >= lo)![1] };
+  return { p, say: KANREN.find(([lo]) => p >= lo)![1], hurt: kanrenHurt(s) };
+}
+
+/** 带着伤的提醒：气血掉到九成以下，或手、足、内息任何一处有伤，就多说一句（掂斤两按满状态，此刻吃亏要让玩家知道） */
+export function kanrenHurt(s: GameState): string {
+  // 气血不到九成、内力不到五成、身上有伤：都算带伤，掂斤两时多说一句
+  const w = s.wounds, hurt = s.hp < s.hpMax * 0.9 || s.mp < s.mpMax * 0.5 || w.hand + w.foot + w.inner > 0;
+  return hurt ? '你眼下带着伤，真动起手来，要吃些亏。' : '';
 }
