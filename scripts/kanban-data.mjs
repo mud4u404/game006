@@ -4,20 +4,37 @@
 // 取数、整理、统计口径都在 public/kanban/core.mjs，页面直连 API 的退路也用同一份，两边的数不会对不上。
 //
 // 用法：GITHUB_TOKEN=... node scripts/kanban-data.mjs [输出文件，默认 data.json]
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { REPO, HOUR, computeBoard, processRaw, sumRuns } from '../public/kanban/core.mjs';
+import { REPO, HOUR, computeBoard, milestoneOf, processRaw, slimClosed, sumRuns } from '../public/kanban/core.mjs';
 
 /* get(路径) -> 解析好的 JSON；路径从 /repos/<仓库> 之后算起，和页面里的写法一样 */
+const jinduPath = fileURLToPath(new URL('../public/kanban/jindu.json', import.meta.url));
+
+/* 翻页取全：第一页路径不带 page（和老写法一致），之后 &page=2…；某页不足 100 条就停，最多 maxPages 页 */
+async function getPages(get, path, maxPages) {
+  let all = [];
+  for (let p = 1; p <= maxPages; p++) {
+    const part = await get(p === 1 ? path : path + '&page=' + p);
+    all = all.concat(part);
+    if (part.length < 100) break;
+  }
+  return all;
+}
+
 export async function buildData(get, now = Date.now()) {
-  const [issues, openPulls, closedPulls, events1, events2] = await Promise.all([
-    get('/issues?state=open&per_page=100'),
+  const [issues, closedIssues, openPulls, closedPulls, events1, events2] = await Promise.all([
+    getPages(get, '/issues?state=open&per_page=100', 5),
+    getPages(get, '/issues?state=closed&sort=updated&direction=desc&per_page=100', 3),
     get('/pulls?state=open&per_page=50'),
     get('/pulls?state=closed&sort=updated&direction=desc&per_page=100'),
     get('/events?per_page=100'),
     get('/events?per_page=100&page=2'),
   ]);
   const data = processRaw({ issues, openPulls, closedPulls, events1, events2 }, now);
+  const closedSlim = closedIssues.filter((x) => !x.pull_request).map(slimClosed);
+  let jindu = null;
+  try { jindu = JSON.parse(readFileSync(jinduPath, 'utf8')); } catch { /* 读不到就不算里程碑，页面退回 jindu.json */ }
 
   // 检查结果：对每个开着的 PR 的最新提交查一次（token 的额度每小时 1000 次，够用）
   const checks = {};
@@ -49,6 +66,8 @@ export async function buildData(get, now = Date.now()) {
       })),
       // 待领任务池：开着的 Issue 按「可领 / 暂缓 / 其他」分
       pool: poolOf(data.issues),
+      // 里程碑：照 Issue 引用的计划项号自动算，不靠手写
+      milestone: jindu ? milestoneOf(jindu, data.issues, closedSlim) : null,
     },
   };
 }

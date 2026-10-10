@@ -10,7 +10,11 @@ import { describe, pickWork } from './relay.mjs';
 const args = process.argv.slice(2);
 const once = args.includes('--once');
 const fi = args.indexOf('--for');
-const me = (fi >= 0 ? args[fi + 1] : process.env.WORK_FOR) ?? '';
+// 改过名的照旧认：step5 已改叫 workbuddy（10-10），还用旧名字的也领得到「给:workbuddy」
+const ALIAS = { step5: 'workbuddy' };
+const raw = ((fi >= 0 ? args[fi + 1] : process.env.WORK_FOR) ?? '').toLowerCase();
+const me = ALIAS[raw] ?? raw;
+if (ALIAS[raw]) console.log(`「${raw}」已改名为「${me}」，按 ${me} 领任务。以后请用 --for ${me}`);
 const mi = args.indexOf('--max-minutes');
 const maxMin = mi >= 0 ? Number(args[mi + 1]) || 0 : 0;
 

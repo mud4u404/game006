@@ -258,7 +258,7 @@ const QUESTS: QuestDef[] = [
   // 求引荐信：柏舟先生拒了之后开，申伯给了信推到第二步，柏舟收下信了结。只加新任务，不动「磨剑」的阶段，旧存档不受影响
   { id: 'smhs_yin', name: '华山 · 求引荐', lilian: 60, stages: [
     { title: '柏先生要一封担保的信', to: 'yz_fuya', hint: '他说扬州府里有人记着他的旧情，该去府衙问问。' },
-    { title: '信到手了，回北固山剑庐', to: 'smhs_jianlu', who: 'smhs_baizhou', hint: '火漆封着的信，该亲手交到柏舟先生手里。' },
+    { title: '信到手了，回北固山剑庐', to: 'smhs_jianlu', who: 'smhs_baizhou', hint: '火漆封着的引荐信，该亲手交到柏舟先生手里。' },
     { title: '华山 · 求引荐 · 完' }
   ],
   notes: [
