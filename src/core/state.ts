@@ -99,6 +99,8 @@ export interface GameState {
   lilian: number;
   /** 和每个对手最近交手的记录：七天内反复打同一人，历练一次比一次少 */
   foeLog?: Record<string, { n: number; day: number }>;
+  /** 掂过斤两的人（对手 id、当时看到的称呼），最近的在后，最多二十个（engine/zhanli.ts）；人物页「认得的人」用 */
+  diao?: { id: string; name: string }[];
   /**
    * 世事（engine/shishi.ts，docs/huojianghu.md）：每件事走到哪一步、哪一刻走到的（core/time.ts 的 absMin）、
    * 玩家知道到哪一步（没有就是还不知道）、了结过几回。还没起头的事不在这里

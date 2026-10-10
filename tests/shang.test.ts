@@ -24,16 +24,22 @@ describe('落伤看强弱', () => {
     expect(woundCap('win', 0.6)).toBe(1);
     expect(woundCap('win', 0.5)).toBe(2);
     expect(woundCap('win', 0.3)).toBe(Infinity);
-    expect(woundCap('lose', 0.9)).toBe(Infinity);
+    // 打输了也按强弱封顶（docs/sheji-s5-s6.md S6）：本该赢的失了手最多两级，相近的三级，差得远的四级；逃跑两级；输了差事一级
+    expect(woundCap('lose', 0.9)).toBe(2);
+    expect(woundCap('lose', 0.4)).toBe(3);
+    expect(woundCap('lose', 0.1)).toBe(4);
+    expect(woundCap('lose')).toBe(4);
+    expect(woundCap('flee', 0.1)).toBe(2);
+    expect(woundCap('lose', 0.1, true)).toBe(1);
     expect(capWounds({ hand: 1, inner: 2 }, 1)).toEqual({ inner: 1 });
   });
 
-  it('同样挨了三级重招，打赢弱的不落伤，打输了照落', () => {
+  it('同样挨了三级重招，打赢弱的不落伤，打输了落伤，但最多两级', () => {
     const f = foeById('xs_hezei')!;
     takeWounds(f, { hand: 2, inner: 1 }, 'win', 0.9);
     expect(S.wounds).toEqual({ hand: 0, foot: 0, inner: 0 });
     takeWounds(f, { hand: 2, inner: 1 }, 'lose', 0.9);
-    expect(S.wounds).toEqual({ hand: 2, foot: 0, inner: 1 });
+    expect(S.wounds).toEqual({ hand: 2, foot: 0, inner: 0 });
   });
 });
 

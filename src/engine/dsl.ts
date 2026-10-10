@@ -221,7 +221,11 @@ export function runStep(effects: Effect[] | undefined, out: Outcome = newOutcome
       case 'feed': pushFeed(e.tag, e.text); break;
       case 'feedReset': S.feed = []; break;
       case 'toast': notify(e.text); break;
-      case 'silver': S.silver = Math.max(0, S.silver + e.delta); break;
+      case 'silver':
+        if (!test(e.if)) break;
+        S.silver = Math.max(0, S.silver + e.delta);
+        if (e.note) pushFeed('江湖', e.note);
+        break;
       case 'item':
       {
         // max 只管加：手里本来就多于 max 的，不收走

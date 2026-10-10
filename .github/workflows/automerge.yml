@@ -1,0 +1,190 @@
+name: automerge
+
+# CI 跑完以后的事：红了打「要改」，全绿且只动了内容就 squash 合并。
+# 独立成一份工作流、用 workflow_run 触发，是因为 workflow_run 用的是 main 上的这份 yml：
+# 以前合并写在 ci.yml 里，push 事件用的是分支提交里的 ci.yml，落后的分支带着旧规则，全绿也合不了，还没人知道。
+# 现在规则只有 main 上这一份，分支落后多少都一样；脚本（scripts/automerge-scope.mjs）也取 main 的。
+#
+# 触发：CI 工作流（ci.yml）跑完（不论红绿、不论是推送还是手动启动）；main 和维护者的 claude/ 分支用 branches-ignore 挡掉。
+# 判断（每一步不满足就停，并在 PR 下留言说明原因，同一原因只留一次）：
+#   1. 看这次 run 里 check、smoke 两个 job 的结论：有一个失败 → 红；两个都成功 → 绿；被取消、跳过 → 什么都不做。
+#   2. 找这个分支开着的 PR，且 PR 的最新提交就是这次测的提交（期间又有推送，这次结果作废，留给下一轮 CI）。
+#   3. 红：给 PR 加「要改」和「给:<分支名前缀>」，评论失败的步骤（同一提交只留一次）。结束。
+#   4. 绿：PR 带「要改」时，只有本工作流之前留过红色评论（标记 automerge:ci-fail:）才摘掉它接着往下；
+#      否则「要改」是维护者打的，不合，不留言。然后判断能不能自动合：
+#      草稿、带「暂缓合并」标签：不合，不留言（人为拦的）；
+#      分支名里没有 Issue 编号：不合，不留言；
+#      Issue 不存在（或编号其实是个 PR）、已关闭、带「暂缓」：不合，留言；读 Issue 遇到临时错误：重试一次，仍失败就只打警告，不合、不留言；
+#      改动的文件越出 Issue「允许修改的文件」（完整路径或裸名都认，新增的内容包也必须点名，规则见 scripts/automerge.mjs）：不合，留言。
+#      （Issue 的开关、暂缓判断在文件范围判断之前，新增文件的 PR 也一样要过。）
+#   5. 都过了：squash 合并（一个提交），关闭 Issue，删分支，在 main 上重新部署试玩网址、重测 main。合并失败：在 PR 下留言（merge-fail:<提交>）并让这次运行变红。
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches-ignore: [main, 'claude/**']
+
+concurrency:
+  group: automerge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  after-ci:
+    # 只处理本仓库的分支（fork 的不动）
+    if: github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      BRANCH: ${{ github.event.workflow_run.head_branch }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      RUN_ID: ${{ github.event.workflow_run.id }}
+      RUN_URL: ${{ github.event.workflow_run.html_url }}
+    steps:
+      # 取 main 上的代码：要用它的 scripts/automerge-scope.mjs，并查内容包文件在不在
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: 红了打「要改」；全绿且只动了内容就合并
+        run: |
+          # 1. 这次 CI 里 check、smoke 的结论
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" > jobs.json
+          verdict() { jq -r --arg n "$1" '[.jobs[] | select(.name == $n) | .conclusion][0] // "none"' jobs.json; }
+          check=$(verdict check)
+          smoke=$(verdict smoke)
+          echo "check：$check，smoke：$smoke"
+          if [[ "$check" =~ ^(failure|timed_out)$ || "$smoke" =~ ^(failure|timed_out)$ ]]; then
+            state=red
+          elif [ "$check" = success ] && [ "$smoke" = success ]; then
+            state=green
+          else
+            echo "检查没跑完，或被取消、跳过，不处理。"
+            exit 0
+          fi
+
+          # 2. 找 PR，并确认检查的就是它现在的最新提交
+          pr_json=$(gh pr list --repo "$REPO" --base main --head "$BRANCH" --state open --json number,headRefOid,isDraft,labels --jq '.[0] // empty')
+          if [ -z "$pr_json" ]; then
+            echo "分支 $BRANCH 没有开着的 PR，不处理。"
+            exit 0
+          fi
+          PR=$(jq -r .number <<< "$pr_json")
+          if [ "$(jq -r .headRefOid <<< "$pr_json")" != "$HEAD_SHA" ]; then
+            echo "PR #$PR 已经有更新的提交，这次结果作废，等下一轮 CI。"
+            exit 0
+          fi
+          has_label() { jq -e --arg l "$1" 'any(.labels[]; .name == $l)' <<< "$pr_json" > /dev/null; }
+          # 在 PR 下留言，同一个标记只留一次
+          note() {
+            mark="<!-- automerge:$1 -->"
+            if gh pr view "$PR" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF "$mark"; then
+              echo "已经留过言：$1"
+              return 0
+            fi
+            gh pr comment "$PR" --repo "$REPO" --body "$mark
+          $2"
+          }
+          # 工作流里用到的标签，仓库里没有就先建（已有会报错，忽略）
+          gh label create "要改" --repo "$REPO" --color d93f0b --description "维护者退回，原作者先改完再领新任务" 2> /dev/null || true
+          gh label create "暂缓合并" --repo "$REPO" --color fbca04 --description "先别自动合并这个 PR" 2> /dev/null || true
+
+          # 3. 红：打「要改」和「给:作者」，说明失败的步骤
+          if [ "$state" = red ]; then
+            tool=${BRANCH%%/*}
+            tool=${tool,,}
+            gh label create "给:$tool" --repo "$REPO" --color 5319e7 --description "指派给 $tool" 2> /dev/null || true
+            gh pr edit "$PR" --repo "$REPO" --add-label "要改" --add-label "给:$tool"
+            failed=$(jq -r '[.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out")
+              | "- " + (if .name == "check" then "check（类型检查、测试、打包）" elif .name == "smoke" then "smoke（冒烟与乱点测试）" else .name end)
+                + "：" + ([.steps[] | select(.conclusion == "failure" or .conclusion == "timed_out") | "「" + .name + "」"] | join("、"))] | join("\n")' jobs.json)
+            note "ci-fail:$HEAD_SHA" "CI 没通过（提交 \`${HEAD_SHA:0:7}\`），失败的步骤：
+          $failed
+
+          已给这个 PR 加上「要改」和「给:$tool」。请原作者在**原分支**上修好再推送（先把最新 main 合进来），不要新开分支、不要新开 PR，也不要推空提交「重跑 CI」：冒烟测试已经自动重试过一次，红了就是真红，先看日志。日志：$RUN_URL"
+            exit 0
+          fi
+
+          # 4. 绿：带「要改」的，只有是本工作流之前因为 CI 红了打的（PR 里留着 ci-fail 标记）才摘掉；
+          #    否则「要改」是维护者打的，不自动合并，也不摘
+          if has_label "要改"; then
+            if gh pr view "$PR" --repo "$REPO" --json comments --jq '.comments[].body' | grep -qF '<!-- automerge:ci-fail:'; then
+              gh pr edit "$PR" --repo "$REPO" --remove-label "要改" || true
+            else
+              echo "PR 带「要改」，但不是 CI 红了打的（是维护者打的），不自动合并。"
+              exit 0
+            fi
+          fi
+          ISSUE=$(sed -nE 's#^[^/]+/([0-9]+)-.*#\1#p' <<< "$BRANCH")
+          if [ -z "$ISSUE" ]; then
+            echo "分支名里没有 Issue 编号，不自动合并。"
+            exit 0
+          fi
+          if [ "$(jq -r .isDraft <<< "$pr_json")" = true ] || has_label "暂缓合并"; then
+            echo "PR 是草稿或带「暂缓合并」标签，不自动合并。"
+            exit 0
+          fi
+          # 读 Issue：真 404（不存在）和临时错误（网络、限流）分开。临时错误重试一次，仍失败就只警告，不合、不留言
+          info=""
+          for try in 1 2; do
+            if info=$(gh api "repos/$REPO/issues/$ISSUE" 2> issue-err.txt); then break; fi
+            info=""
+            if grep -q 'HTTP 404' issue-err.txt; then break; fi
+            sleep 5
+          done
+          if [ -z "$info" ]; then
+            if grep -q 'HTTP 404' issue-err.txt; then
+              note "no-issue" "找不到分支名里的 Issue #$ISSUE，不能自动合并，等维护者审。分支名里的编号要写对。"
+            else
+              echo "::warning::读 Issue #$ISSUE 连续失败（$(head -c 200 issue-err.txt)），这次不合并，也不留言；重新运行这次工作流即可。"
+            fi
+            exit 0
+          fi
+          # 编号对应的其实是个 PR，不算 Issue
+          if jq -e '.pull_request != null' <<< "$info" > /dev/null; then
+            note "no-issue" "分支名里的 #$ISSUE 是个 PR，不是 Issue，不能自动合并，等维护者审。分支名里的编号要写成 Issue 的编号。"
+            exit 0
+          fi
+          if [ "$(jq -r .state <<< "$info")" != open ]; then
+            note "issue-closed" "Issue #$ISSUE 已经关闭，不自动合并，等维护者审（任务关了还有新提交，维护者要看一眼）。"
+            exit 0
+          fi
+          if jq -e 'any(.labels[]; .name == "暂缓")' <<< "$info" > /dev/null; then
+            note "issue-hold" "Issue #$ISSUE 带「暂缓」标签，不自动合并，等维护者审。"
+            exit 0
+          fi
+          jq -r '.body // ""' <<< "$info" > body.txt
+          gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[]' | jq -s '.' > files.json
+          scope=$(node scripts/automerge-scope.mjs body.txt files.json)
+          echo "范围判定：$scope"
+          if [ "$(jq -r .ok <<< "$scope")" != true ]; then
+            if [ "$(jq '.bad | length' <<< "$scope")" = 0 ]; then
+              echo "PR 没有改动文件，不合并。"
+              exit 0
+            fi
+            bad=$(jq -r '.bad | map("- `" + . + "`") | join("\n")' <<< "$scope")
+            hash=$(jq -r '.bad | join(",")' <<< "$scope" | sha1sum | cut -c1-8)
+            note "scope:$hash" "这个 PR 改了 Issue #$ISSUE「允许修改的文件」以外的文件（或改动方式不在自动合并的范围内），不能自动合并，等维护者审。越界的文件：
+          $bad
+
+          如果这些文件确实该改，在这里说一声，由维护者审；如果不该改，把它们的改动撤掉再推送。Issue 里写的允许文件，完整路径（src/content/packs/xxx.ts）或裸名（xxx.ts）都认，新增的内容包也要点名。"
+            exit 0
+          fi
+
+          # 5. 合并：只合并检查过的这一个提交（期间又有推送，就留给下一轮 CI）；压成一个提交
+          if ! out=$(gh pr merge "$PR" --repo "$REPO" --squash --match-head-commit "$HEAD_SHA" 2>&1); then
+            echo "$out"
+            note "merge-fail:$HEAD_SHA" "自动合并失败（提交 \`${HEAD_SHA:0:7}\`）：$(head -c 300 <<< "$out")。可能是和 main 有冲突、有人要求审查，或 GitHub 临时出错。等维护者看。"
+            exit 1
+          fi
+          # 机器人合并时，GitHub 不会按「Closes #编号」自动关闭 Issue，这里补上。
+          # 不关的话，协作者的 wait-for-work 会把它当成还没做的任务；分支留着，也会被当成有人在做。
+          gh issue close "$ISSUE" --repo "$REPO" --reason completed --comment "已由 #$PR 完成，检查通过后自动合并。" || true
+          gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" || true
+          # 用 GITHUB_TOKEN 合并不会触发 main 上的推送事件，这里手动启动部署和 main 的检查
+          gh workflow run pages.yml --repo "$REPO" --ref main
+          gh workflow run ci.yml --repo "$REPO" --ref main

@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<title>江湖夜雨 开发看板</title>
+<style>
+:root{
+  --bg:#f4f1ea; --card:#ffffff; --ink:#1f2328; --sub:#667085; --line:#e4dfd3;
+  --ok:#1a7f37; --okbg:#dcf3e1; --warn:#9a6700; --warnbg:#fff1c2; --bad:#c62828; --badbg:#fde0dd;
+  --run:#0b5fc5; --runbg:#dbeafe; --gray:#8a8f98; --graybg:#ececec; --acc:#8c3b2a;
+  --bar-done:#2e9e55; --bar-doing:#e0a526; --bar-todo:#cfcabd;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161a; --card:#1e2127; --ink:#e8e8ea; --sub:#9aa1ad; --line:#2f333b;
+    --ok:#5fd486; --okbg:#173823; --warn:#f0c040; --warnbg:#3b3012; --bad:#ff8a80; --badbg:#401c19;
+    --run:#7db3ff; --runbg:#16304f; --gray:#9aa1ad; --graybg:#2a2d33; --acc:#e8a08c;
+    --bar-done:#3fb86b; --bar-doing:#d8a21f; --bar-todo:#3b3f47;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161a; --card:#1e2127; --ink:#e8e8ea; --sub:#9aa1ad; --line:#2f333b;
+  --ok:#5fd486; --okbg:#173823; --warn:#f0c040; --warnbg:#3b3012; --bad:#ff8a80; --badbg:#401c19;
+  --run:#7db3ff; --runbg:#16304f; --gray:#9aa1ad; --graybg:#2a2d33; --acc:#e8a08c;
+  --bar-done:#3fb86b; --bar-doing:#d8a21f; --bar-todo:#3b3f47;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;overflow-x:hidden}
+main{max-width:760px;margin:0 auto;padding:12px 16px 48px}
+h1{font-size:19px;margin:6px 0 2px}
+h2{font-size:16px;margin:22px 0 8px;display:flex;align-items:baseline;gap:8px}
+h2 small{font-weight:400;color:var(--sub);font-size:12px}
+a{color:inherit}
+.top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.meta{color:var(--sub);font-size:12px;overflow-wrap:anywhere}
+button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px;min-height:36px}
+.banner{margin:10px 0;padding:10px 12px;border-radius:10px;font-size:13px;background:var(--warnbg);color:var(--warn)}
+.banner.bad{background:var(--badbg);color:var(--bad)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 10px;min-width:0}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--bar-todo);margin:8px 0}
+.bar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:baseline}
+.nums{display:flex;gap:10px}
+.nums div{flex:1;background:var(--graybg);border-radius:10px;padding:8px 10px;min-width:0}
+.nums b{display:block;font-size:22px;line-height:1.2}
+.nums span{font-size:12px;color:var(--sub)}
+.sub{color:var(--sub);font-size:12px}
+.chip{display:inline-block;font-size:12px;line-height:1.4;padding:1px 8px;border-radius:999px;background:var(--graybg);color:var(--sub);margin:2px 4px 2px 0;max-width:100%;overflow-wrap:anywhere}
+.chip.ok{background:var(--okbg);color:var(--ok)}
+.chip.warn{background:var(--warnbg);color:var(--warn)}
+.chip.bad{background:var(--badbg);color:var(--bad)}
+.chip.run{background:var(--runbg);color:var(--run)}
+.chip.acc{background:transparent;border:1px solid var(--acc);color:var(--acc)}
+.ai{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:640px){.ai{grid-template-columns:1fr 1fr}}
+.ai .card{margin:0}
+.ai h3{margin:0 0 6px;font-size:15px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:13px;margin:0}
+.kv dt{color:var(--sub);white-space:nowrap}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.row{display:block;text-decoration:none;padding:8px 0;border-top:1px solid var(--line);min-width:0}
+.row:first-child{border-top:0}
+.row .t{display:block;overflow-wrap:anywhere}
+.row .s{display:block;font-size:12px;color:var(--sub);overflow-wrap:anywhere}
+.n{color:var(--acc);font-weight:600;margin-right:6px}
+details>summary{cursor:pointer;padding:6px 0;font-size:14px}
+.empty{color:var(--sub);font-size:13px;padding:4px 0}
+.err{color:var(--bad);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <h1>江湖夜雨 · 开发看板</h1>
+      <div class="meta" id="meta">加载中……</div>
+    </div>
+    <button id="refresh" type="button">刷新</button>
+  </div>
+  <div id="banners"></div>
+  <div id="root"><div class="card empty">正在向 GitHub 取数据……</div></div>
+</main>
+<script>
+(function(){
+'use strict';
+var REPO='mud4u404/game006';
+var API='https://api.github.com/repos/'+REPO;
+var TTL=5*60*1000;          // 数据缓存五分钟
+var CKEY='kanban-cache-v1', KKEY='kanban-checks-v1';
+var AIS=[
+ {k:'codex',n:'Codex'},{k:'codebuddy',n:'CodeBuddy'},{k:'qoder',n:'Qoder'},{k:'minimax',n:'MiniMax'},
+ {k:'zcode',n:'zcode',tag:'整改观察'},{k:'trae',n:'Trae'},{k:'autoclaw',n:'autoclaw'},{k:'step5',n:'step5'},
+ {k:'claude',n:'维护者（Claude）',boss:true}
+];
+var HOUR=3600*1000;
+
+/* ---------- 小工具 ---------- */
+function lsGet(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function el(tag,attrs,kids){
+  var e=document.createElement(tag);
+  if(attrs){for(var a in attrs){
+    if(a==='class')e.className=attrs[a];
+    else if(a==='text')e.textContent=attrs[a];
+    else e.setAttribute(a,attrs[a]);
+  }}
+  (kids||[]).forEach(function(c){ if(c==null)return; e.appendChild(typeof c==='string'?document.createTextNode(c):c); });
+  return e;
+}
+function chip(text,cls){return el('span',{class:'chip'+(cls?' '+cls:''),text:text})}
+function ago(t){
+  if(!t)return '未知';
+  var s=Math.max(0,(Date.now()-t)/1000);
+  if(s<90)return '刚刚';
+  if(s<3600)return Math.round(s/60)+' 分钟前';
+  if(s<86400)return (s/3600).toFixed(s<36000?1:0).replace(/\.0$/,'')+' 小时前';
+  return Math.round(s/86400)+' 天前';
+}
+function prefixOf(ref){var i=(ref||'').indexOf('/');return i>0?ref.slice(0,i):''}
+function aiOf(ref){var p=prefixOf(ref);for(var i=0;i<AIS.length;i++)if(AIS[i].k===p)return AIS[i];return null}
+function nameOfRef(ref){var a=aiOf(ref);return a?a.n:(prefixOf(ref)||'其他')}
+function has(labels,x){return labels.indexOf(x)>=0}
+function giveOf(labels){
+  for(var i=0;i<labels.length;i++){var m=/^给[:：](.+)$/.exec(labels[i]);if(m)return m[1].trim().toLowerCase()}
+  return '';
+}
+
+/* ---------- 取数 ---------- */
+var rl={remaining:null,reset:null};   // 限流信息，来自响应头
+function gh(path){
+  return fetch(API+path,{headers:{'Accept':'application/vnd.github+json'}}).then(function(r){
+    var rem=r.headers.get('x-ratelimit-remaining'),rs=r.headers.get('x-ratelimit-reset');
+    if(rem!=null){rl.remaining=+rem;rl.reset=rs?+rs*1000:null}
+    if(r.status===403||r.status===429){
+      var e=new Error('limit');e.limit=true;
+      var ra=r.headers.get('retry-after');
+      if(ra&&!rl.reset)rl.reset=Date.now()+(+ra)*1000;
+      throw e;
+    }
+    if(!r.ok){var e2=new Error('HTTP '+r.status);throw e2}
+    return r.json();
+  });
+}
+function fetchJindu(){
+  return fetch('jindu.json?t='+Math.floor(Date.now()/60000)).then(function(r){
+    if(!r.ok)throw new Error('jindu '+r.status);return r.json();
+  });
+}
+function slimIssue(x){
+  var labels=(x.labels||[]).map(function(l){return l.name});
+  var dep='';
+  var m=/依赖[：:]\s*([^\n\r]*)/.exec(x.body||'');
+  if(m)dep=(m[1].match(/#\d+/g)||[]).join(' ');
+  return {n:x.number,title:x.title,labels:labels,created:Date.parse(x.created_at),dep:dep};
+}
+function slimPull(x){
+  return {n:x.number,title:x.title,ref:x.head&&x.head.ref,sha:x.head&&x.head.sha,
+    labels:(x.labels||[]).map(function(l){return l.name}),updated:Date.parse(x.updated_at),draft:!!x.draft};
+}
+function loadAll(){
+  // 五个接口：开着的 Issue（含 PR，要剔掉）、开着的 PR、已关的 PR、仓库事件两页（推送时间）
+  return Promise.all([
+    gh('/issues?state=open&per_page=100'),
+    gh('/pulls?state=open&per_page=50'),
+    gh('/pulls?state=closed&sort=updated&direction=desc&per_page=100'),
+    gh('/events?per_page=100'),
+    gh('/events?per_page=100&page=2')
+  ]).then(function(r){
+    var ev=r[3].concat(r[4]);
+    var data={t:Date.now()};
+    data.issues=r[0].filter(function(x){return !x.pull_request}).map(slimIssue);
+    data.pulls=r[1].map(slimPull);
+    data.closedFull=r[2].length>=100;
+    data.closedOldest=r[2].length?Date.parse(r[2][r[2].length-1].updated_at):0;
+    data.merged=r[2].filter(function(x){return x.merged_at}).map(function(x){
+      return {n:x.number,title:x.title,ref:x.head&&x.head.ref,at:Date.parse(x.merged_at)};
+    }).sort(function(a,b){return b.at-a.at});
+    data.pushes=ev.filter(function(e){return e.type==='PushEvent'&&e.payload&&e.payload.ref})
+      .map(function(e){return {ref:e.payload.ref.replace('refs/heads/',''),t:Date.parse(e.created_at)}});
+    data.evOldest=ev.length?Date.parse(ev[ev.length-1].created_at):Date.now();
+    data.evFull=ev.length>=100;
+    return data;
+  });
+}
+/* 检查结果：只对开着的 PR 的最新提交查，结果按提交缓存（跑完的永久有效，没跑完的五分钟） */
+function sumRuns(runs){
+  var out={};
+  ['check','smoke'].forEach(function(nm){
+    var best=null;
+    runs.forEach(function(r){ if(r.name===nm&&(!best||r.id>best.id))best=r; });
+    if(!best){out[nm]='none';return}
+    if(best.status!=='completed'){out[nm]='run';return}
+    out[nm]=(best.conclusion==='success'||best.conclusion==='neutral'||best.conclusion==='skipped')?'ok':'fail';
+  });
+  return out;
+}
+function loadChecks(pulls){
+  var cache=lsGet(KKEY)||{};
+  var now=Date.now(),todo=[];
+  pulls.forEach(function(p){
+    var c=cache[p.sha];
+    var fresh=c&&(c.done||now-c.t<TTL);
+    if(!fresh)todo.push(p);
+  });
+  // 限流紧的时候少查：剩余不足 12 次就不查检查结果
+  if(rl.remaining!=null&&rl.remaining<12)todo=[];
+  todo=todo.sort(function(a,b){return b.updated-a.updated}).slice(0,10);
+  return Promise.all(todo.map(function(p){
+    return gh('/commits/'+p.sha+'/check-runs?per_page=30').then(function(j){
+      var res=sumRuns(j.check_runs||[]);
+      var done=res.check!=='run'&&res.smoke!=='run'&&res.check!=='none'&&res.smoke!=='none';
+      cache[p.sha]={t:Date.now(),done:done,res:res};
+    }).catch(function(e){ if(e&&e.limit)throw e; });
+  })).catch(function(e){/* 限流：用已有的 */ }).then(function(){
+    // 只保留还在用的提交，免得缓存越积越大
+    var keep={};pulls.forEach(function(p){if(cache[p.sha])keep[p.sha]=cache[p.sha]});
+    lsSet(KKEY,keep);
+    return keep;
+  });
+}
+
+/* ---------- 渲染 ---------- */
+var state={data:null,jindu:null,checks:{},err:null,limitMsg:'',fromCache:false};
+
+function prState(res){
+  if(!res)return {cls:'',txt:'未查'};
+  var v=[res.check,res.smoke];
+  if(v.indexOf('fail')>=0)return {cls:'bad',txt:'红'};
+  if(v.indexOf('run')>=0)return {cls:'run',txt:'在跑'};
+  if(v[0]==='ok'&&v[1]==='ok')return {cls:'ok',txt:'绿'};
+  if(v.indexOf('none')>=0&&v.indexOf('ok')>=0)return {cls:'run',txt:'未跑全'};
+  return {cls:'',txt:'无结果'};
+}
+function prChips(res){
+  var box=[];
+  var names={ok:'✓',fail:'✗',run:'…',none:'–'};
+  var cls={ok:'ok',fail:'bad',run:'run',none:''};
+  if(!res){box.push(chip('检查未查'));return box}
+  ['check','smoke'].forEach(function(nm){box.push(chip(nm+' '+names[res[nm]],cls[res[nm]]))});
+  return box;
+}
+
+function render(){
+  var root=document.getElementById('root');
+  root.textContent='';
+  var d=state.data;
+  if(!d){
+    root.appendChild(el('div',{class:'card err',text:state.limitMsg||state.err||'没有数据'}));
+    return;
+  }
+  var now=Date.now();
+  var pulls=d.pulls,issues=d.issues;
+  var prNums={};   // 已经有 PR 在做的 Issue 编号
+  pulls.forEach(function(p){var m=/\[#(\d+)/.exec(p.title);if(m)prNums[m[1]]=p.n});
+
+  /* —— 总览 —— */
+  root.appendChild(el('h2',{text:'总览'}));
+  var ov=el('div',{class:'card'});
+  var J=state.jindu;
+  if(J&&J.items){
+    var c={done:0,doing:0,todo:0};
+    J.items.forEach(function(i){c[i.status]=(c[i.status]||0)+1});
+    var tot=J.items.length||1;
+    ov.appendChild(el('div',{text:'前 '+tot+' 个任务：做完 '+c.done+'，进行中 '+c.doing+'，没开始 '+c.todo}));
+    var bar=el('div',{class:'bar'});
+    [['done','--bar-done'],['doing','--bar-doing']].forEach(function(p){
+      var i=el('i');i.style.width=(c[p[0]]/tot*100)+'%';i.style.background='var('+p[1]+')';bar.appendChild(i);
+    });
+    ov.appendChild(bar);
+    var lg=el('div',{class:'legend'});
+    [['做完',c.done,'--bar-done'],['进行中',c.doing,'--bar-doing'],['没开始',c.todo,'--bar-todo']].forEach(function(x){
+      var s=el('span',{},[]);var dt=el('span',{class:'dot'});dt.style.background='var('+x[2]+')';
+      s.appendChild(dt);s.appendChild(document.createTextNode(x[0]+' '+x[1]+'（'+Math.round(x[1]/tot*100)+'%）'));lg.appendChild(s);
+    });
+    ov.appendChild(lg);
+    ov.appendChild(el('div',{class:'sub',text:'进度表更新于 '+(J.updated||'?')+'（维护者改 jindu.json）'}));
+  }else{
+    ov.appendChild(el('div',{class:'err',text:'读不到 jindu.json'}));
+  }
+  root.appendChild(ov);
+
+  if(J&&J.milestone){
+    var ms=el('div',{class:'card'});
+    ms.appendChild(el('div',{},[el('b',{text:'当前里程碑：'+J.milestone.name})]));
+    if(J.milestone.goal)ms.appendChild(el('div',{class:'sub',text:J.milestone.goal}));
+    var rem=J.milestone.remaining||[];
+    var by={};(J.items||[]).forEach(function(i){by[i.id]=i});
+    ms.appendChild(el('div',{style:'margin-top:6px',text:rem.length?('还差 '+rem.length+' 件：'):'该里程碑的项都做完了'}));
+    var box=el('div');
+    rem.forEach(function(id){
+      var it=by[id];
+      var cls=it&&it.status==='doing'?'warn':'';
+      var label=String(id).padStart(3,'0')+(it?' '+it.title:'');
+      var ch=chip(label,cls);ch.title=it?it.note:'';box.appendChild(ch);
+    });
+    ms.appendChild(box);
+    ms.appendChild(el('div',{class:'sub',text:'黄色＝进行中，灰色＝没开始'}));
+    root.appendChild(ms);
+  }
+
+  var m24=d.merged.filter(function(m){return now-m.at<24*HOUR}).length;
+  var m48=d.merged.filter(function(m){return now-m.at<48*HOUR}).length;
+  // 接口一次最多给 100 件已关的 PR；若最老的一件还在窗口里，说明窗口没取全，数字只是下限
+  var sat24=d.closedFull&&now-d.closedOldest<24*HOUR, sat48=d.closedFull&&now-d.closedOldest<48*HOUR;
+  var open=issues.filter(function(i){return has(i.labels,'内容')||has(i.labels,'功能')});
+  var ready=open.filter(function(i){return !has(i.labels,'暂缓')&&!prNums[i.n]});
+  var nums=el('div',{class:'nums'},[
+    el('div',{},[el('b',{text:(sat24?'≥':'')+m24}),el('span',{text:'24 小时合进主线'})]),
+    el('div',{},[el('b',{text:String(pulls.length)}),el('span',{text:'开着的 PR'})]),
+    el('div',{},[el('b',{text:String(ready.length)}),el('span',{text:'可领任务'})])
+  ]);
+  root.appendChild(el('div',{class:'card'},[nums,el('div',{class:'sub',style:'margin-top:6px',text:'48 小时合了 '+(sat48?'至少 ':'')+m48+' 件；合并按 PR 算'})]));
+
+  /* —— 每个 AI —— */
+  root.appendChild(el('h2',{},['每个 AI 的工作量',el('small',{text:'黄＝超 2 小时没推送，红＝超 6 小时'})]));
+  var grid=el('div',{class:'ai'});
+  AIS.forEach(function(ai){
+    var myIssues=ai.boss?[]:issues.filter(function(i){
+      return giveOf(i.labels)===ai.k&&(has(i.labels,'内容')||has(i.labels,'功能'))&&!has(i.labels,'暂缓');
+    });
+    var waiting=myIssues.filter(function(i){return !prNums[i.n]});
+    var myPulls=pulls.filter(function(p){return prefixOf(p.ref)===ai.k});
+    var recent=d.pushes.filter(function(p){return prefixOf(p.ref)===ai.k});
+    var last=recent.reduce(function(a,p){return Math.max(a,p.t)},0);
+    var branches={};
+    recent.forEach(function(p){if(now-p.t<24*HOUR)branches[p.ref]=1});
+    myPulls.forEach(function(p){branches[p.ref]=1});
+    var fixes=myPulls.filter(function(p){return has(p.labels,'要改')});
+    var merged48=d.merged.filter(function(m){return prefixOf(m.ref)===ai.k&&now-m.at<48*HOUR}).length;
+
+    var age=last?now-last:Infinity;
+    var lastTxt,lastCls='';
+    if(last){lastTxt=ago(last);lastCls=age>6*HOUR?'bad':age>2*HOUR?'warn':'ok'}
+    else if(d.evFull){lastTxt='至少 '+ago(d.evOldest)+'（更早的查不到）';lastCls=now-d.evOldest>6*HOUR?'bad':'warn'}
+    else{lastTxt='没有记录';lastCls=''}
+
+    var card=el('div',{class:'card'});
+    var h=el('h3',{},[ai.n]);
+    if(ai.tag)h.appendChild(chip(ai.tag,'acc'));
+    card.appendChild(h);
+    var kv=el('dl',{class:'kv'});
+    function row(k,v){kv.appendChild(el('dt',{text:k}));var dd=el('dd');(Array.isArray(v)?v:[v]).forEach(function(x){dd.appendChild(typeof x==='string'?document.createTextNode(x):x)});kv.appendChild(dd)}
+    row('待领 Issue',ai.boss?'—':[String(waiting.length)+' 件',myIssues.length>waiting.length?chip('另 '+(myIssues.length-waiting.length)+' 件已有 PR'):null].filter(Boolean));
+    var bl=Object.keys(branches);
+    row('正在做',bl.length?bl.map(function(b){
+      var pr=myPulls.filter(function(p){return p.ref===b})[0];
+      return chip(b.slice(b.indexOf('/')+1)+(pr?' #'+pr.n:''),pr?'run':'');
+    }):'没有');
+    if(myPulls.length){
+      row('开着的 PR',myPulls.map(function(p){
+        var st=prState(state.checks[p.sha]&&state.checks[p.sha].res);
+        return chip('#'+p.n+' '+st.txt,st.cls);
+      }));
+    }else row('开着的 PR','0');
+    row('要改',fixes.length?fixes.map(function(p){return chip('#'+p.n,'bad')}):'无');
+    row('48 小时合了',(sat48?'至少 ':'')+merged48+' 件');
+    row('最后推送',chip(lastTxt,lastCls));
+    card.appendChild(kv);
+    grid.appendChild(card);
+  });
+  root.appendChild(grid);
+
+  /* —— 任务池 —— */
+  root.appendChild(el('h2',{},['任务池',el('small',{text:'开着的 Issue '+issues.length+' 件'})]));
+  var groups=[['可领',[]],['暂缓',[]],['其他',[]]];
+  issues.slice().sort(function(a,b){return b.created-a.created}).forEach(function(i){
+    var task=has(i.labels,'内容')||has(i.labels,'功能');
+    if(task&&has(i.labels,'暂缓'))groups[1][1].push(i);
+    else if(task)groups[0][1].push(i);
+    else groups[2][1].push(i);
+  });
+  groups.forEach(function(g,gi){
+    var box=el('div');
+    if(!g[1].length)box.appendChild(el('div',{class:'empty',text:'没有'}));
+    g[1].forEach(function(i){
+      var who=giveOf(i.labels);
+      var meta=[];
+      meta.push(who?('给：'+who):'没指定给谁');
+      if(i.dep)meta.push('依赖 '+i.dep);
+      if(prNums[i.n])meta.push('已有 PR #'+prNums[i.n]);
+      meta.push(ago(i.created)+'开');
+      var extra=i.labels.filter(function(l){return l!=='内容'&&l!=='功能'&&l!=='暂缓'&&l.indexOf('给:')!==0&&l.indexOf('给：')!==0});
+      if(extra.length)meta.push(extra.join('、'));
+      var a=el('a',{class:'row',href:'https://github.com/'+REPO+'/issues/'+i.n,target:'_blank',rel:'noopener'},[
+        el('span',{class:'t'},[el('span',{class:'n',text:'#'+i.n}),i.title]),
+        el('span',{class:'s',text:meta.join(' · ')})
+      ]);
+      box.appendChild(a);
+    });
+    var det=el('details',{},[el('summary',{text:g[0]+'（'+g[1].length+'）'}),box]);
+    if(gi===0)det.open=true;
+    root.appendChild(el('div',{class:'card'},[det]));
+  });
+
+  /* —— 开着的 PR —— */
+  root.appendChild(el('h2',{},['开着的 PR',el('small',{text:pulls.length+' 个'})]));
+  var pc=el('div',{class:'card'});
+  if(!pulls.length)pc.appendChild(el('div',{class:'empty',text:'没有开着的 PR'}));
+  pulls.slice().sort(function(a,b){return b.updated-a.updated}).forEach(function(p){
+    var res=state.checks[p.sha]&&state.checks[p.sha].res;
+    var kids=prChips(res);
+    if(has(p.labels,'要改'))kids.push(chip('要改','bad'));
+    if(p.draft)kids.push(chip('草稿'));
+    kids.push(el('span',{class:'s',text:' '+(p.ref||'')+' · '+ago(p.updated)+'更新'}));
+    pc.appendChild(el('a',{class:'row',href:'https://github.com/'+REPO+'/pull/'+p.n,target:'_blank',rel:'noopener'},[
+      el('span',{class:'t'},[el('span',{class:'n',text:'#'+p.n}),p.title]),
+      el('span',{class:'s'},kids)
+    ]));
+  });
+  root.appendChild(pc);
+
+  /* —— 最近合并 —— */
+  root.appendChild(el('h2',{},['最近合并',el('small',{text:'最近 20 件，按 PR 的分支推断是谁'})]));
+  var mc=el('div',{class:'card'});
+  if(!d.merged.length)mc.appendChild(el('div',{class:'empty',text:'没有数据'}));
+  d.merged.slice(0,20).forEach(function(m){
+    mc.appendChild(el('a',{class:'row',href:'https://github.com/'+REPO+'/pull/'+m.n,target:'_blank',rel:'noopener'},[
+      el('span',{class:'t'},[el('span',{class:'n',text:'#'+m.n}),m.title]),
+      el('span',{class:'s',text:nameOfRef(m.ref)+' · '+ago(m.at)})
+    ]));
+  });
+  root.appendChild(mc);
+}
+
+function renderMeta(){
+  var parts=[];
+  if(state.data)parts.push('数据取自 '+ago(state.data.t)+(state.fromCache?'（缓存）':''));
+  if(rl.remaining!=null)parts.push('GitHub 额度剩 '+rl.remaining+'/60');
+  document.getElementById('meta').textContent=parts.join(' · ')||'加载中……';
+  var b=document.getElementById('banners');b.textContent='';
+  if(state.limitMsg)b.appendChild(el('div',{class:'banner bad',text:state.limitMsg}));
+  else if(state.err)b.appendChild(el('div',{class:'banner',text:state.err}));
+}
+
+var busy=false;
+function load(force){
+  if(busy)return;
+  var cached=lsGet(CKEY);
+  var fresh=cached&&cached.data&&Date.now()-cached.data.t<(force?60*1000:TTL);
+  state.limitMsg='';state.err=null;
+  var jp=fetchJindu().then(function(j){state.jindu=j},function(){state.jindu=null});
+  if(fresh){
+    state.data=cached.data;state.checks=lsGet(KKEY)||{};state.fromCache=true;
+    return jp.then(function(){render();renderMeta()});
+  }
+  busy=true;
+  var btn=document.getElementById('refresh');btn.disabled=true;btn.textContent='刷新中';
+  if(cached&&cached.data){state.data=cached.data;state.checks=lsGet(KKEY)||{};state.fromCache=true;render();renderMeta()}
+  return loadAll().then(function(data){
+    state.data=data;state.fromCache=false;
+    lsSet(CKEY,{data:data});
+    return loadChecks(data.pulls).then(function(chk){state.checks=chk});
+  }).catch(function(e){
+    if(e&&e.limit){
+      var mins=rl.reset?Math.max(1,Math.ceil((rl.reset-Date.now())/60000)):null;
+      state.limitMsg='GitHub 限流，'+(mins?mins+' 分钟后':'稍后')+'再刷新'+(state.data?'；下面是上次缓存的数据':'');
+    }else{
+      state.err='读 GitHub 失败（'+(e&&e.message||'网络')+'）'+(state.data?'；下面是上次缓存的数据':'');
+    }
+    if(!state.data&&cached&&cached.data){state.data=cached.data;state.fromCache=true}
+  }).then(function(){return jp}).then(function(){
+    busy=false;btn.disabled=false;btn.textContent='刷新';
+    render();renderMeta();
+  });
+}
+document.getElementById('refresh').addEventListener('click',function(){load(true)});
+// 页面开着时每五分钟自动看一次（缓存没过期就不会真的调接口）；切走时不刷
+setInterval(function(){if(!document.hidden)load(false)},TTL+5000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)load(false)});
+load(false);
+})();
+</script>
+</body>
+</html>

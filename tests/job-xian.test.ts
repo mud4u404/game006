@@ -90,11 +90,15 @@ describe('差事的线头', () => {
     expect(lines()).toEqual([]);
   });
 
-  it('未接差事和没有 xian 的旧差事照常显示，不凭空添线头', () => {
+  // 寻物在 #255 里也补上了线头，不再是「没有 xian 的旧差事」：这里改验它记下的去处
+  it('未接差事不凭空添线头；揭了寻物榜就记下绣娘阿蕙的去处', () => {
     expect(lines()).toEqual([]);
     act('xsb_zhuren', '揭寻物');
     expect(questbookSheetHtml()).toContain('帮绣娘阿蕙追回被偷的玉佩');
-    expect(lines()).toEqual([]);
+    const [wu] = lines();
+    expect(lines()).toHaveLength(1);
+    expect(wu).toContain('绣娘阿蕙');
+    expect(wu).toContain('府衙照壁');
   });
 
   it('多个成立的线头按内容顺序列出，不带 if 的也显示，未成立的隐藏', () => {

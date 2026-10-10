@@ -36,4 +36,4 @@ body:
     id: scope
     attributes:
       label: 允许修改的文件
-      value: 只在 src/content/packs/ 下新建文件
+      value: 新建 `src/content/packs/<文件名>.ts`（必须写出具体文件名，否则 CI 不会自动合并）

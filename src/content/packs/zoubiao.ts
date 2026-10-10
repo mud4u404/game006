@@ -306,9 +306,21 @@ const NPCS_EXTRA: NpcDef[] = [
 ];
 
 const JOBS: JobDef[] = [
-  { id: 'zb_bu', shenfen: 'biaoshi', tier: 1, title: '保一车细布去瓜洲布行，路上有关卡', npc: 'zb_zhaofeng', at: 'gz_town', days: 2 },
-  { id: 'zb_yao', shenfen: 'biaoshi', tier: 2, title: '押一批川贝老参去镇江百草堂，路上有劫镖的', npc: 'jb_zhang', at: 'zj_shi', days: 3, again: 5 },
-  { id: 'zb_yin', shenfen: 'biaoshi', tier: 3, title: '押官银三百两去镇江银号，托镖的人要你亲手交', npc: 'jb_yinhao', at: 'zj_shi', days: 5, k: 1.5 }
+  { id: 'zb_bu', shenfen: 'biaoshi', tier: 1, title: '保一车细布去瓜洲布行，路上有关卡', npc: 'zb_zhaofeng', at: 'gz_town', days: 2,
+    xian: [
+      { npc: 'zb_wukai', at: 'yz_guandao', if: { job: 'zb_bu', notFlag: 'zb_tax_done' }, text: '蜀冈官道上设着关卡，税吏吴开守着栅栏口，过不去得想个法子。' },
+      { npc: 'zb_zhaofeng', at: 'gz_town', if: { job: 'zb_bu', flag: 'zb_tax_done' }, text: '布行朝奉在瓜洲镇点货，一匹一匹对过了才算交差。' }
+    ] },
+  { id: 'zb_yao', shenfen: 'biaoshi', tier: 2, title: '押一批川贝老参去镇江百草堂，路上有劫镖的', npc: 'jb_zhang', at: 'zj_shi', days: 3, again: 5,
+    xian: [
+      { npc: 'jb_zhang', at: 'zj_shi', if: { job: 'zb_yao' }, text: '百草堂的张掌柜在大市口验货，一根参须都不肯放过。' }
+    ] },
+  { id: 'zb_yin', shenfen: 'biaoshi', tier: 3, title: '押官银三百两去镇江银号，托镖的人要你亲手交', npc: 'jb_yinhao', at: 'zj_shi', days: 5, k: 1.5,
+    xian: [
+      { npc: 'zb_kuli', at: 'yz_fuya', if: { job: 'zb_yin', notFlag: 'zb_yin_tibx' }, text: '官银要当着库吏的面点交，先去府衙前堂提箱。' },
+      { npc: 'zb_lanxiang', at: 'zj_xijin', if: { job: 'zb_yin', flag: 'zb_yin_tibx', notFlag: 'zb_yin_open' }, text: '过了江头一站是西津渡，库吏说那一程上有人候着。' },
+      { npc: 'jb_yinhao', at: 'zj_shi', if: { job: 'zb_yin', flag: 'zb_yin_tibx' }, text: '银号的朝奉在大市口等着点银，箱子和回执要一并交割。' }
+    ] }
 ];
 
 const NEWS: NewsDef[] = [

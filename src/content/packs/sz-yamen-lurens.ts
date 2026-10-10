@@ -28,7 +28,7 @@ const NPCS: NpcDef[] = [
     }
   },
   {
-    id: 'sz_ym3', name: '卖茶的王阿婆', ini: '王', tone: 'jade', brief: '守着茶炉子',
+    id: 'sz_ym3', name: '王阿婆', ini: '王', tone: 'jade', brief: '守着茶炉子',
     look: '头发花白的老婆婆，围裙上全是茶渍。一副担子搁在墙根，一头是炭炉和铜壶，一头摞着粗瓷碗。壶嘴里冒着热气。',
     at: { room: 'sz_yamen', if: { hour: { from: 6, to: 18 } } },
     verbs: ['交谈', '购买'],
@@ -36,9 +36,12 @@ const NPCS: NpcDef[] = [
       交谈: [
         { text: '王阿婆掀开壶盖看了看：「衙门口的茶，三文一碗，粗茶。」她拿抹布擦了擦碗边，「打官司的喝碗茶再去，喉咙润了，说话也响亮些。」' }
       ],
+      // 一碗粗茶只解渴：一日一碗，回一点气力（10-10 质量调查：原来三文回二十气血、不限次数，是白给的）
       购买: [
+        { if: { doneToday: 'sz_ym3_cha' }, text: '王阿婆把壶往炉上一坐：「一碗就够了，喝多了跑茅房，误了你的官司。」',
+          do: [{ type: 'time', add: 0 }] },
         { if: { silver: 3 }, text: '王阿婆倒了满满一碗递过来：「慢点喝，烫。」茶是粗茶，解渴。（银两 −3 文）',
-          do: [{ type: 'silver', delta: -3 }, { type: 'heal', hp: 20 }, { type: 'toast', text: '银两 −3 文' }] },
+          do: [{ type: 'today', id: 'sz_ym3_cha' }, { type: 'silver', delta: -3 }, { type: 'heal', hp: 8 }, { type: 'toast', text: '银两 −3 文' }] },
         { text: '王阿婆瞟了一眼你的钱袋：「三文，赊账不得。」' }
       ]
     }
