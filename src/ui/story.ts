@@ -1,6 +1,7 @@
 /**
  * 剧情卡片、标题画面、章回题字。
  */
+import { tupoClear } from '../engine/tupo';
 import { titleAccountHTML } from './views/account-link';
 import { S, load, newGame, save, saveBroken, setState, skipToYangzhou, type GameState } from '../core/state';
 import { dateStr } from '../core/time';
@@ -198,6 +199,7 @@ registerHandlers({
   tContinue: () => {
     const saved = load();
     if (!saved) return;
+    tupoClear(); // 换存档：旧档攒着没弹的突破卡不带过去
     setState(saved);
     hideTitle();
     // 停在新序章中途的：接回那一屏（打到一半的，从头再打这一场）
