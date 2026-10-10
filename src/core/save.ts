@@ -341,6 +341,35 @@ export function exportCode(state: GameState): string {
   return CODE_HEAD + btoa(bin);
 }
 
+/* 压缩存档码：z1: + deflate-raw 压缩后的 base64url。反馈链接里放得下，旧的 JHYY: 码照读 */
+const Z_HEAD = 'z1:';
+
+async function pipe(data: Uint8Array, ts: CompressionStream | DecompressionStream): Promise<Uint8Array> {
+  const w = ts.writable.getWriter();
+  void w.write(data as BufferSource).catch(() => {});
+  void w.close().catch(() => {});
+  return new Uint8Array(await new Response(ts.readable).arrayBuffer());
+}
+
+export async function exportCodeZ(state: GameState): Promise<string> {
+  const z = await pipe(new TextEncoder().encode(JSON.stringify(state)), new CompressionStream('deflate-raw'));
+  let bin = '';
+  for (const b of z) bin += String.fromCharCode(b);
+  return Z_HEAD + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** 读任何格式的存档码：z1:（压缩）、JHYY:（旧）、备份原文 */
+export async function importCodeAny(code: string): Promise<GameState> {
+  const t = code.trim();
+  if (!t.startsWith(Z_HEAD)) return importCode(t);
+  try {
+    const b64 = t.slice(Z_HEAD.length).replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(b64);
+    const raw = await pipe(Uint8Array.from(bin, c => c.charCodeAt(0)), new DecompressionStream('deflate-raw'));
+    return migrate(JSON.parse(new TextDecoder().decode(raw)));
+  } catch { throw new Error('存档码不完整，请整段复制'); }
+}
+
 /** 读存档码；也接受从备份里直接复制出来的原文。认不出来时抛出给玩家看的错误 */
 export function importCode(code: string): GameState {
   const t = code.trim();
@@ -351,6 +380,7 @@ export function importCode(code: string): GameState {
       json = new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
     } catch { throw new Error('存档码不完整，请整段复制'); }
   } else if (t.startsWith('{')) json = t;
+  else if (t.startsWith(Z_HEAD)) throw new Error('压缩存档码要用 importCodeAny 读');
   else throw new Error('这不是存档码，存档码以 JHYY: 开头');
   try { return migrate(JSON.parse(json)); } catch { throw new Error('存档码不完整，请整段复制'); }
 }
