@@ -14,7 +14,7 @@ import { cn, fmt } from '../../core/util';
 import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine/shiguang';
 import { shenfenOf } from '../../engine/shenfen';
 import { verbChufa } from '../../engine/chufa';
-import { wantOf } from '../../engine/shijie';
+import { refuseOf, wantOf } from '../../engine/shijie';
 import { test, textVars } from '../../engine/dsl';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
@@ -124,7 +124,7 @@ const verbBtn = (id: string) => (v: Verb): string => {
   const poor = !p.ok;
   // 能挣钱的（揭榜的赏钱、零工的工钱）：报酬和耗时写在底下，点之前就知道
   const gain = price === null ? verbGain(id, v) : null;
-  const specificWhy = poor && p.why && p.why !== '囊中银两不足。';
+  const specificWhy = poor && p.why && (p.why === refuseOf(id, v) || p.why === '他手里没有');
   const sub = specificWhy ? `${p.why}${price !== null ? ` · ${cn(price)}文` : ''}`
     : price !== null ? `${poor && S.silver < price ? '囊中不足，要' : ''}${cn(price)}文` : poor ? p.why : gain;
   return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;

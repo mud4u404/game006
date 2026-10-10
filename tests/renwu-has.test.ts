@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { npc } from '../src/content';
 import type { Effect, NpcDef } from '../src/content/types';
-import { S, setState, skipToYangzhou } from '../src/core/state';
+import { S, save, setState, skipToYangzhou } from '../src/core/state';
 import { dayNo, setNowMs } from '../src/core/time';
 import { migrate, readSave, useStore, type SaveStore } from '../src/core/save';
 import { applyWorld, changeHas, dayPass, hasOf, refuseOf, tracksHas, wantOf } from '../src/engine/shijie';
 import { act, effectReq, plan, type ActionReq } from '../src/engine/xingdong';
 import { act as worldAct, verbPlan } from '../src/engine/world';
+import { spreadDay } from '../src/engine/chuanwen';
 import { viewJianghu } from '../src/ui/views/jianghu';
 
 class MemStore implements SaveStore {
@@ -189,6 +190,18 @@ describe('钱物的来处去处', () => {
     expect(tracksHas(chu.id)).toBe(true);
   });
 
+  it('带价按钮不拼接其他系统失败原因，仍显示价钱和灰态', () => {
+    chu.actions = { ...chu.actions, 交谈: [{ text: '还办不了。', do: [
+      { type: 'silver', delta: -3 }, { type: 'lilian', amount: -9999 }
+    ] }] };
+    S.silver = 100; S.lilian = 0; S.sel = chu.id;
+    expect(verbPlan(chu.id, '交谈').why).toBe('历练不足。');
+    const html = viewJianghu();
+    expect(html).toMatch(/data-act="do:交谈"[^>]*disabled/);
+    expect(html).toContain('<small>三文</small>');
+    expect(html).not.toContain('历练不足。');
+  });
+
   it('全局预览与灰按钮反映缺货，既有交谈依然能推进', () => {
     chu.actions = { ...chu.actions, 交谈: [{ text: '交出花。', do: [{ type: 'silver', delta: -2 }, { type: 'item', id: 'flower', delta: 2 }] }] };
     S.sel = chu.id;
@@ -214,6 +227,28 @@ describe('持有与世界、存档', () => {
     applyWorld(S.w, { type: 'w', op: 'dead', npc: chu.id }, dayNo(S)); expectHas();
     changeHas(chu.id, 'silver', 6); changeHas(chu.id, 'huadiao', -1);
     expect(S.w.ppl[chu.id].has).toBeUndefined();
+  });
+
+  it('遗忘传闻不补回已交出的持有；仍清理只有传闻的空人物状态', () => {
+    expect(act(request([{ type: 'item', id: 'flower', delta: 1 }, { type: 'silver', delta: 6 }])).ok).toBe(true);
+    const day = dayNo(S), id = 'forget-holding';
+    S.w.rumor = { [id]: { id, ev: 'test', ph: '', day, place: '', juice: 0, subj: [] } };
+    S.w.ppl[chu.id].know = [[id, 0, day]];
+    S.w.ppl['only-rumor'] = { know: [[id, 0, day]] };
+    S.w.ppl['empty-holding'] = { has: {}, know: [[id, 0, day]] };
+    expect(S.w.ppl[chu.id].st).toBeUndefined();
+    expect(S.w.ppl[chu.id].at).toBeUndefined();
+    spreadDay(S.w, day + 8);
+    expect(S.w.ppl[chu.id]?.know).toBeUndefined();
+    expect(S.w.ppl[chu.id]?.has).toEqual({ flower: 0, silver: 0 });
+    expect(hasOf(chu.id)).toMatchObject({ flower: 0, silver: 0 });
+    expect(S.w.ppl['only-rumor']).toBeUndefined();
+    expect(S.w.ppl['empty-holding']).toEqual({ has: {} });
+    save(); setState(readSave().state!);
+    expect(hasOf(chu.id)).toMatchObject({ flower: 0, silver: 0 });
+    const before = structuredClone(S);
+    expect(act(request([{ type: 'item', id: 'flower', delta: 1 }])).why).toBe('他手里没有');
+    expect(S).toEqual(before);
   });
 
   it('旧档缺持有读默认值；新档的零库存、传闻和其他世界事实不丢', () => {
