@@ -599,14 +599,18 @@ describe('话有来处：打听', () => {
 
   it('没写声口的人：先说这一带传开的，没有就说太平得很；一人一日一回', () => {
     S.loc = 'hu';
-    // 拿没写 life 的人当样本。卖花姑娘（huagu）从 #232 起有活气了，换成同在瘦西湖畔、还没写 life 的柳寒舟
-    const none = ask('liu');
+    // 拿没写 life 的人当样本，按 lifeOf 现挑，不写死人名：卖花姑娘从 #232 起有活气了，
+    // 柳寒舟从 #269 起也有了；谁哪天再补一条，这里自己换人，不用回来改测试
+    const bare = NPCS.filter(n => roomsOf(n.id).includes('hu') && !lifeOf(n.id));
+    expect(bare.length, '瘦西湖畔该留着没写 life 的人').toBeGreaterThan(0);
+    const who = bare[0].id;
+    const none = ask(who);
     expect(none.src).toBe('none');
     expect(none.text).toContain('太平得很');
-    expect(ask('liu').src).toBe('again');
+    expect(ask(who).src).toBe('again');
     advanceDays(S, 1);
     const r = rid('ss_zei', 'bang', 0.5, dayNo(S), { place: 'cheng' });
-    const old = ask('liu');
+    const old = ask(who);
     expect(old.src).toBe('old');
     expect(old.text).toContain(shiById('ss_zei')!.steps.bang.news!);
     expect(S.heard).toContain(r);
