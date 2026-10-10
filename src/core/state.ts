@@ -118,6 +118,12 @@ export interface GameState {
   gongxian?: Record<string, number>;
   /** 打听：每个人今天问过没有（江湖日） */
   asked?: Record<string, number>;
+  /** 迎面（engine/yingmian.ts）：每个人最近一次主动开口是哪一日（江湖日）；过了日子的自动清掉。旧档可缺省 */
+  greeted?: Record<string, number>;
+  /** 场景里眼下的迎面：key 是「地点|日|时辰段」，同一个 key 不再挑第二个人；id 是开口的人，i 是第几条，used 表示话头已经点过。旧档可缺省 */
+  greet?: { key: string; id?: string; i?: number; used?: true };
+  /** 最近一次对谁做了动作（江湖日），迎面挑人时「刚做过与他有关的事」排前头。旧档可缺省 */
+  lastWith?: { id: string; day: number };
   /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts） */
   away?: Record<string, number>;
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */

@@ -18,6 +18,7 @@ import { checkYue } from '../engine/shiguang';
 import { tierCheck, tupoPending, tupoTake } from '../engine/tupo';
 import { tupoCardHTML } from './tupo';
 import { tickShi } from '../engine/shishi';
+import { refreshGreet } from '../engine/yingmian';
 import { tickWorld } from '../engine/shijie';
 import { dropFailedTrack } from '../engine/daohang';
 import { isPreview } from '../core/preview';
@@ -189,6 +190,8 @@ export function render(): void {
   // 江湖自己往前走：世界的慢变逐日补到今天（engine/shijie.ts）；世事该起头的起头，到日子的往下走（engine/shishi.ts）
   tickWorld();
   tickShi();
+  // 迎面：场景里有人先开口（engine/yingmian.ts）；这个时辰段挑过的不再挑
+  refreshGreet();
   // 记挂着的心事做不成了：放下横幅，动态里记一笔（engine/daohang.ts）
   dropFailedTrack();
   const main = $('#main'), tabs = $('#tabs');
