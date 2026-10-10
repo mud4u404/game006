@@ -5,7 +5,7 @@ import { npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, ve
 import { IC } from '../icons';
 import { FEED_TONE } from '../widgets';
 import { questNav } from '../../engine/daohang';
-import { jueseKa, yaoJin, type YaoJin } from '../../engine/jiemian';
+import { arrivalHot, jueseKa, visitsOf, yaoJin, type YaoJin } from '../../engine/jiemian';
 import { kanren } from '../../engine/zhaoshi';
 import { recordDiao } from '../../engine/zhanli';
 import { eyesOn } from '../../engine/yan';
@@ -23,7 +23,10 @@ const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', �
 
 export function viewJianghu(): string {
   const all = roomNpcs(S.loc).concat(roomObjs(S.loc));
-  if (!S.sel || !all.includes(S.sel)) S.sel = all[0] || null;
+  const yj = yaoJin();
+  // 没选过人：眼下要找的人就在此处，先选他（到地即办）；不然选第一个
+  const hot = yj.hot ?? arrivalHot();
+  if (!S.sel || !all.includes(S.sel)) S.sel = (hot && all.includes(hot.npc) ? hot.npc : all[0]) || null;
   // 刚说完话人就走了（世事推着他离场、跳了河、回去报信）：话留着，不然玩家只看到动态里一行小字（审查 C03）
   // 只留一小会儿：隔了一阵（歇脚、赶路、过夜）就收起，不让昨夜的话挂到第二天
   const gone = S.reply && !all.includes(S.reply.id) && npc(S.reply.id) && S.reply.at !== undefined && absMin(S) - S.reply.at <= 15
@@ -31,7 +34,6 @@ export function viewJianghu(): string {
   // 眼下要紧：永远只有一件，写成动宾句；点了先赶路，到了把人和动作高亮（engine/jiemian.ts）
   const nav = S.track ? questNav(S.track) : null;
   const q = nav && (nav.state === '能做' || nav.state === '要等' || nav.state === '卡住') ? nav : null;
-  const yj = yaoJin();
   const feed = S.feed.slice(0, 2).map(e =>
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
@@ -40,20 +42,35 @@ export function viewJianghu(): string {
   const yueBar = !y || y.due - dayNo(S) > 3 ? '' : S.loc === y.at
     ? `<div class="card quest"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">就在此处</span></div>`
     : `<button class="card quest" data-act="travel:${y.at}"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">约${minLabel(travelMin(pathMin(S.loc, y.at)))}</span>${IC.chev}</button>`;
+  const scene = sceneHTML(feed);
+  const people = all.length ? `<section class="card here-card">
+    <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
+    <div class="avas">${all.map(id => avaBtn(id, hot)).join('')}</div>
+    ${S.sel ? detail(S.sel, hot) : ''}
+  </section>` : '';
+  // 眼下要找的人就在此处：人和动作排在场景白描前面，一进门就办得上事（到地即办）
+  const first = hot && people ? people + scene : scene + people;
   return `
   ${jueseHTML()}
   ${yaoJinHTML(yj)}
   ${yueBar}
   ${greetCard()}
-  <section class="card scene"><p class="desc">${roomDesc(S.loc)}</p>${zhudiHTML()}${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>
+  ${first}
   ${gone}
-  ${all.length ? `<section class="card here-card">
-    <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
-    <div class="avas">${all.map(id => avaBtn(id, yj.hot)).join('')}</div>
-    ${S.sel ? detail(S.sel, yj.hot) : ''}
-  </section>` : ''}
   ${goHTML(q?.to)}
   ${xiejiaoHTML()}`;
+}
+
+/** 场景白描：第二次起进同一处，折成两行，点开再展开（展开的记在这一处，走开就收回） */
+let descOpen = '';
+export const toggleDesc = (): void => { descOpen = descOpen === S.loc ? '' : S.loc; };
+function sceneHTML(feed: string): string {
+  const fold = visitsOf(S.loc) >= 2;
+  const open = !fold || descOpen === S.loc;
+  const desc = fold
+    ? `<p class="desc${open ? '' : ' fold'}">${roomDesc(S.loc)}</p><button class="desc-tg" data-act="descToggle" aria-expanded="${open}">${open ? '收起' : '展开'}</button>`
+    : `<p class="desc">${roomDesc(S.loc)}</p>`;
+  return `<section class="card scene">${desc}${zhudiHTML()}${eyesOn({ room: S.loc }).map(eyeLine).join('')}${feed ? `<div class="feed">${feed}</div>` : ''}</section>`;
 }
 
 /** 迎面（engine/yingmian.ts）：场景里有人先开口，一句话加一个话头，点了就对他做对应的动作 */
@@ -71,7 +88,7 @@ function jueseHTML(): string {
     <div class="jh"><span class="ava t-accent">沈</span>
       <div class="who"><b>${k.name}</b><small>${k.title}</small></div>
       <div class="jp"><small>战力</small><b>${k.power}</b>${k.from !== undefined ? `<i class="jup" aria-label="战力变了">${k.from} → ${k.power}</i>` : ''}</div></div>
-    <p class="jy">${k.pingyu}</p>
+    <p class="jy" title="${k.pingyu}">${k.pingyu}</p>
     <p class="jl">${k.line}</p>
   </section>`;
 }
@@ -84,7 +101,7 @@ function yaoJinHTML(yj: YaoJin): string {
   const body = `<span class="tag ${yj.main ? 'info' : 'accent'}">${yj.tag}</span><span class="qt"><small class="qk">眼下要紧</small>${yj.text}${yj.why ? `<small class="qs">${yj.why}</small>` : ''}</span>${sub ? `<span class="qd">${sub}</span>` : ''}${act ? IC.chev : ''}`;
   const main = act ? `<button class="card quest yj" data-act="${yj.main ? 'quest' : other}">${body}</button>` : `<div class="card quest yj">${body}</div>`;
   const book = `<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button>`;
-  const also = yj.also.length ? `<div class="also"><small>也可以</small>${yj.also.map(a => `<button class="lead" data-act="travel:${a.to}"><span class="lt">${a.text}</span><span class="ld">约${minLabel(a.min)}</span>${IC.chev}</button>`).join('')}</div>` : '';
+  const also = yj.also.length ? `<div class="also"><small>也可以</small>${yj.also.map(a => `<button class="lead" data-act="travel:${a.to}"><span class="lg">前往</span><span class="lt">${a.text}</span><span class="ld">约${minLabel(a.min)}</span>${IC.chev}</button>`).join('')}</div>` : '';
   return `<div class="quest-row">${main}${book}</div>${also}`;
 }
 
@@ -133,8 +150,10 @@ function detail(id: string, hot?: YaoJin['hot']): string {
   const look = kr ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kr.say}</b>${kr.hurt ? `<br><span class="hurt">${kr.hurt}</span>` : ''}</p>` : '';
   const want = !n.obj && ['相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'].includes(rel) ? wantOf(id) : undefined;
   const wanting = want ? `<p class="muted">他眼下想${want.text}。</p>` : '';
+  // 看完榜文：下一步找谁，一步到他的动作（NpcDef.next）。这个人此刻不在场就不写
+  const nx = n.next && S.reply?.id === id && roomNpcs(S.loc).includes(n.next.npc) ? `<button class="act next" data-act="jumpTo:${n.next.npc}${n.next.verb ? `:${n.next.verb}` : ''}">${n.next.text}${IC.chev}</button>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
-    ${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id, hot?.npc === id ? hot.verb : undefined)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
+    ${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id, hot?.npc === id ? hot.verb : undefined)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}${nx}</div>`;
 }
 
 /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
