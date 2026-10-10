@@ -63,11 +63,13 @@ describe('被并掉的场景', () => {
     raw.loc = 'old_changjing_b';
     raw.yue = [{ id: 'job_none', npc: 'x', at: 'old_changjing_a', due: 1, text: '' }];
     raw.w.place.old_changjing_a = { order: 12, prosper: 34, price: 1, marks: [] };
+    raw.w.ppl.zz_old_changjing = { at: { room: 'old_changjing_b', until: 99999 } };
     const old = Object.keys(raw.w.fac)[0];
     if (old) raw.w.fac[old].holds = ['old_changjing_a', target];
     const got = migrate(raw);
     expect(got.loc).toBe(target);
     expect(got.yue[0].at).toBe(target);
+    expect(got.w.ppl.zz_old_changjing?.at?.room).toBe(target);
     expect(got.w.place.old_changjing_a).toBeUndefined();
     expect(got.w.place[target]).toBeDefined();
     if (old) expect(got.w.fac[old].holds.filter(h => h === target)).toHaveLength(1);
