@@ -15,6 +15,8 @@ import { ZONE_NAME } from '../../engine/duel';
 import { cn } from '../../core/util';
 import { cloudRowHTML } from './account-link';
 import { dollHTML } from './zhiwawa';
+import { SAVE_VERSION } from '../../core/save';
+import { wushiToolsHTML } from './wushi-tools';
 
 const ATTRS: AttrKey[] = ['体魄', '根骨', '身法', '悟性', '胆魄'];
 
@@ -140,5 +142,6 @@ export function viewRenwu(): string {
 export function saveCardHTML(): string {
   return `${cloudRowHTML()}<p class="muted">进度自动保存在这台设备的浏览器里，每天另留一份备份。换手机、清缓存之前，先导出存档码带走。</p>
     <div class="btnrow"><button class="act" data-act="saveExport">导出存档码</button><button class="act" data-act="saveImport">导入存档码</button></div>
-    <div class="btnrow"><button class="act" data-act="saveBackups">找回备份</button><button class="act" data-act="toTitle">回到标题</button></div>`;
+    <div class="btnrow"><button class="act" data-act="saveBackups">找回备份</button><button class="act" data-act="toTitle">回到标题</button></div>
+    <button class="verline" data-act="verTap">版本 存档 v${SAVE_VERSION}</button>${wushiToolsHTML()}`;
 }
