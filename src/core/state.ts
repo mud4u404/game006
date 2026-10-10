@@ -118,6 +118,8 @@ export interface GameState {
   gongxian?: Record<string, number>;
   /** 打听：每个人今天问过没有（江湖日） */
   asked?: Record<string, number>;
+  /** 打听：今天对这个人问到第几句了、哪几句已经说过（engine/chuanwen.ts）；隔日清掉 */
+  askLog?: Record<string, { d: number; u: string[] }>;
   /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts） */
   away?: Record<string, number>;
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts） */

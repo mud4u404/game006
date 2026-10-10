@@ -207,7 +207,8 @@ describe('世事的引擎', () => {
     expect(going.length).toBeGreaterThan(1);
     dating('yaopu', '药铺掌柜');
     expect(knownShi().length).toBe(1);
-    expect(dating('yaopu', '药铺掌柜'), '一个人一天只问一回').toContain('改日');
+    expect(dating('yaopu', '药铺掌柜'), '再问一回不再「改日再来」，也不多说一件新事').not.toContain('改日');
+    expect(knownShi().length).toBe(1);
     // 渡口的船夫、管事也问一问：卫衡寻褚七那件事，是渡口一带的人先知道（第四稿）
     for (const who of ['xiaoer', 'shuoshu', 'bs2_hu', 'bj_yazi', 'chuanfu', 'guanshi']) dating(who, who);
     expect(knownShi().map(r => r.id).sort()).toEqual([...going].sort());
