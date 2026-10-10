@@ -4,6 +4,7 @@ import { jobById, npc, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import { S, pushFeed, save, setState, type GameState } from '../core/state';
 import { emit } from '../core/bus';
+import { trimActionLog } from '../core/save';
 import { absMin, dayNo } from '../core/time';
 import { newOutcome, runStep, test, withRunHooks, type Outcome } from './dsl';
 import { barredFrom, canLearn, gongxianCost, learnCost, rootHint } from './shicheng';
@@ -174,7 +175,7 @@ function prepare(req: ActionReq): Prepared {
   const condition = req.if ?? b?.if;
   if (!req.who || !req.verb) return deny('行动缺少来由。');
   if (req.at && req.who === 'player' && req.at !== S.loc) return deny('你不在此处。');
-  if (req.key && S.log?.some(e => e.key === req.key)) return deny('这件事已经结算过了。');
+  if (req.key && (S.settledKeys?.includes(req.key) || S.log?.some(e => e.key === req.key))) return deny('这件事已经结算过了。');
   if (effects.some(reward) && !req.key) return deny('这件事的凭据还未定下。');
   // 人物的钱物从自身持有结算；作息在 023 项接，不借玩家的武学、历练和身份。
   if (req.who !== 'player' && effects.some(e => !['silver', 'item', 'w', 'feed', 'toast', 'time'].includes(e.type)))
@@ -284,7 +285,7 @@ function record(req: ActionReq, p: ActionPlan, why?: string): EventRec {
     cost: logEffects(p.cost), gain: logEffects(p.gain), ...(req.key ? { key: req.key } : {}),
     ...(Number.isInteger(cause) && cause! > 0 ? { cause } : {}), ...(why ? { why } : {}) };
   (S.log ??= []).push(e);
-  S.log = S.log.slice(-LOG_LIMIT);
+  if (S.log.length > LOG_LIMIT) trimActionLog(S);
   return e;
 }
 /** 界面长文字照常显示，但不重复塞进最近三百条事实记录。 */

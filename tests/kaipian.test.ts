@@ -106,6 +106,33 @@ describe('新开局：瓜洲夜雨', () => {
     });
   }
 
+  it('「不渡」的三条小路，每条都至少付出一样（Issue #533：留在船上那条原来白拿）', () => {
+    /** 走一遍「不渡」，落水的人那张卡选哪一支 */
+    const 走不渡 = (选: string) => {
+      setState(newGame());
+      const tr: Trace = { stories: [], fights: [], clicks: 0, results: {} };
+      walk('p_open', (t, ls) => (t === '渡不渡' ? 2 : t === '落水的人' ? ls.findIndex(x => x.includes(选)) : 0), SKILLED, 1, tr);
+      return tr;
+    };
+
+    // 一、下水救他：得褚七相谈甚欢，代价是气血掉下去（打的硬仗）
+    const 救 = 走不渡('下水救');
+    expect(救.fights.length, '下水救他不用打').toBe(0);
+    const 救了 = JSON.parse(JSON.stringify(S));
+    expect(救了.rel.kp_chu, '救了他，褚七该记着').toBe('相谈甚欢');
+
+    // 二、留在船上：不动 xia（Issue #533），代价落在江伯身上——他一夜没动，看在眼里
+    setState(newGame());
+    const 留 = newGame();
+    walk('p_open', (t, ls) => (t === '渡不渡' ? 2 : t === '落水的人' ? ls.findIndex(x => x.includes('留在船上')) : 0), SKILLED, 1, { stories: [], fights: [], clicks: 0, results: {} });
+    expect(S.rel.jiangbo, '缩在船上不动，江伯该淡下来').not.toBe(留.rel.jiangbo);
+    expect(S.rel.jiangbo, '留在船上付出的代价是关系').toBe('点头之交');
+
+    // 三、追上去打输：褚七被人带走，人没了
+    const 追 = 走不渡('沿着江堤追');
+    expect(追.fights.length, '追上去要打一场').toBe(1);
+  });
+
   it('「不渡」的另外两条小路（下水救他、留在船上）不用打也走得通', () => {
     for (const label of ['下水救', '留在船上']) {
       setState(newGame());
