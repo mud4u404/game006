@@ -393,13 +393,17 @@ const NPCS: NpcDef[] = [
         { if: { eming: 10 }, text: '秦教头连眼皮都没抬：「恶名在外的人，穿不得这身皂衣。」' },
         { if: { noSect: true, quest: { id: 'side_caoshangfei', atLeast: 3 }, flag: 'csf_surrender' },
           text: '秦教头放下铁尺，打量你半晌：「劝得动草上飞自首的，就是你？拿人不靠刀，这才是六扇门要的人。」他站起身，「周捕头举荐你。规矩不能破，接我三十招。」',
-          do: [{ type: 'fight', foe: 'bs2_lsm_kao' }] },
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 1 }, { type: 'fight', foe: 'bs2_lsm_kao' }] },
         { if: { noSect: true, quest: { id: 'side_caoshangfei', atLeast: 3 }, flag: 'csf_caught' },
           text: '秦教头放下铁尺：「草上飞是你押回来的。周捕头说，你下手有分寸，没要他的命。」他站起身，「周捕头举荐的人，我也得亲手试过。接我三十招。」',
-          do: [{ type: 'fight', foe: 'bs2_lsm_kao' }] },
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 1 }, { type: 'fight', foe: 'bs2_lsm_kao' }] },
         { if: { noSect: true, xia: 30, rel: { npc: 'fuya_zhou', is: ['相谈甚欢', '知交'] } },
           text: '秦教头看了你一眼：「周捕头提过你，说扬州城里行侠仗义的后生，你算一个。」他抽出铁尺，「行侠是一回事，拿人是另一回事。接我三十招。」',
-          do: [{ type: 'fight', foe: 'bs2_lsm_kao' }] },
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 1 }, { type: 'fight', foe: 'bs2_lsm_kao' }] },
+        // 侠名在外，周捕头把你名字递上去（和华山申伯求信「侠义二十五也算熟」一路）：不必先有交情
+        { if: { noSect: true, xia: 30 },
+          text: '秦教头上下打量了你一眼，抽出铁尺横在胸前：「扬州城里替人出头的事，一件件都传到府衙来了。周捕头把你的名字抄在举荐的单子上。名声是名声，拿人是拿人，接我三十招。」',
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 1 }, { type: 'fight', foe: 'bs2_lsm_kao' }] },
         { if: { noSect: true },
           text: '秦教头摇摇头，朝公案那边努努嘴：「六扇门不是募兵处，不收毛遂自荐的。周捕头白日都在堂上压着案子，替他办成一件，叫他举荐你，再来说话。」',
           do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 0 }] },
@@ -625,11 +629,11 @@ const QUESTS: QuestDef[] = [
       ] },
     { title: '丐帮 · 讨一顿饭 · 完' }
   ] },
-  // 入门被拒之后开的三件心事（Issue #314）：被拒时说清人在哪、什么时辰、钱去哪挣；补齐条件、进了门就了结
+  // 入门被拒之后开的三件心事（Issue #314）：被拒时说清人在哪、什么时辰、钱去哪挣；补齐条件、举荐到手（或交了学费、画了押）就了结
   { id: 'bs2_lsm_jujian', name: '六扇门 · 举荐', stages: [
     { title: '周捕头举荐，秦教头才收你', to: 'yz_fuya', who: 'fuya_zhou',
-      hint: '秦教头说了：周捕头白日都在府衙前堂压着案子，替他办成一件，他肯开口举荐，六扇门才收你。你在扬州行侠仗义的名声，他看在眼里。',
-      need: [{ if: { any: [{ flag: 'csf_surrender' }, { flag: 'csf_caught' }, { rel: { npc: 'fuya_zhou', is: ['相谈甚欢', '知交'] } }] },
+      hint: '秦教头说了：周捕头白日都在府衙前堂压着案子，替他办成一件，他肯开口举荐，六扇门才收你。你行侠的名声若传进衙门，周捕头也肯把你的名字递上去。',
+      need: [{ if: { any: [{ flag: 'csf_surrender' }, { flag: 'csf_caught' }, { rel: { npc: 'fuya_zhou', is: ['相谈甚欢', '知交'] } }, { xia: 30 }] },
         text: '周捕头肯替你在秦教头面前开口' }] },
     { title: '六扇门 · 举荐 · 完' }
   ] },
