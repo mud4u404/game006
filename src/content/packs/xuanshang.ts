@@ -368,9 +368,21 @@ const JOBS: JobDef[] = [
       { npc: 'xsb_jiuju', at: 'cheng_tavern', if: { flag: 'xsb_xr_clue1', notFlag: 'xsb_xr_clue2' }, text: '小栓的舅舅常在望江楼饮酒，得问问孩子的下落。' },
       { npc: 'xsb_xiaoshuan', at: 'sz_matou', if: { flag: 'xsb_xr_clue2', notFlag: 'xsb_xr_found' }, text: '舅舅说小栓被押在苏州枫桥码头的货栈里，去寻他。' }
     ] },
-  { id: 'xsb_xunwu', shenfen: 'youxia', tier: 1, title: '帮绣娘阿蕙追回被偷的玉佩', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, again: 5, bang: true },
-  { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手郝屠户', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 5, bang: true },
-  { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, again: 30, k: 1.5, bang: true }
+  { id: 'xsb_xunwu', shenfen: 'youxia', tier: 1, title: '帮绣娘阿蕙追回被偷的玉佩', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, again: 5, bang: true,
+    xian: [
+      { npc: 'xsb_xiuniang', if: { notFlag: 'xsb_xw_clue' }, text: '绣娘阿蕙还在照壁下守着绣摊，玉佩怎么丢的，只有她清楚。' },
+      { npc: 'xsb_chensan', at: 'zj_shi', if: { flag: 'xsb_xw_clue', notFlag: 'xsb_xw_found' }, text: '收旧货的陈三过了江，在镇江大市口摆着担子。' }
+    ] },
+  { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手郝屠户', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 5, bang: true,
+    xian: [
+      { npc: 'xsb_gufu', if: { notFlag: 'xsb_xiong_clue' }, text: '寡妇周氏在照壁下等着回话，死者身上的刀伤，她记得最清楚。' },
+      { npc: 'xsb_zhao', at: 'cheng', if: { flag: 'xsb_xiong_clue', notFlag: 'xsb_xiong_beat' }, text: '郝屠户换了名字在东关街的肉铺帮工，天不亮就上案板。' }
+    ] },
+  { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, again: 30, k: 1.5, bang: true,
+    xian: [
+      { npc: 'xsb_liehu', at: 'daming', if: { notFlag: 'xsb_jf_clue' }, text: '猎户老韩熟蜀冈的山道，先去大明寺问他寨里的情形。' },
+      { npc: 'xsb_erdangjia', at: 'yz_guandao', if: { flag: 'xsb_jf_clue', notFlag: 'xsb_jf_beat' }, text: '黑风寨的二当家守在蜀冈官道的寨口，拿住他才回得了府衙。' }
+    ] }
 ];
 
 const NEWS: NewsDef[] = [
