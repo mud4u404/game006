@@ -164,8 +164,8 @@ export interface GameState {
   story: string;
   /** 范围：界面；写入口：ui */
   sel: string | null;
-  /** 范围：界面；写入口：ui */
-  reply: { id: string; text: string } | null;
+  /** 范围：界面；写入口：ui。at：说这句话时的江湖分钟（core/time absMin）；人走了以后「说完就走了」那张卡只留一小会儿，不隔夜 */
+  reply: { id: string; text: string; at?: number } | null;
   /** 范围：界面；写入口：ui */
   tab: Tab;
 }
