@@ -203,7 +203,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'toast': emit('toast', e.text); break;
       case 'silver': S.silver = Math.max(0, S.silver + e.delta); break;
       case 'item':
-        S.items[e.id] = Math.max(0, Math.min(e.max ?? Infinity, (S.items[e.id] || 0) + e.delta));
+      {
+        // max 只管加：手里本来就多于 max 的，不收走
+        const cur = S.items[e.id] || 0;
+        const to = cur + e.delta;
+        S.items[e.id] = Math.max(0, e.max !== undefined && e.delta > 0 ? Math.max(cur, Math.min(e.max, to)) : to);
+      }
         // 兵器当了、卖了，手里也就没了
         if (!S.items[e.id] && S.gear?.weapon === e.id) delete S.gear.weapon;
         break;
@@ -283,9 +288,13 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'wound':
         // 剧情里添的伤：封顶三级；一级的算轻伤，从此刻起过一日自己好（engine/shang.ts）。写了 if 的，条件成立才落伤
         if (!test(e.if)) break;
-        S.wounds[e.zone] = Math.min(3, S.wounds[e.zone] + (e.level ?? 1));
+      {
+        const was = S.wounds[e.zone];
+        S.wounds[e.zone] = Math.min(3, was + (e.level ?? 1));
         markLight(S);
-        pushFeed('江湖', `${{ hand: '手上', foot: '脚上', inner: '胸口' }[e.zone]}添了一处伤，轻的过一日自己会好。`);
+        const where = { hand: '手上', foot: '脚上', inner: '胸口' }[e.zone];
+        if (S.wounds[e.zone] > was) pushFeed('江湖', S.wounds[e.zone] === 1 ? `${where}添了一处伤，轻的过一日自己会好。` : `${where}的伤又重了一层，得找大夫看看。`);
+      }
         break;
       // 江湖上的话：这一带传开的、你还不知道的、最耸动的一条（engine/chuanwen.ts 的 hearsay），不再随手抽
       case 'news': out.vars.news = inner(hearsay() ?? '这几日太平得很，没听说什么。'); break;
