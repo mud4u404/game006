@@ -286,7 +286,7 @@ export interface RoomLife {
 /** 基础服务：医馆（看伤）、客栈（住店）、兵器铺、当铺、杂货铺。tests/content.test.ts「基础设施」按它查各地齐不齐 */
 export type Service = '医' | '宿' | '兵' | '当' | '杂';
 
-export interface NpcAt { room: string; if?: Cond }
+export interface NpcAt { room: string; if?: Cond; /** 这处不可说：打听去处时跳过去（docs/sheji-021-026.md 023 节） */ secret?: true }
 
 export interface NpcDef {
   id: string;

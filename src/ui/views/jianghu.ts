@@ -2,6 +2,7 @@ import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
 import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
+import { askableTargets } from '../../engine/chuanwen';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
@@ -114,7 +115,12 @@ function detail(id: string): string {
   const want = !n.obj && ['相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'].includes(rel) ? wantOf(id) : undefined;
   const wanting = want ? `<p class="muted">他眼下想${want.text}。</p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
-    ${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
+    ${wanting}<div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}${n.obj ? '' : askBtn()}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
+}
+
+/** 打听按钮旁加一个「问人」：弹出你认得、又有常去处的人，问眼前这人知不知道他们的去处 */
+function askBtn(): string {
+  return askableTargets().length ? `<button class="act" data-act="askOpen">问人</button>` : '';
 }
 
 /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */

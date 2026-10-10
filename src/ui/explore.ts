@@ -14,6 +14,8 @@ import { TIELV_TEXT, XIEJIAO, checkYue, restLine, jingxiu, nightWarn, restDays, 
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
 import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
+import { askWhere, askableTargets } from '../engine/chuanwen';
+import { npcName } from '../engine/world';
 import { act as settleAction, effectReq } from '../engine/xingdong';
 import { FAR_MIN, chufaLine } from '../engine/chufa';
 import { markEncounter, rollEncounter } from '../engine/encounter';
@@ -201,6 +203,26 @@ registerHandlers({
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
   do: v => doAct(v as Verb),
+  // 问人：弹出你认得、又有常去处的人，问眼前这人知不知道他们的去处（engine/chuanwen.ts 的 askWhere）
+  askOpen: () => {
+    const targets = askableTargets();
+    if (!targets.length) { toast('你还没认识几个有常去处的人'); return; }
+    const list = targets.map(id => `<button class="act" data-act="askWhere:${id}">${npcName(id)}</button>`).join('');
+    openSheet(`<div class="r-h"><span class="tag accent">问人</span><h2>问${npcName(S.sel ?? '')}：谁平日在哪</h2></div>
+      <p class="muted">只问你认得的人。答得上来才记进见闻。</p>
+      <div class="btnrow">${list}</div>
+      <button class="btn ghost" data-act="sheetClose">算了</button>`, true);
+  },
+  askWhere: v => {
+    const id = S.sel;
+    if (!id) return;
+    const r = askWhere(id, v);
+    S.reply = { id, text: r.text };
+    closeSheet();
+    render();
+    const rp = document.querySelector('.reply');
+    if (rp) rp.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+  },
   travel: v => travelTo(v),
   travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
   quest: () => {

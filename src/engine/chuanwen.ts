@@ -15,6 +15,7 @@
 import { S, markSeen, pushFeed, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
 import { NEWS, NPCS, ROOMS, npc, room, shiById } from '../content';
+import type { Cond } from '../content/types';
 import type { NpcLife, ShiDef, ShiStep } from '../content/types';
 import { pickBranch, test } from './dsl';
 import { mulberry32, seedOf } from './rng';
@@ -519,6 +520,129 @@ export function panwen(npcId: string, who: string = npcName(npcId)): string {
  * 只在 ask() 里传，别的调用一律不传 —— 说书人的打赏和效果 news 那两句兼着把见闻簿上那件事往前推一步
  * （tellYou → learnShi），在那里换一句说，就等于替玩家改世事的进度。所以这一层不替它们做主。
  */
+/* ---------- 打听去处（docs/sheji-021-026.md 023 节） ---------- */
+
+/** 时辰（24 小时制）对应的时辰名：子0 丑2 寅4 卯6 辰8 巳10 午12 未14 申16 酉18 戌20 亥22 */
+const SHICHEN = ['子时', '丑时', '寅时', '卯时', '辰时', '巳时', '午时', '未时', '申时', '酉时', '戌时', '亥时'];
+const shichenOf = (h: number): string => SHICHEN[Math.floor(h / 2) % 12];
+/** 一段时辰（from 到 to，可跨午夜）说成一句：整段夜里→入夜，只到正午前→清早，整段白天→白日，否则「时辰到时辰」 */
+function hourLabel(from: number, to: number): string {
+  const wrap = to < from;
+  if (wrap) return '入夜';
+  if (from >= 19) return '入夜';
+  if (to <= 12) return '清早';
+  if (from >= 5 && to <= 19) return '白日';
+  return `${shichenOf(from)}到${shichenOf(to)}`;
+}
+
+/**
+ * 这个条件是不是「只按时辰、平日就能成立」——不依赖旗标/世事/差事/关系等。带别的条件的去处不公开，免得漏出不该知道的下落（docs/sheji-021-026.md 023 节）。
+ * any 里只要有一条「只含时辰（或为空）」的分支，整条平日就成立（纯时辰分支去掉时辰代表真，不能丢掉）；嵌套 any 递归处理。
+ */
+function onlyHour(c?: Cond): boolean {
+  if (!c) return true;
+  const keys = Object.keys(c) as (keyof Cond)[];
+  if (keys.length === 0) return true;
+  if (keys.length === 1 && keys[0] === 'hour') return true;
+  if (keys.includes('any') && Array.isArray((c as { any?: Cond[] }).any)) {
+    return (c as { any: Cond[] }).any.some(onlyHour);
+  }
+  return false;
+}
+
+/** 从条件里取出用于显示的时辰段：优先顶层 hour；否则取 any 里第一条「只含时辰」的分支（嵌套 any 递归） */
+function hourOf(c?: Cond): { from: number; to: number } | undefined {
+  if (!c) return undefined;
+  if (c.hour) return c.hour;
+  if (Array.isArray((c as { any?: Cond[] }).any)) {
+    for (const s of (c as { any: Cond[] }).any) {
+      const h = hourOf(s);
+      if (h) return h;
+    }
+  }
+  return undefined;
+}
+
+/** 这个人的公开作息（at 里不标 secret、且只按时辰、平日就能成立的）拼成一句去处；带旗标/世事/差事等条件的不说。没有为空 */
+export function whereaboutsOf(id: string): string {
+  const n = npc(id);
+  if (!n?.at) return '';
+  const list = (Array.isArray(n.at) ? n.at : [n.at]).filter(a => !a.secret && onlyHour(a.if));
+  if (!list.length) return '';
+  return list.map(a => {
+    const name = room(a.room)?.name ?? a.room;
+    const h = hourOf(a.if);
+    if (!h) return `常在${name}`;
+    return `${hourLabel(h.from, h.to)}在${name}`;
+  }).join('，');
+}
+
+/** 这人还活着、没走远（dead / 未到期的 gone 不算，人物详情里不该列） */
+function isAround(id: string): boolean {
+  const p = worldOf().ppl[id];
+  const st = p?.st;
+  if (st === 'dead') return false;
+  if (st === 'gone') { const u = p.until; return u !== undefined && u <= dayNo(S); }
+  return true;
+}
+
+/** 这人能不能答得出 target 的去处：同势力、常待同一处、眼下同处一室。不读玩家与目标的交情——「问人」只列玩家认识的人，读了那句「不知道」就永远出不来 */
+export function canTell(npcId: string, targetId: string): boolean {
+  if (npcId === targetId) return false;
+  const a = lifeOf(npcId), b = lifeOf(targetId);
+  if (a?.faction && b?.faction && a.faction === b.faction) return true;
+  const ra = new Set(roomsOf(npcId)), rb = new Set(roomsOf(targetId));
+  for (const r of ra) if (rb.has(r)) return true;
+  if (roomNpcs(S.loc).includes(targetId)) return true;
+  return false;
+}
+
+/** 玩家认识、又有作息、还活着、不是物件、也不是被问的自己（人物详情里「问人」弹窗只列这些） */
+export function askableTargets(): string[] {
+  return NPCS.filter(n => n.at && !n.obj && isAround(n.id) && n.id !== S.sel && (S.rel[n.id] && (REL_NOD.includes(S.rel[n.id]) || REL_WARM.includes(S.rel[n.id])))).map(n => n.id);
+}
+
+export interface WhereResult { text: string; /** know=答得出，unknown=不认识这人，nosched=这人没个准地方 */ src: 'know' | 'unknown' | 'nosched' }
+
+/** 同一句重复追问不刷屏：最近一条「传闻」已经是这句就不重复记进见闻簿 */
+function tellFeed(text: string): void {
+  const last = S.feed[S.feed.length - 1];
+  if (last && last.t === '传闻' && last.x === text) return;
+  pushFeed('传闻', text);
+}
+
+/**
+ * 问 npcId：「某某平日在哪」。答的是作息的公开部分，事件打断时只有关心这事的人才说得出新去处（读他知道的传闻）。
+ * 答得出来记进见闻簿（docs/sheji-021-026.md 023 节）。
+ */
+export function askWhere(npcId: string, targetId: string): WhereResult {
+  const who = npcName(npcId), tname = npcName(targetId);
+  if (!npc(targetId)?.at) return { text: `${who}摇摇头：「${tname}？他没个准地方，我可说不上来。」`, src: 'nosched' };
+  if (!canTell(npcId, targetId)) return { text: `${who}想了想：「${tname}素不相识，他平日在哪，我哪里晓得。」`, src: 'unknown' };
+  // 事件打断作息：知道这件事（他知道的传闻牵涉 target）的人才说得出新去处
+  const p = worldOf().ppl[targetId];
+  const today = dayNo(S);
+  if (p?.at && p.at.until > today) {
+    // 只有确切知道「这次移位、新去处」的传闻（传闻的 place 就是新地方）的人才说得出；同一个人别处的无关旧闻不泄露新位置
+    const newRoom = p.at.room;
+    const knows = knowsOf(worldOf(), npcId).some(k => {
+      const r = worldOf().rumor[k[0]];
+      return !!r && r.subj.includes(targetId) && r.place === newRoom;
+    });
+    if (knows) {
+      const where = room(p.at.room)?.name ?? p.at.room;
+      const text = `${who}压低声音：「${tname}这几日不在常待的地方——${where}那边的人说，他叫事绊住了，在那儿能寻着。」`;
+      tellFeed(text);
+      return { text, src: 'know' };
+    }
+  }
+  const base = whereaboutsOf(targetId);
+  const text = base ? `${who}道：「${tname}平日的去处我知道——${base}。」` : `${who}道：「${tname}啊，他没个准地方，街面上常碰得着。」`;
+  tellFeed(text);
+  return { text, src: 'know' };
+}
+
+
 export function hearsay(opt: { skip?: ReadonlySet<string> } = {}): string | null {
   const w = worldOf(), today = dayNo(S), region = room(S.loc).region, heard = new Set(S.heard ?? []);
   let best: { r: RumorInst; text: string; s: number } | null = null;
