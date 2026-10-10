@@ -5,15 +5,15 @@
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
 import { absMin, advanceDays, dateStr, dayNo } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
-import { room, skillById } from '../content';
+import { npc, room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
 import { fits } from '../engine/wuxue';
 import { slotSheet } from './views/wugong';
 import { gongliText } from '../engine/ren';
-import { TIELV_TEXT, XIEJIAO, checkYue, restLine, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
-import { chuguanHTML } from './chuguan';
+import { TIELV_TEXT, XIEJIAO, checkYue, xiejiaoBao, restLine, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
+import { chuguanHTML, xingLaiHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
-import { act, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
+import { act, enter, hopMin, roomNpcs, verbsOf, pathTo, payFare, roadText, travelMin } from '../engine/world';
 import { act as settleAction, effectReq } from '../engine/xingdong';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { TRAVEL_BUSY, afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
@@ -21,9 +21,9 @@ import { openQuestbook, trackQuest } from './views/questbook';
 import { kpBiguanTip } from '../engine/kaipian';
 import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
 import { mapSheet, setMapRegion } from './views/ditu';
-import { powerNow, yaoJin } from '../engine/jiemian';
+import { markArrival, powerNow, targetAt, type Target } from '../engine/jiemian';
 import { showTitle } from './story';
-import { eyeLine } from './views/jianghu';
+import { eyeLine, toggleDesc } from './views/jianghu';
 import { pickItemFirst } from './daoju';
 import { takeTopic } from '../engine/yingmian';
 
@@ -45,11 +45,14 @@ export const isTraveling = (): boolean => traveling;
 export function travelTo(dest: string, onArrive?: () => void): void {
   if (traveling) { toast(TRAVEL_BUSY); return; }
   if (dest === S.loc || !$('#fightLayer')?.hidden || !$('#storyLayer')?.hidden) return;
+  // 到了要找谁：动身之前问（到了以后差事就不再列了，engine/jiemian.ts 的 targetAt）
+  const tgt = onArrive ? undefined : targetAt(dest);
   const path = pathTo(S.loc, dest);
   if (!path.length) { toast(S.chapter === 0 ? '要下大雨了，码头今儿不开船。' : '从这里去不了那儿'); return; }
   traveling = true;
   stopAsked = false;
   S.tab = 'jianghu'; S.sel = null; S.reply = null;
+  markArrival(null);
   render();
   const bar = $('#travel')!;
   const app = $('#app')!;
@@ -65,7 +68,7 @@ export function travelTo(dest: string, onArrive?: () => void): void {
     $('#main')!.scrollTop = 0;
     const out = enter(S.loc);
     if (out) afterOutcome(out);
-    if (S.loc === dest) onArrive?.();
+    if (S.loc === dest) { if (onArrive) onArrive(); else focusTarget(tgt); }
   };
   const step = (): void => {
     const nx = stopAsked ? undefined : path.shift();
@@ -111,11 +114,14 @@ export function travelTo(dest: string, onArrive?: () => void): void {
   step();
 }
 
-/** 到了主线要去的地方：把要找的人选中，滚到他的动作那里（高亮在 ui/views/jianghu.ts，由 engine/jiemian.ts 的 yaoJin 定） */
-function focusQuest(): void {
-  const hot = yaoJin().hot;
-  if (!hot) return;
-  S.sel = hot.npc; S.reply = null;
+/**
+ * 到了地方就能办事（docs/sheji-youhua-1010.md 第六条）：把要找的人选中、他的动作高亮，把动作面板滚进首屏。
+ * 主线、差事、零工、约好的地方都走这里（要找谁由 engine/jiemian.ts 的 targetAt 定，赶路前问好）；那个人此刻不在场就什么也不做
+ */
+function focusTarget(t: Target | undefined): void {
+  if (!t || !roomNpcs(S.loc).includes(t.npc)) return;
+  markArrival(t);
+  S.sel = t.npc; S.reply = null;
   render();
   document.querySelector('.detail')?.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
 }
@@ -211,7 +217,16 @@ registerHandlers({
     if (m) m.scrollTop = top;
     $('.detail')?.scrollIntoView({ block: 'nearest' });
   },
-  do: v => doAct(v as Verb),
+  do: v => { markArrival(null); doAct(v as Verb); },
+  // 场景白描折叠后点开、收起
+  descToggle: () => { toggleDesc(); render(); },
+  // 看完榜文，一步到下一个人（NpcDef.next）：选中他，高亮字头相符的动作，滚进首屏。v = 人物id[:动作字头]
+  jumpTo: v => {
+    const [id, head] = v.split(':');
+    const n = npc(id);
+    if (!n || !roomNpcs(S.loc).includes(id)) return;
+    focusTarget({ npc: id, verb: head ? verbsOf(n).find(x => x.startsWith(head)) : undefined });
+  },
   // 迎面的话头：选中开口的人，做对应的动作（engine/yingmian.ts）
   greet: () => {
     const t = takeTopic();
@@ -224,8 +239,8 @@ registerHandlers({
   quest: () => {
     // 卡住的也照去：差的那一步多半就在那儿办（缘故卡上已经写着）。到了地方，把要找的人选中、动作高亮（engine/jiemian.ts），不再只弹一句「就在此处」
     const q = S.track ? questNav(S.track) : null;
-    if (q?.to && q.to !== S.loc) travelTo(q.to, focusQuest);
-    else if (q?.to) focusQuest();
+    if (q?.to && q.to !== S.loc) travelTo(q.to);
+    else if (q?.to) focusTarget(targetAt(S.loc));
     else toast(q && q.state !== '能做' ? q.why : '眼下没有要去的地方');
   },
   questbook: () => { openQuestbook(); },
@@ -266,19 +281,24 @@ registerHandlers({
     if (traveling) return;
     const h = Number(v), label = XIEJIAO.find(([x]) => x === h)?.[1] ?? '';
     closeSheet();
+    const day0 = dayNo(S);
     const m = waitUntil(S, h);
     // 歇着也缓过一点气力：一个时辰回三分，最多回三成（审查 G22、H42：歇了十几个时辰一点不回）
     const frac = Math.min(0.3, (m / 60) * 0.03);
     S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * frac));
     S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * frac));
-    // 歇脚那一句换几种说法，不进动态（动态里天天一模一样的一行，读着腻）
-    toast(restLine(S, label));
     const tip = kpBiguanTip(S, 'rest');
     if (tip) pushFeed('江湖', tip);
+    // 歇过一夜醒来：和出关一样，读一页邸报（几条世事，外加某人惦记着你）；什么都没有，就照旧只弹一句
+    const bao = xiejiaoBao(S, day0);
+    const missed = bao.news.length || bao.nian ? checkYue(S) : [];
+    const html = bao.news.length || bao.nian ? xingLaiHTML({ ...bao, missed }, `${restLine(S, label)}今日是${dateStr(S)}。`) : '';
+    // 歇脚那一句换几种说法，不进动态（动态里天天一模一样的一行，读着腻）
+    if (!html) toast(restLine(S, label));
     render();
     // 新的描写在最上头（审查 H09：歇完停在底部，看不到）
     $('#main')!.scrollTop = 0;
-    lateYue();
+    if (html) { openSheet(html); save(); } else lateYue();
   },
   sheetClose: () => { closeSheet(); render(); },
   restart: () => { setConfirmRestart(true); render(); },

@@ -1,7 +1,7 @@
 /**
  * 主界面的几样东西（负责人 10-10 七条，docs/sheji-youhua-1010.md 第二、三、六、七条）。纯函数，只读 S，界面和测试共用：
  * - 角色卡：战力、称号、评语，战力变了记下旧值，卡上写一回「旧 → 新」；
- * - 眼下要紧：永远只有一件，写成动宾句；主线卡住了写缘故，再给一件帮得上忙的事；往下最多两条「也可以」；
+ * - 眼下要紧：永远只有一件，写成动宾句；主线卡住了写缘故，再给一件帮得上忙的事；往下最多一条「也可以」；
  * - 地点说明：地图上点一处，看那里有什么人、什么事、要走多久；
  * - 变强的路：闭关的预估、切磋、学艺、门派练功，各写代价。
  * 战力、评语、闭关、导航都是现成的（engine/zhanli.ts、lilian.ts、daohang.ts），这里只拼，不另造公式。
@@ -63,6 +63,39 @@ export function markWent(id: string): void {
   if (!w.includes(id)) w.push(id);
 }
 export const wentSet = (): Set<string> => new Set([...(S.ui?.went ?? []), S.loc]);
+
+/* ---------- 到地即办 ---------- */
+
+/** 赶到一处要找的人、要点的动作 */
+export interface Target { npc: string; verb?: Verb }
+let arrival: (Target & { loc: string }) | null = null;
+/** 赶到了：记下要高亮的人和动作（只在这处地方有效，走开或做了别的就不再亮） */
+export const markArrival = (t: Target | null): void => { arrival = t ? { ...t, loc: S.loc } : null; };
+/** 刚赶到时要高亮的人和动作；人不在场、已走开则没有 */
+export const arrivalHot = (): Target | undefined => (arrival && arrival.loc === S.loc && roomNpcs(S.loc).includes(arrival.npc) ? { npc: arrival.npc, verb: arrival.verb } : undefined);
+
+/**
+ * 去 dest 要找谁：主线这一步要找的人，差事、零工派活的人，约好等你的人。要在动身之前问（到了以后差事就不再列了）。
+ * 没有明确要找的人返回 undefined
+ */
+export function targetAt(dest: string): Target | undefined {
+  const nav = S.track ? questNav(S.track) : null;
+  if (nav && nav.state === '能做' && nav.to === dest && nav.who) return { npc: nav.who.id, verb: advanceVerb(nav.who.id, nav.id, nav.stage) };
+  const l = leadsNear(8).find(x => x.to === dest && x.who);
+  if (l) return { npc: l.who!, verb: l.verb };
+  const y = S.yue.find(x => x.at === dest && x.npc);
+  return y ? { npc: y.npc } : undefined;
+}
+
+/** 这是第几次走进这处地方（走进来一次记一次，ui/shell.ts 的 render 在换了地方时记；旧档里到过的算第一次） */
+export function markVisit(): void {
+  const ui = (S.ui ??= {});
+  if (ui.at === S.loc) return;
+  ui.at = S.loc;
+  const v = (ui.visits ??= {});
+  v[S.loc] = (v[S.loc] ?? ((ui.went ?? []).includes(S.loc) ? 1 : 0)) + 1;
+}
+export const visitsOf = (id: string): number => S.ui?.visits?.[id] ?? 0;
 
 /* ---------- 眼下要紧 ---------- */
 
@@ -135,19 +168,18 @@ export function yaoJin(): YaoJin {
   const nav = S.track ? questNav(S.track) : null;
   const ls = S.chapter === 0 ? [] : leadsNear(3);
   const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
-  // 已揭的差事，当前这一步排在「也可以」第一条：主线在前也不挤掉正在做的事
+  // 「也可以」只留一条（首屏减负）：有已揭的差事就是它的当前一步，主线在前也不挤掉正在做的事
   const jy0 = S.job ? S.yue.find(y => y.id === 'job_' + S.job!.id) : undefined;
   const jn0 = jy0 ? yueNow(jy0) : null;
   const jobAlso: Also[] = jy0 && jn0 ? [{ text: jn0.step ? `${jn0.go}（${jy0.text}）` : `去${jn0.toName}，交差：${jy0.text}`, to: jn0.to, toName: jn0.toName, min: jn0.to === S.loc ? 0 : travelMin(pathMin(S.loc, jn0.to)) }] : [];
-  const alsoOf = (skip?: Lead): Also[] => [...jobAlso, ...ls.filter(l => l !== skip && l.min <= NEAR).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }))].slice(0, 2);
+  const alsoOf = (skip?: Lead): Also[] => [...jobAlso, ...ls.filter(l => l !== skip && l.min <= NEAR).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }))].slice(0, 1);
   // 主线要找的人明显打不过：先去变强，主线放到「也可以」第一行，说明缘故
   const weak = nav && nav.state === '能做' ? tooStrong(nav) : null;
   if (nav && weak) {
     const mainAt: Also = { text: nav.who ? `去${nav.toName}，找${nav.who.name}（${kind}，眼下还打不过）` : `办「${nav.title}」`, to: nav.to ?? S.loc, toName: nav.toName ?? room(S.loc).name, min: nav.to && nav.to !== S.loc ? travelMin(pathMin(S.loc, nav.to)) : 0 };
     const why = `${weak.name}${weak.gap >= 2 ? '的功夫高出你两三层' : '功夫在你之上'}，${nav.to === S.loc ? '他不理你，' : '现在去也是送死，'}你得先变强`;
     const h = (S.lilian ?? 0) > 0 ? helpOf(false, ls) : ls[0] ? helpOf(true, ls) : { tag: '先变强', text: '先去闭关，攒够历练再回来', tab: 'wugong' as Tab, to: undefined, toName: undefined };
-    const used = ls.find(l => l.to === h.to && leadText(l) === h.text);
-    return { ...h, tag: '先变强', here: false, why, also: [mainAt, ...alsoOf(used)].slice(0, 2) };
+    return { ...h, tag: '先变强', here: false, why, also: [mainAt] };
   }
   // 主线有下一步：就是它
   if (nav && nav.state === '能做') {

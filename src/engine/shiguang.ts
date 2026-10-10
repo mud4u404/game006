@@ -18,7 +18,7 @@ import { jingxiuPlan, retreatPlan } from './lilian';
 import { healLight, markLight } from './shang';
 import { syncBody } from './ren';
 import { npcName } from './world';
-import { tickWorld, worldRng } from './shijie';
+import { tickWorld, wantOf, worldRng } from './shijie';
 
 /** 铁律的余裕（日）、一次离开最多算几日、现实一小时算江湖几日 */
 export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
@@ -193,6 +193,28 @@ export function jingxiu(s: GameState, days: number, rng: () => number = worldRng
   const db = dibao(s, fromDay, tickShiFull());
   const missed = checkYue(s);
   return { days, grow, used, gains, breaks, healed: jx.healed, gongli: gl, zouhuo, news: db.map(x => x.text), newsSrc: db.map(x => x.src), missed, lodging: zhu, cost, lusuDays };
+}
+
+/** 惦记着你的人：关系够热（相谈甚欢以上）、眼下有心事的，取关系最亲的一位（同亲取先认识的）；没有为空 */
+const WARM = ['师徒', '相依为命', '情缘', '结拜兄弟', '知交', '相谈甚欢'];
+export function nianNi(s: GameState = S): string | undefined {
+  const rank = (id: string): number => WARM.indexOf(s.rel[id] ?? '');
+  const ids = Object.keys(s.rel).filter(id => rank(id) >= 0 && npc(id) && !npc(id)!.obj && wantOf(id));
+  if (!ids.length) return undefined;
+  const id = ids.map((x, i) => ({ x, i })).sort((a, b) => rank(a.x) - rank(b.x) || a.i - b.i)[0].x;
+  return `${npcName(id)}惦记着你，眼下想${wantOf(id)!.text}，不知你得空没有。`;
+}
+
+/**
+ * 歇脚醒来的邸报（歇过一夜、跨了江湖日才有；复用出关邸报的取法 jingxiu → dibao）：
+ * 江湖往前走一夜（世界的慢变、世事），耳朵里听到的几条真事（最多三条），外加一条某人惦记着你（有的话）。
+ * fromDay 是歇脚前的江湖日。什么都没有就返回空，界面照旧只弹一句
+ */
+export function xiejiaoBao(s: GameState, fromDay: number): { news: string[]; nian?: string } {
+  if (dayNo(s) <= fromDay) return { news: [] };
+  tickWorld(s);
+  const news = dibao(s, fromDay, tickShiFull()).slice(0, 3).map(x => x.text);
+  return { news, nian: nianNi(s) };
 }
 
 /** 这个约是榜上揭的差事（JobDef.bang），或者交给一件物件的：误了期不算失信于人 */
