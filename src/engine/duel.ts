@@ -193,6 +193,8 @@ export interface DuelLog {
   parry: number; open: number; ult: number;
   /** 这一场新落下的伤（打完以后起作用） */
   taken: Wounds;
+  /** 没接住的重招，按对手那一招的路数（力、速、巧）记：败仗结算「败在哪里」用（engine/jiesuan.ts 的 loseNote） */
+  miss: Record<TellDom, number>;
 }
 
 /** 一场最多吃几包金疮药 */
@@ -289,7 +291,7 @@ export class Duel {
     this.allyHits = this.allies.map(() => 0);
     this.crowd = opts.crowd ?? { n: 1, maxAtk: 1 };
     this.left = this.crowd.n - 1;
-    this.log = { decisions: 0, prompts: 0, openings: 0, dealt: {}, last: null, swings: 0, deficit: 0, maxHeld: 0, feints: 0, saw: 0, fooled: 0, parry: 0, open: 0, ult: 0, taken: { ...NO_WOUNDS } };
+    this.log = { decisions: 0, prompts: 0, openings: 0, dealt: {}, last: null, swings: 0, deficit: 0, maxHeld: 0, feints: 0, saw: 0, fooled: 0, parry: 0, open: 0, ult: 0, taken: { ...NO_WOUNDS }, miss: { li: 0, su: 0, qiao: 0 } };
     // 合璧里的减益，开战时就施给对手
     for (const fx of hero.openers ?? []) this.applyFx(fx);
   }
@@ -572,6 +574,9 @@ export class Duel {
     ev.push({ k: 'tell', tell: i, pw, opts, feintRate: side ? 0 : this.feintR, side });
   }
 
+  /** 这一记重招是哪一路的（对手没写重招就按力、速、巧轮着来，同 constructor） */
+  private domOf(i: number): TellDom { return this.f.tells[i] ?? (['li', 'su', 'qiao'] as const)[i % 3]; }
+
   /**
    * 应对重招。choice 为空（时间到了没选、或者没有一种用得上）：凭本能挑成算最高的，成算打一点五成折扣；都用不上就硬吃。
    */
@@ -594,6 +599,7 @@ export class Duel {
       this.mom = clamp(this.mom - 12, 5, 95);
       const e: Ev = { k: 'resp', key: null, ok: false, feint: pr.feint, instinct: true, p: 0, dmg: 0, dir: 'in', side: pr.side };
       ev.push(e);
+      this.log.miss[this.domOf(pr.tell)]++;
       e.dmg = this.hurt(big * 1.2 * this.foeOut(), 'inner', true, ev);
       resetTell();
       return ev;
@@ -637,6 +643,7 @@ export class Duel {
       this.mom = clamp(this.mom - dm, 5, 95);
       const e: Ev = { k: 'resp', key: o.k, ok: false, feint: false, instinct, p, dmg: 0, dir: 'in', side: pr.side };
       ev.push(e);
+      this.log.miss[this.domOf(pr.tell)]++;
       e.dmg = this.hurt(big * mul * this.foeOut(), ZONE_OF[o.k], true, ev);
     }
     resetTell();
