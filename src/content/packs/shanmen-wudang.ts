@@ -23,7 +23,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, JobDef, Ne
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smwd_qionghua', name: '琼花观', area: '扬州城 · 观巷', region: 'yz', t: 10, map: [58, 92],
+    id: 'smwd_qionghua', name: '琼花观', area: '扬州 · 琼花观', region: 'yz', t: 10, map: [58, 92],
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '观门虚掩着，殿里一盏长明灯。院子里黑沉沉的，老琼花的枝影投在青砖上，廊下有人在低声念晚课，扫帚靠在墙角。' },
@@ -191,10 +191,15 @@ const NPCS: NpcDef[] = [
   {
     id: 'smwd_saochen', name: '扫尘', ini: '尘', tone: 'amber', brief: '扫着落叶',
     look: '十二三岁的小道童，头发用一根木簪别着，别得歪歪的。扫帚比他高半头，扫两下就要停下来比一比谁高。',
-    verbs: ['交谈', '观察',
+    verbs: ['交谈', '观察', '打听',
       { verb: '站桩', if: { flag: 'smwd_asked', notFlag: 'smwd_zhuang', noSect: true } },
       { verb: '交药', if: { job: 'smwd_job_cai' } }],
     actions: {
+      打听: [
+        { if: { flag: 'smwd_asked', notFlag: 'smwd_zhuang' },
+          text: '「要拜师，先过考校：想动手，找邢师兄接三十招；不想动手，就在我这儿站桩。观主在廊下看着呢。」' },
+        { text: '「我只会扫地。观里的事，观主和邢师兄知道得全；我记性差，转头就忘了。」', do: [{ type: 'news' }] }
+      ],
       交谈: [
         { if: { flag: 'smwd_zhuang' },
           text: '扫尘把扫帚一扔，凑过来捏你的腿：「硬了没有？站过桩的腿，头三天都是硬的。我头一回站，哭了一下午——别告诉邢师兄。」' },

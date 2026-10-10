@@ -28,7 +28,7 @@ const SHI_DEF: ShiDef[] = [
     id: SHI, name: '乱石阵困船', region: 'gz', start: { flag: 'ssgz_seen' }, first: 'qi',
     steps: {
       qi: {
-        now: '江滩上多了一片乱石阵，渔家的船进去就出不来，转半天又回到原处。石头摆的方位透着古怪——是有人按阵法摆的。',
+        now: '江滩上多了一片乱石阵，渔家的船进去就出不来，转半天又回到原处。石头摆的方位透着古怪——是有人按阵法摆的。摆阵的人，渔家都说住在江滩上的听潮小筑。',
         news: '江滩上多了一片乱石阵，渔船进去就出不来，石头摆的方位透着古怪。',
         next: { days: 2, to: 'huo' }
       },
@@ -60,7 +60,7 @@ const SHI_DEF: ShiDef[] = [
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smth_xiaozhu', name: '听潮小筑', area: '瓜洲 · 江滩', region: 'gz', t: 10, map: [84, 84],
+    id: 'smth_xiaozhu', name: '听潮小筑', area: '瓜洲 · 渡口', region: 'gz', t: 10, map: [84, 84],
     desc: [
       { if: { shi: { id: SHI, at: ['huo'] } },
         text: '江滩上的小筑竹篱围着，半院桃花开得正好——可篱笆外头聚了一群渔家，个个攥着火把。领头的是渔行的胡三，嘴里喊着「妖人布阵，困我渔船」。' },

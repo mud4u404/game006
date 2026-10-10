@@ -26,7 +26,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, ItemDef, J
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smhs_jianlu', name: '剑庐', area: '镇江 · 北固山下', region: 'zj', t: 15, map: [74, 12],
+    id: 'smhs_jianlu', name: '剑庐', area: '镇江 · 北固山', region: 'zj', t: 15, map: [74, 12],
     desc: [
       { if: { flag: 'smhs_in' },
         text: '北固山下一座三间的小院，柴门虚掩，院里一方磨剑石，一块旧匾上「剑庐」两个字剥了大半。你进门不用叩门——哑叔听见你的脚步，早把门拉开了。' },
@@ -212,9 +212,14 @@ const NPCS: NpcDef[] = [
   {
     id: 'smhs_shenbo', name: '申伯', ini: '申', tone: 'blue', brief: '在廊下抄案卷', at: { room: 'yz_fuya' },
     look: '六十来岁，抄案卷的老书吏，左手按着纸，右手悬着笔，写三个字就要停下来揉一揉眼睛。案卷码得半人高，边角都对得整整齐齐。',
-    verbs: ['交谈', '观察',
+    verbs: ['交谈', '观察', '打听',
       { verb: '求信', if: { noItem: 'smhs_xin' } }],
     actions: {
+      打听: [
+        { if: { noSect: true, notFlag: 'smhs_xin_given' },
+          text: '「信不是老朽说写就写的，得捕头爷点头。他在前堂，白天都在；你替府衙办成过案子，他自然肯保。」' },
+        { text: '「老朽只管抄案卷。北固山那位柏先生的闲话，倒是听老书吏们讲过几回。」', do: [{ type: 'news' }] }
+      ],
       交谈: [
         { if: { flag: 'smhs_xin_given' },
           text: '申伯揉着眼睛抬头：「信送到了没有？北固山上的柏先生——当年府里一桩陈年悬案，是他在城墙上指了一个人，捕头爷才破的案。替我问他安。」' },
@@ -357,7 +362,7 @@ const EYES: EyeDef[] = [
 /* ---------- 传闻 ---------- */
 
 const NEWS: NewsDef[] = [
-  { text: '北固山下的剑庐住着一位华山的剑客，十几年没下山。听说他收徒，要有人引荐才见得到。', who: ['书吏', '货郎', '渔家'] },
+  { region: 'zj', text: '北固山下的剑庐住着一位华山的剑客，十几年没下山。听说他收徒，要有人引荐才见得到。', who: ['书吏', '货郎', '渔家'] },
   { if: { flag: 'smhs_ju' },
     text: '有人带着引荐信上北固山拜师，叫剑客挡了驾——听说手上有人命的，他一概不收。', who: ['书吏', '猎户', '货郎'], about: 'you' },
   { if: { flag: 'smhs_in' },

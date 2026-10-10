@@ -88,7 +88,7 @@ describe('突破合成一张卡', () => {
 });
 
 describe('闭关邸报：突破在最上面', () => {
-  it('一次闭关里升重加学会，邸报的第一块是突破，其次才是消化历练的数', () => {
+  it('一次闭关里升重加学会，邸报的第一块是突破，其次才是历练的数', () => {
     S.lilian = 5000;
     S.skills.hanjiang = { r: 0, p: 190 };
     const gone = Object.keys(S.skills).find(k => k !== 'hanjiang')!;
@@ -100,7 +100,7 @@ describe('闭关邸报：突破在最上面', () => {
     const html = chuguanHTML(rep, '闭关七日。', '闭关七日');
     const at = (s: string): number => html.indexOf(s);
     expect(at('tupo-blk')).toBeGreaterThan(-1);
-    expect(at('tupo-blk')).toBeLessThan(at('消化历练'));
+    expect(at('tupo-blk')).toBeLessThan(at('历练 '));
     expect(at('tupo-blk')).toBeLessThan(at('class="story"'));
     expect(html).toContain('升重');
     expect(html).toContain('新学');

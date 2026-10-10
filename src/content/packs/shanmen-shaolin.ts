@@ -25,7 +25,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, JobDef, Ne
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smsl_jinshan', name: '金山寺', area: '镇江 · 金山', region: 'zj', t: 15, map: [26, 8],
+    id: 'smsl_jinshan', name: '金山寺', area: '镇江 · 金山寺', region: 'zj', t: 15, map: [26, 8],
     desc: [
       { if: { flag: 'smsl_in' },
         text: '金山立在江心，寺在山上，黄墙碧瓦，江风里全是香火气。你上山不用看知客僧的脸色——殿前的知客僧远远看见你，板着的脸松了松，侧身让你进去了。' },
