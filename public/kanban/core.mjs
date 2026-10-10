@@ -5,7 +5,7 @@ export const HOUR = 3600 * 1000;
 
 export const AIS = [
   { k: 'codex', n: 'Codex' }, { k: 'codebuddy', n: 'CodeBuddy' }, { k: 'qoder', n: 'Qoder' }, { k: 'minimax', n: 'MiniMax' },
-  { k: 'zcode', n: 'zcode', tag: '整改观察' }, { k: 'trae', n: 'Trae' }, { k: 'autoclaw', n: 'autoclaw' }, { k: 'workbuddy', n: 'WorkBuddy', old: 'step5' },
+  { k: 'zcode', n: 'zcode', tag: '停用' }, { k: 'trae', n: 'Trae' }, { k: 'autoclaw', n: 'autoclaw' }, { k: 'workbuddy', n: 'WorkBuddy', old: 'step5' },
   { k: 'claude', n: '维护者（Claude）', boss: true },
 ];
 
