@@ -8,7 +8,7 @@
  */
 import type { ContentPack, EncounterDef, EyeDef, FactionDef, FoeDef, ItemDef, JobDef, NewsDef, NpcDef, QuestDef, RegionDef, RoomDef, ShiDef, SkillDef, StoryDef } from './types';
 
-export { REALMS, REALM_NEED, GRADES, GRADE_COEF, SLOT_CATS, SLOT_NAME } from './skills';
+export { REALMS, duanOf, REALM_NEED, GRADES, GRADE_COEF, SLOT_CATS, SLOT_NAME } from './skills';
 
 const modules = import.meta.glob<{ default: ContentPack }>('./packs/*.ts', { eager: true });
 const packs = Object.keys(modules).sort().map(k => modules[k].default);

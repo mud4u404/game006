@@ -153,6 +153,9 @@ function repair(s: GameState): GameState {
   if (rec.loadout === undefined) rec.loadout = defaultLoadout(s.skills ?? {});
   // 现实的钟从换算的这一刻算起：旧存档里的江湖日子不算「跑在现实前头」
   if (!rec.real || typeof (rec.real as GameState['real']).start !== 'number') rec.real = { start: nowMs(), startDay: dayNo(s), seen: nowMs() };
+  // 修为日（10-09 铁律改成只管成长）：旧存档按「开局以来江湖走过的日子」算，和改之前的额度一样
+  const rl = s.real as GameState['real'];
+  if (typeof rl.grown !== 'number') rl.grown = Math.max(0, dayNo(s) - rl.startDay);
   // 营生：序章里是渔家，走出瓜洲就是游侠
   if (!rec.shenfen || typeof (rec.shenfen as GameState['shenfen']).id !== 'string') rec.shenfen = { id: s.chapter === 0 ? 'yumin' : 'youxia', standing: 1, since: dayNo(s) };
   // 世界状态（第五版）：缺了就按当前的内容铺开局的世界，不丢档；有的补齐内容里后来添的势力、地方

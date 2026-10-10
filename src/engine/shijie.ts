@@ -296,14 +296,24 @@ export function applyWorld(w: WorldState, e: WorldEffect, today: number): void {
     case 'free': {
       // 放回来、伤好了：处境清掉，知道的传闻留着
       const p = w.ppl[e.npc];
-      if (p) {
+      if (p && p.st !== 'dead') {
         delete p.st; delete p.until; delete p.at;
         if (!p.know?.length) delete w.ppl[e.npc];
       }
       for (const p of Object.values(w.place)) p.marks = p.marks.filter(m => m.k !== personKey(e.npc));
       break;
     }
+    case 'dead': {
+      // 死了：不带日子，dayPass 不会把它清掉；知道的传闻留着（人死了，话还在人嘴里传）
+      const know = w.ppl[e.npc]?.know;
+      w.ppl[e.npc] = { st: 'dead' };
+      if (know?.length) w.ppl[e.npc].know = know;
+      if (e.mark) addMark(w, e.mark.place, personKey(e.npc), e.mark.text, today + 30);
+      break;
+    }
     case 'hurt': case 'jail': case 'gone': {
+      // 死了的人不再伤、不再坐牢、不再走（和 free 一样，不让死人回来）
+      if (w.ppl[e.npc]?.st === 'dead') break;
       const st = e.op === 'hurt' ? 'hurt' : e.op === 'jail' ? 'jailed' : 'gone';
       // 伤不写日子的，三日好；牢和走不写日子的，要等 free
       const days = e.days ?? (e.op === 'hurt' ? 3 : undefined);

@@ -106,7 +106,7 @@ function checkEffects(list: Effect[] | undefined, where: string, errs: string[])
         (e.type === 'job' ? jobTaken : e.type === 'jobDone' ? jobDoneSet : new Set<string>()).add(e.id);
         break;
       case 'w': {
-        const pl = 'place' in e ? e.place : e.op === 'hurt' || e.op === 'jail' || e.op === 'gone' ? e.mark?.place : undefined;
+        const pl = 'place' in e ? e.place : e.op === 'hurt' || e.op === 'jail' || e.op === 'gone' || e.op === 'dead' ? e.mark?.place : undefined;
         if (pl !== undefined && !roomIds.has(pl)) errs.push(`${w}：地点「${pl}」不存在`);
         const f = 'fac' in e ? e.fac : e.op === 'owner' ? e.to : undefined;
         if (typeof f === 'string' && !facIds.has(f)) errs.push(`${w}：势力「${f}」不存在`);
@@ -790,6 +790,23 @@ describe('约', () => {
 });
 
 describe('差事', () => {
+  it('线头的人物、地点存在，人物在指向的地点确有作息，条件引用有效', () => {
+    const errs: string[] = [];
+    for (const j of JOBS) for (const [i, x] of (j.xian ?? []).entries()) {
+      const w = `差事 ${j.id} 的线头[${i}]`;
+      if (!npcIds.has(x.npc)) errs.push(`${w}：人物「${x.npc}」不存在`);
+      if (x.at !== undefined && !roomIds.has(x.at)) errs.push(`${w}：地点「${x.at}」不存在`);
+      const places = ROOMS.filter(r => [...r.npcs, ...(r.objs ?? [])]
+        .some(n => (typeof n === 'string' ? n : n.id) === x.npc)).map(r => r.id);
+      if (npcIds.has(x.npc) && (x.at !== undefined ? !places.includes(x.at) : !places.length)) {
+        errs.push(`${w}：人物「${x.npc}」${x.at ? `在「${x.at}」没有作息` : '没有去处，推不出地点'}`);
+      }
+      if (!x.text.trim()) errs.push(`${w}：要写主角心里的盘算（text）`);
+      checkCond(x.if, w, errs);
+    }
+    report(errs);
+  });
+
   // 放在约的后面：前面的检查把所有效果都过了一遍，这里对账
   it('身份、档次、期限有效；交差的人在交差的地方；有人发、有人收', () => {
     const errs: string[] = [];

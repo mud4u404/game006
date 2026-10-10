@@ -8,12 +8,12 @@
  * 纯函数，只读 S（试作息时临时改 S.min，算完还原）。见闻簿、江湖页横幅、地图都读它。
  */
 import { S, pushFeed } from '../core/state';
-import { shichen } from '../core/time';
+import { dayNo, shichen } from '../core/time';
 import { JOBS, NPCS, ROOMS, itemById, questById, room, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
 import { lackOf, test } from './dsl';
-import { npcName, pathMin, roomNpcs, roomObjs, travelMin } from './world';
+import { npcName, pathMin, roomNpcs, roomObjs, stageText, travelMin } from './world';
 import { jobOpen } from './shenfen';
 
 /** 能做：去了就办得成；要等：只差时辰、人不在；卡住：差别的门槛；未竟：做不成了；了结：办完了 */
@@ -39,6 +39,8 @@ export interface QuestNav {
   past: string[];
   title: string;
   hint?: string;
+  /** 心里记着的线索（QuestDef.notes）：亲耳听见、亲眼看见的，条件成立的才有 */
+  notes: string[];
   /** 该去的地点：找的人眼下在哪就去哪，不然是这一步写的地点 */
   to?: string;
   toName?: string;
@@ -118,13 +120,15 @@ export function questNav(id: string): QuestNav | null {
   const total = q.stages.length;
   const stage = Math.min(S.quests[id], total - 1);
   const st = q.stages[stage];
-  const base = { id, name: q.name, stage, total, past: q.stages.slice(0, stage).map(s => s.title), title: st.title, hint: st.hint };
+  const tx = stageText(st);
+  const notes = (q.notes ?? []).filter(n => test(n.if)).map(n => n.text);
+  const base = { id, name: q.name, stage, total, past: q.stages.slice(0, stage).map(s => stageText(s).title), title: tx.title, hint: tx.hint, notes };
   if (stage === total - 1) return { ...base, dist: 0, needs: [], memo: [], state: '了结', why: '' };
   const fail = [q.fail, st.fail].find(f => f && test(f.if));
   const needs = needsOf(st);
   // 找的人点没点过名：标题、盘算里写了他的名字，玩家才算知道是谁
   const whoRaw = st.who ? whoNav(st.who, st.to) : undefined;
-  const who = whoRaw && `${st.title}${st.hint ?? ''}`.includes(whoRaw.name) ? whoRaw : undefined;
+  const who = whoRaw && `${tx.title}${tx.hint ?? ''}`.includes(whoRaw.name) ? whoRaw : undefined;
   const to = who?.now ?? st.to;
   const nav: QuestNav = { ...base, to, toName: to ? room(to).name : undefined, dist: to && to !== S.loc ? travelMin(pathMin(S.loc, to)) : 0, who, needs, memo: [], state: '能做', why: '' };
   if (fail) return { ...nav, state: '未竟', why: fail.text, memo: [fail.text] };
@@ -235,7 +239,40 @@ function giverOf(jobId: string): string | undefined {
   return giverCache.get(jobId);
 }
 
-/** 眼下能接的差事，按路近排，最多 n 件；派差的人眼下在哪就去哪，不在的写他常在的地方 */
+/** 零工的去处怎么说，按各处零工「今日做过」的记号（content/packs/lingong.ts、shishi-yangzhou.ts）排 */
+const GIG_TEXT: Record<string, string> = {
+  lg_kangbao: '运河渡口，常把头招脚夫扛盐包',
+  lg_chaoshu: '辕门桥，席先生缺人抄书',
+  lg_bangchu: '望江楼后厨，葛师傅缺人手',
+  lg_tibian: '东关街，更夫想找人替一更'
+};
+/** 钱少到这个数以下，「近处有事」里才添一条零工的去处 */
+const GIG_POOR = 100;
+
+/**
+ * 身上钱少、今日还没做过零工的人，给一条零工的去处（运河渡口常把头招脚夫之类）：派活的人眼下在、开工的钟点也对得上的，取路最近的一处。
+ * 没有零工可指的返回 null。试玩：新到扬州身上三十文，不知道到哪里挣第一笔钱
+ */
+export function gigLead(): Lead | null {
+  if (S.job || S.chapter === 0 || S.silver >= GIG_POOR) return null;
+  if (Object.keys(GIG_TEXT).some(k => S.dayLog?.[k] === dayNo(S))) return null;
+  let best: Lead | null = null;
+  for (const n of NPCS) for (const bs of Object.values(n.actions)) {
+    // 零工的写法：开工的那条分支里有一条 today 效果，记号在 GIG_TEXT 里
+    const work = bs?.find(b => b.do?.some(e => e.type === 'today' && e.id in GIG_TEXT));
+    if (!work || !test(work.if ?? {})) continue;
+    const at = whoNav(n.id).now;
+    if (!at || at === S.loc) continue;
+    const m = pathMin(S.loc, at);
+    if (!m) continue;
+    const key = (work.do!.find(e => e.type === 'today') as { id: string }).id;
+    const min = travelMin(m);
+    if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min };
+  }
+  return best;
+}
+
+/** 眼下能接的差事，按路近排，最多 n 件；派差的人眼下在哪就去哪，不在的写他常在的地方。身上钱少的，末尾另添一条零工的去处（不占差事的名额） */
 export function leadsNear(n = 3): Lead[] {
   if (S.job) return [];
   const out: Lead[] = [];
@@ -249,5 +286,7 @@ export function leadsNear(n = 3): Lead[] {
     if (!m) continue;
     out.push({ text: j.title, to: at, toName: room(at).name, min: travelMin(m) });
   }
-  return out.sort((a, b) => a.min - b.min).slice(0, n);
+  const jobs = out.sort((a, b) => a.min - b.min).slice(0, n);
+  const gig = gigLead();
+  return gig ? [...jobs, gig] : jobs;
 }

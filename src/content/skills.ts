@@ -2,10 +2,12 @@
  * 武学库的常量与规矩。武功本身写在 src/content/packs/ 下的内容包里（skills 字段）。
  * 设计说明见 docs/wuxue.md。这里的数值上限由 tests/content.test.ts 校验每一门武功。
  */
-import type { FxKind, SectRank, SkillCategory, SkillGrade, SkillNature, SkillReach, SkillTeach, Slot, WeaponKind, WoundKind } from './types';
+import type { Duan, FxKind, SectRank, SkillCategory, SkillGrade, SkillNature, SkillReach, SkillTeach, Slot, WeaponKind, WoundKind } from './types';
 
 /** 九重境界的名字。第七重原叫「一代宗师」，和档次的「宗师」打架；第九重原叫「大乘」，是佛家修行的词（审查 G16，只改显示） */
 export const REALMS = ['初窥门径', '略有小成', '融会贯通', '炉火纯青', '登堂入室', '出神入化', '登峰造极', '返璞归真', '天人合一'];
+/** 境界分四段：生（第一、二重，下标 0-1）、熟（2-3）、精（4-5）、化（6 以上）。战报的写法和样子随段而变 */
+export function duanOf(realm: number): Duan { return realm >= 6 ? '化' : realm >= 4 ? '精' : realm >= 2 ? '熟' : '生'; }
 /** 每一重升到下一重所需的熟练度 */
 export const REALM_NEED = [200, 600, 1200, 2000, 3200, 4800, 7000, 10000, 99999];
 export const GRADES: [SkillGrade, string][] = [['凡品', 'fan'], ['良品', 'liang'], ['上品', 'shang'], ['绝品', 'jue'], ['神品', 'shen'], ['禁品', 'jin']];
@@ -18,7 +20,7 @@ export const GRADE_COEF: Record<SkillGrade, number> = { 凡品: 0.9, 良品: 1, 
 /**
  * 学一门新武功要拿多少历练去换（负责人 10-08：「这个世界大多是有条件有代价的，极少存在唾手可得的东西」）。
  * 历练本是闭关时化成功夫的见识：学新的，就少了练旧的。打赢一个不入流的对手一百，每高一档约翻一倍（engine/lilian.ts）。
- * 剧情、奇遇里给的，在效果上写明 lilian（代价写在剧情里，例如江伯临终所传）。
+ * 剧情、奇遇里给的，在效果上写明 lilian（代价写在剧情里，例如江伯留下的残页）。
  */
 export const LEARN_LILIAN: Record<SkillGrade, number> = { 凡品: 40, 良品: 100, 上品: 250, 绝品: 600, 神品: 1500, 禁品: 1500 };
 

@@ -371,10 +371,10 @@ function step(seen: Set<string>): void {
     advanceMin(S, h !== null ? waitMin(S, h) : rng() < 0.5 ? 120 : waitMin(S, pickOne(XIEJIAO)[0]));
   }
   else {
-    // 闭关碰到约期，那天一早就出关（engine/shiguang.ts 的 restDays；铁律跟现实时间走，机器玩家不受它管）
+    // 闭关碰到约期，那天一早就出关（engine/shiguang.ts 的 restDays；修为额度跟现实时间走，机器玩家不受它管，jingxiu 的 grow 传满 days）
     const want = cur?.shi ? 1 : 1 + Math.floor(rng() * 3), y = nextYue(S);
     const days = y ? Math.min(want, y.due - dayNo(S)) : want;
-    if (days >= 1) jingxiu(S, days, rng);
+    if (days >= 1) jingxiu(S, days, rng, days);
   }
 }
 
@@ -409,10 +409,12 @@ function play(r: Run): void {
   // 要验的是每一种插手的路走不走得通：人找不找得到、识不识得破、打不打得过
   if (r.shi && r.start === 'skip') {
     S.lilian += 20000;
-    for (let m = 0; m < 6; m++) jingxiu(S, 30, rng);
+    for (let m = 0; m < 6; m++) jingxiu(S, 30, rng, 30);
     // 练完了再给盘缠（不然住店花光了）：要花钱的插手也得有人走得到
     S.silver += 3000;
     run([{ type: 'shi', id: r.shi, to: shiById(r.shi)!.first }]);
+    // 卫衡寻褚七的「撑船夜渡」要渔家的本领（序章里选过认得浅滩）：跳过序章的人没有选过，盯世事的局里每三局给一回，走一走这条路
+    if (r.shi === 'kp_xun' && r.seed % 3 === 0) S.flags.kp_qiantan = true;
   }
   // 盯一件心事的局，跳过序章开局的人是「已经办过几件侠义事」的：有的心事要名声够了才肯开口
   // （华山的引荐信，申伯那里侠义到二十五才写；这是有意的代价，不是机器玩家该靠乱走撞出来的）

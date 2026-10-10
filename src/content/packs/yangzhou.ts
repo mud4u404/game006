@@ -3,6 +3,18 @@ import type { ContentPack, Effect, FightResult, FoeDef, NpcDef, QuestDef, RoomDe
 /** 第一回 · 扬州 */
 
 const BOSS_HERE = { quest: { id: 'main1', is: 1 }, notFlag: 'boss' };
+
+/**
+ * 了尘头一回见新开局的玩家（旗标 kp_xin，江伯生死未卜）：先白给一层，再说屠千山。
+ * 白给的：江伯是他旧识；那一夜找到瓜洲渡口的人，是冲着寒江的旧账去的，不是冲着你。
+ * 屠千山是一条线（那夜江上泊过黑风寨的船），不是价钱：截住他，便是顺着那夜的线往下找。旧存档的文字在后面，一字没动
+ */
+const liaochenXin = (tail: string): string =>
+  '了尘大师看见你腰间那半块玉佩，扫帚停在半空，良久才道：「江老三……终究还是动了那柄剑么。」他把扫帚靠在树上，缓缓道：「他是老衲的旧识。那一夜找到瓜洲渡口的人，是冲着寒江的旧账去的，不是冲着你。」他看了看你头上的斗笠，「他留话叫你来找老衲，是信得过老衲。可他如今人在哪里，老衲也说不准。」他顿了顿，「线头倒有一条：那夜江上泊过黑风寨的船。寨主屠千山这些日子霸着运河渡口，那三船盐是漕帮兄弟半年的血汗。施主去截住他，便是顺着那夜的线往下找。」他又道：「不必急在今日。那人刀下没有庸手，' + tail + '」';
+const LIAOCHEN_XIN_DO: Effect[] = [
+  { type: 'rel', npc: 'liaochen', value: '点头之交', from: ['素不相识'], note: '江伯留下的话，让你来找他' }, { type: 'quest', id: 'main1', stage: 1 },
+  { type: 'feed', tag: '主线', text: '了尘大师说，那夜江上泊过黑风寨的船。去运河渡口截住黑风寨主屠千山，是顺着那夜的线往下找。' }, { type: 'toast', text: '主线更新' }
+];
 /** 入夜：街市、码头上的人回家了（RoomDef.nightQuiet，engine/world.ts 的 NIGHT_HOME） */
 const NIGHT_H = { from: 21, to: 5 };
 
@@ -158,13 +170,20 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察', '请教', '赠礼'],
     actions: {
       交谈: [
+        // 新开局：先白给一层（江伯是他旧识，那夜的人冲着旧账来的），再把屠千山说成一条线，不是价钱
+        { if: { quest: { id: 'main1', is: 0 }, item: { id: 'jade' }, flag: 'kp_xin', any: [{ item: { id: 'kp_mujian' } }] },
+          text: liaochenXin('施主腰间那柄木剑，拿去会他的鬼头刀，还是先换一柄真的罢。'),
+          do: LIAOCHEN_XIN_DO },
+        { if: { quest: { id: 'main1', is: 0 }, item: { id: 'jade' }, flag: 'kp_xin' },
+          text: liaochenXin('施主先掂一掂自己的斤两。'),
+          do: LIAOCHEN_XIN_DO },
         { if: { quest: { id: 'main1', is: 0 }, item: { id: 'jade' } },
           text: '了尘大师看见你腰间那半块玉佩，扫帚停在半空，良久才道：「江老三……终究还是走了么。」他双手合十：「黑风寨主屠千山这些日子霸着运河渡口，那三船盐是漕帮兄弟半年的血汗。施主若能截住他，老衲便把你想知道的事，原原本本说给你听。」他看了看你握剑的手，又道：「不必急在今日。那人刀下没有庸手，施主先掂一掂自己的斤两。」',
           do: [{ type: 'rel', npc: 'liaochen', value: '点头之交', from: ['素不相识'], note: '江伯临终让你来找他' }, { type: 'quest', id: 'main1', stage: 1 },
             { type: 'feed', tag: '主线', text: '了尘大师托你：前往运河渡口，截住黑风寨主屠千山。' }, { type: 'toast', text: '主线更新' }] },
         { if: { quest: { id: 'main1', is: 0 } },
           text: '了尘大师放下扫帚，双手合十：「施主来得正好。黑风寨主屠千山这些日子霸着运河渡口，那三船盐是漕帮兄弟半年的血汗……老衲出家人，不便动手。」',
-          do: [{ type: 'rel', npc: 'liaochen', value: '点头之交', from: ['素不相识'], note: '江伯临终让你来找他' }, { type: 'quest', id: 'main1', stage: 1 },
+          do: [{ type: 'rel', npc: 'liaochen', value: '点头之交', from: ['素不相识'], note: '江伯留下的话，让你来找他' }, { type: 'quest', id: 'main1', stage: 1 },
             { type: 'feed', tag: '主线', text: '了尘大师托你：前往运河渡口，截住黑风寨主屠千山。' }, { type: 'toast', text: '主线更新' }] },
         // 渡口一剑怎么赢，不止闭门苦练一条路：知彼、帮手、练手（docs/story.md 第一回）
         { if: { quest: { id: 'main1', is: 1 }, any: [{ flag: 'tu_scar' }, { flag: 'tu_allies' }, { flag: 'tu_liu' }] },
@@ -279,6 +298,8 @@ const NPCS: NpcDef[] = [
         { if: { quest: { id: 'main1', is: 2 }, flag: 'bei' }, text: '说书人醒木一拍：「列位看官！{story}」满堂喝彩。说到要紧处，满堂的人都朝你这边看过来。',
           do: [{ type: 'quest', id: 'main1', stage: 3 }, { type: 'feed', tag: '主线', text: '「寒江旧案」第一回完。湖畔石碑上的「沈」字，又是怎么回事？' }, { type: 'toast', text: '第一回 · 完' }] },
         // 没看过湖畔石碑的，不提石碑（审查 A23）
+        { if: { quest: { id: 'main1', is: 2 }, flag: 'kp_xin' }, text: '说书人醒木一拍：「列位看官！{story}」满堂喝彩。说到要紧处，满堂的人都朝你这边看过来。',
+          do: [{ type: 'quest', id: 'main1', stage: 3 }, { type: 'feed', tag: '主线', text: '「寒江旧案」第一回完。江伯的下落，你还没有头绪。' }, { type: 'toast', text: '第一回 · 完' }] },
         { if: { quest: { id: 'main1', is: 2 } }, text: '说书人醒木一拍：「列位看官！{story}」满堂喝彩。说到要紧处，满堂的人都朝你这边看过来。',
           do: [{ type: 'quest', id: 'main1', stage: 3 }, { type: 'feed', tag: '主线', text: '「寒江旧案」第一回完。江伯临终那几句话，你还没想明白。' }, { type: 'toast', text: '第一回 · 完' }] },
         { if: { flag: 'boss' }, text: '说书人冲你挤挤眼：「少侠的段子，小老儿每天要讲三场。」' },
@@ -447,11 +468,27 @@ const FOES: FoeDef[] = [
 
 const QUESTS: QuestDef[] = [
   { id: 'main1', name: '第一回 · 扬州', stages: [
-    { title: '寻访大明寺了尘大师', to: 'daming', who: 'liaochen', hint: '江伯咽气前只交代了一句：去扬州，大明寺，找了尘。玉佩和残谱，都在怀里。' },
+    // 新开局（旗标 kp_xin）心里挂着的是江伯的下落；旧存档江伯已经下葬，还是原来的写法
+    { title: '寻访大明寺了尘大师', to: 'daming', who: 'liaochen', hint: '去扬州，大明寺，找了尘——这是你手里仅有的一条去路。玉佩和那页残谱，都在怀里。',
+      alt: [{ if: { flag: 'kp_xin' }, title: '江伯去了哪里',
+        hint: '江伯走进雨里之前，只留下一句话：扬州，大明寺，了尘。他人在哪里，没人说得准。去大明寺找了尘大师，是你手里仅有的一条线。' }] },
     // 屠千山入夜回船上歇（运河渡口 nightQuiet），导航按作息算，不写进门槛
-    { title: '前往运河渡口，截住黑风寨主', to: 'dukou', who: 'tu', hint: '了尘大师说，黑风寨主屠千山霸着运河渡口，那三船盐是漕帮兄弟半年的血汗。要去截他，先掂掂自己的斤两。' },
+    { title: '前往运河渡口，截住黑风寨主', to: 'dukou', who: 'tu', hint: '了尘大师说，黑风寨主屠千山霸着运河渡口，那三船盐是漕帮兄弟半年的血汗。要去截他，先掂掂自己的斤两。',
+      alt: [{ if: { flag: 'kp_xin' }, title: '江伯去了哪里：顺着那夜的线，去运河渡口截黑风寨的船', hint: '了尘大师说，那夜江上泊过黑风寨的船。黑风寨主屠千山霸着运河渡口，截住他，便是顺着那夜的线往下找。要去截他，先掂掂自己的斤两。' }] },
     { title: '去东关街听听江湖怎么说', to: 'cheng', who: 'shuoshu', hint: '渡口这一仗，想必已经传开了。东关街角的说书人嘴快，去听听江湖上怎么说。' },
     { title: '寒江旧案 · 第一回完' }
+  ],
+  // 那夜听来的：新开局第一夜的三条路各记一条，后面谁读了牌子、谁说了左手，再添一句（旗标来自 prologue.ts、kp-guren.ts、fuya.ts）
+  notes: [
+    { if: { flag: 'kp_du' }, text: '那夜听来的：船到江心，独臂镖师说，二十年前领路的人他没看清脸，只记得那人给了他一袋银子，叫他闭嘴，他当夜就走了。三日后的雨夜，他在泥里改了口：带路的人，就是他自己。' },
+    { if: { flag: 'kp_wen' }, text: '那夜听来的：船上验伤，镖师肩上有一道单刀砍的旧疤，宽背厚刃，从锁骨斜劈到肋下。卞婆婆说，二十年前深秋有一条没点灯的船靠岸，走在头里的，是个使左手的后生。' },
+    { if: { flag: 'kp_bu' }, text: '那夜听来的：镖师的钱袋底下压着一块腰牌，牌面阴刻「黑风」二字，背面一行小字：水路，丙。三日后雨夜，船外那几个人影，腰间挂的也是一样的牌子。' },
+    { if: { flag: 'kp_chu_zuo' }, text: '褚七后来说，二十年前雇他押镖的那个人，使刀用的是左手。' },
+    { if: { flag: 'kp_wei_pai' }, text: '卫衡认得那块腰牌：黑风寨水路上的牌子，寨里管水路的头目，不止一个。' },
+    { if: { flag: 'kp_zhou_pai' }, text: '周捕头看了那块腰牌，说是黑风寨水路上的牌子，能上船的头目才有。' },
+    // 第四稿：第二夜回头看见的，和渡口那一夜褚七、卫衡嘴里说的，是同一只手
+    { if: { flag: 'kp_hui' }, text: '第二夜江伯推你进芦苇，你回过一次头：雨里有个人左手提刀，收刀的时候，拇指先扣了刀镡。' },
+    { if: { flag: 'kp_zuo_dui' }, text: '渡口那一夜，褚七当着卫衡说，雇他的人使刀用的是左手，收刀时拇指先扣刀镡。卫衡说，他父亲也说过一模一样的话。' }
   ] }
 ];
 

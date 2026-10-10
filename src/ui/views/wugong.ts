@@ -7,6 +7,7 @@ import { RESP, huohou } from '../../engine/formulas';
 import { activeOuter, fits, respSkill, slotSkill, weaponReady } from '../../engine/wuxue';
 import { gongliText, tierNow } from '../../engine/ren';
 import { canPerform, realmCap } from '../../engine/shicheng';
+import { FOE_FX_TAG, passivesNow } from '../../engine/zhaoshi';
 import { RETREAT, gongliCeiling } from '../../engine/lilian';
 import { LODGING, ZHU_NAME, allowance, retreatBlock, zhuOf } from '../../engine/shiguang';
 import type { Zhu } from '../../core/state';
@@ -26,7 +27,8 @@ export function viewWugong(): string {
       ? '<p class="muted">江伯还病着，眼下不是闭关的时候。</p>'
       : (() => {
         const block = retreatBlock(S);
-        return `<p class="muted">${block ?? `江湖跑不过现实：现在最多还能闭关${cn(allowance(S))}日。下线就是静修，现实一个钟头算江湖一日，回来先读出关邸报。`}</p>
+        const al = allowance(S);
+        return `<p class="muted">${block ?? `${al ? `眼下还能长${cn(al)}日修为` : '这几日的修为额度用完了'}：功夫要一日一日长，现实一个钟头添一日。额度用完照样能闭关养伤，只是修为不长。下线就是静修，回来先读出关邸报。`}</p>
         <div class="acts">${opts.map(([d, l]) => `<button class="act spar" data-act="retreat:${d}"${block ? ' disabled' : ''}>${l}</button>`).join('')}</div>`;
       })()}
   </section>
@@ -78,7 +80,41 @@ function loadoutCard(): string {
   }).join('');
   return `<section class="card here-card"><div class="sec-h"><h2>搭配</h2><span class="count">${tierNow(S).name} · 功力${gongliText(S.gongli)}</span></div>
     <div class="rows">${rows}</div>
-    <p class="muted">${hand}。战斗中不能换。</p></section>`;
+    <p class="muted">${hand}。战斗中不能换。</p>
+    ${effectsHtml()}</section>`;
+}
+
+type Pv = ReturnType<typeof passivesNow>;
+const PASSIVE_LABEL: [keyof Pv['sum'], string][] = [['guard', '护体'], ['haste', '身法'], ['heal', '回血'], ['rage', '怒气']];
+
+/** 一条合璧没生效的缘故 */
+function comboWhy(c: Pv['combos'][number]): string {
+  if (c.idle) return '搭档在身上，可这条合璧要兵器在手（兵器类的那门不论当主当搭档，都得握着兵器），或要写这条合璧的外功正在出手';
+  if (!c.paired) {
+    const w = c.combo.with;
+    return w.startsWith('门派:') ? `身上没有${w.slice(3)}的另一门武功` : `身上没有「${skillById(w)?.name ?? '搭档'}」`;
+  }
+  return '没有本门内功打底';
+}
+
+/** 眼下生效的常驻之效与合璧；没生效的写缘故（和实战用同一份算法，engine/beidong.ts） */
+function effectsHtml(): string {
+  const pv = passivesNow(S);
+  const ng = slotSkill(S, 'neigong');
+  const sum = { ...pv.sum, haste: pv.sum.haste + pv.qinggongHaste };
+  const got = PASSIVE_LABEL.filter(([k]) => sum[k] > 0).map(([k, l]) => (k === 'heal' ? `${l} 每合${sum[k] / 10}%` : `${l} +${sum[k]}`));
+  const head = got.length ? `<b>${got.join('　')}</b>` : ng ? `「${ng.name}」没有常驻之效` : '内功位空着，没有常驻之效';
+  const rows: string[] = [`<p class="muted">搭配之效：${head}。回血、怒气是每合所得，回血一场最多回一成五气血，护体至多两成五；内力跌到一成五以下，这些尽皆断了。</p>`];
+  for (const c of pv.combos) {
+    const fx = (c.combo.fx ?? []).map(f => {
+      const pk = PASSIVE_LABEL.find(([k]) => k === f.kind);
+      return pk ? `${pk[1]} +${f.value ?? 0}` : `开战令对手${FOE_FX_TAG[f.kind]?.[0] ?? '受制'}`;
+    });
+    rows.push(c.on
+      ? `<p class="muted"><span class="tag accent">合璧</span> <b>${c.combo.name}</b>（${c.owner.name}）：${c.combo.text}${fx.length ? ` · ${fx.join('、')}` : ''}</p>`
+      : `<p class="muted"><span class="tag">合璧未成</span> ${c.combo.name}（${c.owner.name}）：${comboWhy(c)}</p>`);
+  }
+  return rows.join('');
 }
 
 /** 换成这门武功以后，这个位置管的那几项应对，火候各是多少 */

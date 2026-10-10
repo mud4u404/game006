@@ -167,7 +167,7 @@ const LIFE: Record<string, NpcLife> = {
     voice: {
       lead: ['把担底的锦盒往里推了推', '笑得眼睛眯成一条缝', '手在担沿上敲了两下'],
       idle: [
-        { if: { flag: 'xsb_xw_found' },
+        { if: { any: [{ flag: 'xsb_xw_found' }, { flag: 'xsb_xw_done' }] },
           text: '那块玉佩的事，我不提了。收旧货的讲究个来路清白——来路不清的，我这两日一件也没收。' },
         { if: DAO_DIU,
           text: '这几日收上来两件小衣裳，虎头帽也见着一顶。我摆在最上头等有人来认——认的人没来，我也不卖。' },

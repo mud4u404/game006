@@ -135,7 +135,9 @@ const EYES: EyeDef[] = [
     text: '外乡人在镇上打听人的那几日，满街铺子都早早上了门板，他的药铺照旧开板碾药——镇上敢这么做的，只有他一个。' },
   { npc: 'huichun', attr: '悟性', atLeast: 29,
     text: '你报药名的时候，他的手比嘴先动——这几味药搁在哪个屉里，他闭着眼都摸得到。这张方子他认得，认了很多年了。' },
-  { room: 'gz_fen', attr: '悟性', atLeast: 33, if: AFTER_GZ,
+  { room: 'gz_fen', attr: '悟性', atLeast: 33, if: { ...AFTER_GZ, flag: 'kp_xin' },
+    text: '树根的边上有一排细细的刻痕，是拿刀尖划的，一年一道，已经刻满了半圈。你数了数，数目和你的岁数对得上。原来他补网的时候，一直在记着你。' },
+  { room: 'gz_fen', attr: '悟性', atLeast: 33, if: { ...AFTER_GZ, notFlag: 'kp_xin' },
     text: '木牌上「江伯之墓」四个字是你拿刀刻的——刻完才发现，起笔收笔的走势，跟江伯那张药方上的字一模一样。原来你的字，是跟他学的。' },
   // 祭拜过才说「跪过多少回」：下葬后头一回来上坟，不该这么说（审查 A31）
   { room: 'gz_fen', attr: '胆魄', atLeast: 25, if: { ...AFTER_GZ, flag: 'gz_fen_bai' },

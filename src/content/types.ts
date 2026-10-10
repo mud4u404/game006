@@ -45,6 +45,10 @@ export interface Cond {
   yue?: string;
   /** 手上挂着这个约，还没到日子（约期未到时人物说「还没到日子」，不再从头自我介绍） */
   yueAhead?: string;
+  /** 今天（江湖日）已经做过这件事（效果 today 记的）：零工、一日一回的营生用它拦下第二回 */
+  doneToday?: string;
+  /** 今天还没做过这件事（doneToday 的反面） */
+  notDoneToday?: string;
   /** 现在的营生是这个身份（engine/shenfen.ts）：youxia 游侠、biaoshi 镖师…… */
   shenfen?: string;
   /** 正在办这件差事（接下了，还没交差） */
@@ -103,6 +107,8 @@ export type WorldEffect =
    * mark 写的是他常待的地方底下添的那一句交代（「药铺上了一半门板」），文字由写这件事的人写，引擎不编
    */
   | { type: 'w'; op: 'hurt' | 'jail' | 'gone' | 'free'; npc: string; days?: number; mark?: { place: string; text: string } }
+  /** 一个人死了：不可撤回（free 也救不回），哪儿都不在，不再听传闻。mark 同上 */
+  | { type: 'w'; op: 'dead'; npc: string; mark?: { place: string; text: string } }
   /** 一股势力对你的账：恩为正、怨为负 */
   | { type: 'w'; op: 'you'; fac: string; delta: number }
   /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；每处最多两行 */
@@ -120,7 +126,10 @@ export type Effect =
   | { type: 'feed'; tag: FeedTag; text: string }
   | { type: 'toast'; text: string }
   | { type: 'silver'; delta: number }
-  | { type: 'item'; id: string; delta: number }
+  /** max：加完不超过这个数（只给一件的东西，断点接回时重做一遍也不多给） */
+  | { type: 'item'; id: string; delta: number; max?: number }
+  /** 把行囊里这件装备穿上（放进它该在的位置，原来的挤回行囊）；行囊里没有、不是装备的，什么也不做 */
+  | { type: 'wear'; id: string }
   /** 设置关系；写了 from 时，只有当前关系在 from 里才改 */
   /** 改关系：value 只用关系阶梯里的词（engine/renqing.ts）；note 是人情备注，写为什么记得这个人 */
   | { type: 'rel'; npc: string; value: string; from?: string[]; note?: string }
@@ -151,6 +160,8 @@ export type Effect =
   /** 治伤（医馆、郎中）：不写 levels 治好全部伤；写了就从最重的那处起，一共减这么多级。治完记一条见闻 */
   /** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；写了 zones 只治这几处（跌打酒治手足、内伤药治内息） */
   | { type: 'cure'; levels?: number; zones?: ('hand' | 'foot' | 'inner')[] }
+  /** 添一处伤（默认一级，轻伤，过一日自己好；封顶三级）：剧情里手被割了、扭了脚。打架落的伤由引擎算，不用这个 */
+  | { type: 'wound'; zone: 'hand' | 'foot' | 'inner'; level?: number; if?: Cond }
   | { type: 'feedReset' }
   /**
    * 江湖上的话：这一带最耸动、你还不知道的一条传闻（engine/chuanwen.ts 的 hearsay），不再随机抽。
@@ -171,6 +182,8 @@ export type Effect =
   | { type: 'shenfen'; id: string }
   /** 本行里的地位升降：误了差事、违了行规降一级，降到底就被辞退；立了功、赔了罪升一级 */
   | { type: 'standing'; delta: number }
+  /** 记下今天做过 id 这件事（江湖日一过自动作废）；条件 doneToday、notDoneToday 读它。要排在耗时的 time 效果前头：夜里干到过了半夜，也算开工那一日 */
+  | { type: 'today'; id: string }
   /** 接一件差事（JobDef）：手上同时只有一件；接下以后定一个约，过了约期没交差就算误事 */
   | { type: 'job'; id: string }
   /** 交差：按身份和这件差事的档次给钱（engine/shenfen.ts 的 jobPay），了结那个约 */
@@ -322,6 +335,18 @@ export interface NpcLife {
    * idle：没新鲜事时说他自己的日子，按世界状态挑第一条成立的（和分支一样，最后一条不带条件），text 只写说的话
    */
   voice: { lead: string[]; idle: Branch[] };
+  /**
+   * 以下四项见 docs/sheji-021-026.md（021 诉求与底线、026 所知与来处）。引擎暂不读：第一版只由内容按旗标、关系分支，
+   * 在交谈里把相应的话写出来，保证玩家碰得到；日后引擎接上（wantOf、refuseOf、打听），内容不必重写。
+   * 想要的：按处境挑第一条成立的（和分支一样，最后一条不带条件）
+   */
+  want?: { k: string; text: string; if?: Cond }[];
+  /** 怕的：一句话，打听、细看时用 */
+  fear?: string;
+  /** 底线：什么情况下他不肯做某件事，原因原样给玩家看 */
+  refuse?: { verb: Verb | '*'; if?: Cond; why: string }[];
+  /** 本来知道的（不靠听传闻）：secret 的，关系到相谈甚欢以上才说 */
+  knows?: { k: string; text: string; if?: Cond; secret?: true }[];
 }
 
 /**
@@ -333,6 +358,8 @@ export interface TellDef {
   text: string;
   dom: 'li' | 'su' | 'qiao';
   after: string;
+  /** 应对框里的判断句。不写由引擎按这一招最突出的一项和你的火候拼（「快得惊人，远在你之上」）；弱对手、不入流的人写这一句，免得框里的话和对手对不上 */
+  judge?: string;
 }
 
 /** 胜负以后的一条路：放他走、问话、送官、下杀手……写明后果在哪里回来 */
@@ -519,7 +546,11 @@ export interface FxDef {
  * realm：练到第几重境界（0 起）才会使出这一招，不写为一开始就会。
  */
 /** alts：同一招的另几种写法，战报轮着用，不连着出现同一句（同样可用 {foe} {part}） */
-export interface MoveDef { name: string; text: string; alts?: string[]; realm?: number; wound?: WoundKind }
+/** 武学的四段：生（第一、二重）、熟（三、四重）、精（五、六重）、化（七重以上）。见 content/skills.ts 的 duanOf、docs/yangban-wuxue.md */
+export type Duan = '生' | '熟' | '精' | '化';
+/** 同一招在熟、精、化三段的写法（生段就是原来的 text/alts）。没写的段往下一段退，最后退到 text/alts */
+export type LvText = { 熟?: string[]; 精?: string[]; 化?: string[] };
+export interface MoveDef { name: string; text: string; alts?: string[]; realm?: number; wound?: WoundKind; lv?: LvText }
 
 /** 武功的「绝招」：战斗中点按钮施展，可带效果。参照北大侠客行的 perform */
 export interface PerformDef {
@@ -541,6 +572,8 @@ export interface PerformDef {
   fx?: FxDef[];
   /** 蓄势：先蓄一合再出手，伤害加两成；蓄势时被点穴、缴械就落空。只有带刚猛的门派能用，只能是一击（docs/menpai.md 第五节） */
   charge?: boolean;
+  /** 熟、精、化三段的出招描写（生段就是 text）；写法同 text，句中点出招名 */
+  lv?: LvText;
 }
 
 /** 绝技槽的「杀招」：怒气满时施展，全屏题字，震撼收场 */
@@ -593,6 +626,8 @@ export interface SkillDef {
   requires?: { skill: SkillId; realm: number }[];
   /** 属性门槛，例如 { 悟性: 20 } */
   needAttr?: Partial<Record<AttrKey, number>>;
+  /** 内功硬接、轻功闪避成功时，接在对手出招后面的一句；按境界分四段，没写的段往下一段退，最后退到通用的那句 */
+  resp?: Partial<Record<Duan, string[]>>;
   /** 绝招、杀招、合璧要用哪些内功来使：不写为本门任意内功；写 '任意' 表示不挑内功（只给有高前置的奇遇武功） */
   roots?: string[];
 }
@@ -665,6 +700,8 @@ export interface QuestStage {
   need?: QuestGate[];
   /** 成立了，这一步就做不成了（未竟） */
   fail?: QuestGate;
+  /** 换一种写法：按存档分新旧两稿（新开局江伯生死未卜，旧存档江伯已经下葬）。第一条成立的生效，没写的字段沿用上面的 */
+  alt?: { if: Cond; title?: string; hint?: string }[];
 }
 
 export interface QuestDef {
@@ -675,6 +712,8 @@ export interface QuestDef {
   fail?: QuestGate;
   /** 了结时给的历练；不写按阶段数算，每阶段 100（engine/lilian.ts） */
   lilian?: number;
+  /** 心里记着的线索（听来的、看到的）：条件成立的逐条写在见闻簿这件心事底下，做过的步骤也留着。不剧透，只写玩家亲耳听见、亲眼看见的 */
+  notes?: { if: Cond; text: string }[];
 }
 
 export interface StoryChoice {
@@ -777,8 +816,17 @@ export interface ShiStep {
   self?: Record<string, string>;
   /** 事情在哪儿：走进这个地点，就知道了这一步 */
   where?: string;
-  /** 没人插手时，过几天自己走到哪一步（半天写 0.5）；不写的是结局 */
-  next?: { days: number; to: string };
+  /**
+   * 没人插手时，过几天自己走到哪一步（半天写 0.5）；不写的是结局。
+   * alt：到了日子，世界的种子抽一回，p（零到一）的几率改走 alt 这一步而不走 to（同一个种子，抽出来的一样）。
+   * 两个去处都算「自己走到」的结局
+   */
+  next?: { days: number; to: string; alt?: { to: string; p: number } };
+  /**
+   * 预告的窗口（docs/sheji-001-003.md 第 003 项「离线」）：走到这一步时，若已经过了半个江湖日才补上来
+   * （下线静修、一口气歇了好几日），这一步从玩家回来那一刻起算，next 的日子留给玩家来得及赶到
+   */
+  window?: true;
   /** 走到这一步时世界上变的事（旗标、关系……）。玩家插手引起的变化写在玩家的选择里 */
   do?: Effect[];
 }
@@ -810,6 +858,8 @@ export interface JobDef {
   npc: string;
   at: string;
   days: number;
+  /** 办差路上已知的线头，按顺序列出；只显示 if 成立的。at 不写时按人物作息找去处，不进存档 */
+  xian?: { npc: string; at?: string; if?: Cond; text: string }[];
   /** 办完以后隔几个江湖日才能再接（不写为三日） */
   again?: number;
   /** 报酬的倍数（难办的差事多给些），不写为一 */

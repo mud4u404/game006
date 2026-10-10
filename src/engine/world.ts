@@ -1,17 +1,18 @@
 import { S, pushFeed } from '../core/state';
-import { fmt } from '../core/util';
-import { npc, questById, room, skillById } from '../content';
-import type { Branch, Cond, EyeDef, NpcDef, RoomDef, Verb } from '../content/types';
+import { cn, fmt } from '../core/util';
+import { jobById, npc, questById, room, skillById } from '../content';
+import type { Branch, Cond, EyeDef, NpcDef, QuestStage, RoomDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
-import { advanceMin, dayNo, shichen } from '../core/time';
+import { advanceMin, dayNo, shichen, spanLabel } from '../core/time';
 import { attrEffects } from './gengu';
+import { tierNow } from './ren';
 import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
 import { seeShi } from './shishi';
 import { ask, panwen } from './chuanwen';
-import { shenfenOf } from './shenfen';
+import { jobGongxian, jobPay, shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
-import { passBlock } from './shiguang';
+import { minutesOf, passWarn } from './shiguang';
 import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
 
 /** 江湖历的第几分钟（暂时走开的人什么时候回来） */
@@ -132,12 +133,18 @@ export function tripCost(to: string): { min: number; hops: number; fee: number }
   return { min: travelMin(pathMin(S.loc, to)), hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
 }
 
+/** 一步心事此刻的标题和盘算：写了 alt 的，第一条成立的生效（新旧两稿），没写的字段沿用 */
+export function stageText(st: QuestStage): { title: string; hint?: string } {
+  const a = st.alt?.find(x => test(x.if));
+  return { title: a?.title ?? st.title, hint: a?.hint ?? st.hint };
+}
+
 /** 当前追踪的任务进度 */
 export function curQuest(): { name: string; title: string; to?: string } | null {
   const q = questById(S.track);
   if (!q) return null;
   const st = q.stages[Math.min(S.quests[S.track] ?? 0, q.stages.length - 1)];
-  return { name: q.name, title: st.title, to: st.to };
+  return { name: q.name, title: stageText(st).title, to: st.to };
 }
 
 export function npcName(id: string): string {
@@ -190,6 +197,45 @@ export function verbPrice(id: string, verb: Verb): number | null {
   return price > 0 ? price : null;
 }
 
+/**
+ * 一件差事凶险不凶险：差事的档次比你眼下的档次高几档（engine/ren.ts 的 tierNow）。
+ * 高一档写「稍险」，高两档「凶险」，高三档以上「极凶险」；不高于你的不写。揭榜按钮标在赏额后头，木剑新人揭剿匪、河贼，点之前就看得出
+ */
+export function dangerOf(jobTier: number): string | null {
+  const gap = jobTier - tierNow(S).t;
+  return gap >= 3 ? '极凶险' : gap === 2 ? '凶险' : gap === 1 ? '稍险' : null;
+}
+
+/**
+ * 这个动作能挣什么（按钮底下的副标，和 verbPrice 标价是一对）：
+ * 接差事的（{type:'job'}）标这件差事的报酬——身份的差事标赏钱，师门差事标贡献；
+ * 干活得钱的（银两为正）标得多少，耗时一个时辰以上的再标耗多久。看的也是「不算银两条件」时会走到的分支。没有可标的返回 null
+ */
+export function verbGain(id: string, verb: Verb): string | null {
+  const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
+  const b = bs?.find(x => { const { silver: _s, ...rest } = x.if ?? {}; return test(rest); });
+  // 一日一回的营生，今天做过了：按钮标出来，点了也不会再干（也不耗时间）
+  if (b?.if?.doneToday !== undefined) return '今日已做';
+  if (!b?.do) return null;
+  const parts: string[] = [];
+  for (const e of b.do) {
+    if (e.type !== 'job') continue;
+    const j = jobById(e.id);
+    if (!j) continue;
+    if (j.sect) parts.push(`贡献${cn(jobGongxian(j))}`);
+    else if (jobPay(j) > 0) {
+      const risk = dangerOf(j.tier);
+      parts.push(`赏${cn(jobPay(j))}文`);
+      if (risk) parts.push(risk);
+    }
+  }
+  const gain = b.do.reduce((sum, e) => (e.type === 'silver' && e.delta > 0 ? sum + e.delta : sum), 0);
+  if (gain > 0) parts.push(`得${cn(gain)}文`);
+  const m = minutesOf(S, b.do);
+  if (gain > 0 && m >= 60) parts.push(`耗${spanLabel(m)}`);
+  return parts.length ? parts.join(' · ') : null;
+}
+
 /** 钱不够时真正走到的分支只是一句回绝（没有扣钱以外的实效）才算「买不起」；赊账、记账这类还能办事的分支，按钮不灰 */
 export function verbPoor(id: string, verb: Verb): boolean {
   if (verbPrice(id, verb) === null) return false;
@@ -225,13 +271,12 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
   }
   const bs = n.actions[verb as keyof typeof n.actions];
   const b = pickBranch(bs);
-  // 铁律：住店睡到天亮这类要跨过半夜的，江湖跑在现实前头时过不去（engine/shiguang.ts）
-  const block = b ? passBlock(S, b.do) : null;
-  if (block) return { text: block, out: newOutcome(), timed: true };
+  // 住店睡到天亮这类要跨过半夜的：今日有约就提一句会误了约，不拦（engine/shiguang.ts）
+  const warn = b ? passWarn(S, b.do) : null;
   if (b) {
     const short = lilianShort(bs, b);
     const out = run(b.do);
-    return { text: fmt(b.text ?? '', { ...textVars(), ...out.vars }) + (short ? `\n（${short}）` : ''), out, timed: b.do?.some(e => e.type === 'time') };
+    return { text: (warn ? `（${warn}）\n` : '') + fmt(b.text ?? '', { ...textVars(), ...out.vars }) + (short ? `\n（${short}）` : ''), out, timed: b.do?.some(e => e.type === 'time') };
   }
   const who = npcName(id);
   const out = newOutcome();
