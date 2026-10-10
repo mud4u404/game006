@@ -8,13 +8,14 @@ import { advanceMin, dayNo, shichen, spanLabel } from '../core/time';
 import { attrEffects } from './gengu';
 import { tierNow } from './ren';
 import { eyesOn } from './yan';
-import { giveGift, have, isPawnshop, pawnPrice, wornAt } from './daoju';
+import { giftable, have, isPawnshop, pawnPrice, wornAt } from './daoju';
+import { warmer } from './renqing';
 import { seeShi } from './shishi';
 import { ask, panwen } from './chuanwen';
 import { jobGongxian, jobPay, shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
 import { minutesOf, passWarn } from './shiguang';
-import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
+import { facName, marksOf, placedHere, refuseOf, tollOf, whereNow } from './shijie';
 
 /** 江湖历的第几分钟（暂时走开的人什么时候回来） */
 export const nowMin = (): number => dayNo(S) * 1440 + S.min;
@@ -319,6 +320,8 @@ export function act(id: string, verb: Verb, arg?: string): { text: string; out: 
 function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outcome; timed?: boolean; eyes?: EyeDef[] } {
   const n = npc(id);
   if (!n) return { text: '', out: newOutcome() };
+  const refusal = refuseOf(id, verb);
+  if (refusal) return { text: refusal, out: newOutcome(), timed: true };
   if (verb === '观察') {
     // 先是外貌，再接上随条件变化的细节（例如拿到线索以后才看得出的东西）
     const b = pickBranch(n.actions['观察']);
@@ -354,7 +357,19 @@ function doAct(id: string, verb: Verb, arg?: string): { text: string; out: Outco
   const out = newOutcome();
   switch (verb) {
     // 赠礼、典当：从行囊里挑一件（engine/daoju.ts）。送了人物喜欢的，关系升一级
-    case '赠礼': return { text: giveGift(n, who, arg), out };
+    case '赠礼': {
+      const it = arg ? itemById(arg) : undefined;
+      if (!it || !giftable(it)) return { text: '你身上没有合适的礼物。', out };
+      const likes = n.likes?.includes(it.id);
+      const effects = [{ type: 'item' as const, id: it.id, delta: -1 },
+        ...(likes ? [{ type: 'rel' as const, npc: id, value: warmer(S.rel[id]) }] : []),
+        { type: 'time' as const, add: VERB_MIN.赠礼 }];
+      const result = settleAction(effectReq(verb, id, effects));
+      const text = !result.ok ? result.why ?? '' : likes
+        ? fmt(n.gift ?? `${who}收下了${it.name}，神色和缓了许多。`, textVars())
+        : `${who}客客气气地收下了${it.name}，道了声谢。`;
+      return { text, out: result.out, timed: true };
+    }
     case '典当': {
       const it = arg ? itemById(arg) : undefined, price = it ? pawnPrice(it) : 0;
       if (!it || !price || have(it.id) < 1) return { text: `${who}摇摇头：「这东西小号不收。」`, out, timed: true };
