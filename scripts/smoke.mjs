@@ -33,11 +33,12 @@ const p = await b.newPage({ viewport: { width: 360, height: 560 }, deviceScaleFa
 // 世界的种子 = 名字 + 开局的现实时刻（core/state.ts 的 worldSeed），路遇的骰子、传闻的走样都出自它（engine/shijie.ts 的 worldRng）；
 // 打斗的骰子用的是 Math.random（ui/fight.ts）。所以把现实的钟钉死在一个时刻，再把 Math.random 换成带种子的。
 // 只在这个脚本的页面里生效，游戏代码里没有任何测试专用开关，正式玩家碰不到。换路：SMOKE_SEED=7（打斗的骰子）、SMOKE_DAY=5（开局的日子，世界种子由它定，路遇由世界种子定）。
-// 默认 SMOKE_DAY=3：这一天开局，赶路会撞上路遇「使剑的船工」（先弹剧情卡，选第一项，开打，打完结算），
-// 这样 settle() 的路遇处理（剧情卡、打斗、结算）每次冒烟都走一遍。实测同样会撞上它的还有 5、6；11 撞「拦路的小毛贼」；
-// 0、1、2、4、7、8、9、10、12、13、14 一次路遇也没有。改了内容或引擎以后路遇的位置会变：日志里没有「路遇」行，就再挑一个日子
+// 默认 SMOKE_DAY=24：这一天开局，赶路会撞上路遇「使剑的船工」（先弹剧情卡，选第一项，开打，打完结算），
+// 这样 settle() 的路遇处理（剧情卡、打斗、结算）每次冒烟都走一遍。实测撞上「拦路的小毛贼」的还有 5、7、13、17、22、23；
+// 0、1、2、3、4、6、8、9、10、11、12、14、15、16、18、19、20、21 一次路遇也没有。改了内容或引擎以后路遇的位置会变：
+// 下面有检查，日志里没有「路遇」行就直接报错，提醒你换日子
 const SEED = Number(process.env.SMOKE_SEED ?? 1) || 1;
-const FIXED_NOW = Date.UTC(2026, 0, 1, 12, 0, 0) + (Number(process.env.SMOKE_DAY ?? 3) || 0) * 86400000;
+const FIXED_NOW = Date.UTC(2026, 0, 1, 12, 0, 0) + (Number(process.env.SMOKE_DAY ?? 24) || 0) * 86400000;
 await p.addInitScript(({ seed, now }) => {
   Date.now = () => now;
   let a = seed >>> 0;
@@ -184,6 +185,8 @@ async function fight(tag, pickBest = true) {
 // 赶路途中会遇到路遇：弹出剧情就点第一个选项，开打就打完，直到路走完。
 // 种子固定以后遇上哪几次是定的（每次日志里的「路遇」几行应该一样）；这里仍要会处理，因为改了内容或引擎，路遇的位置会变
 let lastCard = '', sameCard = 0;
+/** 走到了没有：冒烟里只要有一次「路遇」或「路遇开打」就算撞上了（#315） */
+let sawLuyu = false;
 // 同一张路遇卡连着出现三次，说明点的选项不起作用：把界面上的按钮打出来再报错，别空等到超时
 async function stuckCard(title) {
   const dump = await p.evaluate(() => [...document.querySelectorAll('#storyLayer .choice')].map(b => `${b.dataset.act}:${b.textContent.trim().slice(0, 16)}${b.classList.contains('locked') ? '(锁)' : ''}`)).catch(e => String(e));
@@ -198,6 +201,7 @@ async function settle() {
     if (await p.$('#storyLayer:not([hidden]) .choice')) {
       const title = (await p.textContent('#storyLayer h2')).trim();
       log('路遇', title);
+      sawLuyu = true;
       if (title === lastCard) { if (++sameCard >= 3) await stuckCard(title); } else { lastCard = title; sameCard = 1; }
       // 刚换上来的卡头三百多毫秒不收点击（ui/shell.ts 的 tooSoon）：不等的话，点在这个窗口里，卡原样不动，
       // 三次判定就会被误触发（实测五次里红过一次，选项明明点得动）
@@ -211,6 +215,7 @@ async function settle() {
       const r = await fight(null);
       lastCard = '';
       log('路遇开打', r);
+      sawLuyu = true;
       if (r === 'timeout') throw new Error('路遇的打斗打不完，卡住了（界面见上一行）');
       continue;
     }
@@ -329,6 +334,9 @@ await click('[data-act="do:动手"]');                  // 动手要再点一下
 log('屠千山', await fight(null));
 log('结算：', (await p.textContent('#sheetLayer .r-h')).trim());
 await snap('09-result');
+// 默认日子要能撞上一场要打的路遇（#315）：撞不上说明内容或引擎改了路遇的位置，
+// 这段就没人测了，CI 当场报错，别再悄悄漏掉。想测没有路遇的日子，另挑 SMOKE_DAY 跑
+if (!sawLuyu) throw new Error('默认日子撞不上路遇了，换 SMOKE_DAY（挑一个日志里出「路遇」和「路遇开打」的；当前默认是 24）');
 console.log(errs.length ? 'ERRORS:\n' + errs.join('\n') : 'no page errors');
 await b.close();
 await server?.close();
