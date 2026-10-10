@@ -3,7 +3,7 @@
  * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
-import { absMin, advanceDays, dateStr } from '../core/time';
+import { absMin, advanceDays, dateStr, dayNo } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
 import { room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
@@ -25,6 +25,7 @@ import { powerNow, yaoJin } from '../engine/jiemian';
 import { showTitle } from './story';
 import { eyeLine } from './views/jianghu';
 import { pickItemFirst } from './daoju';
+import { takeTopic } from '../engine/yingmian';
 
 let traveling = false;
 /** 赶路途中点了「停下」：走完这一段就停 */
@@ -140,6 +141,8 @@ function doAct(verb: Verb): void {
   // 赠礼、典当：先从行囊里挑一件（ui/daoju.ts）
   if (pickItemFirst(id, verb)) return;
   const { text, out, eyes } = act(id, verb);
+  // 迎面挑人用：刚和谁有过来往（engine/yingmian.ts）
+  S.lastWith = { id, day: dayNo(S) };
   lateYue();
   if (out.story || out.fight) { afterOutcome(out, text || undefined); return; }
   // 根基之眼：观察时根基够了多看出的那一层，跟在描写后面（engine/yan.ts）
@@ -203,6 +206,13 @@ registerHandlers({
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
   do: v => doAct(v as Verb),
+  // 迎面的话头：选中开口的人，做对应的动作（engine/yingmian.ts）
+  greet: () => {
+    const t = takeTopic();
+    if (!t) return;
+    S.sel = t.id; S.reply = null;
+    doAct(t.verb);
+  },
   travel: v => travelTo(v),
   travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
   quest: () => {

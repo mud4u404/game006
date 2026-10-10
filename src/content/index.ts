@@ -81,6 +81,13 @@ export function mergePacks(list: ContentPack[]): Registry {
       if (target && !target.life) target.life = life;
     }
   }
+  // 迎面的话：给别的内容包里的人补上（人物自己写了 greet 的，以人物自己的为准）
+  for (const p of list) {
+    for (const [id, greet] of Object.entries(p.npcGreet ?? {})) {
+      const target = npcById.get(id);
+      if (target && !target.greet) target.greet = greet;
+    }
+  }
   return reg;
 }
 

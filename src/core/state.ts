@@ -144,6 +144,12 @@ export interface GameState {
   asked?: Record<string, number>;
   /** 打听：今天对这个人问到第几句了、哪几句已经说过（engine/chuanwen.ts）；隔日清掉；范围：个人；写入口：engine/chuanwen.ts */
   askLog?: Record<string, { d: number; u: string[] }>;
+  /** 迎面（engine/yingmian.ts）：每个人最近一次主动开口是哪一日（江湖日）；过了日子的自动清掉。旧档可缺省；范围：个人；写入口：engine/yingmian.ts */
+  greeted?: Record<string, number>;
+  /** 场景里眼下的迎面：key 是「地点|日|时辰段」，同一个 key 不再挑第二个人；id 是开口的人，i 是第几条，used 表示话头已经点过。旧档可缺省；范围：个人；写入口：engine/yingmian.ts */
+  greet?: { key: string; id?: string; i?: number; used?: true };
+  /** 最近一次对谁做了动作（江湖日），迎面挑人时「刚做过与他有关的事」排前头。旧档可缺省；范围：个人；写入口：ui/explore.ts */
+  lastWith?: { id: string; day: number };
   /** 暂时走开的人：到江湖历的第几分钟才回来（效果 away，engine/world.ts）；范围：世界；写入口：engine/xingdong.ts（经 engine/dsl.ts 结算） */
   away?: Record<string, number>;
   /** 路遇：每一条最近遇到是第几天；上一次路遇的时刻（engine/encounter.ts）；范围：世界；写入口：engine/encounter.ts、engine/xingdong.ts */
@@ -232,6 +238,9 @@ export const FIELD_OWNER = Object.freeze({
   gongxian: { scope: '个人', writer: 'engine/xingdong.ts' },
   asked: { scope: '个人', writer: 'engine/xingdong.ts' },
   askLog: { scope: '个人', writer: 'engine/chuanwen.ts' },
+  greeted: { scope: '个人', writer: 'engine/yingmian.ts' },
+  greet: { scope: '个人', writer: 'engine/yingmian.ts' },
+  lastWith: { scope: '个人', writer: 'ui/explore.ts' },
   away: { scope: '世界', writer: 'engine/xingdong.ts（经 engine/dsl.ts 结算）' },
   encLog: { scope: '世界', writer: 'engine/encounter.ts、engine/xingdong.ts' },
   lastEnc: { scope: '世界', writer: 'engine/encounter.ts、engine/xingdong.ts' },
