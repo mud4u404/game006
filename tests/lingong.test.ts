@@ -186,13 +186,21 @@ describe('零工：每处每个江湖日一回', () => {
     expect(S.silver - 30).toBeGreaterThanOrEqual(LODGING.inn + 20);
   });
 
-  it('夜里干到过了半夜，也算开工那一日（today 排在 time 前头）', () => {
-    at(22, 30);
+  it('替更夫只在亥时头上开工，一更走完到不了半夜', () => {
+    at(21, 30);
     const d = dayNo(S);
     act('ss_gengfu', '替班');
-    expect(dayNo(S)).toBe(d + 1);
+    expect(dayNo(S)).toBe(d);
     expect(S.dayLog).toEqual({ lg_tibian: d });
-    expect(cond({ doneToday: 'lg_tibian' })).toBe(false);
+  });
+
+  it('干到过了半夜，也算开工那一日（today 排在 time 前头）', () => {
+    at(22, 30);
+    const d = dayNo(S);
+    run([{ type: 'today', id: 'x' }, { type: 'time', add: 120 }]);
+    expect(dayNo(S)).toBe(d + 1);
+    expect(S.dayLog).toEqual({ x: d });
+    expect(cond({ doneToday: 'x' })).toBe(false);
   });
 });
 

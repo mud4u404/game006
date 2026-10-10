@@ -370,7 +370,7 @@ const JOBS: JobDef[] = [
     ] },
   { id: 'xsb_xunwu', shenfen: 'youxia', tier: 1, title: '帮绣娘阿蕙追回被偷的玉佩', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, again: 5, bang: true },
   { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手郝屠户', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 5, bang: true },
-  { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, k: 1.5, bang: true }
+  { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, again: 30, k: 1.5, bang: true }
 ];
 
 const NEWS: NewsDef[] = [
