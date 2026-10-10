@@ -26,7 +26,7 @@
 
 | 要做的事 | 先读 |
 |---|---|
-| 门派驻地、练功、门派生活、晋升 | `mud-xiakexing.md`；待读：#335 炎黄、#336 侠客行 100 |
+| 门派驻地、练功、门派生活、晋升 | `mud-xiakexing.md`、`mud-xkx100.md`；师门任务、贡献、叛师另见 `mud-yanhuang.md` |
 | 世界自己生事、世事会不会重来、导演 | `sandbox-rimworld.md`（环世界导演：保底、间隔、分级）；待读：#337 Evennia、#342 矮人要塞 |
 | 声望、恶名、势力好恶 | 待读：#341 骑砍、#338 CoffeeMUD |
 | 人物关系、让玩家惦记一个人 | 待读：#339 太吾绘卷 |
@@ -39,8 +39,8 @@
 | 名字 | 地址 | 许可 | 读过没有 |
 |---|---|---|---|
 | 侠客行 2001（UTF-8 版） | https://github.com/xiongmao86/xkx2001-utf8 | 无明确许可，仅供学习 | 读过：门派布局、练功、门派生活（`mud-xiakexing.md`） |
-| 侠客行 100 | https://github.com/mudchina/xkx100 | 无明确许可 | 读过一部分：门派任务、丐帮分舵、武馆 |
-| 炎黄 | https://github.com/oiuv/mud | MIT | 读过一部分：门派声望、师门任务奖励 |
+| 侠客行 100 | https://github.com/mudchina/xkx100 | 无明确许可 | 读过：五派布局、门禁四式、戒律院审问、门人日常（`mud-xkx100.md`） |
+| 炎黄 | https://github.com/oiuv/mud | MIT | 读过：师门任务全程、贡献/威望/阅历/声望、辈分、叛师（`mud-yanhuang.md`） |
 | Evennia（Python MUD 框架） | https://github.com/evennia/evennia | BSD | 未读 |
 | CoffeeMUD | https://github.com/bozimmerman/CoffeeMud | Apache-2.0 | 未读 |
 | Discworld mudlib（及其他 LPC 库） | GitHub 搜「discworld mudlib」 | 各异 | 未读 |
@@ -57,5 +57,6 @@
 
 | 主题 | 笔记 |
 |---|---|
-| 门派驻地、练功、门派生活 | `mud-xiakexing.md`（侠客行系） |
+| 门派驻地、练功、门派生活 | `mud-xiakexing.md`（侠客行系）、`mud-xkx100.md`（侠客行 100，#336） |
+| 师门任务、门派贡献、辈分、叛师 | `mud-yanhuang.md`（炎黄，#335） |
 | 世事重来、路遇不重复、导演节奏、人物心绪 | `sandbox-rimworld.md`（环世界，#340） |
