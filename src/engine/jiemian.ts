@@ -7,11 +7,11 @@
  * 战力、评语、闭关、导航都是现成的（engine/zhanli.ts、lilian.ts、daohang.ts），这里只拼，不另造公式。
  */
 import { S } from '../core/state';
-import { NPCS, REALMS, REALM_NEED, npc, room, skillById } from '../content';
+import { NPCS, REALMS, REALM_NEED, foeById, npc, room, skillById } from '../content';
 import type { Verb } from '../content/types';
 import { RETREAT, retreatPlan } from './lilian';
-import { LODGING, allowance, retreatBlock, skillName, yueText, zhuOf } from './shiguang';
-import { type Lead, leadsNear, questNav, sectHome, sectNav } from './daohang';
+import { LODGING, allowance, retreatBlock, skillName, zhuOf } from './shiguang';
+import { type Lead, jobStep, leadsNear, questNav, sectHome, sectNav, yueNow } from './daohang';
 import { test } from './dsl';
 import { profMul } from './gengu';
 import { personOf, tierNow } from './ren';
@@ -138,6 +138,21 @@ export function advanceVerb(npcId: string, questId: string, stage: number): Verb
 
 const NEAR = 90;
 
+/**
+ * 主线这一步要找的人明显打不过（档次差一档以上，和掂斤两同一套：engine/zhaoshi.ts 的 kanrenSay），
+ * 而且推进这一步靠的是动手、不是交谈：这时候直接指过去就是送死（10-10 商业制作人试玩：新手四下点到屠千山，只剩必输的「动手」）。
+ * 返回差几档和对手的名字；不是这种情形为空。
+ */
+export function tooStrong(nav: { who?: { id: string; name: string }; id: string; stage: number } | null): { gap: number; name: string } | null {
+  if (!nav?.who) return null;
+  const f = foeById(nav.who.id);
+  if (!f) return null;
+  const gap = f.rank - tierNow(S).t;
+  if (gap < 1) return null;
+  const v = advanceVerb(nav.who.id, nav.id, nav.stage);
+  return !v || v === '动手' ? { gap, name: nav.who.name } : null;
+}
+
 /** 差事、零工写成动宾句 */
 const leadText = (l: Lead): string => (l.gig ? `去${l.toName}，找点零工做` : `去${l.toName}，接差事「${l.text}」`);
 
@@ -153,7 +168,19 @@ export function yaoJin(): YaoJin {
   const nav = S.track ? questNav(S.track) : null;
   const ls = S.chapter === 0 ? [] : leadsNear(3);
   const kind = S.track === 'prologue' ? '序章' : S.track.startsWith('main') ? '主线' : '支线';
-  const alsoOf = (skip?: Lead): Also[] => ls.filter(l => l !== skip && l.min <= NEAR).slice(0, 1).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }));
+  // 「也可以」只留一条（首屏减负）：有已揭的差事就是它的当前一步，主线在前也不挤掉正在做的事
+  const jy0 = S.job ? S.yue.find(y => y.id === 'job_' + S.job!.id) : undefined;
+  const jn0 = jy0 ? yueNow(jy0) : null;
+  const jobAlso: Also[] = jy0 && jn0 ? [{ text: jn0.step ? `${jn0.go}（${jy0.text}）` : `去${jn0.toName}，交差：${jy0.text}`, to: jn0.to, toName: jn0.toName, min: jn0.to === S.loc ? 0 : travelMin(pathMin(S.loc, jn0.to)) }] : [];
+  const alsoOf = (skip?: Lead): Also[] => [...jobAlso, ...ls.filter(l => l !== skip && l.min <= NEAR).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }))].slice(0, 1);
+  // 主线要找的人明显打不过：先去变强，主线放到「也可以」第一行，说明缘故
+  const weak = nav && nav.state === '能做' ? tooStrong(nav) : null;
+  if (nav && weak) {
+    const mainAt: Also = { text: nav.who ? `去${nav.toName}，找${nav.who.name}（${kind}，眼下还打不过）` : `办「${nav.title}」`, to: nav.to ?? S.loc, toName: nav.toName ?? room(S.loc).name, min: nav.to && nav.to !== S.loc ? travelMin(pathMin(S.loc, nav.to)) : 0 };
+    const why = `${weak.name}${weak.gap >= 2 ? '的功夫高出你两三层' : '功夫在你之上'}，${nav.to === S.loc ? '他不理你，' : '现在去也是送死，'}你得先变强`;
+    const h = (S.lilian ?? 0) > 0 ? helpOf(false, ls) : ls[0] ? helpOf(true, ls) : { tag: '先变强', text: '先去闭关，攒够历练再回来', tab: 'wugong' as Tab, to: undefined, toName: undefined };
+    return { ...h, tag: '先变强', here: false, why, also: [mainAt] };
+  }
   // 主线有下一步：就是它
   if (nav && nav.state === '能做') {
     const here = !nav.to || nav.to === S.loc;
@@ -167,6 +194,13 @@ export function yaoJin(): YaoJin {
     const h = helpOf(nav.state === '要等', ls);
     const used = ls.find(l => l.to === h.to && leadText(l) === h.text);
     return { ...h, here: false, why: nav.why, also: alsoOf(used) };
+  }
+  // 手上有差事：办到哪一步，就指哪一步（和「有约」同一个说法）
+  const jy = S.job ? S.yue.find(y => y.id === 'job_' + S.job!.id) : undefined;
+  const js = S.job ? jobStep(S.job.id) : null;
+  if (jy && js) {
+    const here = js.to === S.loc;
+    return { tag: '差事', text: here ? `找${js.who.name}` : `去${js.toName}，找${js.who.name}`, to: js.to, toName: js.toName, here, hot: here && roomNpcs(S.loc).includes(js.who.id) ? { npc: js.who.id } : undefined, also: alsoOf() };
   }
   // 没有主线可走：近处的差事、零工
   const l = ls[0];
@@ -184,9 +218,9 @@ export function roomBrief(id: string): RoomBrief {
   const folks = roomNpcs(id).map(npcName);
   const things: string[] = [];
   const nav = S.track ? questNav(S.track) : null;
-  if (nav && nav.state !== '未竟' && nav.state !== '了结' && nav.to === id) things.push(`记挂着的事：${nav.title}`);
+  if (nav && nav.state !== '未竟' && nav.state !== '了结' && nav.to === id) things.push(tooStrong(nav) ? `记挂着的事：${nav.title}（眼下还打不过，先变强）` : `记挂着的事：${nav.title}`);
   for (const l of leadsNear(8)) if (l.to === id) things.push(l.gig ? `零工：${l.text}` : `差事：${l.text}`);
-  for (const y of S.yue) if (y.at === id) things.push(`有约：${yueText(S, y)}`);
+  for (const y of S.yue) if (yueNow(y).to === id) things.push(`有约：${yueNow(y).text}`);
   things.push(...marksOf(id).slice(0, 2));
   const c = id === S.loc ? null : tripCost(id);
   return { name: r.name, area: r.area, folks, things, min: c?.min, hops: c?.hops, fee: c?.fee, here: id === S.loc };
@@ -196,7 +230,7 @@ export function roomBrief(id: string): RoomBrief {
 export function busyRooms(): Set<string> {
   const out = new Set<string>();
   if (S.chapter > 0) for (const l of leadsNear(8)) out.add(l.to);
-  for (const y of S.yue) if (y.at) out.add(y.at);
+  for (const y of S.yue) if (y.at) out.add(yueNow(y).to);
   return out;
 }
 

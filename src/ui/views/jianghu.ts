@@ -4,14 +4,14 @@ import { foeById, npc, room } from '../../content';
 import { npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE } from '../widgets';
-import { questNav } from '../../engine/daohang';
+import { questNav, yueNow } from '../../engine/daohang';
 import { arrivalHot, jueseKa, visitsOf, yaoJin, type YaoJin } from '../../engine/jiemian';
 import { kanren } from '../../engine/zhaoshi';
 import { recordDiao } from '../../engine/zhanli';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef, Verb } from '../../content/types';
 import { cn, fmt } from '../../core/util';
-import { XIEJIAO, crossesNight, nextYue, nightWarn, yueText } from '../../engine/shiguang';
+import { XIEJIAO, crossesNight, nextYue, nightWarn } from '../../engine/shiguang';
 import { verbChufa } from '../../engine/chufa';
 import { refuseOf, wantOf } from '../../engine/shijie';
 import { test, textVars } from '../../engine/dsl';
@@ -37,9 +37,10 @@ export function viewJianghu(): string {
   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
   const y = nextYue(S);
   // 点了就赶去约定的地方
-  const yueBar = !y || y.due - dayNo(S) > 3 ? '' : S.loc === y.at
-    ? `<div class="card quest"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">就在此处</span></div>`
-    : `<button class="card quest" data-act="travel:${y.at}"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">约${minLabel(travelMin(pathMin(S.loc, y.at)))}</span>${IC.chev}</button>`;
+  const yn = y && yueNow(y);
+  const yueBar = !y || !yn || y.due - dayNo(S) > 3 ? '' : S.loc === yn.to
+    ? `<div class="card quest"><span class="tag warn">有约</span><span class="qt">${yn.text}</span><span class="qd">就在此处</span></div>`
+    : `<button class="card quest" data-act="travel:${yn.to}"><span class="tag warn">有约</span><span class="qt">${yn.text}</span><span class="qd">约${minLabel(travelMin(pathMin(S.loc, yn.to)))}</span>${IC.chev}</button>`;
   const scene = sceneHTML(feed);
   const people = all.length ? `<section class="card here-card">
     <div class="sec-h"><h2>此处</h2><span class="count">${all.length}</span></div>
