@@ -157,8 +157,8 @@ export function computeBoard(data, checks, now) {
     const done48 = merged.filter((m) => isMe(ai, prefixOf(m.ref)) && now - m.at < 48 * HOUR).length;
     // 要叫醒：手上有活（PR、已领分支、排着的），却超过九十分钟没动静（停用的、维护者不算）
     const hasWork = myPulls.length + claimed.length + waiting.length > 0;
-    // 从「最后一次动静」和「最近一次接到新活」里取晚的那个算起，免得刚派下去的活就被当成停了
-    const since = Math.max(last || 0, ...waiting.map((i) => i.created || 0));
+    // 从「最后一次动静」和「最早一件还没动的活派下来的时候」里取晚的那个算起：刚派下活不算停，派了很久还不动才算
+    const since = Math.max(last || 0, waiting.length ? Math.min(...waiting.map((i) => i.created || now)) : 0);
     const stalled = !ai.boss && ai.tag !== '停用' && hasWork && (!since || now - since > 90 * 60 * 1000);
     const nextNo = myPulls.length ? myPulls[0].n : (waiting.length ? waiting[0].n : null);
     return {
