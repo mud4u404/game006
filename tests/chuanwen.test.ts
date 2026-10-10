@@ -18,11 +18,20 @@ beforeEach(() => {
   S.min = 10 * 60;
 });
 
-/** 文本是「{名}{开口前的样子}：「{话}」」；把开口前的样子抠出来 */
+/** 文本是「{名}{开口前的样子}，道：「{话}」」（写过声口的）或「{名}{开口前的样子}：「{话}」」
+ *  （没写声口、落分组默认的）；把开口前的样子抠出来。取先出现的那个分隔。 */
 const leadOf = (id: string): string => {
   const t = ask(id, { force: true }).text;
-  return t.slice(npc(id)!.name.length, t.indexOf('：「'));
+  const cuts = [t.indexOf('，道：'), t.indexOf('：「')].filter(i => i >= 0);
+  return t.slice(npc(id)!.name.length, Math.min(...cuts));
 };
+
+/** 扬州还没写 life 的出家人：分组默认只对他们生效（见引擎 open：有 life 用自己的，
+ *  没有才落 DATING_LEAD[gang]）。按 gangOf 和 life 现挑，不写死人名：
+ *  谁哪天补了活气，这条用例自己就换人，不用回来改测试。 */
+const SENGDAO_BARE: string[] = NPCS
+  .filter(n => !n.life && gangOf(n.id) === 'sengdao' && roomsOf(n.id).some(r => room(r)?.region === 'yz'))
+  .map(n => n.id);
 
 describe('开口的样子按身份分组', () => {
   it('了尘认作出家人', () => {
@@ -36,9 +45,11 @@ describe('开口的样子按身份分组', () => {
     expect(gangOf('huagu')).toBe('shijing');        // 卖花姑娘，认不出
   });
   it('僧人打听一百次，开口的动作都出家人，不落市井组', () => {
+    expect(SENGDAO_BARE.length, '扬州该有没写声口的出家人').toBeGreaterThan(0);
+    const id = SENGDAO_BARE[0];
     const seen = new Set<string>();
     for (let i = 0; i < 100; i++) {
-      const lead = leadOf('liaochen');
+      const lead = leadOf(id);
       seen.add(lead);
       expect(DATING_LEAD.shijing, `第 ${i} 次用了市井的动作：${lead}`).not.toContain(lead);
       expect(DATING_LEAD.sengdao, `第 ${i} 次的动作不在僧道组：${lead}`).toContain(lead);
@@ -47,13 +58,22 @@ describe('开口的样子按身份分组', () => {
     expect(seen.size).toBe(1);
   });
   it('同一个人隔天再问，开口的动作换一个', () => {
-    const first = leadOf('liaochen');
+    const id = SENGDAO_BARE[0];
+    const first = leadOf(id);
     let changed = false;
     for (let d = 1; d <= 30 && !changed; d++) {
       S.day += 1;
-      changed = leadOf('liaochen') !== first;
+      changed = leadOf(id) !== first;
     }
     expect(changed, `一个月里都是「${first}」`).toBe(true);
+  });
+  it('写了声口的人用自己的动作，不落分组默认', () => {
+    // 了尘写过声口（#269 的内容包），他开口用的是自己那几句，不是 DATING_LEAD.sengdao
+    const own = npc('liaochen')!.life!.voice!.lead!;
+    for (let i = 0; i < 50; i++) {
+      const lead = leadOf('liaochen');
+      expect(own, `第 ${i} 次的动作「${lead}」不在他自己的声口里`).toContain(lead);
+    }
   });
   it('同一组里没有两句一样的动作', () => {
     for (const [g, list] of Object.entries(DATING_LEAD)) expect(new Set(list).size, g).toBe(list.length);
