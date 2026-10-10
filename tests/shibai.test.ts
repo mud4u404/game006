@@ -230,8 +230,8 @@ describe('输了写明为什么、下回怎么补', () => {
     for (const { d } of ls) {
       const n = loseNote(loseFacts(d, f, []));
       expect(n.kind).toBe('tier');
-      expect(n.why).toMatch(/高出你(两档|一档半|两档半)/);
-      expect(n.mend).toMatch(/练到第.+重再来领教/);
+      expect(n.why).toMatch(/高着(两层|一层半|两层半)/);
+      expect(n.mend).toMatch(/练到第.+重，再来领教/);
       expect(n.mend).toContain('换一门柔路的功夫克他');
     }
   });
@@ -256,7 +256,7 @@ describe('输了写明为什么、下回怎么补', () => {
     // 档次差得多，盖过带的轻伤；有备战没用上的，下回怎么补里提一句
     const gap = loseNote({ ...base, foeTier: 4, wounds: { hand: 1, foot: 0, inner: 0 }, prepIdle: true });
     expect(gap.kind).toBe('tier');
-    expect(gap.why).toContain('高出你两档');
+    expect(gap.why).toContain('高着两层');
     expect(gap.mend).toContain('帮手请来');
   });
 
