@@ -1,7 +1,7 @@
 import { S, pushFeed } from '../core/state';
 import { cn, fmt } from '../core/util';
 import { jobById, npc, questById, room, skillById } from '../content';
-import type { Branch, Cond, EyeDef, NpcDef, RoomDef, Verb } from '../content/types';
+import type { Branch, Cond, EyeDef, NpcDef, QuestStage, RoomDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
 import { advanceMin, dayNo, shichen, spanLabel } from '../core/time';
 import { attrEffects } from './gengu';
@@ -132,12 +132,18 @@ export function tripCost(to: string): { min: number; hops: number; fee: number }
   return { min: travelMin(pathMin(S.loc, to)), hops: path.length, fee: path.reduce((sum, id) => sum + (tollOf(id)?.fee ?? 0), 0) };
 }
 
+/** 一步心事此刻的标题和盘算：写了 alt 的，第一条成立的生效（新旧两稿），没写的字段沿用 */
+export function stageText(st: QuestStage): { title: string; hint?: string } {
+  const a = st.alt?.find(x => test(x.if));
+  return { title: a?.title ?? st.title, hint: a?.hint ?? st.hint };
+}
+
 /** 当前追踪的任务进度 */
 export function curQuest(): { name: string; title: string; to?: string } | null {
   const q = questById(S.track);
   if (!q) return null;
   const st = q.stages[Math.min(S.quests[S.track] ?? 0, q.stages.length - 1)];
-  return { name: q.name, title: st.title, to: st.to };
+  return { name: q.name, title: stageText(st).title, to: st.to };
 }
 
 export function npcName(id: string): string {

@@ -18,6 +18,7 @@ import { run } from '../engine/dsl';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
+import { kpBiguanTip } from '../engine/kaipian';
 import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
 import { setMapRegion } from './views/ditu';
 import { showTitle } from './story';
@@ -84,6 +85,8 @@ export function travelTo(dest: string, onArrive?: () => void): void {
         S.loc = nx;
         payFare(nx);
         lateYue();
+        const tip = kpBiguanTip(S, 'walk');
+        if (tip) pushFeed('江湖', tip);
         // 路遇：这一段路上遇到了事，停下来；读完剧情接着赶路，到了就照常进门（engine/encounter.ts）
         const enc = rollEncounter(from, nx);
         if (enc) {
@@ -246,6 +249,8 @@ registerHandlers({
     S.hp = Math.min(S.hpMax, S.hp + Math.round(S.hpMax * frac));
     S.mp = Math.min(S.mpMax, S.mp + Math.round(S.mpMax * frac));
     pushFeed('江湖', `你找了个地方歇脚，一直歇到${label}，缓过了些气力。`);
+    const tip = kpBiguanTip(S, 'rest');
+    if (tip) pushFeed('江湖', tip);
     render();
     // 新的描写在最上头（审查 H09：歇完停在底部，看不到）
     $('#main')!.scrollTop = 0;

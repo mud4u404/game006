@@ -96,6 +96,10 @@ const NPCS: NpcDef[] = [
         { if: { flag: 'mem2_patrol', notFlag: 'fuya_met_old' },
           text: MET_OLD_TEXT,
           do: [...MET_OLD_DO, { type: 'story', id: 'fuya_jiangjia' }] },
+        // 新开局不渡那条路上带出来的腰牌（序章 prologue.ts）：周捕头认得，只说一句
+        { if: { item: { id: 'kp_yaopai' }, notFlag: 'kp_zhou_pai' },
+          text: '你把那块腰牌放在案上。周捕头拿起来，翻过去看了看背面，指尖在边上磨了磨：「黑风寨水路上的牌子，能上船的头目才有。牌是真的，丢牌的人，这几日怕是睡不安稳。」他把牌子推回给你，「这东西，别拿到漕帮的人眼前去。」',
+          do: [{ type: 'flag', flag: 'kp_zhou_pai' }, { type: 'feed', tag: '江湖', text: '周捕头认得那块腰牌，是黑风寨水路上的牌子。' }] },
         { if: { flag: 'boss', notFlag: 'fuya_met_name' },
           text: '周捕头抬起头，把你腰间的兵刃看了两眼：「渡口一剑？」他把卷宗一合：「草上飞那贼在小金山一带出没，周某两拨弟兄都扑了空。阁下是六扇门要找的人物——肯出手，赏格二两，一文不少。」',
           do: [

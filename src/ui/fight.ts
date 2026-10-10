@@ -425,7 +425,7 @@ function startTell(): void {
   // 虚招的提醒：虚招两成以上的对手才说，一场只说一回（审查 F40：句句都说）
   const warnFeint = c.d.feintR >= 0.2 && !c.feintWarned;
   if (warnFeint) c.feintWarned = true;
-  $('#rJudge')!.textContent = judgeText(pr.pw, c.d.hh, c.f.ws) + (warnFeint ? `${c.f.name}会使虚招，全力硬接最怕落空。` : '');
+  $('#rJudge')!.textContent = (t.judge ?? judgeText(pr.pw, c.d.hh, c.f.ws)) + (warnFeint ? `${c.f.name}会使虚招，全力硬接最怕落空。` : '');
   $('#rOpts')!.innerHTML = pr.opts.map(o => optHTML(o)).join('');
   const qg = S.skills[S.loadout.qinggong ?? '']?.r ?? 0;
   const dur = Math.round((5000 + qg * 300) * (c.d.phase === 2 ? 0.85 : 1));

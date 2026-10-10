@@ -60,7 +60,7 @@ function draw(): void {
     ${card.paras.map(p => `<p class="sp">${fmt(p, v)}</p>`).join('')}
     ${card.gains ? `<div class="gains">${card.gains.map(g => `<span class="tag info">${g}</span>`).join('')}</div>` : ''}
     ${nameBox}
-    ${cur.result !== undefined ? `<div class="sres">${fmt(cur.result, v)}</div>${gainTags(cur.picked).length ? `<div class="gains">${gainTags(cur.picked).map(g => `<span class="tag info">${g}</span>`).join('')}</div>` : ''}` : ''}
+    ${cur.result !== undefined ? `${fmt(cur.result, v).split('\n').map((x, i) => `<div class="sres${i ? ' sres-a' : ''}">${x}</div>`).join('')}${gainTags(cur.picked).length ? `<div class="gains">${gainTags(cur.picked).map(g => `<span class="tag info">${g}</span>`).join('')}</div>` : ''}` : ''}
     <div class="choices">${choices}</div>
   </div>`;
   // 新的一张从头读；选完出了结果，把结果和「继续」滚进眼前（原来一律滚回顶部，「继续」常落在屏幕外）

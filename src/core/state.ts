@@ -143,14 +143,15 @@ export function newGame(): GameState {
     // 气血、内力的上限由「人」算出来（engine/ren.ts 的 syncBody）；功力三年：江伯教过吐纳
     hp: 1e9, hpMax: 0, mp: 150, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
     real, w: newWorld('孤舟', real), heard: [], yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
-    silver: 30, items: { qingfeng: 1, jcy: 1, fhs: 3 },
+    // 兵器是江伯削的木剑（docs/kaipian.md 第三稿）：青锋剑只在旧存档里，真兵刃要到扬州花钱买
+    silver: 30, items: { kp_mujian: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
     // 瓜洲的街坊看着你长大：回春堂掌柜、茶摊老汉、卖鱼阿婆、艄公、钟郎中、谭老栓（审查 A12、C34）
     flags: {}, rel: { jiangbo: '相依为命', ...JIEFANG }, title: '', xia: 0, eming: 0,
     attr: { 体魄: 20, 根骨: 20, 身法: 20, 悟性: 20, 胆魄: 20 }, lilian: 0, encLog: {}, lastEnc: -1e9,
     // 渔家少年：江伯只教过几招防身的粗浅功夫，都还没入门（从零练起，见 docs/audit.md）
     skills: { hanjiang: { r: 0, p: 0 }, xinfa: { r: 0, p: 0 }, taxue: { r: 0, p: 0 } },
-    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'qingfeng' },
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'kp_mujian' },
     feed: [{ t: '传闻', x: '江上这两天来了几条生船，不打鱼，专打听人。', n: 0 }],
     story: '', sel: null, reply: null, tab: 'jianghu'
   };
@@ -163,23 +164,28 @@ export function newGame(): GameState {
 const JIEFANG: Record<string, string> = Object.fromEntries(
   ['huichun', 'chatan', 'ayp', 'shaogong', 'jc_gz_zhong', 'jc_gz_tan'].map(id => [id, '点头之交']));
 
-/** 跳过序章，直接从扬州开始：和走完序章的样子相当（江伯生死未卜，只留下斗笠和断水残页，断水要自己参悟；惊鸿剑要自己去小金山悟）。带旗标 kp_xin：新开局的说法 */
+/**
+ * 跳过序章，直接从扬州开始：照「渡」那条路走完的结果给，不比走完更肥（docs/kaipian.md 第三稿第五条）：
+ * 银两、历练、侠义、药、兵器（木剑）、旗标（kp_du）、褚七和卫衡的关系，都和走一遍一样；
+ * 江伯生死未卜，只留下斗笠和断水残页，断水要自己参悟；惊鸿剑要自己去小金山悟。带旗标 kp_xin：新开局的说法
+ */
 export function skipToYangzhou(): GameState {
   const real = realNow(67);
   const s: GameState = {
     v: 5, chapter: 1, name: '孤舟', loc: 'hu', year: 0, month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
     hp: 1e9, hpMax: 0, mp: 1e9, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
     real, w: newWorld('孤舟', real), heard: [], yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'youxia', standing: 1, since: 67 }, job: null, jobLog: {},
-    silver: 120, items: { qingfeng: 1, jcy: 3, fhs: 5, jade: 1, scroll: 1, kp_douli: 1 },
+    silver: 30, items: { kp_mujian: 1, jcy: 1, fhs: 3, jade: 1, scroll: 1, kp_douli: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
-    flags: { skipped: true, kp_xin: true }, rel: { liu: '素不相识', ...JIEFANG }, title: '', xia: 12, eming: 0,
-    // 历练：序章了结 300，加第一夜那一场弱对手的打约 60（kp_jiading、kp_biaoshi 各 55，kp_zhuibing 65，engine/lilian.ts 的 foeLilian），
-    // 新开局真走一遍约 360。这里仍是 506（旧版序章 300 + 两场恶战 26 + 180 的值，跳过序章的存档历来是这个数；
-    // 六扇门入门武功等的历练开销按它排，tests/menpai.test.ts）：多出的约 150 当作跳过序章的补偿，改数值要另议，这次不动
-    attr: { ...ATTR0 }, lilian: 506, encLog: {}, lastEnc: -1e9,
+    flags: { skipped: true, kp_xin: true, kp_du: true, kp_chu_name: true },
+    rel: { liu: '素不相识', kp_chu: '相谈甚欢', kp_wei: '心存芥蒂', ...JIEFANG }, title: '', xia: 2, eming: 0,
+    relNote: { kp_chu: '欠你一条命', kp_wei: '你渡了他要找的人' },
+    // 历练：序章了结 300，加「渡」那条路上打赢家丁的 55（engine/lilian.ts 的 foeLilian），共 355，和真走一遍一样
+    // （原来是 506，多出的约 150 是跳过序章的补偿，第三稿起取消：跳过不比走完更肥）
+    attr: { ...ATTR0 }, lilian: 355, encLog: {}, lastEnc: -1e9,
     // 断水不在开局：江伯留下的残页要自己参悟（负责人 10-09）
     skills: { hanjiang: { r: 0, p: 120 }, taxue: { r: 0, p: 50 }, xinfa: { r: 0, p: 80 } },
-    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'qingfeng' },
+    loadout: { neigong: 'xinfa', qinggong: 'taxue', weapon: 'hanjiang' }, gear: { weapon: 'kp_mujian' },
     feed: [
       { t: '江湖', x: '你在扬州城外的破庙里歇了一夜，江伯教的那几招剑法，比划来比划去，总觉得差着火候。', n: 0 },
       { t: '传闻', x: '黑风寨劫了漕帮三船盐货，漕帮吃了哑巴亏。', n: 0 }

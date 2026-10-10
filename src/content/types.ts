@@ -328,6 +328,18 @@ export interface NpcLife {
    * idle：没新鲜事时说他自己的日子，按世界状态挑第一条成立的（和分支一样，最后一条不带条件），text 只写说的话
    */
   voice: { lead: string[]; idle: Branch[] };
+  /**
+   * 以下四项见 docs/sheji-021-026.md（021 诉求与底线、026 所知与来处）。引擎暂不读：第一版只由内容按旗标、关系分支，
+   * 在交谈里把相应的话写出来，保证玩家碰得到；日后引擎接上（wantOf、refuseOf、打听），内容不必重写。
+   * 想要的：按处境挑第一条成立的（和分支一样，最后一条不带条件）
+   */
+  want?: { k: string; text: string; if?: Cond }[];
+  /** 怕的：一句话，打听、细看时用 */
+  fear?: string;
+  /** 底线：什么情况下他不肯做某件事，原因原样给玩家看 */
+  refuse?: { verb: Verb | '*'; if?: Cond; why: string }[];
+  /** 本来知道的（不靠听传闻）：secret 的，关系到相谈甚欢以上才说 */
+  knows?: { k: string; text: string; if?: Cond; secret?: true }[];
 }
 
 /**
@@ -339,6 +351,8 @@ export interface TellDef {
   text: string;
   dom: 'li' | 'su' | 'qiao';
   after: string;
+  /** 应对框里的判断句。不写由引擎按这一招最突出的一项和你的火候拼（「快得惊人，远在你之上」）；弱对手、不入流的人写这一句，免得框里的话和对手对不上 */
+  judge?: string;
 }
 
 /** 胜负以后的一条路：放他走、问话、送官、下杀手……写明后果在哪里回来 */
@@ -679,6 +693,8 @@ export interface QuestStage {
   need?: QuestGate[];
   /** 成立了，这一步就做不成了（未竟） */
   fail?: QuestGate;
+  /** 换一种写法：按存档分新旧两稿（新开局江伯生死未卜，旧存档江伯已经下葬）。第一条成立的生效，没写的字段沿用上面的 */
+  alt?: { if: Cond; title?: string; hint?: string }[];
 }
 
 export interface QuestDef {
@@ -689,6 +705,8 @@ export interface QuestDef {
   fail?: QuestGate;
   /** 了结时给的历练；不写按阶段数算，每阶段 100（engine/lilian.ts） */
   lilian?: number;
+  /** 心里记着的线索（听来的、看到的）：条件成立的逐条写在见闻簿这件心事底下，做过的步骤也留着。不剧透，只写玩家亲耳听见、亲眼看见的 */
+  notes?: { if: Cond; text: string }[];
 }
 
 export interface StoryChoice {
