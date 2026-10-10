@@ -20,7 +20,7 @@ body:
     id: scope
     attributes:
       label: 允许修改的文件
-      description: 功能任务必须写明允许修改哪些文件
+      description: 功能任务必须写明允许修改哪些文件，写完整路径（如 src/engine/xxx.ts）。要改或新增内容包、文档的，也必须写出具体文件名，否则 CI 不会自动合并
     validations:
       required: true
   - type: textarea

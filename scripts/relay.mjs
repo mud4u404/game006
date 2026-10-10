@@ -62,8 +62,10 @@ export function pickWork(items, branches = [], me = '') {
   );
 }
 
-/** 打印给协作者看的一行 */
-export const describe = w =>
-  w.pull_request
-    ? `有退回要改的 PR #${w.number}：${w.title}。先读 PR 下维护者的评论，改完推回原分支（不要新开分支、不要新开 PR）`
-    : `有新任务 #${w.number}【${labelNames(w).filter(n => WORK_LABELS.includes(n)).join('、')}】${w.title}`;
+/** 打印给协作者看的一行。标题里已经带着【内容】【功能】这样的前缀就不再重复加 */
+export const describe = w => {
+  if (w.pull_request) return `有退回要改的 PR #${w.number}：${w.title}。先读 PR 下维护者的评论，改完推回原分支（不要新开分支、不要新开 PR）`;
+  const kinds = labelNames(w).filter(n => WORK_LABELS.includes(n));
+  const prefix = /【[^】]*】/.test(w.title) || !kinds.length ? '' : `【${kinds.join('、')}】`;
+  return `有新任务 #${w.number}${prefix}${w.title}`;
+};
