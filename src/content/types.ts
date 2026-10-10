@@ -45,6 +45,10 @@ export interface Cond {
   yue?: string;
   /** 手上挂着这个约，还没到日子（约期未到时人物说「还没到日子」，不再从头自我介绍） */
   yueAhead?: string;
+  /** 今天（江湖日）已经做过这件事（效果 today 记的）：零工、一日一回的营生用它拦下第二回 */
+  doneToday?: string;
+  /** 今天还没做过这件事（doneToday 的反面） */
+  notDoneToday?: string;
   /** 现在的营生是这个身份（engine/shenfen.ts）：youxia 游侠、biaoshi 镖师…… */
   shenfen?: string;
   /** 正在办这件差事（接下了，还没交差） */
@@ -171,6 +175,8 @@ export type Effect =
   | { type: 'shenfen'; id: string }
   /** 本行里的地位升降：误了差事、违了行规降一级，降到底就被辞退；立了功、赔了罪升一级 */
   | { type: 'standing'; delta: number }
+  /** 记下今天做过 id 这件事（江湖日一过自动作废）；条件 doneToday、notDoneToday 读它。要排在耗时的 time 效果前头：夜里干到过了半夜，也算开工那一日 */
+  | { type: 'today'; id: string }
   /** 接一件差事（JobDef）：手上同时只有一件；接下以后定一个约，过了约期没交差就算误事 */
   | { type: 'job'; id: string }
   /** 交差：按身份和这件差事的档次给钱（engine/shenfen.ts 的 jobPay），了结那个约 */

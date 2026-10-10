@@ -78,6 +78,9 @@ export function test(c?: Cond): boolean {
   if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
   if (c.job !== undefined && S.job?.id !== c.job) return false;
   if (c.jobOpen !== undefined && !jobOpen(S, c.jobOpen)) return false;
+  // 一日一回的营生（效果 today）
+  if (c.doneToday !== undefined && S.dayLog?.[c.doneToday] !== dayNo(S)) return false;
+  if (c.notDoneToday !== undefined && S.dayLog?.[c.notDoneToday] === dayNo(S)) return false;
   if (c.gongxian !== undefined && gongxianOf(S) < c.gongxian) return false;
   // 世事（engine/shishi.ts）：眼下在哪一步；还没起头的，哪一步都不在
   if (c.shi) {
@@ -300,6 +303,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         const free = S.shenfen.id === 'youxia' || S.shenfen.id === 'yumin';
         S.shenfen.standing = Math.max(free ? 1 : 0, Math.min(3, S.shenfen.standing + e.delta));
         if (S.shenfen.standing === 0 && sf) dismiss('你被辞退了，');
+        break;
+      }
+      case 'today': {
+        const log = (S.dayLog ??= {});
+        for (const k of Object.keys(log)) if (log[k] !== dayNo(S)) delete log[k];
+        log[e.id] = dayNo(S);
         break;
       }
       case 'job': {

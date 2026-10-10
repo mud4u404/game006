@@ -1,17 +1,17 @@
 import { S, pushFeed } from '../core/state';
-import { fmt } from '../core/util';
-import { npc, questById, room, skillById } from '../content';
+import { cn, fmt } from '../core/util';
+import { jobById, npc, questById, room, skillById } from '../content';
 import type { Branch, Cond, EyeDef, NpcDef, RoomDef, Verb } from '../content/types';
 import { newOutcome, pickBranch, run, test, textVars, type Outcome } from './dsl';
-import { advanceMin, dayNo, shichen } from '../core/time';
+import { advanceMin, dayNo, shichen, spanLabel } from '../core/time';
 import { attrEffects } from './gengu';
 import { eyesOn } from './yan';
 import { giveGift, isPawnshop, pawn } from './daoju';
 import { seeShi } from './shishi';
 import { ask, panwen } from './chuanwen';
-import { shenfenOf } from './shenfen';
+import { jobGongxian, jobPay, shenfenOf } from './shenfen';
 import { canLearn } from './shicheng';
-import { passWarn } from './shiguang';
+import { minutesOf, passWarn } from './shiguang';
 import { facName, marksOf, placedHere, tollOf, whereNow } from './shijie';
 
 /** 江湖历的第几分钟（暂时走开的人什么时候回来） */
@@ -188,6 +188,30 @@ export function verbPrice(id: string, verb: Verb): number | null {
   if (!b?.do) return null;
   const price = b.do.reduce((sum, e) => (e.type === 'silver' && e.delta < 0 ? sum - e.delta : sum), 0);
   return price > 0 ? price : null;
+}
+
+/**
+ * 这个动作能挣什么（按钮底下的副标，和 verbPrice 标价是一对）：
+ * 接差事的（{type:'job'}）标这件差事的报酬——身份的差事标赏钱，师门差事标贡献；
+ * 干活得钱的（银两为正）标得多少，耗时一个时辰以上的再标耗多久。看的也是「不算银两条件」时会走到的分支。没有可标的返回 null
+ */
+export function verbGain(id: string, verb: Verb): string | null {
+  const bs = npc(id)?.actions[verb as keyof NpcDef['actions']];
+  const b = bs?.find(x => { const { silver: _s, ...rest } = x.if ?? {}; return test(rest); });
+  if (!b?.do) return null;
+  const parts: string[] = [];
+  for (const e of b.do) {
+    if (e.type !== 'job') continue;
+    const j = jobById(e.id);
+    if (!j) continue;
+    if (j.sect) parts.push(`贡献${cn(jobGongxian(j))}`);
+    else if (jobPay(j) > 0) parts.push(`赏${cn(jobPay(j))}文`);
+  }
+  const gain = b.do.reduce((sum, e) => (e.type === 'silver' && e.delta > 0 ? sum + e.delta : sum), 0);
+  if (gain > 0) parts.push(`得${cn(gain)}文`);
+  const m = minutesOf(S, b.do);
+  if (gain > 0 && m >= 60) parts.push(`耗${spanLabel(m)}`);
+  return parts.length ? parts.join(' · ') : null;
 }
 
 /** 钱不够时真正走到的分支只是一句回绝（没有扣钱以外的实效）才算「买不起」；赊账、记账这类还能办事的分支，按钮不灰 */
