@@ -3,6 +3,7 @@
  * 规则在 core/save.ts；栏目本身的 HTML 在 views/renwu.ts。
  * 由 main.ts 引入，避免和 shell.ts 循环引用。
  */
+import { tupoClear } from '../engine/tupo';
 import { S, setState } from '../core/state';
 import { exportCode, importCode, listBackups, rawBackup, replaceSave, summary } from '../core/save';
 import type { GameState } from '../core/state';
@@ -73,6 +74,7 @@ registerHandlers({
   saveReplaceYes: () => {
     if (!pending) return;
     replaceSave(pending);
+    tupoClear(); // 换存档：旧档攒着没弹的突破卡不带过去
     setState(pending);
     pending = null;
     closeSheet();

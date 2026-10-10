@@ -2,7 +2,7 @@
  * 界面外壳：顶栏、内容区、底部标签、提示、底部弹层，以及统一的点击分发。
  * 所有可点的元素都写 data-act="动作:参数"，由 registerHandlers 注册的处理函数接手。
  */
-import { S, pushFeed, save, type Tab } from '../core/state';
+import { S, save, type Tab } from '../core/state';
 import { on } from '../core/bus';
 import { dateStr, shichenKe } from '../core/time';
 import { $, cn } from '../core/util';
@@ -15,7 +15,8 @@ import { viewWugong } from './views/wugong';
 import { viewXingnang } from './views/xingnang';
 import { viewDitu } from './views/ditu';
 import { checkYue } from '../engine/shiguang';
-import { tierNow } from '../engine/ren';
+import { tierCheck, tupoPending, tupoTake } from '../engine/tupo';
+import { tupoCardHTML } from './tupo';
 import { tickShi } from '../engine/shishi';
 import { tickWorld } from '../engine/shijie';
 import { dropFailedTrack } from '../engine/daohang';
@@ -141,6 +142,8 @@ export function closeSheet(): void {
   if (!L) return;
   L.hidden = true;
   L.innerHTML = '';
+  // 页关了，若还有攒着的突破，等这一轮动作做完再弹（后面紧跟着开别的页的，就让它先开）
+  if (tupoPending()) window.setTimeout(flushTupo, 0);
 }
 
 const VIEWS: Record<Tab, () => string> = { jianghu: viewJianghu, renwu: viewRenwu, wugong: viewWugong, xingnang: viewXingnang, ditu: viewDitu };
@@ -168,15 +171,6 @@ function saveNow(): void {
   save();
 }
 
-/** 升了档次：记一条见闻、提一句（审查 G13：升档没有任何提示）。旧存档头一回只记下，不提 */
-function tierUp(): void {
-  const t = tierNow(S);
-  if (S.tierTop === undefined || t.t <= S.tierTop) { S.tierTop = Math.max(S.tierTop ?? t.t, t.t); return; }
-  S.tierTop = t.t;
-  pushFeed('江湖', `你的功夫到了「${t.name}」这一档。`);
-  toast(`你已入${t.name}`);
-}
-
 /** 失约的提示：一次失了几个约，合成一条，不然只看得到最后那条（审查 H45）。详情都在见闻里 */
 export function missedToast(ms: string[]): void {
   if (ms.length === 1) toast(ms[0]);
@@ -186,7 +180,7 @@ export function missedToast(ms: string[]): void {
 export function render(): void {
   // 过了约期还没赴的约，算失约（engine/shiguang.ts）：失约的后果、心魔，都记进见闻
   missedToast(checkYue(S));
-  tierUp();
+  tierCheck();
   // 江湖自己往前走：世界的慢变逐日补到今天（engine/shijie.ts）；世事该起头的起头，到日子的往下走（engine/shishi.ts）
   tickWorld();
   tickShi();
@@ -198,4 +192,17 @@ export function render(): void {
   main.innerHTML = (VIEWS[S.tab] || viewJianghu)();
   tabs.innerHTML = TABS.map(([k, l]) => `<button class="tab" data-act="tab:${k}"${S.tab === k ? ' aria-current="page"' : ''}>${IC[k]}${l}</button>`).join('');
   saveSoon();
+  flushTupo();
+}
+
+/**
+ * 攒下的突破（升重、升档、习得，engine/tupo.ts）合成一张「突破」卡弹出来。
+ * 正在打、正在看剧情、开着别的页的时候不弹，等那一页关了再弹（closeSheet、下一回 render 都会来问一声）
+ */
+export function flushTupo(): void {
+  if (!tupoPending()) return;
+  const busy = ['fightLayer', 'storyLayer', 'chapLayer', 'sheetLayer', 'titleLayer'].some(id => $('#' + id)?.hidden === false);
+  if (busy) return;
+  openSheet(tupoCardHTML(tupoTake()), true);
+  swapped();
 }

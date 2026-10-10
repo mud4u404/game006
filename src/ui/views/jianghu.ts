@@ -7,6 +7,7 @@ import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
 import { leadsNear, questNav } from '../../engine/daohang';
 import { kanren } from '../../engine/zhaoshi';
+import { recordDiao } from '../../engine/zhanli';
 import { eyesOn } from '../../engine/yan';
 import type { EyeDef, Verb } from '../../content/types';
 import { cn, fmt } from '../../core/util';
@@ -106,7 +107,9 @@ function detail(id: string): string {
   const whom = foe && foe.id !== id && foe.name !== npcName(id) ? foe.name : '他';
   // 揭榜、接镖、接差事：点之前先说一声眼下的状态（带伤、气血、内力、钱），只提示，不拦（engine/chufa.ts）
   const chufa = verbChufa(id);
-  const look = foe ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kanren(S, foe).say}</b></p>` : '';
+  const kr = foe ? kanren(S, foe) : undefined;
+  if (foe) recordDiao(S, foe.id, whom === '他' ? npcName(id) : whom);
+  const look = kr ? `<p class="kanren">你掂了掂${whom}的斤两：<b>${kr.say}</b>${kr.hurt ? `<br><span class="hurt">${kr.hurt}</span>` : ''}</p>` : '';
   return `<div class="detail"><div class="d-h"><b>${npcName(id)}</b><span class="tag">${rel}</span><small>${n.hint || n.brief}</small></div>${look}
     <div class="acts">${verbsOf(n).map(verbBtn(id)).join('')}</div>${chufa ? `<p class="muted chufa">${chufa}</p>` : ''}${reply}</div>`;
 }
