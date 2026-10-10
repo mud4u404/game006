@@ -172,7 +172,7 @@ export function yaoJin(): YaoJin {
   const jy0 = S.job ? S.yue.find(y => y.id === 'job_' + S.job!.id) : undefined;
   const jn0 = jy0 ? yueNow(jy0) : null;
   const jobAlso: Also[] = jy0 && jn0 ? [{ text: jn0.step ? `${jn0.go}（${jy0.text}）` : `去${jn0.toName}，交差：${jy0.text}`, to: jn0.to, toName: jn0.toName, min: jn0.to === S.loc ? 0 : travelMin(pathMin(S.loc, jn0.to)) }] : [];
-  const alsoOf = (skip?: Lead): Also[] => [...jobAlso, ...ls.filter(l => l !== skip && l.min <= NEAR).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }))].slice(0, 1);
+  const alsoOf = (skip?: Lead): Also[] => [...jobAlso, ...[...ls].sort((a, b) => +!!b.gig - +!!a.gig).filter(l => l !== skip && l.min <= NEAR).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }))].slice(0, 1);
   // 主线要找的人明显打不过：先去变强，主线放到「也可以」第一行，说明缘故
   const weak = nav && nav.state === '能做' ? tooStrong(nav) : null;
   if (nav && weak) {

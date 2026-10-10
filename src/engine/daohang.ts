@@ -235,7 +235,6 @@ const GIG_POOR = 100;
  */
 export function gigLead(): Lead | null {
   if (S.job || S.chapter === 0 || S.silver >= GIG_POOR) return null;
-  if (Object.keys(GIG_TEXT).some(k => S.dayLog?.[k] === dayNo(S))) return null;
   let best: Lead | null = null;
   for (const n of NPCS) for (const [verb, bs] of Object.entries(n.actions) as [Verb, Branch[] | undefined][]) {
     // 零工的写法：开工的那条分支里有一条 today 效果，记号在 GIG_TEXT 里
@@ -246,6 +245,8 @@ export function gigLead(): Lead | null {
     const m = pathMin(S.loc, at);
     if (!m) continue;
     const key = (work.do!.find(e => e.type === 'today') as { id: string }).id;
+    // 每一处单独算：这一处今天做过了不挡别处（lingong.ts 允许一天做两三处）
+    if (S.dayLog?.[key] === dayNo(S)) continue;
     const min = travelMin(m);
     if (!best || min < best.min) best = { text: GIG_TEXT[key], to: at, toName: room(at).name, min, gig: true, who: n.id, verb };
   }
@@ -260,7 +261,8 @@ export function leadsNear(n = 3): Lead[] {
     if (!jobOpen(S, j.id)) continue;
     const g = giverOf(j.id);
     if (!g) continue;
-    const at = whoNav(g.npc).now ?? roomsOf(g.npc)[0];
+    // 派差的人此刻不在（歇息、外出）就不推「去」：「常在此处」不等于此刻能办
+    const at = whoNav(g.npc).now;
     if (!at || at === S.loc) continue;
     const m = pathMin(S.loc, at);
     if (!m) continue;
