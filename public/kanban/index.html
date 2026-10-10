@@ -124,6 +124,7 @@ button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(-
     <button id="refresh" type="button">刷新</button>
   </div>
   <div id="banners"></div>
+  <div id="wake"></div>
   <div id="root"><div class="card empty">正在读数据……</div></div>
 </main>
 <script type="module">
@@ -390,6 +391,9 @@ function render() {
   }
   var now = Date.now();
   var board = computeBoard(d, state.checks, now);
+  // 要叫醒：手上有活却一个半钟头没动静的，红字列在最上面，负责人一眼看到该叫谁
+  var wk = document.getElementById('wake'); wk.textContent = '';
+  if (board.wake && board.wake.length) wk.appendChild(el('div', { class: 'banner bad', text: '要叫醒：' + board.wake.map(function (w) { return w.n + (w.no ? '（手上有 #' + w.no + '，' + w.lastTxt + '没动静）' : ''); }).join('；') }));
   var J = state.jindu;
   var link = function (kind, n, title, sub) {
     return el('a', { class: 'row', href: 'https://github.com/' + REPO + '/' + kind + '/' + n, target: '_blank', rel: 'noopener' }, [
