@@ -26,7 +26,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, ItemDef, N
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smhs_jianlu', name: '剑庐', area: '镇江 · 北固山下', region: 'zj', t: 15, map: [74, 12],
+    id: 'smhs_jianlu', name: '剑庐', area: '镇江 · 北固山', region: 'zj', t: 15, map: [74, 12],
     desc: [
       { if: { flag: 'smhs_in' },
         text: '北固山下一座三间的小院，柴门虚掩，院里一方磨剑石，一块旧匾上「剑庐」两个字剥了大半。你进门不用叩门——哑叔听见你的脚步，早把门拉开了。' },
