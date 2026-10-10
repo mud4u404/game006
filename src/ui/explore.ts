@@ -3,7 +3,7 @@
  * 道具（穿戴、服用、细看、赠礼、典当）在 ui/daoju.ts。
  */
 import { S, clearSave, pushFeed, save, type Tab } from '../core/state';
-import { advanceDays, dateStr, minLabel } from '../core/time';
+import { advanceDays, dateStr } from '../core/time';
 import { $, cn, reduceMotion } from '../core/util';
 import { room, skillById } from '../content';
 import type { Slot, Verb } from '../content/types';
@@ -13,15 +13,15 @@ import { gongliText } from '../engine/ren';
 import { TIELV_TEXT, XIEJIAO, checkYue, restLine, jingxiu, nightWarn, restDays, skillName, waitUntil, yueText } from '../engine/shiguang';
 import { chuguanHTML } from './chuguan';
 import { questNav } from '../engine/daohang';
-import { act, enter, hopMin, pathTo, payFare, roadText, travelMin, tripCost } from '../engine/world';
+import { act, enter, hopMin, pathTo, payFare, roadText, travelMin } from '../engine/world';
 import { act as settleAction, effectReq } from '../engine/xingdong';
-import { FAR_MIN, chufaLine } from '../engine/chufa';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { TRAVEL_BUSY, afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
 import { openQuestbook, trackQuest } from './views/questbook';
 import { kpBiguanTip } from '../engine/kaipian';
 import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
-import { setMapRegion } from './views/ditu';
+import { mapSheet, setMapRegion } from './views/ditu';
+import { powerNow, yaoJin } from '../engine/jiemian';
 import { showTitle } from './story';
 import { eyeLine } from './views/jianghu';
 import { pickItemFirst } from './daoju';
@@ -110,6 +110,15 @@ export function travelTo(dest: string, onArrive?: () => void): void {
   step();
 }
 
+/** 到了主线要去的地方：把要找的人选中，滚到他的动作那里（高亮在 ui/views/jianghu.ts，由 engine/jiemian.ts 的 yaoJin 定） */
+function focusQuest(): void {
+  const hot = yaoJin().hot;
+  if (!hot) return;
+  S.sel = hot.npc; S.reply = null;
+  render();
+  document.querySelector('.detail')?.scrollIntoView({ block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+
 /** 同一个人、同一个动作，连点两下只算一下（原来双击「交谈」会说两遍、花两份时辰） */
 let lastAct = { key: '', t: 0 };
 let armed = { key: '', t: 0 };
@@ -157,12 +166,13 @@ function retreat(want: number): void {
   b.style.transition = `width ${reduceMotion ? 50 : 1200}ms linear`;
   b.style.width = '100%';
   window.setTimeout(() => {
+    const power0 = powerNow();
     const rep = jingxiu(S, r.days, undefined, r.grow);
     const how = rep.used ? `消化历练 ${rep.used}` : rep.grow === 0 ? TIELV_TEXT.replace(/。$/, '') : '没有历练可消化，闭门造车，进境有限';
     pushFeed('出关', `闭关${label}，${how}${rep.gains[0] ? `，「${skillName(rep.gains[0][0])}」熟练 +${rep.gains[0][1]}` : ''}${rep.gongli > 0 ? `；功力深到${gongliText(S.gongli)}` : ''}。`);
     const stop = r.why === 'yue' && r.yue ? `想闭关${cn(want)}日，可约期到了，只好提前出关：${yueText(S, r.yue)}。` : r.why === 'tielv' ? (r.grow ? `闭关${label}，其中${cn(r.grow)}日修为有长进；余下的日子，${TIELV_TEXT}` : TIELV_TEXT) : undefined;
     const panel = document.querySelector('#sheetLayer .panel');
-    if (panel) panel.innerHTML = chuguanHTML(rep, `闭关${label}，今日是${dateStr(S)}。`, `闭关${label}`, stop);
+    if (panel) panel.innerHTML = chuguanHTML(rep, `闭关${label}，今日是${dateStr(S)}。`, `闭关${label}`, stop, power0);
     save();
   }, reduceMotion ? 150 : 1300);
 }
@@ -186,16 +196,8 @@ registerHandlers({
   // 地图点地名：先写明这趟路要多久、花多少钱，再由玩家决定走不走（地图审查第一条）
   travelAsk: v => {
     if (!v) return;
-    if (v === S.loc) { toast('你就在这里'); return; }
-    const c = tripCost(v);
-    if (!c) { toast('从这里去不了那儿'); return; }
-    const short = c.fee > S.silver;
-    // 出远门（赶路超过一个时辰）：带伤、气血、内力、过夜的店钱，点之前说一声（engine/chufa.ts）。船钱不够的另有一句，不重复
-    const warn = c.min > FAR_MIN ? chufaLine(S, short ? undefined : c) : null;
-    openSheet(`<h2>去${room(v).name}</h2>
-      <p>路上约 <b>${minLabel(c.min)}</b>，经过 ${cn(c.hops)} 处${c.fee ? `；船钱和过路钱共 <b>${cn(c.fee)} 文</b>` : '；一路不花钱'}。</p>
-      ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}${warn ? `<p class="muted chufa">${warn}</p>` : ''}
-      <div class="acts"><button class="btn" data-act="travelGo:${v}">出发</button><button class="btn ghost" data-act="sheetClose">再看看</button></div>`, true);
+    // 地图上点一处：先看那里有什么人、什么事、要走多久、花多少钱，再点「去」直接赶路（ui/views/ditu.ts 的 mapSheet）
+    openSheet(mapSheet(v), true);
   },
   travelGo: v => { closeSheet(); travelTo(v); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
@@ -204,10 +206,11 @@ registerHandlers({
   travel: v => travelTo(v),
   travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
   quest: () => {
-    // 卡住的也照去：差的那一步多半就在那儿办（缘故横幅上已经写着）
+    // 卡住的也照去：差的那一步多半就在那儿办（缘故卡上已经写着）。到了地方，把要找的人选中、动作高亮（engine/jiemian.ts），不再只弹一句「就在此处」
     const q = S.track ? questNav(S.track) : null;
-    if (q?.to && q.to !== S.loc) travelTo(q.to);
-    else toast(q && q.state !== '能做' ? q.why : '就在此处');
+    if (q?.to && q.to !== S.loc) travelTo(q.to, focusQuest);
+    else if (q?.to) focusQuest();
+    else toast(q && q.state !== '能做' ? q.why : '眼下没有要去的地方');
   },
   questbook: () => { openQuestbook(); },
   // 离开师门：先看后果卡，再点一次才算（ui/views/renwu.ts 的 sectLeaveSheet）

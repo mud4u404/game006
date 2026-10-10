@@ -136,6 +136,11 @@ export interface GameState {
   sel: string | null;
   reply: { id: string; text: string } | null;
   tab: Tab;
+  /**
+   * 界面记的小账（engine/jiemian.ts），可缺省，旧档没有也读得出来：
+   * power 上次在江湖页角色卡上显示的战力；from 变了以后的旧值（卡上显示「旧 → 新」，离开江湖页就清）；went 到过的地点
+   */
+  ui?: { power?: number; from?: number; went?: string[] };
 }
 
 /** 跳过序章时的根基：和走完童年三忆的样子相当（常人各二十） */
