@@ -20,7 +20,7 @@
 5. 给负责人一页纸：Codex fenxi H1（世事重来、路遇再遇、导演）结合 `docs/zhishiku/sandbox-rimworld.md`，方向级，等点头。
 
 ## 人手现状
-- 停用：autoclaw（额度用尽，任务全给 minimax）、zcode（第二次机会没过，原来的活全给 minimax）。
+- 停用：autoclaw（额度用尽，任务全给 minimax）、zcode（第二次机会没过，原来的活全给 minimax）、WorkBuddy（10-10 负责人定下线，20 件「给:workbuddy」全改「给:trae」）。
 - 48 小时交付：Trae 13 合、退回 1；Codex 11 合；minimax 10 合、退回率 27%；Qoder 9；CodeBuddy 8 合、退回率 36%、3 件要改挂着；WorkBuddy 3 件（常停，名字已从 step5 改别名）。
 
 ## minimax「总没活」的根因和办法
