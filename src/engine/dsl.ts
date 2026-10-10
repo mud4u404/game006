@@ -12,7 +12,8 @@ import type { Branch, Cond, Effect } from '../content/types';
 import { gainProf, learnSkill } from './growth';
 import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
-import { houtianOf } from './ren';
+import { houtianOf, syncGear } from './ren';
+import { keyOfSlot } from './zhuangbei';
 import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
 import { learnShi, moveShi } from './shishi';
 import { hearsay, inner } from './chuanwen';
@@ -78,6 +79,9 @@ export function test(c?: Cond): boolean {
   if (c.shenfen !== undefined && !(S.shenfen.id === c.shenfen && S.shenfen.standing >= 1)) return false;
   if (c.job !== undefined && S.job?.id !== c.job) return false;
   if (c.jobOpen !== undefined && !jobOpen(S, c.jobOpen)) return false;
+  // 一日一回的营生（效果 today）
+  if (c.doneToday !== undefined && S.dayLog?.[c.doneToday] !== dayNo(S)) return false;
+  if (c.notDoneToday !== undefined && S.dayLog?.[c.notDoneToday] === dayNo(S)) return false;
   if (c.gongxian !== undefined && gongxianOf(S) < c.gongxian) return false;
   // 世事（engine/shishi.ts）：眼下在哪一步；还没起头的，哪一步都不在
   if (c.shi) {
@@ -199,10 +203,20 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'toast': emit('toast', e.text); break;
       case 'silver': S.silver = Math.max(0, S.silver + e.delta); break;
       case 'item':
-        S.items[e.id] = Math.max(0, (S.items[e.id] || 0) + e.delta);
+      {
+        // max 只管加：手里本来就多于 max 的，不收走
+        const cur = S.items[e.id] || 0;
+        const to = cur + e.delta;
+        S.items[e.id] = Math.max(0, e.max !== undefined && e.delta > 0 ? Math.max(cur, Math.min(e.max, to)) : to);
+      }
         // 兵器当了、卖了，手里也就没了
         if (!S.items[e.id] && S.gear?.weapon === e.id) delete S.gear.weapon;
         break;
+      case 'wear': {
+        const it = itemById(e.id);
+        if (it?.equip && (S.items[e.id] ?? 0) > 0) { S.gear[keyOfSlot(it.equip.slot)] = e.id; syncGear(S); }
+        break;
+      }
       case 'rel': {
         const cur = S.rel[e.npc] ?? '素不相识';
         if (!e.from || e.from.includes(cur)) S.rel[e.npc] = e.value;
@@ -271,6 +285,17 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
         break;
       }
+      case 'wound':
+        // 剧情里添的伤：封顶三级；一级的算轻伤，从此刻起过一日自己好（engine/shang.ts）。写了 if 的，条件成立才落伤
+        if (!test(e.if)) break;
+      {
+        const was = S.wounds[e.zone];
+        S.wounds[e.zone] = Math.min(3, was + (e.level ?? 1));
+        markLight(S);
+        const where = { hand: '手上', foot: '脚上', inner: '胸口' }[e.zone];
+        if (S.wounds[e.zone] > was) pushFeed('江湖', S.wounds[e.zone] === 1 ? `${where}添了一处伤，轻的过一日自己会好。` : `${where}的伤又重了一层，得找大夫看看。`);
+      }
+        break;
       // 江湖上的话：这一带传开的、你还不知道的、最耸动的一条（engine/chuanwen.ts 的 hearsay），不再随手抽
       case 'news': out.vars.news = inner(hearsay() ?? '这几日太平得很，没听说什么。'); break;
       case 'away':
@@ -300,6 +325,12 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         const free = S.shenfen.id === 'youxia' || S.shenfen.id === 'yumin';
         S.shenfen.standing = Math.max(free ? 1 : 0, Math.min(3, S.shenfen.standing + e.delta));
         if (S.shenfen.standing === 0 && sf) dismiss('你被辞退了，');
+        break;
+      }
+      case 'today': {
+        const log = (S.dayLog ??= {});
+        for (const k of Object.keys(log)) if (log[k] !== dayNo(S)) delete log[k];
+        log[e.id] = dayNo(S);
         break;
       }
       case 'job': {

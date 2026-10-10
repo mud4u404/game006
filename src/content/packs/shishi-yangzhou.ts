@@ -1,4 +1,4 @@
-import type { ContentPack, Cond, FoeDef, NewsDef, NpcDef, ShiDef, StoryDef } from '../types';
+import type { ContentPack, Cond, Effect, FoeDef, NewsDef, NpcDef, ShiDef, StoryDef } from '../types';
 
 /**
  * 扬州的世事示范（docs/huojianghu.md）：江湖自己转，玩家不插手，事情也会走到结局。
@@ -13,6 +13,8 @@ const ZEI = 'ss_zei';
 const ZEI_OPEN: Cond = { shi: { id: ZEI, at: ['qi', 'bang'] } };
 /** 夜里：亥时到寅时 */
 const NIGHT = { from: 21, to: 5 };
+/** 没有活可干的回话，点了不耗时间（同 packs/lingong.ts 的 NO_TIME） */
+const NO_TIME: Effect[] = [{ type: 'time', add: 0 }];
 
 const SHI: ShiDef[] = [
   {
@@ -159,9 +161,26 @@ const NPCS: NpcDef[] = [
   /* ---------- 东关街，夜里 ---------- */
   { id: 'ss_gengfu', name: '更夫', ini: '更', tone: 'gray', brief: '提着梆子',
     look: '佝偻着背，一手梆子一手铜锣，灯笼上写着一个「更」字。',
-    at: { room: 'cheng', if: { hour: NIGHT } },
-    verbs: ['交谈', '观察'],
+    at: { room: 'cheng', if: { hour: { from: 20, to: 5 } } },
+    verbs: ['交谈', '观察', '替班'],
     actions: {
+      // 零工（写法同 packs/lingong.ts）：二十点到二十二点之间都能替更夫走一更，一更一个时辰，最晚二十一点五十九分开工、二十三点多收工，不过半夜
+      替班: [
+        { if: { doneToday: 'lg_tibian' }, text: '更夫提着灯笼摆了摆手：「今夜你已替过一回，剩下的路我自己走。」', do: NO_TIME },
+        {
+          if: { hour: { from: 20, to: 22 } },
+          text: '更夫把梆子和铜锣递过来，自己蹲到墙根暖手：「顺着街敲一个来回，慢慢走，别敲急了。」你提着灯笼从街头走到街尾，梆子敲到第二遍，药铺后墙根蹿出一只猫，吓了你一跳。回来时更夫已经靠着墙打起盹，听见脚步声才睁眼，从怀里摸出铜钱递给你。\n（银两 +四十五文，过去一个时辰）',
+          // today 排在 time 前头：夜里干到过了半夜，也算开工那一日
+          do: [
+            { type: 'today', id: 'lg_tibian' },
+            { type: 'time', add: 120 },
+            { type: 'silver', delta: 45 },
+            { type: 'toast', text: '银两 +四十五文' },
+            { type: 'feed', tag: '收获', text: '你在东关街替更夫走了一更，领了工钱。' }
+          ]
+        },
+        { text: '更夫把梆子抱紧了些：「这一更已经走了一半，下半夜的路我熟，不劳动了。」', do: NO_TIME }
+      ],
       交谈: [
         { if: ZEI_OPEN,
           text: '更夫把灯笼往你脸上照了照，才压低声音：「那贼我见过。个头不高，像个孩子，专往药铺后墙去，子时前后来，往运河堤那边跑。」他敲了一下梆子，「我一个打更的，追不上。」' },

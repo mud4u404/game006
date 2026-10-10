@@ -259,7 +259,7 @@ describe('门派打法', () => {
    * 负责人 10-08：「这个世界大多是有条件有代价的，极少存在唾手可得的东西……武功有很多，但都应该有前置条件，无非是有的简单，有的艰难。」
    * 上品以上的武功都要有前置（前置武学，或者根基门槛），奇遇、江湖散学也不例外；
    * 绝品以上要艰难：前置武学练到第二重以上，或者根基门槛二十八以上。
-   * 例外只有主线：断水是江伯临终所传的起手式（序章），代价是江伯的命。
+   * 例外只有主线：断水是江伯留下的残页里的起手式（序章），代价是江伯的下落不明。
    */
   it('上品以上的武功都有前置，绝品以上的前置要难（奇遇、江湖散学也一样）', () => {
     const STORY_GIFT = ['duanshui'];
@@ -511,6 +511,8 @@ describe('拜师：从扬州起拜师学艺，入门武功上得了阵', () => {
     passKao('bs2_lsm_kao');
     expect(S.sect).toEqual({ school: '六扇门', rank: '记名' });
     expect(S.items.bs2_tiechi).toBe(1);
+    // 四门入门武功的历练开销按五百零六排；跳过序章已不比走完更肥（三百五十五），这里补足，只验六扇门的传授
+    S.lilian = Math.max(S.lilian, 506);
     for (let i = 0; i < 5; i++) act('bs2_qin', '请教');
     for (const id of ['jl_jishixinfa', 'jl_suolian', 'jl_tiechi', 'jl_zhuifeng']) expect(S.skills[id], id).toBeDefined();
     expect(S.skills.jl_fulong).toBeUndefined();

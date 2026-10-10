@@ -14,6 +14,7 @@ import { SHI, room, shiById } from '../content';
 import type { ShiDef, ShiStep } from '../content/types';
 import { run, test } from './dsl';
 import { ask, shiRumor, type HeardItem } from './chuanwen';
+import { worldRng } from './shijie';
 
 export { hearsay, panwen } from './chuanwen';
 
@@ -94,7 +95,12 @@ export function tickShiFull(): HeardItem[] {
       st = shiOf(d.id)!;
       const nx = d.steps[st.at]?.next;
       if (!nx || now - st.since < nx.days * DAY) break;
-      goStep(d, nx.to, st.since + Math.round(nx.days * DAY), heard);
+      // 到了日子：有岔路的，世界的种子抽一回（同一个种子，抽出来的一样）
+      const to = nx.alt && worldRng() < nx.alt.p ? nx.alt.to : nx.to;
+      let at = st.since + Math.round(nx.days * DAY);
+      // 预告的窗口：补了半个江湖日以上才走到这一步（下线静修、一口气歇了几日），日子从玩家回来这一刻起算（docs/sheji-001-003.md 第 003 项）
+      if (d.steps[to].window && now - at >= DAY / 2) at = now;
+      goStep(d, to, at, heard);
     }
   }
   heard.forEach(n => pushFeed('传闻', n.text));

@@ -169,12 +169,10 @@ jobs:
         run: |
           held=$(gh pr view "$PR" --repo "$REPO" --json isDraft,labels --jq '.isDraft or any(.labels[]; .name == "暂缓合并")')
           if [ "$held" = "true" ]; then echo "草稿或带「暂缓合并」标签，不自动合并。"; echo "content_only=false" >> "$GITHUB_OUTPUT"; exit 0; fi
-          # 「修订」任务：Issue 正文「## 允许修改的文件」里点名的内容包，可以修改
-          allowed=""
-          if [ "$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq 'any(.labels[]; .name == "修订")')" = "true" ]; then
-            allowed=$(gh issue view "$ISSUE" --repo "$REPO" --json body --jq .body | sed -n '/^## 允许修改的文件/,/^## [^允]/p' | grep -oE 'src/content/packs/[A-Za-z0-9_.-]+[.]ts' | sort -u)
-            echo "修订任务，允许修改：$allowed"
-          fi
+          # Issue 正文「## 允许修改的文件」（也认「## 允许改的文件」）里点名的内容包和文档，可以修改。
+          # 不限「修订」标签：内容任务也常要改已有的内容包（比如给已有武功补层级写法）
+          allowed=$(gh issue view "$ISSUE" --repo "$REPO" --json body --jq .body | sed -n '/^## 允许修\{0,1\}改的文件/,/^## [^允]/p' | grep -oE '(src/content/packs|docs)/[A-Za-z0-9_.-]+[.](ts|md)' | sort -u)
+          echo "允许修改：$allowed"
           files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[] | "\(.status) \(.deletions) \(.filename)"')
           ok=true
           [ -n "$files" ] || ok=false
@@ -182,7 +180,7 @@ jobs:
             [ -n "$file" ] || continue
             case "$status:$file" in
               added:src/content/packs/*.ts) ;;
-              modified:src/content/packs/*.ts) grep -qxF "$file" <<< "$allowed" || ok=false ;;
+              modified:src/content/packs/*.ts|added:docs/*.md|modified:docs/*.md) grep -qxF "$file" <<< "$allowed" || ok=false ;;
               modified:tests/forbidden-names.ts) [ "$deletions" = "0" ] || ok=false ;;
               *) ok=false ;;
             esac

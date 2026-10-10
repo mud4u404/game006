@@ -22,19 +22,19 @@ const NPCS: NpcDef[] = [
     { if: { flag: 'xsb_jf_all' }, text: '黑风寨二十三口匪徒尽数拿送府衙，全城称快。' },
     { if: { flag: 'xsb_jf_sha' }, text: '黑风寨叫人一把火烧了。跑得慢的匪徒，烟熏死在了山洞里。' },
     { if: { flag: 'xsb_jf_done' }, text: '「剿匪的那桩，山寨也平了。」书办竖了个大拇指，「四张榜全叫你揭了——游侠里头，你算头一份。」' },
-        { text: '书办翻开底册：「寻人、寻物、缉凶、剿匪，府台那边还没批下来，榜还贴不出去。」他蘸了蘸墨，「照壁上悬赏那一栏，眼下只有运河河贼一张。要揭，在我这儿登记；拿了人，也押到我这儿来验。」' },
+        { text: '书办翻开底册，用笔杆一张张点给你看：「寻人，布庄走了学徒，赏两百五十文。寻物，绣娘丢了玉佩，赏八百文。河贼夜里上岸偷漕船，也是八百文。缉凶，布行钱掌柜的命案，赏一千五百文。剿匪，蜀冈黑风寨，赏三千三百八十文。」他蘸了蘸墨，「要揭，在我这儿登记；人拿来了，也押到我这儿验。」' },
       ],
-      揭寻人: [{ text: '你揭下寻人的榜。书办登记道：「布庄学徒小栓，走失半月。赏三百文，去东关布庄问掌柜。」',
+      揭寻人: [{ text: '你揭下寻人的榜。书办登记道：「布庄学徒小栓，走失半月。赏两百五十文，去东圈门的布庄问掌柜。」',
         do: [{ type: 'job', id: 'xsb_xunren' }] }],
-      揭寻物: [{ text: '你揭下寻物的榜。书办登记道：「绣娘阿蕙的玉佩，被偷了。赏二百文，先去找她问经过。」',
+      揭寻物: [{ text: '你揭下寻物的榜。书办登记道：「绣娘阿蕙的玉佩，被偷了。赏八百文，先去找她问经过。」',
         do: [{ type: 'job', id: 'xsb_xunwu' }] }],
-      揭缉凶: [{ text: '你揭下缉凶的榜。书办道：「郝屠户，杀了布行钱掌柜。赏银二两，周氏见过凶手。」',
+      揭缉凶: [{ text: '你揭下缉凶的榜。书办道：「郝屠户，杀了布行钱掌柜。赏银一千五百文，周氏见过凶手。」',
         do: [{ type: 'job', id: 'xsb_xiong' }] }],
-      揭剿匪: [{ text: '你揭下剿匪的榜。书办道：「黑风寨二十来号人。赏银五两，找猎户老韩带路。」',
+      揭剿匪: [{ text: '你揭下剿匪的榜。书办道：「黑风寨二十来号人。赏三千三百八十文，找猎户老韩带路。」',
         do: [{ type: 'job', id: 'xsb_jiaofei' }] }],
       // 运河河贼（packs/biaoju.ts）：揭榜、领赏都在书办这里
       揭河贼: [
-        { text: '书办揭下河贼那张榜，在簿子上记了你的名字：「三日之内拿人来领赏。那贼入夜才上岸，在渡口盐包后头出没。」',
+        { text: '书办揭下河贼那张榜，在簿子上记了你的名字：「赏八百文，三日之内拿人来领赏。那贼入夜才上岸，在渡口盐包后头出没。」',
           do: [{ type: 'flag', flag: 'xs_hezei_caught', value: false }, { type: 'job', id: 'xs_hezei' }] }
       ],
       交河贼: [
@@ -49,6 +49,8 @@ const NPCS: NpcDef[] = [
           do: [
             { type: 'jobDone', id: 'xsb_xunren' },
             { type: 'flag', flag: 'xsb_xr_done' },
+            // 交了差就把「找到了」收回去：冷却一过再揭，得重新办成才能再领赏（同 xs_hezei_caught）
+            { type: 'flag', flag: 'xsb_xr_found', value: false },
             { type: 'feed', tag: '江湖', text: '你完成了寻人的悬赏，领了赏钱。' }
           ] },
         { text: '「寻人的榜还没结果——找到了再来领赏。」' }
@@ -59,6 +61,7 @@ const NPCS: NpcDef[] = [
           do: [
             { type: 'jobDone', id: 'xsb_xunwu' },
             { type: 'flag', flag: 'xsb_xw_done' },
+            { type: 'flag', flag: 'xsb_xw_found', value: false },
             { type: 'feed', tag: '江湖', text: '你完成了寻物的悬赏，领了赏钱。' }
           ] },
         { text: '「寻物的榜还没结果——找到了再来领赏。」' }
@@ -79,6 +82,7 @@ const NPCS: NpcDef[] = [
           do: [
             { type: 'jobDone', id: 'xsb_jiaofei' },
             { type: 'flag', flag: 'xsb_jf_done' },
+            { type: 'flag', flag: 'xsb_jf_beat', value: false },
             { type: 'feed', tag: '江湖', text: '你剿灭了黑风寨，领了赏钱。' }
           ] },
         { text: '「剿匪的榜还没结果——平了山寨再来领赏。」' }
@@ -92,7 +96,7 @@ const NPCS: NpcDef[] = [
     verbs: ['交谈', '观察'],
     actions: {
       交谈: [
-        { text: '「那孩子叫小栓，十六了，在我铺子里学了三年徒。」掌柜的叹气，「前几日他舅舅来了一趟，第二天人就没了。我怕他出了什么事。」',
+        { text: '掌柜叹了口气，道：「小栓十六了，在我铺子里学了三年徒。他舅舅来过，第二日人就没了。那汉子常在望江楼饮酒，入夜后才露面，你去问问他。」',
           do: [{ type: 'flag', flag: 'xsb_xr_clue1' }] }
       ]
     }
@@ -137,7 +141,7 @@ const CHAIN_NPCS: NpcDef[] = [
       交谈: [{ text: '舅舅的酒碗一转：「小栓？他自己要走的好不好！」他不敢看你的眼睛。' }],
       点破: [
         { if: { any: [{ attr: { key: '悟性', atLeast: 25 } }, { attr: { key: '胆魄', atLeast: 25 } }] },
-          text: '你点破了他袖口的麻屑和骰子茧：「孩子被你押在码头抵赌债了吧。」舅舅脸白了：「在苏州枫桥码头的货栈里！」',
+          text: '你指着他袖口的麻屑，道：「孩子被你押在码头抵赌债了罢？」舅舅脸白了，道：「在苏州的枫桥码头，货栈里！」',
           do: [{ type: 'flag', flag: 'xsb_xr_clue2' }] },
         { text: '他埋头喝酒，一个字也再不肯吐。' }
       ]
@@ -358,10 +362,15 @@ const JIAOFEI: FoeDef = {
 
 const JOBS: JobDef[] = [
   // 榜上揭的差事：一律在照壁下的书办这里登记、交差（负责人 10-09）
-  { id: 'xsb_xunren', shenfen: 'youxia', tier: 0, title: '帮布庄掌柜找回走失的学徒小栓', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, bang: true },
+  { id: 'xsb_xunren', shenfen: 'youxia', tier: 0, title: '帮布庄掌柜找回走失的学徒小栓', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, bang: true,
+    xian: [
+      { npc: 'xsb_shifu', if: { notFlag: 'xsb_xr_clue1' }, text: '布庄掌柜知道小栓走失前后的事，先去问问他。' },
+      { npc: 'xsb_jiuju', at: 'cheng_tavern', if: { flag: 'xsb_xr_clue1', notFlag: 'xsb_xr_clue2' }, text: '小栓的舅舅常在望江楼饮酒，得问问孩子的下落。' },
+      { npc: 'xsb_xiaoshuan', at: 'sz_matou', if: { flag: 'xsb_xr_clue2', notFlag: 'xsb_xr_found' }, text: '舅舅说小栓被押在苏州枫桥码头的货栈里，去寻他。' }
+    ] },
   { id: 'xsb_xunwu', shenfen: 'youxia', tier: 1, title: '帮绣娘阿蕙追回被偷的玉佩', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 3, again: 5, bang: true },
   { id: 'xsb_xiong', shenfen: 'youxia', tier: 2, title: '缉拿命案凶手郝屠户', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 5, bang: true },
-  { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, k: 1.5, bang: true }
+  { id: 'xsb_jiaofei', shenfen: 'youxia', tier: 3, title: '剿灭蜀冈黑风寨，拿住二当家', npc: 'xsb_zhuren', at: 'yz_zhaobi', days: 7, again: 30, k: 1.5, bang: true }
 ];
 
 const NEWS: NewsDef[] = [

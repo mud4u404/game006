@@ -5,6 +5,8 @@
 export const WORK_LABELS = ['内容', '功能'];
 /** 带这个标签的 Issue 先不做 */
 export const HOLD_LABEL = '暂缓';
+/** 维护者退回的 PR 带这个标签（再加「给:作者」）：作者先把它改完，再领新任务 */
+export const REDO_LABEL = '要改';
 /**
  * 指派：Issue 带「给:trae」这样的标签，只有自报名字叫 trae 的协作者（node scripts/wait-for-work.mjs --for trae）才领得到；
  * 不报名字的协作者领不到任何带「给:」的任务，所以多个工具同时开着自动模式也不会抢同一件
@@ -30,6 +32,16 @@ export const branchIssue = name => (name.startsWith('claude/') ? null : Number(n
  */
 export function pickWork(items, branches = [], me = '') {
   const prs = items.filter(i => i.pull_request);
+  // 退回的 PR 排在最前：带「要改」和「给:我」的，先改它（不带「给:」的不派，免得别人去改不是自己的分支）
+  const redo = me
+    ? prs
+        .filter(p => {
+          const names = labelNames(p);
+          return names.includes(REDO_LABEL) && !names.includes(HOLD_LABEL) && names.includes(`${ROUTE_PREFIX}${me.toLowerCase()}`);
+        })
+        .sort((a, b) => a.number - b.number)[0]
+    : null;
+  if (redo) return redo;
   const issues = items.filter(i => !i.pull_request);
   // 依赖可以是 Issue，也可以是维护者的 PR（例如新格式在那个 PR 里，合并以前写了会报错）：开着的都算没好
   const open = new Set(items.map(i => i.number));
@@ -51,4 +63,7 @@ export function pickWork(items, branches = [], me = '') {
 }
 
 /** 打印给协作者看的一行 */
-export const describe = w => `有新任务 #${w.number}【${labelNames(w).filter(n => WORK_LABELS.includes(n)).join('、')}】${w.title}`;
+export const describe = w =>
+  w.pull_request
+    ? `有退回要改的 PR #${w.number}：${w.title}。先读 PR 下维护者的评论，改完推回原分支（不要新开分支、不要新开 PR）`
+    : `有新任务 #${w.number}【${labelNames(w).filter(n => WORK_LABELS.includes(n)).join('、')}】${w.title}`;

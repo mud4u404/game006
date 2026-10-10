@@ -52,18 +52,22 @@ await click('[data-act="stPick:0"]');                 // 回想
 for (let i = 0; i < 3; i++) { await click(`[data-act="stPick:${i}"]`); await click('[data-act="stNext"]'); }
 await snap('02-name');
 await p.fill('#nameIn', '听雨');
-await click('[data-act="stPick:0"]');
-await click('[data-act="stPick:0"]');                 // 回到小屋
-log('序章开场完成', await p.textContent('.who b'));
-await snap('03-guazhou');
-await click('[data-act="do:交谈"]');                  // 江伯
-await click('[data-act="quest"]');                    // 去瓜洲镇
-await p.waitForTimeout(1200);
-await click('[data-act="sel:huichun"]');
-await click('[data-act="do:抓药"]');
-await click('[data-act="quest"]');                    // 回小屋，触发夜袭
-await p.waitForTimeout(1200);
-await click('[data-act="stPick:0"]');                 // 拔剑迎敌
+await click('[data-act="stPick:0"]');                 // 就叫这个名字
+// 第一夜（docs/kaipian.md）：四张「继续」，到「渡不渡」，选「渡」
+for (let i = 0; i < 4; i++) await click('[data-act="stPick:0"]');
+await snap('03-dubudu');
+log('渡不渡', (await p.textContent('#storyLayer h2')).trim());
+// 新序章中途刷新：「继续」要接回「渡不渡」这一屏，不能掉进旧序章
+await p.reload();
+await click('[data-act="tContinue"]');
+await p.waitForSelector('#storyLayer:not([hidden]) h2');
+const back = (await p.textContent('#storyLayer h2')).trim();
+if (back !== '渡不渡') throw new Error('刷新后没有接回新序章：' + back);
+log('刷新后接回', back);
+await click('[data-act="stPick:0"]');                 // 「渡。」
+await click('[data-act="stPick:0"]');                 // 继续（船离岸）
+await click('[data-act="stPick:0"]');                 // 把船头偏向西汊口（认得浅滩）
+await click('[data-act="stNext"]');
 
 async function fight(tag, pickBest = true) {
   for (let i = 0; i < 300; i++) {
@@ -143,14 +147,15 @@ async function goQuest(dest) {
   throw new Error('走不到' + dest);
 }
 
-log('黑衣人', await fight('04-fight1'));
-await click('[data-act="stPick:0"]');                 // 握紧长剑
-log('黑衣首领', await fight('05-fight2'));
-await p.waitForSelector('#storyLayer:not([hidden])');
-await snap('06-death');
-await click('[data-act="stPick:0"]');                 // 江伯——
-await click('[data-act="stPick:0"]');                 // 掩埋江伯
-await click('[data-act="stPick:0"]');                 // 登船
+log('卫家家丁', await fight('04-fight1'));
+// 打完接着读：南岸、码头、三日后的第二夜、天亮；每张卡点第一个选项（最后一张是「登船 · 去扬州」）
+for (let i = 0; i < 60; i++) {
+  await p.waitForSelector('#storyLayer:not([hidden]) .choice, #chapLayer:not([hidden])', { timeout: 8000 });
+  if (await p.$('#chapLayer:not([hidden])')) break;
+  const t = (await p.textContent('#storyLayer h2')).trim();
+  if (t === '焦船') await snap('06-doupeng');
+  await click((await p.$('#storyLayer [data-act="stNext"]')) ? '[data-act="stNext"]' : '[data-act="stPick:0"]');
+}
 await p.waitForTimeout(500);
 await snap('07-chapter');
 await click('[data-act="chapDone"]');
@@ -161,7 +166,7 @@ await click('[data-act="tab:renwu"]');
 await click('[data-act="gearSlot:weapon"]');
 await click('#sheetLayer [data-act="gearSet:weapon:"]');
 await click('[data-act="gearSlot:weapon"]');
-await click('#sheetLayer [data-act="gearSet:weapon:qingfeng"]');
+await click('#sheetLayer [data-act="gearSet:weapon:kp_mujian"]');
 log('纸娃娃 · 兵器：', (await p.textContent('[data-act="gearSlot:weapon"] b')).trim());
 await click('[data-act="tab:xingnang"]');
 await click('[data-act="itemLook:jade"]');

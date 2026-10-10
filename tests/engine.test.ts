@@ -95,7 +95,7 @@ describe('世界', () => {
     S.silver = 25;
     act('yaopu', '购买');
     expect(S.silver).toBe(5);
-    expect(S.items.jcy).toBe(4);
+    expect(S.items.jcy).toBe(2);
     const { text } = act('yaopu', '购买');
     expect(text).toContain('一文都不能少');
   });
@@ -789,11 +789,44 @@ describe('路遇', () => {
 describe('重回瓜洲', () => {
   beforeEach(() => setState(skipToYangzhou()));
 
-  it('序章以后，小屋是焦土，生船不见了，镇上的人记得江伯', () => {
+  it('新开局序章以后：江伯生死未卜，渡口的船只剩骨架，镇上的人记得那一夜', () => {
+    expect(S.flags.kp_xin).toBe(true);
     expect(roomNpcs('gz_pier')).toContain('shaogong');
+    expect(act('chatan', '交谈').text).toContain('还敢回来');
+    expect(act('chatan', '交谈').text).toContain('不见了');
+    expect(act('ayp', '交谈').text).not.toContain('坟');
+    expect(S.relNote?.ayp).toContain('留意江伯的消息');
+    // 老柳下没有坟，只有江伯坐惯了的树根
+    S.loc = 'gz_fen';
+    expect(roomObjs('gz_fen')).toContain('gz_shugen');
+    expect(roomObjs('gz_fen')).not.toContain('gz_fenmu');
+  });
+
+  it('艄公按第一夜走的哪条路说话（旗标 kp_du、kp_wen、kp_bu 有人读）', () => {
+    for (const [f, w] of [['kp_du', '独臂'], ['kp_wen', '卫家'], ['kp_bu', '不渡']] as const) {
+      delete S.flags.kp_du; delete S.flags.kp_wen; delete S.flags.kp_bu;
+      S.flags[f] = true;
+      expect(act('shaogong', '交谈').text, f).toContain(w);
+    }
+  });
+
+  it('树根上坐一坐、搁一壶酒：江伯不在，不是上坟', () => {
+    expect(act('gz_shugen', '坐一坐').text).toContain('斗笠');
+    S.flags.boss = true;
+    expect(act('gz_shugen', '坐一坐').text).toContain('渡口那一剑');
+    S.items.huadiao = 1;
+    expect(act('gz_shugen', '坐一坐').text).toContain('花雕');
+    expect(S.items.huadiao).toBe(0);
+    expect(S.flags.kp_fen_wine).toBe(true);
+  });
+
+  it('旧存档序章以后（没有 kp_xin）：江伯已经下葬，小屋是焦土，镇上的人记得江伯', () => {
+    delete S.flags.kp_xin;
     expect(act('chatan', '交谈').text).toContain('还敢回来');
     expect(act('ayp', '交谈').text).toContain('坟');
     expect(S.relNote?.ayp).toContain('照看江伯的坟');
+    expect(roomObjs('gz_fen')).toContain('gz_fenmu');
+    expect(roomObjs('gz_fen')).not.toContain('gz_shugen');
   });
 
   it('石臼底下的小木剑，回春堂的旧方子，都只给一次', () => {
@@ -805,7 +838,8 @@ describe('重回瓜洲', () => {
     expect(S.items.fangzi).toBe(1);
   });
 
-  it('坟前祭拜：斗败屠千山以后，有话要对江伯说', () => {
+  it('坟前祭拜（旧存档）：斗败屠千山以后，有话要对江伯说', () => {
+    delete S.flags.kp_xin;
     expect(act('gz_fenmu', '祭拜').text).toContain('磕了三个头');
     S.flags.boss = true;
     expect(act('gz_fenmu', '祭拜').text).toContain('渡口那一剑');

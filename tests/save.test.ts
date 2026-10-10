@@ -95,8 +95,9 @@ describe('存档：更新游戏不丢档', () => {
 
   it('手里的兵器已经不在行囊里了，就空着手', () => {
     const t = skipToYangzhou();
-    delete t.items.qingfeng;
-    expect(migrate(t).gear).toEqual({});
+    delete t.items.kp_mujian;
+    // 玉佩、斗笠还在行囊里，戴着；只有木剑没了，手里就空着
+    expect(migrate(t).gear).toEqual({ waist: 'jade', head: 'kp_douli' });
   });
 
   it('纸娃娃：第四版的旧存档只有兵器一个装备位，照样读得出来，其余五个位置空着', () => {
@@ -111,8 +112,8 @@ describe('存档：更新游戏不丢档', () => {
   it('装备位上不对的东西空出来：不认识的位置、放错的位置、行囊里已经没有的、不是道具的', () => {
     const t = skipToYangzhou();
     t.items = { ...t.items, zb_douli: 1, zb_pijia: 1 };
-    const raw = { ...JSON.parse(JSON.stringify(t)), gear: { weapon: 'qingfeng', head: 'zb_douli', body: 'zb_douli', feet: 'zb_kuaixue', waist: 'no_such_item', hat: 'zb_douli' } };
-    expect(migrate(raw).gear).toEqual({ weapon: 'qingfeng', head: 'zb_douli' });
+    const raw = { ...JSON.parse(JSON.stringify(t)), gear: { weapon: 'kp_mujian', head: 'zb_douli', body: 'zb_douli', feet: 'zb_kuaixue', waist: 'no_such_item', hat: 'zb_douli' } };
+    expect(migrate(raw).gear).toEqual({ weapon: 'kp_mujian', head: 'zb_douli' });
     expect(migrate({ ...raw, gear: null }).gear).toEqual({});
     expect(migrate({ ...raw, gear: 'qingfeng' }).gear).toEqual({});
   });
@@ -120,7 +121,7 @@ describe('存档：更新游戏不丢档', () => {
   it('穿着装备的存档：气血上限把护体算进去，反复读档不变', () => {
     const t = skipToYangzhou();
     t.items = { ...t.items, zb_pijia: 1 };
-    t.gear = { weapon: 'qingfeng', body: 'zb_pijia' };
+    t.gear = { weapon: 'kp_mujian', body: 'zb_pijia' };
     const s = migrate(JSON.parse(JSON.stringify(t)));
     expect(s.gear.body).toBe('zb_pijia');
     expect(personOf(s).gear?.huti).toBe(2);
@@ -167,7 +168,7 @@ describe('存档：更新游戏不丢档', () => {
   });
 
   it('关系称谓统一到阶梯：旧词换成阶梯里的词，有味道的留作人情备注；气血上限由「人」算出来，反复读档也不变', () => {
-    const s = migrate({ ...skipToYangzhou(), rel: { liu: '不打不相识', fuya_zhou: '初识' }, hpMax: 1000 } as GameState);
+    const s = migrate({ ...skipToYangzhou(), rel: { liu: '不打不相识', fuya_zhou: '初识' }, relNote: undefined, hpMax: 1000 } as GameState);
     expect(s.rel).toEqual({ liu: '相谈甚欢', fuya_zhou: '点头之交' });
     expect(s.relNote).toEqual({ liu: '湖畔切磋，不打不相识' });
     expect(s.hpMax).toBe(hpMaxOf(personOf(s)));
