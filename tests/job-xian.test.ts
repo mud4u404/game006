@@ -67,6 +67,7 @@ describe('差事的线头', () => {
     S.attr.悟性 = 25;
     S.loc = 'cheng_tavern';
     S.min = 22 * 60;
+    act('xsb_jiuju', '观察');                 // 先看见袖口的麻屑，才点得破（#606：点破只引玩家见过的线索）
     expect(act('xsb_jiuju', '点破').text).toContain('枫桥码头');
     const [line] = lines();
     expect(lines()).toHaveLength(1);
