@@ -12,6 +12,10 @@ import type { Cond, ContentPack, NpcDef, NpcLife } from '../types';
  * - 阿七嘴硬心软：嘴上硬气，句句绕着他娘。
  * 一句话不许在两人身上出现（tests/huo.test.ts 查 lead、idle 的整句重复）。
  *
+ * 樊九思的 life 不挂 faction（types.ts 的 NpcLife.faction）：挂了他就是「牵涉东舵的事都先知道」的那个，
+ * 白日在望江楼听枢纽们的信、白日在渡口又说给船夫，市井两头的见闻都叫他串起来，
+ * 船夫和药铺掌柜知道的事重合过五成（tests/huo.test.ts 的 K1）。他该知道的帮中事都写在 knows 里，不靠帮内互通。
+ *
  * 樊九思的作息读码头的主人（w.owner）：
  * - 码头归东舵（开局、打跑焦五、调停之后）：白天在运河渡口。两舵对峙、火并那两步他躲开了
  *   （那两步北头站着焦五的人，码头上再站他就挤了，tests/content.test.ts「场景不挤」）；
@@ -65,7 +69,7 @@ const NPCS: NpcDef[] = [
       ]
     },
     life: {
-      trade: '舵主', faction: 'dong', talk: 0.5,
+      trade: '舵主', talk: 0.5,
       voice: {
         lead: ['把袖口的折痕理了理', '笑了一笑，眼角的纹没有动', '伸出两根指头，把桌上的茶碗挪了挪'],
         idle: [
