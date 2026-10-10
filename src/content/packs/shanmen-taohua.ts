@@ -60,7 +60,7 @@ const SHI_DEF: ShiDef[] = [
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smth_xiaozhu', name: '听潮小筑', area: '瓜洲 · 江滩', region: 'gz', t: 10, map: [84, 84],
+    id: 'smth_xiaozhu', name: '听潮小筑', area: '瓜洲 · 渡口', region: 'gz', t: 10, map: [84, 84],
     desc: [
       { if: { shi: { id: SHI, at: ['huo'] } },
         text: '江滩上的小筑竹篱围着，半院桃花开得正好——可篱笆外头聚了一群渔家，个个攥着火把。领头的是渔行的胡三，嘴里喊着「妖人布阵，困我渔船」。' },

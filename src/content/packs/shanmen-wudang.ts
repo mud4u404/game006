@@ -23,7 +23,7 @@ import type { Cond, ContentPack, Effect, EyeDef, FightResult, FoeDef, NewsDef, N
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'smwd_qionghua', name: '琼花观', area: '扬州城 · 观巷', region: 'yz', t: 10, map: [58, 92],
+    id: 'smwd_qionghua', name: '琼花观', area: '扬州 · 琼花观', region: 'yz', t: 10, map: [58, 92],
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '观门虚掩着，殿里一盏长明灯。院子里黑沉沉的，老琼花的枝影投在青砖上，廊下有人在低声念晚课，扫帚靠在墙角。' },

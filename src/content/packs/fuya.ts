@@ -18,7 +18,7 @@ const MET_OLD_DO: Effect[] = [
 
 const ROOMS: RoomDef[] = [
   {
-    id: 'yz_zhaobi', name: '府衙照壁', area: '扬州 · 府前街', region: 'yz', t: 5, map: [32, 78], nightQuiet: true,
+    id: 'yz_zhaobi', name: '府衙照壁', area: '扬州 · 府衙', region: 'yz', t: 5, map: [32, 78], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '府衙的大门关了，只开着一扇角门。门房里一盏油灯，值夜的衙役抱着水火棍打盹。照壁上的榜文叫夜风掀起一角，哗哗地响，画像上的人在灯影里忽明忽暗。' },
@@ -29,7 +29,7 @@ const ROOMS: RoomDef[] = [
     road: '你沿城墙根往西走，府衙的鼓楼渐渐近了……'
   },
   {
-    id: 'yz_fuya', name: '府衙前堂 · 六扇门', area: '扬州 · 府衙（六扇门）', region: 'yz', t: 10, map: [18, 84], nightQuiet: true,
+    id: 'yz_fuya', name: '府衙前堂 · 六扇门', area: '扬州 · 府衙', region: 'yz', t: 10, map: [18, 84], nightQuiet: true,
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '前堂黑着，公案上的签筒、惊堂木都收了，只有廊下挂着一盏气死风灯。后头大牢里有人在喊冤，喊两声又没了动静。' },
@@ -40,7 +40,7 @@ const ROOMS: RoomDef[] = [
     road: '你绕过照壁，进了府衙的仪门……'
   },
   {
-    id: 'yz_fuya_lao', name: '府衙大牢', area: '扬州 · 府衙后院', region: 'yz', t: 5, map: [10, 92],
+    id: 'yz_fuya_lao', name: '府衙大牢', area: '扬州 · 府衙', region: 'yz', t: 5, map: [10, 92],
     desc: [
       { if: { hour: { from: 21, to: 5 } },
         text: '大牢里只点着一盏豆油灯，栅栏的影子一根根投在地上。有人在稻草里翻身，有人在说梦话，牢头的钥匙在黑地里叮当一响，又没了声。' },
