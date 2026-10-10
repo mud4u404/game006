@@ -10,6 +10,7 @@ import { LODGING, ZHU_NAME, xinmoLine, yueText, zhuOf } from '../../engine/shigu
 import { shenfenOf, shenfenText, gongxianOf } from '../../engine/shenfen';
 import { menguiText, pastSectText, sectText } from '../../engine/shicheng';
 import { fullDate } from '../../core/time';
+import { pingyuOf, renGuo, zhanliLine } from '../../engine/zhanli';
 import { ZONE_NAME } from '../../engine/duel';
 import { cn } from '../../core/util';
 import { cloudRowHTML } from './account-link';
@@ -79,6 +80,19 @@ export function sectLeaveSheet(how: '辞别' | '叛门'): string {
     <div class="acts"><button class="act" data-act="sheetClose">再想想</button><button class="act ${how === '叛门' ? 'strong' : 'danger'}" data-act="sectLeave:${how}">${how === '辞别' ? '拜别师门' : '就此叛出'}</button></div>`;
 }
 
+/** 斤两：战力数、离下一档差什么、一句评语、认得的人谁强谁弱（docs/sheji-s5-s6.md S5） */
+function jinliangHTML(): string {
+  const z = zhanliLine(S), gap = nextTierLine(S), g = renGuo(S);
+  const cols: [string, typeof g.strong][] = [['强过你', g.strong], ['相仿', g.even], ['不如你', g.weak]];
+  const known = cols.filter(([, rows]) => rows.length)
+    .map(([name, rows]) => `<div><span class="tag">${name}</span><span>${rows.map(r => r.name).join('、')}</span></div>`).join('');
+  return `<section class="card here-card"><div class="sec-h"><h2>斤两</h2><span class="count">战力 ${z.power}</span></div>
+    <p class="zhanli"><b>${z.line}</b>${z.hurt ? `<br><span class="hurt">${z.hurt}</span>` : ''}</p>
+    ${gap ? `<p class="muted">${gap}</p>` : ''}
+    <p class="pingyu">${pingyuOf(S)}</p>
+    ${known ? `<div class="sec-h"><h2>认得的人</h2><span class="count">交过手、掂过斤两的</span></div><div class="news">${known}</div>` : ''}</section>`;
+}
+
 let confirmRestart = false;
 export const setConfirmRestart = (v: boolean): void => { confirmRestart = v; };
 
@@ -106,7 +120,8 @@ export function viewRenwu(): string {
     <div><span>侠义</span><b>${S.xia}</b></div><div><span>恶名</span><b>${S.eming}</b></div>
     <div><span>银两</span><b>${S.silver} 文</b></div><div><span>名号</span><b>${S.title || '—'}</b></div>
     <div><span>江湖历</span><b>${fullDate(S)}</b></div>
-  </div>${nextTierLine(S) ? `<p class="muted">${nextTierLine(S)}</p>` : ''}</section>
+  </div></section>
+  ${jinliangHTML()}
   ${yingshengHTML()}
   ${shimenHTML()}
   ${yueHTML()}
