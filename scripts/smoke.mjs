@@ -173,6 +173,39 @@ await click('[data-act="itemLook:jade"]');
 log('细看：', (await p.textContent('#sheetLayer .sk-d')).slice(0, 12));
 await click('#sheetLayer [data-act="sheetClose"]');
 await click('[data-act="tab:jianghu"]');
+// 突破（S3）：升了档次弹一张醒目的「突破」卡，点一下就关；闭关出关的邸报，突破排在最上面。
+// 手改本机存档：把「最高档次」记成最低、一门外功攒满熟练、给足历练，重新读档
+await p.waitForTimeout(2300);
+await p.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem('jhyy-save-v2'));
+  s.tierTop = -1;
+  s.skills.hanjiang = { r: 0, p: 199 };
+  s.lilian = 3000;
+  localStorage.setItem('jhyy-save-v2', JSON.stringify(s));
+  // 刷新时页面会把当前状态再存一遍（切后台即存），盖掉手改的存档：先把写存档的口子堵上
+  Storage.prototype.setItem = () => {};
+});
+await p.reload();
+await click('[data-act="tContinue"]');
+await p.waitForSelector('#sheetLayer .tupo', { timeout: 8000 }).catch(async e => { console.log(await p.evaluate(() => JSON.stringify({ t: JSON.parse(localStorage.getItem('jhyy-save-v2')).tierTop, layers: [...document.querySelectorAll('#app > div')].map(d => d.id + ':' + d.hidden), sheet: document.querySelector('#sheetLayer').innerHTML.slice(0, 200) }))); throw e; });
+const card = (await p.textContent('#sheetLayer .tupo')).replace(/\s+/g, '');
+if (!card.includes('升档')) throw new Error('突破卡里没有升档：' + card);
+await snap('08b-tupo');
+await click('#sheetLayer .tupo [data-act="sheetClose"]');
+await p.waitForSelector('#sheetLayer', { state: 'hidden' });
+log('突破卡', card.slice(0, 20), '| 点一下关掉了');
+await click('[data-act="tab:wugong"]');
+await click('[data-act="retreat:7"]');
+await p.waitForSelector('#sheetLayer .tupo-blk', { timeout: 8000 });
+const order = await p.evaluate(() => {
+  const k = [...document.querySelectorAll('#sheetLayer .panel > *')].map(e => e.className);
+  return [k.indexOf('tupo-blk'), k.indexOf('story'), k.indexOf('rewards')];
+});
+if (!(order[0] >= 0 && order[0] < order[1] && order[0] < order[2])) throw new Error('出关邸报里突破不在最上面：' + order);
+log('出关邸报 · 突破在最上面', order.join(','));
+await click('#sheetLayer [data-act="sheetClose"]');
+await p.waitForSelector('#sheetLayer', { state: 'hidden' });
+await click('[data-act="tab:jianghu"]');
 await goQuest('大明寺');
 await click('[data-act="sel:liaochen"]');
 await click('[data-act="do:交谈"]');

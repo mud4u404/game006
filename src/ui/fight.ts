@@ -98,7 +98,7 @@ export function startFight(fid: string, lead?: string): void {
   const prep = activePrep(f);
   const kit = fightKit(S);
   // 开打前掂一掂斤两：打赢了比你弱的人，不该落一身伤（负责人 10-09）
-  const odds = f.spar || f.script ? undefined : kanren(S, f, 24).p;
+  const odds = f.spar || f.script ? undefined : kanren(S, f, 24, true).p;
   brace(f);
   const d = new Duel(heroSpec(S, kit, f), foeSpec(f, prep), { rng: Math.random, allies: alliesOf(prep) });
   C = {
