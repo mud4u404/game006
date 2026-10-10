@@ -9,6 +9,11 @@ describe('接力：挑下一个任务', () => {
     expect(pickWork([issue(30, ['内容']), issue(21, ['功能']), issue(25, ['内容'])])?.number).toBe(21);
   });
 
+  it('带「调研」的排在一切正经活之后，没有别的活才领', () => {
+    expect(pickWork([issue(21, ['内容', '调研']), issue(30, ['内容']), issue(25, ['功能'])])?.number).toBe(25);
+    expect(pickWork([issue(31, ['内容', '调研']), issue(21, ['内容', '调研'])])?.number).toBe(21);
+  });
+
   it('已有开着的 PR 的任务跳过', () => {
     expect(pickWork([issue(21, ['内容']), issue(22, ['内容']), pr(40, '[#21] 丐帮武功')])?.number).toBe(22);
   });
