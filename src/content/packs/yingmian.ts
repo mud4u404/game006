@@ -135,7 +135,7 @@ const GREET: Record<string, GreetDef[]> = {
   /* ---------- 周捕头 ---------- */
   fuya_zhou: [
     { if: { flag: 'boss', notFlag: 'fuya_met_name' },
-      text: '周捕头从卷宗上抬起眼，把你腰间兵刃看了两眼，道：「渡口那一剑，是你出的？」',
+      text: '周捕头从卷宗上抬起眼，把你腰间兵刃看了两眼，道：「渡口那一仗，是你出的？」',
       topic: '上前搭话' },
     { if: { shi: { id: MATOU, at: ['qi', 'duizhi', 'huobing'] } },
       text: '周捕头合上卷宗，道：「运河渡口这几日不太平，你从那边过来，可看见什么？」',

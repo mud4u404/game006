@@ -566,7 +566,7 @@ const NPCS: NpcDef[] = [
     }
   },
   {
-    id: 'sz_luxiaozhou', name: '柯小舟', ini: '陆', tone: 'jade', brief: '蹲在摊后理货', service: ['杂'],
+    id: 'sz_luxiaozhou', name: '柯小舟', ini: '柯', tone: 'jade', brief: '蹲在摊后理货', service: ['杂'],
     at: { room: 'sz_shantang' },
     look: '精瘦的年轻人，杂货摊从针头线脑堆到船钉桐油。他蹲在摊后理货，理得飞快，嘴里还哼着船工的号子。',
     verbs: ['交谈', '观察', '买药', '买飞蝗石'],
