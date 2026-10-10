@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { S, setState, skipToYangzhou } from '../src/core/state';
 import { advanceDays, dayNo, fullDate, setNowMs } from '../src/core/time';
 import { run, test as cond } from '../src/engine/dsl';
-import { SHIGUANG, allowance, checkYue, jingxiu, restDays, settleAway } from '../src/engine/shiguang';
+import { SHIGUANG, allowance, checkYue, jingxiu, restDays, settleAway, XINSHOU_DAYS } from '../src/engine/shiguang';
 
 const H = 3.6e6;
 let now = 1_000_000_000_000;
@@ -32,6 +32,8 @@ describe('江湖历', () => {
 
 describe('江湖跑不过现实：只限成长，不限行动（宪章 P7，10-09 改定）', () => {
   it('开局就有十日的余裕；现实过一小时，多一日；逛、打、办事走掉的日子不吃额度，只有长了修为的日子吃', () => {
+    // 新手期（Issue #547）头十日额度是满的，这条验的是出了新手期以后怎么随现实时辰走
+    advanceDays(S, XINSHOU_DAYS + 1);
     expect(allowance(S)).toBe(SHIGUANG.slack);
     at(5);
     expect(allowance(S)).toBe(SHIGUANG.slack + 5);
@@ -41,6 +43,7 @@ describe('江湖跑不过现实：只限成长，不限行动（宪章 P7，10-0
     expect(allowance(S)).toBe(0);
   });
   it('闭关不再被拦：想闭关一月，日子照走一月，只有额度之内的十日长修为', () => {
+    advanceDays(S, XINSHOU_DAYS + 1);   // 同上，出新手期再验
     expect(restDays(S, 30)).toMatchObject({ days: 30, grow: 10, why: 'tielv' });
     expect(restDays(S, 7)).toEqual({ days: 7, grow: 7, why: undefined, yue: undefined });
     S.lilian = 5000;

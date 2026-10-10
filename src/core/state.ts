@@ -258,7 +258,7 @@ export function newGame(): GameState {
     hp: 1e9, hpMax: 0, mp: 150, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
     real, w: newWorld('孤舟', real), heard: [], yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'yumin', standing: 1, since: 65 }, job: null, jobLog: {},
     // 兵器是江伯削的木剑（docs/kaipian.md 第三稿）：青锋剑只在旧存档里，真兵刃要到扬州花钱买
-    silver: 30, items: { kp_mujian: 1, jcy: 1, fhs: 3 },
+    silver: 250, items: { kp_mujian: 1, jcy: 1, fhs: 3 },
     quests: { prologue: 0 }, track: 'prologue',
     // 瓜洲的街坊看着你长大：回春堂掌柜、茶摊老汉、卖鱼阿婆、艄公、钟郎中、谭老栓（审查 A12、C34）
     flags: {}, rel: { jiangbo: '相依为命', ...JIEFANG }, title: '', xia: 0, eming: 0,
@@ -289,7 +289,7 @@ export function skipToYangzhou(): GameState {
     v: 5, chapter: 1, name: '孤舟', loc: 'hu', year: 0, month: 3, day: 7, min: 7 * 60 + 40, weather: '微雨',
     hp: 1e9, hpMax: 0, mp: 1e9, mpMax: 0, gongli: 3, wounds: { hand: 0, foot: 0, inner: 0 },
     real, w: newWorld('孤舟', real), heard: [], yue: [], xinmo: { n: 0, why: '' }, shenfen: { id: 'youxia', standing: 1, since: 67 }, job: null, jobLog: {},
-    silver: 30, items: { kp_mujian: 1, jcy: 1, fhs: 3, jade: 1, scroll: 1, kp_douli: 1 },
+    silver: 250, items: { kp_mujian: 1, jcy: 1, fhs: 3, jade: 1, scroll: 1, kp_douli: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
     flags: { skipped: true, kp_xin: true, kp_du: true, kp_chu_name: true },
     rel: { jiangbo: '相依为命', liu: '素不相识', kp_chu: '相谈甚欢', kp_wei: '心存芥蒂', ...JIEFANG }, title: '', xia: 2, eming: 0,

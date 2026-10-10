@@ -23,6 +23,7 @@
 | 过路钱 | `RoomDef.life.toll` | 加在船钱之外，按这处地方眼下归谁收 |
 | 住店嚼用 | `LODGING`（`engine/shiguang.ts`） | 一日一百文，身上留一百文盘缠不拿来住店；不够的那些夜露宿，打坐参悟打八折 |
 | 差事赏格 | `jobPay`（`engine/shenfen.ts`） | 身份的档次表 × 工时 × 难易，取整到十文；没有 `shenfen` 的不发钱 |
+| 起手银两 | `src/core/state.ts` 的 `newGame` | **250 文**（Issue #547 从三十改上来）：够两晚客栈（一宿一百）加一副金疮药。走完序章的存档是 30 文，`skipToYangzhou` 照旧 |
 
 ### 物品买价（37 件有标价，共 48 件物品）
 

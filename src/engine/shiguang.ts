@@ -22,6 +22,19 @@ import { tickWorld, worldRng } from './shijie';
 
 /** 铁律的余裕（日）、一次离开最多算几日、现实一小时算江湖几日 */
 export const SHIGUANG = { slack: 10, awayCap: 16, perHour: 1 };
+
+/**
+ * 新手期：开局头十个江湖日，修为额度不受现实时间限制（Issue #547，负责人 10-10
+ * 「变强的速度要受限，但新手前期要尝到甜头」）。玩家反馈：第一次闭关七日升到略有小成，
+ * 第二次就撞上「现实一个钟头添一日」，半小时内想靠修炼赢屠千山走不通。
+ * 过了第十日照旧走 allowance 的现实小时数。
+ * 开局那天是景和元年三月初五（core/state.ts 的 newGame 就这么写），这里是同一处事实；
+ * 改了那边记得回来改这里。
+ */
+export const XINSHOU_DAYS = 10;
+const XINSHOU_DAY0 = dayNo({ year: 0, month: 3, day: 5 });
+/** 眼下是不是还在新手期 */
+export const inXinshou = (s: GameState): boolean => dayNo(s) - XINSHOU_DAY0 < XINSHOU_DAYS;
 /**
  * 嚼用：住下房一日一钱银子（一百文，docs/foundation.md 第三节第六条）；钱不够就露宿，不花钱，睡不安稳，那几日打坐、参悟打八折。
  * 身上留一百文盘缠不拿来住店：一趟长闭关不至于把人花得一文不剩，连买条鱼、打点衙役的钱都没有（机器玩家摸底时发现）。
@@ -56,7 +69,8 @@ export const grownOf = (s: GameState): number => s.real.grown ?? Math.max(0, day
  * 封顶在余裕加一次离开最多算的日子：不然离开三天回来，剩下的几十日点闭关全拿回来，一次离开的上限形同虚设（审查 G06）
  */
 export const allowance = (s: GameState): number =>
-  Math.max(0, Math.min(SHIGUANG.slack + SHIGUANG.awayCap, Math.floor(realHours(s) + SHIGUANG.slack - grownOf(s))));
+  inXinshou(s) ? SHIGUANG.slack + SHIGUANG.awayCap
+    : Math.max(0, Math.min(SHIGUANG.slack + SHIGUANG.awayCap, Math.floor(realHours(s) + SHIGUANG.slack - grownOf(s))));
 /** 离开了几个现实小时 */
 export const awayHours = (s: GameState): number => Math.max(0, (nowMs() - s.real.seen) / H);
 

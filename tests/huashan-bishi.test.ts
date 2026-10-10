@@ -163,7 +163,9 @@ describe('华山拜师：从头走通', () => {
     expect(S.flags.csf_knows_zhangfang).toBe(true);
 
     travel('zhuyuwan');
-    // 身上的钱早花在船钱上，买不了鱼；七岁盯着浪头数过节奏的人悟性够，蹲下细看破船，就看得出有人落脚
+    // 这条靠的是「买不了鱼」才逼出蹲下细看这一路。起手钱从三十改成二百五十（Issue #547）以后，
+    // 走到茱萸湾还剩一百九十几，鱼就买得起了，所以这里照原意把钱花到买不了为止
+    S.silver = 20;
     expect(S.silver, '买不起鱼').toBeLessThan(30);
     doing('zy_poshuan', '细看');
     expect(S.flags.csf_clue2, '细看破船看出有人落脚').toBe(true);
