@@ -58,7 +58,7 @@ export function kpPick(s: GameState, id: string, cardCount: number, out: { fight
  */
 const WALK = 'kp_walk:';
 const WALK_MAX = 10;
-export const BIGUAN_TIP = '这一路见的、打的，都攒在身上，还没化开。找个清净处闭关几日，才算真长进（武功页的「闭关修炼」）。';
+export const BIGUAN_TIP = '这一路见的、打的，都攒在身上，还没化开。找个清净处闭关几日，把它化成自己的功夫（武功页「闭关修炼」）。';
 
 export function kpBiguanTip(s: GameState, how: 'rest' | 'walk'): string | null {
   if (!s.flags.kp_xin || s.chapter < 1 || s.flags.kp_tip_biguan) return null;

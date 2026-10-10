@@ -122,7 +122,7 @@ export function questNav(id: string): QuestNav | null {
   const st = q.stages[stage];
   const tx = stageText(st);
   const notes = (q.notes ?? []).filter(n => test(n.if)).map(n => n.text);
-  const base = { id, name: q.name, stage, total, past: q.stages.slice(0, stage).map(s => s.title), title: tx.title, hint: tx.hint, notes };
+  const base = { id, name: q.name, stage, total, past: q.stages.slice(0, stage).map(s => stageText(s).title), title: tx.title, hint: tx.hint, notes };
   if (stage === total - 1) return { ...base, dist: 0, needs: [], memo: [], state: '了结', why: '' };
   const fail = [q.fail, st.fail].find(f => f && test(f.if));
   const needs = needsOf(st);

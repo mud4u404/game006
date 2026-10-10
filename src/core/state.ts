@@ -178,7 +178,7 @@ export function skipToYangzhou(): GameState {
     silver: 30, items: { kp_mujian: 1, jcy: 1, fhs: 3, jade: 1, scroll: 1, kp_douli: 1 },
     quests: { prologue: 3, main1: 0 }, track: 'main1',
     flags: { skipped: true, kp_xin: true, kp_du: true, kp_chu_name: true },
-    rel: { liu: '素不相识', kp_chu: '相谈甚欢', kp_wei: '心存芥蒂', ...JIEFANG }, title: '', xia: 2, eming: 0,
+    rel: { jiangbo: '相依为命', liu: '素不相识', kp_chu: '相谈甚欢', kp_wei: '心存芥蒂', ...JIEFANG }, title: '', xia: 2, eming: 0,
     relNote: { kp_chu: '欠你一条命', kp_wei: '你渡了他要找的人' },
     // 历练：序章了结 300，加「渡」那条路上打赢家丁的 55（engine/lilian.ts 的 foeLilian），共 355，和真走一遍一样
     // （原来是 506，多出的约 150 是跳过序章的补偿，第三稿起取消：跳过不比走完更肥）
