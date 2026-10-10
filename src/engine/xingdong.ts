@@ -2,9 +2,9 @@
 import type { Branch, Cond, Effect } from '../content/types';
 import { jobById, npc, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
-import { S, pushFeed, save, setState } from '../core/state';
+import { S, pushFeed, save, setState, type GameState } from '../core/state';
 import { emit } from '../core/bus';
-import { dayNo } from '../core/time';
+import { absMin, dayNo } from '../core/time';
 import { newOutcome, pickBranch, runStep, test, withRunHooks, type Outcome } from './dsl';
 import { barredFrom, canLearn, gongxianCost, learnCost, rootHint } from './shicheng';
 import { gainProf } from './growth';
@@ -22,7 +22,7 @@ export interface ActionReq {
   /** 现有内容的适配入口；省略时从人物动作分支取效果 */
   effects?: readonly Effect[];
   if?: Cond;
-  /** 开始条件之外，耗时之后再查的完成条件 */
+  /** 开始条件之外，耗时之后再查的完成条件；失败仍保留 key，不能重领或重退 */
   finish?: Cond;
   /** 完成条件不成立时退还这些资源代价；时间不能退 */
   refundable?: readonly Effect[];
@@ -81,7 +81,7 @@ export function actionBranch(id: string, verb: string, preview = false): Branch 
   }) ?? real;
 }
 
-/** 内容适配器配凭据：差事按揭榜日，日级营生按日，付款交易按流水；无代价的好处按内容入口。 */
+/** 内容适配器配凭据：差事按揭榜日，日级营生按日，其余交易、奖励按本次行动流水。 */
 export function effectReq(verb: string, target: string, effects: readonly Effect[] = [], condition?: Cond, scope = target + ':' + verb): ActionReq {
   const req: ActionReq = { who: 'player', verb, target, at: S.loc, effects, if: condition };
   if (!effects.some(reward)) return req;
@@ -94,9 +94,31 @@ export function effectReq(verb: string, target: string, effects: readonly Effect
   else if (effects.some(resource)) req.key = `paid:${scope}:${nextN()}`;
   else {
     const shi = condition?.shi && S.shi?.[condition.shi.id];
-    req.key = `gain:${scope}${shi ? ':' + shi.since + ':' + (shi.done ?? 0) : ''}`;
+    req.key = `gain:${scope}${shi ? ':' + shi.since + ':' + (shi.done ?? 0) : ''}:${nextN()}`;
   }
   return req;
+}
+
+type StoryPos = NonNullable<GameState['storyAt']>;
+/** 打开或续读剧情：时辰和流水区分本次；断点里的凭据不会因刷新、耗时而变化。 */
+export function storyOpen(id: string, i = 0): StoryPos {
+  const held = S.storyAt;
+  const pos = held?.id === id && held.i === i ? { ...held } : { id, i, started: `${absMin(S)}:${nextN()}` };
+  S.storyAt = { ...pos };
+  return pos;
+}
+
+/** 同一次遇见、同一张卡共用凭据，花钱的选项也不能重复领取。 */
+export function storyReq(pos: StoryPos, effects: readonly Effect[] = [], condition?: Cond): ActionReq {
+  const req = effectReq('抉择', pos.id, effects, condition);
+  if (effects.some(reward)) req.key = `story:${pos.id}:${pos.started}:${pos.i}`;
+  return req;
+}
+
+/** 与奖励一起写下一张卡的断点；开打、转剧情和收尾交还给各自的入口。 */
+export function storyCheckpoint(pos: StoryPos, cardCount: number, out: Outcome, next: number): void {
+  if (!out.fight && !out.story && next >= 0 && next < cardCount) S.storyAt = { ...pos, i: next };
+  else delete S.storyAt;
 }
 
 /** 战后接续入口：同一场的静默结果和结算页继续共用凭据，不改交手规则。 */
@@ -114,8 +136,15 @@ function prepare(req: ActionReq): Prepared {
   const p: Prepared = { ok: true, cost: [], gain: [], minutes: 0, learned: new Map() };
   const deny = (why: string): Prepared => { p.ok = false; p.why = why; return p; };
   const b = req.effects === undefined && req.target ? actionBranch(req.target, req.verb, true) : undefined;
-  const effects = req.effects ?? (b && !b.do?.some(e => ['time', 'fight', 'story'].includes(e.type)) && !b.if?.doneToday
+  const rawEffects = req.effects ?? (b && !b.do?.some(e => ['time', 'fight', 'story'].includes(e.type)) && !b.if?.doneToday
     ? [...(b.do ?? []), { type: 'time' as const, add: VERB_MIN[req.verb] ?? 10 }] : b?.do ?? []);
+  // 条件银两在开始时定下；不生效的既不预付也不列所得，生效的不能因耗时后条件变化再漏扣。
+  const effects = rawEffects.flatMap<Effect>(e => {
+    if (e.type !== 'silver') return [e];
+    if (!test(e.if)) return [];
+    const { if: _if, ...active } = e;
+    return [active];
+  });
   const condition = req.if ?? b?.if;
   if (!req.who || !req.verb) return deny('行动缺少来由。');
   if (req.at && req.who === 'player' && req.at !== S.loc) return deny('你不在此处。');
@@ -200,12 +229,14 @@ function record(req: ActionReq, p: ActionPlan, why?: string): EventRec {
   const cause = req.cause === undefined ? settling?.parent : Number(req.cause);
   const e: EventRec = { n: nextN(), day: dayNo(S), min: S.min, who: req.who, verb: req.verb,
     ...(req.target === undefined ? {} : { target: req.target }), at: req.at ?? S.loc,
-    cost: copy(p.cost), gain: copy(p.gain), ...(req.key ? { key: req.key } : {}),
+    cost: logEffects(p.cost), gain: logEffects(p.gain), ...(req.key ? { key: req.key } : {}),
     ...(Number.isInteger(cause) && cause! > 0 ? { cause } : {}), ...(why ? { why } : {}) };
   (S.log ??= []).push(e);
   S.log = S.log.slice(-LOG_LIMIT);
   return e;
 }
+/** 界面长文字照常显示，但不重复塞进最近三百条事实记录。 */
+const logEffects = (effects: readonly Effect[]): Effect[] => copy(effects.filter(e => e.type !== 'feed' && e.type !== 'toast'));
 function mergeOut(into: Outcome, from: Outcome): void {
   Object.assign(into.vars, from.vars);
   into.breaks.push(...from.breaks);
@@ -287,7 +318,7 @@ export function act(req: ActionReq, out: Outcome = newOutcome(), checkpoint?: (o
     }, () => {
       const cost = req.who === 'player' ? p.cost : p.cost.filter(e => e.type !== 'time');
       runStep(cost, work);
-      event.cost = copy(p.cost);
+      event.cost = logEffects(p.cost);
       if (!test(req.finish)) {
         const refunds = req.refundable ?? [];
         for (const e of refunds) {
@@ -300,7 +331,7 @@ export function act(req: ActionReq, out: Outcome = newOutcome(), checkpoint?: (o
         return;
       }
       runStep(p.gain, work);
-      event.gain = copy(p.gain);
+      event.gain = logEffects(p.gain);
       for (const child of req.chains ?? []) {
         const result = act({ ...child, cause: String(event.n) }, work);
         if (!result.ok && (ctx.depth >= CHAIN_DEPTH || ctx.count >= CHAIN_LIMIT)) break;

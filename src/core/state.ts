@@ -91,6 +91,8 @@ export interface GameState {
   jobLog: Record<string, number>;
   /** 行动结算记录：只留最近三百条，旧档从空记录继续 */
   log: EventRec[];
+  /** 正在读的剧情及本次遇见的凭据；刷新沿用，收尾清掉，旧档可缺省 */
+  storyAt?: { id: string; i: number; started: string };
   /** 一个江湖日只做一回的营生（零工、讨赏钱）：做的是哪一件 → 哪一日做的（dayNo）。效果 today 写、条件 doneToday 读；过了日子的自动清掉 */
   dayLog?: Record<string, number>;
   /** 人情备注：为什么记得这个人，例如「湖畔切磋，不打不相识」 */

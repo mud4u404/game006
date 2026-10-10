@@ -10,14 +10,14 @@ import { room, storyById } from '../content';
 import type { StoryDef } from '../content/types';
 import { gainTags, leanText } from './qingxiang';
 import { lackOf, newOutcome, test, textVars, type Outcome } from '../engine/dsl';
-import { act, effectReq, plan } from '../engine/xingdong';
+import { act, plan, storyCheckpoint, storyOpen, storyReq } from '../engine/xingdong';
 import { kpOpen, kpPick, kpPos } from '../engine/kaipian';
 import { afterOutcome, hooks, registerHandlers, render, swapped, toast, tooSoon } from './shell';
 import { welcomeBack } from './chuguan';
 
 /* ---------- 剧情卡片 ---------- */
 
-interface Playing { def: StoryDef; i: number; result?: string; next?: number; out: Outcome; onDone?: () => void; lead?: string; picked?: string }
+interface Playing { def: StoryDef; i: number; started: string; result?: string; next?: number; out: Outcome; onDone?: () => void; lead?: string; picked?: string }
 let cur: Playing | null = null;
 /** 已经开着剧情时又来的剧情：排队，读完这一段再读（原来直接顶掉，旧剧情的收尾丢了，赶路停在半路） */
 const queue: [string, (() => void) | undefined, string | undefined][] = [];
@@ -29,7 +29,9 @@ export function openStory(id: string, onDone?: () => void, lead?: string, at = 0
   if (!def) { onDone?.(); return; }
   const i = at >= 0 && at < def.cards.length ? at : 0;
   kpOpen(S, id, i);
-  cur = { def, i, out: newOutcome(), onDone, lead };
+  const { started } = storyOpen(id, i);
+  cur = { def, i, started, out: newOutcome(), onDone, lead };
+  save();
   draw();
   $('#storyLayer')!.hidden = false;
 }
@@ -50,7 +52,7 @@ function draw(): void {
       // 选之前只写倾向，不写数（ui/qingxiang.ts）
       const sub = c.sub ? leanText(c.sub) : '';
       if (test(c.if)) {
-        const p = plan(effectReq('抉择', cur!.def.id, c.do, c.if, `story:${cur!.def.id}:${cur!.i}`));
+        const p = plan(storyReq({ id: cur!.def.id, i: cur!.i, started: cur!.started }, c.do, c.if));
         if (!p.ok) return `<button class="choice locked" data-act="stLocked:${k}" aria-disabled="true"><b>${c.label}</b><small>${p.why ?? ''}</small></button>`;
         return `<button class="choice${card.choices.length === 1 ? ' primary' : ''}" data-act="stPick:${k}"><b>${c.label}</b>${sub ? `<small>${sub}</small>` : ''}</button>`;
       }
@@ -76,11 +78,12 @@ function draw(): void {
 }
 
 function pick(k: number): void {
-  if (!cur) return;
+  if (!cur || cur.result !== undefined) return;
   const card = cur.def.cards[cur.i];
   const c = card.choices[k];
   if (!c || !test(c.if)) return;
-  const req = effectReq('抉择', cur.def.id, c.do, c.if, `story:${cur.def.id}:${cur.i}`);
+  const pos = { id: cur.def.id, i: cur.i, started: cur.started };
+  const req = storyReq(pos, c.do, c.if);
   const p = plan(req);
   if (!p.ok) { toast(p.why ?? '眼下还办不了。'); draw(); return; }
   if (card.input === 'name') {
@@ -89,7 +92,10 @@ function pick(k: number): void {
   }
   const playing = cur, next = c.next ?? cur.i + 1;
   // 奖励和下一站在同一次结算里存下，刷新不会回到已经领过好处的选项。
-  const result = act(req, cur.out, out => { kpPick(S, playing.def.id, playing.def.cards.length, out, next); });
+  const result = act(req, cur.out, out => {
+    kpPick(S, playing.def.id, playing.def.cards.length, out, next);
+    storyCheckpoint(pos, playing.def.cards.length, out, next);
+  });
   if (!result.ok) { toast(result.why ?? '眼下还办不了。'); draw(); return; }
   if (c.result) { cur.result = c.result; cur.next = next; cur.picked = c.sub; draw(); return; }
   // 没有结果文字的选项：加了什么，提示条里说一句
@@ -206,7 +212,7 @@ registerHandlers({
   stLocked: v => {
     const c = cur?.def.cards[cur.i].choices[Number(v)];
     if (!c || !cur) return;
-    const lack = lackOf(c.if) ?? plan(effectReq('抉择', cur.def.id, c.do, c.if, `story:${cur.def.id}:${cur.i}`)).why;
+    const lack = lackOf(c.if) ?? plan(storyReq({ id: cur.def.id, i: cur.i, started: cur.started }, c.do, c.if)).why;
     if (lack) toast(`还走不了这条路：${lack}`);
   },
   tContinue: () => {
@@ -221,6 +227,11 @@ registerHandlers({
       render();
       if (at.kind === 'fight') hooks.startFight(at.id);
       else openStory(at.id, undefined, undefined, at.i);
+      return;
+    }
+    if (saved.storyAt) {
+      render();
+      openStory(saved.storyAt.id, undefined, undefined, saved.storyAt.i);
       return;
     }
     // 下线就是静修：离开的时辰算成静修的日子，先读出关邸报（ui/chuguan.ts）。要在 render 之前算：render 会存档，把「上次在线」记成现在

@@ -26,7 +26,7 @@ import { IC } from './icons';
 import { mb } from './widgets';
 import { growthHTML } from './growth';
 import { pickFresh } from './fresh';
-import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, tooSoon } from './shell';
+import { afterOutcome, closeSheet, hooks, openSheet, registerHandlers, render, swapped, toast, tooSoon } from './shell';
 
 const ROUND_MS = 1500;
 const PARTS = ['左肩', '右肩', '左臂', '右臂', '胸口', '右肋', '左肋', '小腹', '左腿', '右腿'];
@@ -957,7 +957,9 @@ function showResult(): void {
   if (!r) { closeFight(); return; }
   if (r.silent) {
     closeFight();
-    afterOutcome(settleAction(fightAfterReq(c.f.id, c.started, r.then), undefined, fightCheckpoint).out);
+    const result = settleAction(fightAfterReq(c.f.id, c.started, r.then), undefined, fightCheckpoint);
+    if (!result.ok) toast(result.why ?? '眼下还办不了。');
+    afterOutcome(result.out);
     return;
   }
   let story = pk?.story ?? (r.story || '');
@@ -1009,7 +1011,11 @@ registerHandlers({
     closeFight();
     // 打完一架时辰走了一刻，过了约期的算失约（engine/shiguang.ts）
     checkYue(S);
-    if (then && request) afterOutcome(settleAction(request, undefined, fightCheckpoint).out);
+    if (then && request) {
+      const result = settleAction(request, undefined, fightCheckpoint);
+      if (!result.ok) toast(result.why ?? '眼下还办不了。');
+      afterOutcome(result.out);
+    }
   }
 });
 
