@@ -110,6 +110,10 @@ const STORIES: StoryDef[] = [
         { label: '托码头上的人照看他们', sub: '银两 −20　侠义 +2', if: { silver: 20 },
           result: '你把钱交给一个老脚夫。老脚夫掂了掂钱袋，叹了口气：「少侠，饭好给，那口气难消啊。」',
           do: [{ type: 'silver', delta: -20 }, { type: 'xia', delta: 2 }], next: -1 },
+        // 失物赎回：上回败在他手里，被摸去的十文，在这里要得回来
+        { label: '拦住那孩子，要回钱袋里的十文', sub: '银两 +10', if: { flag: 'ly_xiaozei_took' },
+          result: '孩子梗着脖子站了半晌，到底从怀里摸出十文钱，拍在你手里，扭头就跑。老脚夫在一旁叹气：「他是真饿。」',
+          do: [{ type: 'silver', delta: 10 }, { type: 'flag', flag: 'ly_xiaozei_took', value: false }], next: -1 },
         { label: '由他们去',
           result: '你站在原地，看着那几个瘦小的背影钻进了芦苇。',
           do: [{ type: 'feed', tag: '江湖', text: '那个被你夺了棍子的孩子，如今跟着黑风寨的喽啰跑腿。' }], next: -1 }
@@ -206,7 +210,7 @@ const XIAOZEI: FoeDef = {
       } },
     lose: { tag: '路遇 · 负', title: '阴沟里翻船', button: '爬起来',
       story: '等你爬起来，钱袋里少了十文，那孩子早跑没了影。巷口有人笑出了声。',
-      do: [{ type: 'silver', delta: -10 }, { type: 'heal', hpAtLeast: 0.5 }] },
+      do: [{ type: 'silver', delta: -10 }, { type: 'flag', flag: 'ly_xiaozei_took' }, { type: 'heal', hpAtLeast: 0.5 }] },
     flee: { tag: '路遇', title: '绕道而行', button: '走开',
       story: '你退出巷子，绕了个远路。那孩子在后头喊了一声，没有追来。' }
   }

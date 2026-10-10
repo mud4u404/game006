@@ -18,15 +18,26 @@ export const isHeavy = (n: number): boolean => n >= 2;
 export const woundNote = (n: number): string => (isHeavy(n) ? '重伤，自己好不了，要找郎中看伤或者服药' : '轻伤，过一日自己好');
 
 /**
- * 这一场最多落几级伤（几处加起来）：只看打赢了的，按开打前掂的斤两（engine/zhaoshi.ts 的 kanren，赢面 odds）。
- * 远不如你的不落伤，稍逊一筹的最多一级，旗鼓相当的最多两级；比你强的、打输了的、跑了的不封顶（一处最多三级）
+ * 这一场最多落几级伤（几处加起来），看开打前掂的斤两（engine/zhaoshi.ts 的 kanren，赢面 odds）。
+ * - 打赢了：远不如你的不落伤，稍逊一筹的最多一级，旗鼓相当的最多两级；比你强的不封顶（一处最多三级）；
+ * - 打输了（负责人 10-09，docs/sheji-001-003.md 第 003 项「失败要有代价，但不清空积累」）：本该赢的失了手最多两级，
+ *   斤两相近的最多三级，差得远的最多四级；一场败仗不会把三处伤一并打到封顶；
+ * - 逃跑：走脱了，最多两级；
+ * - 这一场输掉了差事（丢镖、误了差事，jobLost）：差事上的代价已经记了，身上的伤不再叠加，最多一级，过一日自己好。
+ * 没掂过斤两（odds 不写）的，赢了不封顶，输了按差得远的算。
  */
-export function woundCap(res: DuelRes, odds?: number): number {
-  if (res !== 'win' || odds === undefined) return Infinity;
-  if (odds >= 0.75) return 0;
-  if (odds >= 0.55) return 1;
-  if (odds >= 0.45) return 2;
-  return Infinity;
+export function woundCap(res: DuelRes, odds?: number, jobLost = false): number {
+  if (res === 'win') {
+    if (odds === undefined) return Infinity;
+    if (odds >= 0.75) return 0;
+    if (odds >= 0.55) return 1;
+    if (odds >= 0.45) return 2;
+    return Infinity;
+  }
+  if (jobLost) return 1;
+  if (res === 'flee') return 2;
+  if (odds === undefined || odds < 0.25) return 4;
+  return odds >= 0.55 ? 2 : 3;
 }
 
 /** 照封顶削减这一场落的伤：重的那处先留 */

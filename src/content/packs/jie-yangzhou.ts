@@ -79,11 +79,14 @@ const SUNBIAO: FoeDef = {
   results: {
     lose: { tag: '好手 · 负', title: '不敌打手', button: '咬牙爬起',
       story: '缠铜钱的拳套把你砸得眼冒金星。孙彪拍了拍你的脸：「回去长长眼，这条街不是你能多嘴的。」你爬起来时，嘴里有血腥味。',
-      do: [{ type: 'heal', hpAtLeast: 0.3 }, { type: 'silver', delta: -20 }] },
+      do: [{ type: 'heal', hpAtLeast: 0.3 }, { type: 'silver', delta: -20 }, { type: 'flag', flag: 'jy_sun_took' }] },
     win: { tag: '好手 · 胜', title: '打手趴下', button: '定他的下场',
       story: '孙彪趴在地上，嘴还硬着：「阎爷不会放过你……」可他抖的手出卖了他——打手再横，也只是拿钱卖力气的人。',
       do: [
         { type: 'flag', flag: 'jy_sun_biaotai' },
+        // 失物赎回：上回败在他手里，被摸去的二十文，这回从他腰里搜回来
+        { type: 'silver', delta: 20, if: { flag: 'jy_sun_took' }, note: '你从孙彪腰里搜回了上回被他摸去的二十文。' },
+        { type: 'flag', flag: 'jy_sun_took', value: false },
         { type: 'feed', tag: '江湖', text: '东关街替盐枭收份子钱的孙彪，叫人当街打趴下了。' }
       ],
       after: {
