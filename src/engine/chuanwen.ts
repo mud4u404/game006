@@ -63,9 +63,55 @@ const RUMOR_KEEP = 60;
 /** 传闻池一日冒出几条；人人都忘了的老话，隔多少日才再被翻出来 */
 const NEWS_PER_DAY = 2;
 const NEWS_REVIVE = 30;
-/** 打听时开口前的样子（没写声口的人用）：一圈问下来别都一个腔调 */
-const DATING_LEAD = ['压低了声音', '左右看了看', '凑近了些', '想了想', '往四下里瞟了一眼', '咂了咂嘴', '叹了口气', '把声音放得很低',
-  '朝你招招手', '先摆摆手说不该多嘴，到底没忍住', '掰着指头数了数', '吐掉嘴里的草棍'];
+/** 打听时开口前的样子，按身份分几组：没写声口的人开口也不该都一个腔调（Issue #263）。
+ * 一组里只放合身份的动作：出家人不掰指头、不吐草棍，做买卖的不咂嘴充江湖。推不出身份就归市井。 */
+type Gang = 'sengdao' | 'guanchai' | 'shanghu' | 'jianghu' | 'shijing';
+export const DATING_LEAD: Record<Gang, string[]> = {
+  sengdao: ['双手合十又松开', '拨了两下念珠', '袍袖轻轻一收', '先念了一声佛号', '木鱼敲了半下又停住',
+    '扫帚在石阶上顿了顿', '往院里瞟了一眼', '把香炉里的香灰拨平'],
+  guanchai: ['清了清嗓子', '往门外扫了一眼', '手指在案上敲了两下', '把簿子合上', '上下打量了你一遍',
+    '把帽檐扶了扶', '咳了一声', '朝门外的差役点了点头'],
+  shanghu: ['把算盘拨了两下', '掂了掂秤砣', '从柜下摸出一本旧账', '把货单翻了一页', '朝后头的伙计招了招手',
+    '把算筹收拢成一堆', '在袖口擦了擦手', '朝门口那挂幌子抬了抬下巴'],
+  jianghu: ['手掌在刀柄上按了按', '往后退了半步', '眼睛在四周一扫', '把袖子往上捋了捋',
+    '啐了一口', '肩膀一沉站住了脚', '朝同伴歪了歪头'],
+  shijing: ['压低了声音', '左右看了看', '凑近了些', '想了想', '往四下里瞟了一眼', '咂了咂嘴', '叹了口气', '把声音放得很低',
+    '朝你招招手', '先摆摆手说不该多嘴，到底没忍住', '掰着指头数了数', '吐掉嘴里的草棍']
+};
+/** 行当字样，先看人：名与 brief 里的说法拿得准 */
+const GANG_WORD: [Gang, RegExp][] = [
+  ['sengdao', /僧|尼|师太|长老|禅师|道人|道长|居士|佛号|禅|抄经|木鱼|念珠|合十|香灰|了尘/],
+  ['guanchai', /捕头|巡检|衙|差役|税吏|书办|库吏|粮官|官兵|关卡|案卷|文书|捕快|兵丁/],
+  ['shanghu', /掌柜|朝奉|账房|算盘|秤砣|行商|货担|点货|理货|绸缎|布庄|盐行|货栈/]
+];
+/** 其次看他常待的地方是什么市面 */
+const GANG_TAG: [Gang, string][] = [
+  ['sengdao', '寺观'], ['sengdao', '破庙'], ['guanchai', '衙门'],
+  ['shanghu', '铺子'], ['jianghu', '码头'], ['jianghu', '官道'], ['jianghu', '荒地']
+];
+/** 走江湖相的，最后才看这一路（刀剑拳掌帮寨，这类字眼松，谁身上都沾） */
+const GANG_LOOSE: [Gang, RegExp] = ['jianghu', /刀|剑|拳|掌|镖|帮|寨|贼|汉子|兄弟|地痞|猎户|掌门|弟子|护船|刃|货栈/];
+/** 他属于哪一拨：行当字样，其次地点的 life.tags，最后江湖相；都看不出来归市井 */
+export function gangOf(id: string): Gang {
+  const n = npc(id);
+  if (n) {
+    const s = `${n.name}${n.brief ?? ''}`;
+    for (const [g, re] of GANG_WORD) if (re.test(s)) return g;
+    const tags = new Set(roomsOf(id).flatMap(r => room(r)?.life?.tags ?? []));
+    for (const [g, t] of GANG_TAG) if (tags.has(t)) return g;
+    if (GANG_LOOSE[1].test(s)) return GANG_LOOSE[0];
+  }
+  return 'shijing';
+}
+/** 这一天已经说过的老话。记在 S.asked 里（同一个字段、同样按日清），前缀别撞上人物 id */
+const SAID = '旧话:';
+function saidToday(): Set<string> {
+  const asked = S.asked, out = new Set<string>();
+  if (!asked) return out;
+  const today = dayNo(S);
+  for (const k of Object.keys(asked)) if (asked[k] === today && k.startsWith(SAID)) out.add(k.slice(SAID.length));
+  return out;
+}
 /** 关系：说多少 */
 const REL_WARM = ['相谈甚欢', '知交', '结拜兄弟', '情缘', '相依为命', '师徒'];
 const REL_NOD = ['点头之交'];
@@ -423,7 +469,7 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
     asked[npcId] = today;
   }
   const life = lifeOf(npcId);
-  const open = (): string => (life ? `${who}${worldPick(life.voice.lead)}，道：` : `${who}${worldPick(DATING_LEAD)}：`);
+  const open = (): string => (life ? `${who}${worldPick(life.voice.lead)}，道：` : `${who}${worldPick(DATING_LEAD[gangOf(npcId)])}：`);
   const got = pickFor(npcId, !!opt.force);
   if (got) {
     tellYou(got.r, got.text);
@@ -436,7 +482,8 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
   }
   const line = hearsay();
   if (line) return { text: `${open()}「${inner(line)}」`, src: 'old' };
-  return { text: `${who}想了想：「这几日太平得很，没听说什么。」`, src: 'none' };
+  // 没得说也要按身份开口：从前这里写死了「想了想」，僧人官差商人都一个腔调（Issue #263）
+  return { text: `${who}${worldPick(DATING_LEAD[gangOf(npcId)])}：「这几日太平得很，没听说什么。」`, src: 'none' };
 }
 
 /** 盘问：捕快亮出腰牌，谁都得答话（docs/lizu.md：六扇门的特权）。不像打听那样一天一回，也不看交情 */
@@ -450,19 +497,23 @@ export function panwen(npcId: string, who: string = npcName(npcId)): string {
 
 /**
  * 江湖上的话：玩家所在地区传开的、你还不知道的、最耸动的一条（原样）。说书人的打赏、效果 news、没写声口的人的打听都用它。
+ * 同一日同一条老话只给一个人说（Issue #263）：说过的记进 S.asked，今日再问别人的时候换一条；
+ * 换不出来了返回空，ask() 就说「这几日太平得很」那句。
  * 返回那句话，没得说为空（不再从传闻池里随手抽）
  */
 export function hearsay(): string | null {
   const w = worldOf(), today = dayNo(S), region = room(S.loc).region, heard = new Set(S.heard ?? []);
+  const said = saidToday();
   let best: { r: RumorInst; text: string; s: number } | null = null;
   for (const r of Object.values(w.rumor)) {
     if (r.far || regionOf(r) !== region || youKnow(r, S, heard)) continue;
     const text = rumorText(r, 0);
-    if (text === null) continue;
+    if (text === null || said.has(text)) continue;
     const s = r.juice - 0.03 * (today - r.day);
     if (!best || s > best.s) best = { r, text, s };
   }
   if (!best) return null;
+  (S.asked ||= {})[SAID + best.text] = today;
   tellYou(best.r, best.text);
   return best.text;
 }
