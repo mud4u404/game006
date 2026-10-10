@@ -5,7 +5,7 @@
 ## 暂停时做了什么
 - 维护者的两个定时任务「每小时巡检」「每日巡视」**已停用**（没删，恢复时在 Routines 里重新打开即可）。「江湖夜雨 · 每日一审」是负责人自己的，没动。
 - 两个在做的 sonnet 助手叫停了，半成品以 WIP 提交推到各自分支，没开 PR：
-  - `claude/chaishi-shouchang`：#631 差事有收场（办成、办砸、放弃、误期都记进见闻簿「了结的事」）
+  - `claude/chaishi-shouchang`（提交 95da89d）：#631 差事有收场。**已做完**：`dsl.ts` 新增 `closeJob`，交差、办砸、误期、放弃（新效果 `jobQuit`）、被辞退、离派都记结局，只留最近 20 条；存档可选字段 `jobEnd`（已登记 `FIELD_OWNER`）；`shenfen.ts` 加 `jobRetryIn`、`jobEndText`；`JobDef` 加可选的 `end` 收场文字；见闻簿加「了结的事」；新测试 `tests/chaishi-shouchang.test.ts`；`npm run check` 全绿。**还差**：开 PR；`jobQuit` 还没有界面入口（见闻簿里该加「放下这件差事」按钮）。判定：过了约期算误期，打输算办砸。
   - `claude/tuijian-zhenneng`（提交 6caa4be）：#633 推荐只推眼下真能做的。**已做完**：零工按处分开算、派差的人不在就不推「去」、缺钱时零工在「也可以」里排前，新测试 `tests/tuijian-zhenneng.test.ts`，`npm run check` 全绿。**还差**：开 PR；「某人某时辰后在某处」那句提示没写，现在是直接不推；主推那一条（`leadsNear`）的次序没按缺钱调。
   恢复时：从这个分支接着做，先合最新 main，补完测试再开 PR。
 - 协作者（Codex、minimax、Trae、Qoder、CodeBuddy）照 `wait-for-work.mjs` 自己领活，维护者这边停不了它们；要它们也停，由负责人在各自工具里停。
