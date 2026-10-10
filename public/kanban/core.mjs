@@ -203,3 +203,37 @@ export function computeBoard(data, checks, now) {
   const wake = ais.filter((a) => a.stalled).map((a) => ({ n: a.n, no: a.nextNo, lastTxt: a.lastTxt }));
   return { prNums, merged24, sat24, hourly, ais, prLamp, wake };
 }
+
+/* ---------- 负责人要求（public/kanban/yaoqiu.json）：逐条的执行状态 ---------- */
+/* 一个关联编号在 data.json 里查到什么：
+   PR 已合（merged）｜PR 开着（pulls，带检查结果）｜Issue 开着（issues）｜Issue 已关（closedIssues，由 kanban-data 写入）｜查不到 */
+export function yaoqiuLink(n, data, checks) {
+  const d = data || {};
+  const ck = checks || d.checks || {};
+  if ((d.merged || []).some((m) => m.n === n)) return { n, kind: 'pr', state: 'merged', label: 'PR 已合', cls: 'ok', done: true };
+  const p = (d.pulls || []).find((x) => x.n === n);
+  if (p) {
+    const s = prState(ck[p.sha]);
+    const lab = s.cls === 'ok' ? 'PR 开着·绿' : s.cls === 'bad' ? 'PR 开着·红' : s.cls === 'run' ? 'PR 开着·在跑' : 'PR 开着';
+    return { n, kind: 'pr', state: 'open', label: lab, cls: s.cls === 'ok' ? 'ok' : s.cls === 'bad' ? 'bad' : 'run', done: false };
+  }
+  if ((d.issues || []).some((x) => x.n === n)) return { n, kind: 'issue', state: 'open', label: 'Issue 开着', cls: 'run', done: false };
+  if ((d.closedIssues || []).indexOf(n) >= 0) return { n, kind: 'issue', state: 'closed', label: 'Issue 已关', cls: 'ok', done: true };
+  return { n, kind: '', state: 'unknown', label: '', cls: '', done: false };
+}
+/* 一条要求显示成什么状态：done / doing / todo。
+   手写是 doing、但关联的全部已合/已关（且关联非空）时，按完成显示，auto 为真 */
+export function yaoqiuStatus(item, data) {
+  const st = item && item.status === 'done' ? 'done' : item && item.status === 'doing' ? 'doing' : 'todo';
+  const links = (item && item.links) || [];
+  const ls = links.map((n) => yaoqiuLink(n, data));
+  if (st === 'doing' && ls.length > 0 && ls.every((l) => l.done)) return { status: 'done', auto: true, note: '关联的都已合/关', links: ls };
+  return { status: st, auto: false, note: '', links: ls };
+}
+/* 汇总：共几条、完成、进行中、未开始、完成百分比 */
+export function yaoqiuSummary(items, data) {
+  const out = { total: 0, done: 0, doing: 0, todo: 0, pct: 0 };
+  (items || []).forEach((it) => { out.total++; out[yaoqiuStatus(it, data).status]++; });
+  out.pct = out.total ? Math.round((out.done / out.total) * 100) : 0;
+  return out;
+}
