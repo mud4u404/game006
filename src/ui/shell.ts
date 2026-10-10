@@ -21,6 +21,7 @@ import { tickShi } from '../engine/shishi';
 import { tickWorld } from '../engine/shijie';
 import { dropFailedTrack } from '../engine/daohang';
 import { isPreview } from '../core/preview';
+import { markWent, trackPower } from '../engine/jiemian';
 import { recordClick, wushiOn } from '../core/wushi';
 
 type Handler = (v: string, el: HTMLElement) => void;
@@ -207,6 +208,8 @@ export function render(): void {
   const main = $('#main'), tabs = $('#tabs');
   if (!main || !tabs) return;
   renderBar();
+  markWent(S.loc);
+  trackPower(S.tab === 'jianghu');
   main.innerHTML = (VIEWS[S.tab] || viewJianghu)();
   tabs.innerHTML = TABS.map(([k, l]) => `<button class="tab" data-act="tab:${k}"${S.tab === k ? ' aria-current="page"' : ''}>${IC[k]}${l}</button>`).join('');
   saveSoon();

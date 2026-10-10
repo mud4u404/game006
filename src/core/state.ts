@@ -168,6 +168,12 @@ export interface GameState {
   reply: { id: string; text: string; at?: number } | null;
   /** 范围：界面；写入口：ui */
   tab: Tab;
+  /**
+   * 界面记的小账（engine/jiemian.ts），可缺省，旧档没有也读得出来：
+   * power 上次在江湖页角色卡上显示的战力；from 变了以后的旧值（卡上显示「旧 → 新」，离开江湖页就清）；went 到过的地点
+   * 范围：界面；写入口：engine/jiemian.ts
+   */
+  ui?: { power?: number; from?: number; went?: string[] };
 }
 
 /** 字段归属约定（docs/sheji-012-013.md 第 012 节），不在此强制拦截旧写入点。
@@ -236,6 +242,7 @@ export const FIELD_OWNER = Object.freeze({
   sel: { scope: '界面', writer: 'ui' },
   reply: { scope: '界面', writer: 'ui' },
   tab: { scope: '界面', writer: 'ui' },
+  ui: { scope: '界面', writer: 'engine/jiemian.ts' },
 } as const satisfies Record<keyof GameState, FieldOwner>);
 for (const owner of Object.values(FIELD_OWNER)) Object.freeze(owner);
 
