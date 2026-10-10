@@ -178,13 +178,9 @@ const drift = (lv: number, p: number): number => Math.min(2, lv + (worldRng() < 
 
 /* ---------- 生 ---------- */
 
-/** 某个钟点在这处的人（不算物件）：临时把时辰拨过去，看完拨回来 */
+/** 某个钟点在这处的人（不算物件）；不拨动游戏时钟。 */
 function presentAt(place: string, min: number): string[] {
-  const m0 = S.min;
-  try {
-    S.min = min;
-    return roomNpcs(place).filter(id => !npc(id)?.obj);
-  } finally { S.min = m0; }
+  return roomNpcs(place, min).filter(id => !npc(id)?.obj);
 }
 
 /**
@@ -331,14 +327,10 @@ function network(w: WorldState, day: number): void {
  */
 export function spreadDay(w: WorldState, day: number): void {
   forget(w, day);
-  const slots: { night: boolean; rooms: string[][] }[] = [];
-  const m0 = S.min;
-  try {
-    for (const sl of SLOTS) {
-      S.min = sl.min;
-      slots.push({ night: sl.k === 'night', rooms: lifeRooms().map(r => roomNpcs(r).filter(id => !npc(id)?.obj)) });
-    }
-  } finally { S.min = m0; }
+  const slots = SLOTS.map(sl => ({
+    night: sl.k === 'night',
+    rooms: lifeRooms().map(r => presentAt(r, sl.min))
+  }));
   for (const sl of slots) {
     for (const ids of sl.rooms) {
       if (ids.length < 2) continue;
