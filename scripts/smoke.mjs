@@ -32,9 +32,12 @@ const p = await b.newPage({ viewport: { width: 360, height: 560 }, deviceScaleFa
 // 固定随机，每次走的路一样（路遇、打斗都不靠运气）：
 // 世界的种子 = 名字 + 开局的现实时刻（core/state.ts 的 worldSeed），路遇的骰子、传闻的走样都出自它（engine/shijie.ts 的 worldRng）；
 // 打斗的骰子用的是 Math.random（ui/fight.ts）。所以把现实的钟钉死在一个时刻，再把 Math.random 换成带种子的。
-// 只在这个脚本的页面里生效，游戏代码里没有任何测试专用开关，正式玩家碰不到。换路：SMOKE_SEED=7 npm run smoke
+// 只在这个脚本的页面里生效，游戏代码里没有任何测试专用开关，正式玩家碰不到。换路：SMOKE_SEED=7（打斗的骰子）、SMOKE_DAY=5（开局的日子，世界种子由它定，路遇由世界种子定）。
+// 默认 SMOKE_DAY=3：这一天开局，赶路会撞上路遇「使剑的船工」（先弹剧情卡，选第一项，开打，打完结算），
+// 这样 settle() 的路遇处理（剧情卡、打斗、结算）每次冒烟都走一遍。实测同样会撞上它的还有 5、6；11 撞「拦路的小毛贼」；
+// 0、1、2、4、7、8、9、10、12、13、14 一次路遇也没有。改了内容或引擎以后路遇的位置会变：日志里没有「路遇」行，就再挑一个日子
 const SEED = Number(process.env.SMOKE_SEED ?? 1) || 1;
-const FIXED_NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
+const FIXED_NOW = Date.UTC(2026, 0, 1, 12, 0, 0) + (Number(process.env.SMOKE_DAY ?? 3) || 0) * 86400000;
 await p.addInitScript(({ seed, now }) => {
   Date.now = () => now;
   let a = seed >>> 0;
@@ -147,6 +150,9 @@ async function settle() {
       const title = (await p.textContent('#storyLayer h2')).trim();
       log('路遇', title);
       if (title === lastCard) { if (++sameCard >= 3) await stuckCard(title); } else { lastCard = title; sameCard = 1; }
+      // 刚换上来的卡头三百多毫秒不收点击（ui/shell.ts 的 tooSoon）：不等的话，点在这个窗口里，卡原样不动，
+      // 三次判定就会被误触发（实测五次里红过一次，选项明明点得动）
+      await p.waitForTimeout(400);
       await p.click('#storyLayer .choice:not(.locked)', { timeout: 4000 }).catch(() => {});
       continue;
     }
@@ -154,6 +160,7 @@ async function settle() {
     if (await p.$('#sheetLayer:not([hidden]) [data-act="fResult"]')) { await p.click('[data-act="fResult"]').catch(() => {}); continue; }
     if (await p.$('#fightLayer:not([hidden])')) {
       const r = await fight(null);
+      lastCard = '';
       log('路遇开打', r);
       if (r === 'timeout') throw new Error('路遇的打斗打不完，卡住了（界面见上一行）');
       continue;
