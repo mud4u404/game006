@@ -147,6 +147,7 @@ export function kanren(s: GameState, f: FoeDef, n = 40, now = false): { p: numbe
 
 /** 带着伤的提醒：气血掉到九成以下，或手、足、内息任何一处有伤，就多说一句（掂斤两按满状态，此刻吃亏要让玩家知道） */
 export function kanrenHurt(s: GameState): string {
-  const w = s.wounds, hurt = s.hp < s.hpMax * 0.9 || w.hand + w.foot + w.inner > 0;
+  // 气血不到九成、内力不到五成、身上有伤：都算带伤，掂斤两时多说一句
+  const w = s.wounds, hurt = s.hp < s.hpMax * 0.9 || s.mp < s.mpMax * 0.5 || w.hand + w.foot + w.inner > 0;
   return hurt ? '你眼下带着伤，真动起手来，要吃些亏。' : '';
 }

@@ -950,7 +950,7 @@ function showResult(): void {
   if (!c || !c.res) return;
   // 结算：历练、结算效果、备战的后果、胜负以后那条路的后果（engine/jiesuan.ts）
   const pk = c.pick;
-  const { r, ll, out, effects } = settle(c.f, c.res, c.prep, pk);
+  const { r, ll, effects } = settle(c.f, c.res, c.prep, pk);
   if (!r) { closeFight(); return; }
   if (r.silent) {
     closeFight();
@@ -969,7 +969,7 @@ function showResult(): void {
   // 输了：写明败在哪里、下回怎么补（engine/jiesuan.ts 的 loseNote）。剧本战是被人救下的，不写
   const note = c.res === 'lose' && !c.f.script ? loseNote(loseFacts(c.d, c.f, c.prep)) : null;
   const loseLine = note ? `<div class="r-sub">败在哪里</div><div class="news"><div><span class="tag warn">缘故</span><span>${note.why}</span></div><div><span class="tag">下回</span><span>${note.mend}</span></div></div>` : '';
-  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])], c.d.hp).concat(out.breaks.map(x => `<span class="tag info">${x}</span>`));
+  const chips = rewardChips([...effects, ...(ll ? [{ type: 'lilian', amount: ll } as Effect] : [])], c.d.hp);
   c.then = r.then;
   save();
   openSheet(`<div class="r-h"><span class="tag ${c.res === 'win' ? (c.f.spar ? 'accent' : 'danger') : ''}">${r.tag || ''}</span><h2>${pk?.title ?? (r.title || '')}</h2></div>
