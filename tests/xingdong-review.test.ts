@@ -28,6 +28,8 @@ beforeEach(() => {
 afterEach(() => { useStore(null); setNowMs(() => Date.now()); });
 
 describe('main 的条件银两', () => {
+  // 起手钱 2026-10-10 从三十改成二百五十（Issue #547），断言一律相对起手值，别再写死
+  const 起手 = skipToYangzhou().silver;
   it.each([-100, 100])('条件不成立的银两 %i 不列代价或所得，不缺钱、不缺凭据、不留提示', delta => {
     const effects: Effect[] = [{ type: 'silver', delta, if: { flag: 'missing' }, note: '未发生的银两' }];
     const req = { who: 'player', verb: '试算', effects };
@@ -47,16 +49,16 @@ describe('main 的条件银两', () => {
       { type: 'time', add: 20 }, { type: 'item', id: 'jcy', delta: 1 }
     ]);
     expect(plan(req).cost).toContainEqual({ type: 'silver', delta: -20, note: '付过了药钱。' });
-    expect(act(req).ok).toBe(true); expect(S.silver).toBe(10); expect(S.items.jcy).toBe(2);
+    expect(act(req).ok).toBe(true); expect(S.silver).toBe(起手 - 20); expect(S.items.jcy).toBe(2);
     expect(S.feed.some(f => f.t === '江湖' && f.x === '付过了药钱。')).toBe(true);
   });
 
   it('runStep 内部入口也保留银两条件和 note（战后结算沿用此口）', () => {
     run([{ type: 'silver', delta: -100, if: { flag: 'missing' }, note: '不应出现' }]);
-    expect(S.silver).toBe(30); expect(S.feed.some(f => f.x === '不应出现')).toBe(false);
+    expect(S.silver).toBe(起手); expect(S.feed.some(f => f.x === '不应出现')).toBe(false);
     S.flags.paid = true;
     run([{ type: 'silver', delta: 10, if: { flag: 'paid' }, note: '已兑现' }]);
-    expect(S.silver).toBe(40); expect(S.feed.some(f => f.x === '已兑现')).toBe(true);
+    expect(S.silver).toBe(起手 + 10); expect(S.feed.some(f => f.x === '已兑现')).toBe(true);
   });
 });
 
@@ -133,30 +135,32 @@ describe('可重复奖励：每一回有自己的凭据', () => {
 
   it('悬赏冷却后再揭、再交能领新一回的钱，新旧凭据不同', () => {
     const def = jobById('xsb_xunren')!;
+    const 起初 = S.silver;                      // 起手钱已改成 250（#547），一律按本例起始值算
     worldAct('xsb_zhuren', '揭寻人'); S.flags.xsb_xr_found = true;
     worldAct('xsb_zhuren', '交寻人');
     const first = S.log.find(e => e.verb === '交寻人')!;
-    expect(S.silver).toBe(30 + jobPay(def));
+    expect(S.silver).toBe(起初 + jobPay(def));
     advanceDays(S, def.again ?? 3);
     expect(jobOpen(S, def.id)).toBe(true);
     worldAct('xsb_zhuren', '揭寻人'); S.flags.xsb_xr_found = true;
     expect(verbPlan('xsb_zhuren', '交寻人').ok).toBe(true);
     worldAct('xsb_zhuren', '交寻人');
-    expect(S.silver).toBe(30 + jobPay(def) * 2); expect(S.job).toBeNull();
+    expect(S.silver).toBe(起初 + jobPay(def) * 2); expect(S.job).toBeNull();
     expect(S.log.at(-1)?.key).not.toBe(first.key);
   });
 
   it('零工第二天重新开工，昨天的凭据不拦今天的工钱', () => {
     S.min = 7 * 60;
     const day = dayNo(S);
+    const 起初 = S.silver;                      // 同上：按本例起始值算
     worldAct('lg_batou', '扛包');
     const first = S.log.at(-1)!;
-    expect(S.silver).toBe(90);
-    worldAct('lg_batou', '扛包'); expect(S.silver).toBe(90);
+    expect(S.silver).toBe(起初 + 60);
+    worldAct('lg_batou', '扛包'); expect(S.silver).toBe(起初 + 60);
     advanceDays(S, 1); S.min = 7 * 60;
     expect(dayNo(S)).toBe(day + 1); expect(verbPlan('lg_batou', '扛包').ok).toBe(true);
     worldAct('lg_batou', '扛包');
-    expect(S.silver).toBe(150); expect(S.log.at(-1)?.key).not.toBe(first.key);
+    expect(S.silver).toBe(起初 + 120); expect(S.log.at(-1)?.key).not.toBe(first.key);
   });
 });
 

@@ -27,6 +27,8 @@ beforeEach(() => {
   setState(skipToYangzhou());
   mem = new MemStore(); useStore(mem);
 });
+// 起手钱 2026-10-10 从三十改成二百五十（Issue #547），断言一律相对起手值，别再写死
+const 起手 = skipToYangzhou().silver;
 afterEach(() => { useStore(null); setNowMs(() => Date.now()); });
 const request = (effects: Effect[], extra: Partial<ActionReq> = {}): ActionReq =>
   ({ who: 'player', verb: '买', target: 'yaopu', key: 'receipt:1', effects, ...extra });
@@ -48,7 +50,7 @@ describe('行动：先算后做、资源与凭据', () => {
   });
 
   for (const [name, effects] of [
-    ['钱', [{ type: 'silver', delta: -31 }, { type: 'item', id: 'jcy', delta: 1 }]],
+    ['钱', [{ type: 'silver', delta: -(起手 + 1) }, { type: 'item', id: 'jcy', delta: 1 }]],
     ['物', [{ type: 'silver', delta: -10 }, { type: 'item', id: 'jcy', delta: -2 }, { type: 'silver', delta: 20 }]],
     ['历练', [{ type: 'silver', delta: -10 }, { type: 'lilian', amount: -356 }, { type: 'item', id: 'jcy', delta: 1 }]],
     ['贡献', [{ type: 'silver', delta: -10 }, { type: 'gongxian', delta: -6 }, { type: 'lilian', amount: 10 }]]
@@ -64,8 +66,8 @@ describe('行动：先算后做、资源与凭据', () => {
 
   it('合计所有扣费，不能各笔够用却透支，也不能用未到手的奖钱预付', () => {
     for (const effects of [
-      [{ type: 'silver', delta: -20 }, { type: 'silver', delta: -20 }],
-      [{ type: 'silver', delta: 100 }, { type: 'silver', delta: -40 }]
+      [{ type: 'silver', delta: -起手 }, { type: 'silver', delta: -20 }],
+      [{ type: 'silver', delta: 100 }, { type: 'silver', delta: -(起手 + 40) }]
     ] as Effect[][]) {
       const before = structuredClone(S);
       expect(act(request(effects)).ok).toBe(false); expect(S).toEqual(before);
@@ -169,9 +171,9 @@ describe('连锁与人物入口', () => {
   it('同 key 的父子不能重领；子条件失败不动它的资源，不丢父行动', () => {
     const child = request([{ type: 'silver', delta: 10 }]);
     expect(act({ ...child, chains: [child] }).ok).toBe(true);
-    expect(S.silver).toBe(40); expect(S.log).toHaveLength(1);
+    expect(S.silver).toBe(起手 + 10); expect(S.log).toHaveLength(1);
     expect(act({ who: 'player', verb: '根', chains: [request(buy(), { key: 'other', if: { flag: 'missing' } })] }).ok).toBe(true);
-    expect(S.silver).toBe(40);
+    expect(S.silver).toBe(起手 + 10);
   });
   it('人物 id 能走同一入口；不能拿玩家的资源代替人物资源，也不推进玩家时辰', () => {
     const before = structuredClone(S);
@@ -278,7 +280,7 @@ describe('现有交差、买卖、学艺接入', () => {
     expect(act(req, undefined, fightCheckpoint).ok).toBe(true); expect(mem.writes).toBe(1);
     const saved = readSave().state!;
     expect(kpPos(saved)).toEqual({ kind: 'story', id: 'kp_du_hou', i: 0 });
-    setState(saved); expect(act(req, undefined, fightCheckpoint).ok).toBe(false); expect(S.silver).toBe(50);
+    setState(saved); expect(act(req, undefined, fightCheckpoint).ok).toBe(false); expect(S.silver).toBe(起手 + 20);
   });
   it('剧情断点和奖励一次存下；断点写入出错时两者一同回滚', () => {
     setState(newGame());
