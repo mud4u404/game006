@@ -1,8 +1,8 @@
 /**
  * 线索不断（docs/gugan.md 第四节 S4）：玩家会遇到的每一件「事」，在它的每一个可达阶段，见闻簿都得说清下一步。
  * 真实玩家反馈：「主要是有些任务没有线索。」这里逐件、逐阶段查五样：
- *   A 线索    见闻簿此刻有一行说清下一步去找谁、去哪（人名、地名在文字里，或导航有目标）
- *   B 人在    说到的那个人，一天里至少有一个时辰真在说到的地方（作息用 engine/world.ts 的 roomNpcs、roomObjs）
+ *   A 线索    见闻簿此刻有一行说清下一步去找谁、去哪（人名、地名在文字里，或导航有目标）。世事例外：只查地名（写地方、不写找谁）
+ *   B 人在    说到的那个人，一天里至少有一个时辰真在说到的地方（作息用 engine/world.ts 的 roomNpcs、roomObjs）；世事不查
  *   C 走得到  说到的地方从扬州走得到（engine/world.ts 的 pathTo）
  *   D 时辰    人不是整日都在的，见闻簿或传闻里能知道什么时辰（写「夜里」「午后」也算）
  *   E 卡住    门槛不够、人走了、人死了、事做不成时，见闻簿有一句说明为什么、还缺什么
@@ -62,13 +62,19 @@ const KNOWN_BROKEN: Record<string, string> = {
   'xsb_xunwu|x2#门槛|E': '陈三「点破」要悟性或胆魄二十五以上，见闻簿没说，不够的人只得一句「撬不开嘴」',
   // 差事：放走凶手，差事就交不了了，见闻簿照旧写着去交差
   'xsb_xiong|accept#做不成_xsb_xiong_gone|E': '放走郝屠户后差事交不了，见闻簿还写着去府衙找书办交差，没说为什么',
-  // 世事：能插手的步，见闻簿只写了事，没点到该找谁、去哪在
-  'smth_shi|st_qi|A': '乱石阵一事没点到该找谁（胡三）、去哪（听潮小筑）',
-  'ssgz_xun|st_qi|A': '鲥鱼汛争江面没点到该找谁（护船汉子）、去哪（瓜洲码头）',
-  'sz_juan|st_yuan|A': '织造贡绢一案没点到该找谁（严捕头、押纲师傅）、去哪（星桥埠头、枫桥码头）',
-  'sz_hua|st_zheng|A': '画舫相争没点到该找谁（花九爷）、去哪（星桥埠头）',
-  'sz_zhong|st_zhuzhong|A': '铸钟一事没点到该找谁（本立）、去哪（寒山寺）',
-  'sz_zhong|st_xiangzhu|A': '补钟一事没点到该找谁（本立）、去哪（寒山寺）'
+  // 世事（维护者 10-10：写地方、不写找谁）：能插手的步，见闻簿那一行里没点出事情在哪儿闹
+  'kp_xun|st_fang#缺地名|A': '缺地名：卫衡寻褚七没点出事情在哪儿闹（常见的去处：运河渡口、广陵客栈、瘦西湖畔）',
+  'kp_xun|st_cuo#缺地名|A': '缺地名：卫衡寻褚七没点出事情在哪儿闹（常见的去处：运河渡口）',
+  'smth_shi|st_qi#缺地名|A': '缺地名：乱石阵困船没点出事情在哪儿闹（常见的去处：听潮小筑）',
+  'ssgz_xun|st_qi#缺地名|A': '缺地名：鲥鱼汛争江面没点出事情在哪儿闹（常见的去处：瓜洲码头）',
+  'ssgz_xun|st_zheng#缺地名|A': '缺地名：鲥鱼汛争江面没点出事情在哪儿闹（常见的去处：瓜洲码头）',
+  'ssgz_du|st_shu#缺地名|A': '缺地名：客店的赌桌没点出事情在哪儿闹（常见的去处：江口客店）',
+  'ss_matou|st_duizhi#缺地名|A': '缺地名：码头空出来以后没点出事情在哪儿闹（常见的去处：运河渡口、府衙前堂 · 六扇门）',
+  'ss_matou|st_huobing#缺地名|A': '缺地名：码头空出来以后没点出事情在哪儿闹（常见的去处：运河渡口、府衙前堂 · 六扇门）',
+  'sszj_du|st_dazhi#缺地名|A': '缺地名：渡船涨价没点出事情在哪儿闹（常见的去处：西津渡、待渡亭）',
+  'sszj_dao|st_diu#缺地名|A': '缺地名：道场拐孩子没点出事情在哪儿闹（常见的去处：西津渡）',
+  'sz_juan|st_yuan#缺地名|A': '缺地名：织造贡绢失窃没点出事情在哪儿闹（常见的去处：枫桥码头、星桥埠头、苏州府衙）',
+  'sz_hua|st_zheng#缺地名|A': '缺地名：山塘河画舫相争没点出事情在哪儿闹（常见的去处：星桥埠头）'
 };
 
 /* ---------------------------------------------------------------------------------------------------
@@ -519,14 +525,14 @@ function checkShi(d: ShiDef): void {
     setup();
     const now = knownShi().find(r => r.id === d.id)?.now ?? step.now;
     const people = [...new Set(pushers.map(p => p.npc.id))];
-    // 玩家要去找的人、去的地方：能推动的人的名字、他们住的几处、事发的地点、牵涉的人
-    const subj = [...(d.subj ?? []), ...(step.subj ?? [])].filter(id => !!npc(id));
-    const rooms = [...new Set([...people.flatMap(roomsOf), ...(step.where ? [step.where] : []), ...(d.place ? [d.place] : [])])];
-    const tokens = [...people, ...subj].flatMap(id => [...fuzzy(nameOf(id)), npc(id)?.altName?.name ?? '']).concat(rooms.flatMap(r => fuzzy(room(r).name))).filter(t => t.length >= 2);
-    put('A', tokens.some(t => now.includes(t)),
-      `见闻簿上这一步只写「${step.now.slice(0, 30)}…」，没点到该找谁（${people.map(nameOf).join('、')}）、去哪（${[...new Set(people.flatMap(roomsOf))].map(r => room(r).name).slice(0, 3).join('、')}）`);
+    // 世事是听来的消息，不是任务（维护者 10-10）：写地方，不写找谁。事情所在的地方：这一步发生的地点、整件事出在哪一处、
+    // 能插手的人常在的几处（事就出在他们那里）。见闻簿那一行（now，加上传开的话 news）里点到其中一处地名就算
+    const rooms = [...new Set([...(step.where ? [step.where] : []), ...(d.place ? [d.place] : []), ...people.flatMap(roomsOf)])];
+    const told = [now, step.news].filter(Boolean).join(' ');
+    add('世事', d.id, d.name, kindStep, stepName, 'A', rooms.flatMap(r => fuzzy(room(r).name)).some(t => told.includes(t)),
+      `见闻簿上这一步只写「${step.now.slice(0, 30)}…」，没点出事情在哪儿闹（${rooms.map(r => room(r).name).slice(0, 4).join('、')}）`, '缺地名');
 
-    // B：能推动的人，至少一个在某处某个时刻真在
+    // C、D：能推动的人在哪处、什么时刻真在（人在不在这一项对世事不查：世事不指路，找人是玩家自己的事）
     const place: { id: string; at: string; hrs: number[] }[] = [];
     for (const p of pushers) {
       for (const r of roomsOf(p.npc.id)) {
@@ -536,7 +542,6 @@ function checkShi(d: ShiDef): void {
         if (hrs.length) place.push({ id: p.npc.id, at: r, hrs });
       }
     }
-    put('B', place.length > 0, `能插手的人（${people.map(nameOf).join('、')}）一天里没有一个时辰真在某处`);
     if (place.length) {
       const ok = place.filter(p => reachable(p.at));
       put('C', ok.length > 0, `能插手的人所在的地方（${[...new Set(place.map(p => room(p.at).name))].join('、')}）从扬州都走不到`);
