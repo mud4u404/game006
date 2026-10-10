@@ -196,6 +196,7 @@ const NPCS: NpcDef[] = [
     id: 'fuya_gaoshi', name: '榜文', obj: true, icon: 'stele', brief: '照壁正中的一块榜',
     look: '照壁正中钉着一块榜，盖着扬州府大印，分作三栏：右首「缉拿」，左首「悬赏」，底下一栏是「海捕」。画像有新有旧，揭走了的，留下一块浆糊印。榜脚一行小字：缉拿揭榜见捕头，悬赏登记找书办，海捕人犯见即拿送。',
     verbs: ['观察', '看缉拿', '看悬赏', '看海捕'],
+    next: { npc: 'xsb_zhuren', text: '去书办那里揭', verb: '揭' },
     actions: {
       看缉拿: [
         { if: { flag: 'fuya_gaoshi_taken' },

@@ -61,8 +61,29 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
     <p class="story">${head}</p>
     ${stop ? `<p class="muted">${stop}</p>` : ''}
     <div class="rewards">${chips.join('')}</div>
-    ${lines.length ? `<div class="r-sub">江湖邸报</div><div class="news">${lines.join('')}</div>` : ''}
+    ${baoBlock(lines)}
     <button class="btn" data-act="sheetClose">出关</button>`;
+}
+
+/** 邸报那一块（出关、歇脚醒来共用）：没有一条就不画 */
+const baoBlock = (lines: string[]): string => lines.length ? `<div class="r-sub">江湖邸报</div><div class="news">${lines.join('')}</div>` : '';
+
+/**
+ * 歇脚醒来的邸报（engine/shiguang.ts 的 xiejiaoBao）：一夜过去，江湖上几条世事，外加某人惦记着你；
+ * 有约的、失了约的照样写。和出关邸报同一块（baoBlock），只是不带长进、住处这些闭关才有的东西
+ */
+export function xingLaiHTML(bao: { news: string[]; nian?: string; missed?: string[] }, head: string): string {
+  const y = nextYue(S);
+  const lines = [
+    ...(bao.missed ?? []).map(m => `<div><span class="tag danger">失约</span><span>${m}</span></div>`),
+    ...(y ? [`<div><span class="tag warn">有约</span><span>${yueText(S, y)}</span></div>`] : []),
+    ...bao.news.map(n => `<div><span class="tag warn">传闻</span><span>${n}</span></div>`),
+    ...(bao.nian ? [`<div><span class="tag accent">惦记</span><span>${bao.nian}</span></div>`] : [])
+  ];
+  return `<div class="r-h"><span class="tag accent">歇脚</span><h2>醒来</h2></div>
+    <p class="story">${head}</p>
+    ${baoBlock(lines)}
+    <button class="btn" data-act="sheetClose">起身</button>`;
 }
 
 /** 下线回来的开头一句 */
