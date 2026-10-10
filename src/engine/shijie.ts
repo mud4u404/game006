@@ -312,6 +312,8 @@ export function applyWorld(w: WorldState, e: WorldEffect, today: number): void {
       break;
     }
     case 'hurt': case 'jail': case 'gone': {
+      // 死了的人不再伤、不再坐牢、不再走（和 free 一样，不让死人回来）
+      if (w.ppl[e.npc]?.st === 'dead') break;
       const st = e.op === 'hurt' ? 'hurt' : e.op === 'jail' ? 'jailed' : 'gone';
       // 伤不写日子的，三日好；牢和走不写日子的，要等 free
       const days = e.days ?? (e.op === 'hurt' ? 3 : undefined);
