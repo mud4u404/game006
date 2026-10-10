@@ -107,6 +107,8 @@ export type WorldEffect =
    * mark 写的是他常待的地方底下添的那一句交代（「药铺上了一半门板」），文字由写这件事的人写，引擎不编
    */
   | { type: 'w'; op: 'hurt' | 'jail' | 'gone' | 'free'; npc: string; days?: number; mark?: { place: string; text: string } }
+  /** 一个人死了：不可撤回（free 也救不回），哪儿都不在，不再听传闻。mark 同上 */
+  | { type: 'w'; op: 'dead'; npc: string; mark?: { place: string; text: string } }
   /** 一股势力对你的账：恩为正、怨为负 */
   | { type: 'w'; op: 'you'; fac: string; delta: number }
   /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；每处最多两行 */
@@ -124,7 +126,8 @@ export type Effect =
   | { type: 'feed'; tag: FeedTag; text: string }
   | { type: 'toast'; text: string }
   | { type: 'silver'; delta: number }
-  | { type: 'item'; id: string; delta: number }
+  /** max：加完不超过这个数（只给一件的东西，断点接回时重做一遍也不多给） */
+  | { type: 'item'; id: string; delta: number; max?: number }
   /** 把行囊里这件装备穿上（放进它该在的位置，原来的挤回行囊）；行囊里没有、不是装备的，什么也不做 */
   | { type: 'wear'; id: string }
   /** 设置关系；写了 from 时，只有当前关系在 from 里才改 */
@@ -157,6 +160,8 @@ export type Effect =
   /** 治伤（医馆、郎中）：不写 levels 治好全部伤；写了就从最重的那处起，一共减这么多级。治完记一条见闻 */
   /** 治伤：从最重的那处起一级一级减，一共减 levels 级（不写为全治）；写了 zones 只治这几处（跌打酒治手足、内伤药治内息） */
   | { type: 'cure'; levels?: number; zones?: ('hand' | 'foot' | 'inner')[] }
+  /** 添一处伤（默认一级，轻伤，过一日自己好；封顶三级）：剧情里手被割了、扭了脚。打架落的伤由引擎算，不用这个 */
+  | { type: 'wound'; zone: 'hand' | 'foot' | 'inner'; level?: number; if?: Cond }
   | { type: 'feedReset' }
   /**
    * 江湖上的话：这一带最耸动、你还不知道的一条传闻（engine/chuanwen.ts 的 hearsay），不再随机抽。
@@ -811,8 +816,17 @@ export interface ShiStep {
   self?: Record<string, string>;
   /** 事情在哪儿：走进这个地点，就知道了这一步 */
   where?: string;
-  /** 没人插手时，过几天自己走到哪一步（半天写 0.5）；不写的是结局 */
-  next?: { days: number; to: string };
+  /**
+   * 没人插手时，过几天自己走到哪一步（半天写 0.5）；不写的是结局。
+   * alt：到了日子，世界的种子抽一回，p（零到一）的几率改走 alt 这一步而不走 to（同一个种子，抽出来的一样）。
+   * 两个去处都算「自己走到」的结局
+   */
+  next?: { days: number; to: string; alt?: { to: string; p: number } };
+  /**
+   * 预告的窗口（docs/sheji-001-003.md 第 003 项「离线」）：走到这一步时，若已经过了半个江湖日才补上来
+   * （下线静修、一口气歇了好几日），这一步从玩家回来那一刻起算，next 的日子留给玩家来得及赶到
+   */
+  window?: true;
   /** 走到这一步时世界上变的事（旗标、关系……）。玩家插手引起的变化写在玩家的选择里 */
   do?: Effect[];
 }

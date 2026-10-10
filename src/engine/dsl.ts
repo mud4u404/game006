@@ -203,7 +203,7 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
       case 'toast': emit('toast', e.text); break;
       case 'silver': S.silver = Math.max(0, S.silver + e.delta); break;
       case 'item':
-        S.items[e.id] = Math.max(0, (S.items[e.id] || 0) + e.delta);
+        S.items[e.id] = Math.max(0, Math.min(e.max ?? Infinity, (S.items[e.id] || 0) + e.delta));
         // 兵器当了、卖了，手里也就没了
         if (!S.items[e.id] && S.gear?.weapon === e.id) delete S.gear.weapon;
         break;
@@ -280,6 +280,13 @@ export function run(effects: Effect[] | undefined, out: Outcome = newOutcome()):
         if (done.length) pushFeed('收获', `治伤：${done.join('；')}。${isWounded() ? '' : '身上的伤都好了。'}`);
         break;
       }
+      case 'wound':
+        // 剧情里添的伤：封顶三级；一级的算轻伤，从此刻起过一日自己好（engine/shang.ts）。写了 if 的，条件成立才落伤
+        if (!test(e.if)) break;
+        S.wounds[e.zone] = Math.min(3, S.wounds[e.zone] + (e.level ?? 1));
+        markLight(S);
+        pushFeed('江湖', `${{ hand: '手上', foot: '脚上', inner: '胸口' }[e.zone]}添了一处伤，轻的过一日自己会好。`);
+        break;
       // 江湖上的话：这一带传开的、你还不知道的、最耸动的一条（engine/chuanwen.ts 的 hearsay），不再随手抽
       case 'news': out.vars.news = inner(hearsay() ?? '这几日太平得很，没听说什么。'); break;
       case 'away':

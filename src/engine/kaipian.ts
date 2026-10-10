@@ -8,18 +8,43 @@
  * 序章了结（章回变成第一回）以后清掉。旧存档没有这个旗标，走老路。
  */
 import type { GameState } from '../core/state';
+import { storyById } from '../content';
 
 export type KpPos = { kind: 'story'; id: string; i: number } | { kind: 'fight'; id: string };
 
 const PREFIX = 'kp_at:';
+/**
+ * 断点的版本：第四稿把第二夜到登船的八张卡压成了五张（docs/kaipian.md 第四稿），卡的序号变了。
+ * 新写的剧情断点末尾带 :2；没带的是第三稿存下的旧断点，读的时候换成新的序号（legacyIndex）。
+ */
+const VER = '2';
 
 /** 新序章的剧情：开篇 p_open，和 kp_ 开头的各段 */
 export const kpStory = (id: string): boolean => id === 'p_open' || id.startsWith('kp_');
 
+/** 第二夜以后的几段（三条路、各三种收场）：第三稿它们尾部是八张卡，第四稿是五张 */
+const HOU = /^kp_(du|wen|bu)_hou(_win|_lose|_flee)?$/;
+/** 第三稿尾部八张卡（旧债上门、布包里的剑、路上的人、走进雨里、焦船、油布、去路、登船）→ 第四稿五张的序号 */
+const TAIL_MAP = [0, 0, 1, 2, 3, 3, 4, 4];
+const TAIL_NEW = 5;
+
+/**
+ * 旧断点的序号换成现在的：落在尾部的，按 TAIL_MAP 接回对应的那一张。
+ * 并进来的两张卡，前一张没有效果（旧债上门），油布那张的效果由选项条件拦住重复（packs/prologue.ts 的 DAWN），
+ * 登船并进了去路，去路的效果重做一遍是幂等的（关系和旗标是设成某值），所以哪一站接回都不会多给东西
+ */
+export function legacyIndex(id: string, i: number): number {
+  if (!HOU.test(id)) return i;
+  const len = storyById(id)?.cards.length;
+  if (!len) return i;
+  const r = i - (len - TAIL_NEW);
+  return r < 0 ? i : len - TAIL_NEW + TAIL_MAP[Math.min(r, TAIL_MAP.length - 1)];
+}
+
 /** 记下一站（null：清掉） */
 export function kpMark(s: GameState, pos: KpPos | null): void {
   for (const k of Object.keys(s.flags)) if (k.startsWith(PREFIX)) delete s.flags[k];
-  if (pos) s.flags[PREFIX + (pos.kind === 'story' ? `story:${pos.id}:${pos.i}` : `fight:${pos.id}`)] = true;
+  if (pos) s.flags[PREFIX + (pos.kind === 'story' ? `story:${pos.id}:${pos.i}:${VER}` : `fight:${pos.id}`)] = true;
 }
 
 /** 读断点：只在序章里（章回为零）才有效 */
@@ -27,9 +52,9 @@ export function kpPos(s: GameState): KpPos | null {
   if (s.chapter !== 0) return null;
   const key = Object.keys(s.flags).find(k => k.startsWith(PREFIX));
   if (!key) return null;
-  const [kind, id, i] = key.slice(PREFIX.length).split(':');
+  const [kind, id, i, ver] = key.slice(PREFIX.length).split(':');
   if (kind === 'fight' && id) return { kind: 'fight', id };
-  if (kind === 'story' && id) return { kind: 'story', id, i: Number(i) || 0 };
+  if (kind === 'story' && id) return { kind: 'story', id, i: ver === VER ? Number(i) || 0 : legacyIndex(id, Number(i) || 0) };
   return null;
 }
 

@@ -160,12 +160,15 @@ describe('新开局：瓜洲夜雨', () => {
     expect(cond({ flag: 'kp_xin' })).toBe(false);
   });
 
-  it('默认路径（冒烟脚本、机器玩家都按「第一个选项」往前点）：每条路的最后一张卡，第一个选项是登船；「再坐一会儿」只能排在后面', () => {
+  it('默认路径（冒烟脚本、机器玩家都按「第一个选项」往前点）：每条路的最后一张卡，第一个选项是登船；「再坐一会儿」在天明那张卡上、只能排在后面', () => {
     for (const id of ['kp_du_hou', 'kp_wen_hou', 'kp_bu_hou']) {
       const def = storyById(id)!;
       const last = def.cards.at(-1)!;
       expect(last.choices[0].label, id).toContain('登船');
-      expect(last.choices.map(c => c.label)).toContain('在焦船边再坐一会儿');
+      // 第四稿：「再坐一会儿」在倒数第二张（天明）上，去路和登船并成了最后一张
+      const dawn = def.cards.at(-2)!;
+      expect(dawn.choices.map(c => c.label)).toContain('在焦船边再坐一会儿');
+      expect(dawn.choices[0].label, id).not.toContain('再坐');
       expect(def.endChapter).toEqual({ small: '第一回', big: '扬州' });
     }
   });

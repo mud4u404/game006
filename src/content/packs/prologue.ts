@@ -11,6 +11,7 @@ import type { ContentPack, Effect, FoeDef, ItemDef, QuestDef, StoryCard, StoryDe
  * - kp_xin：新开局，江伯生死未卜；kp_zuo：天亮后在焦船边多坐了一会儿；
  * - kp_jiu：不渡的那条路上，落水的独臂人被救上了岸（下水救他，或在堤下打退了追兵），扬州才见得到他（packs/kp-guren.ts）；
  * - kp_chu_name：知道独臂镖师姓褚。
+ * - kp_hui：第二夜江伯推你进芦苇时回了头，看见雨里左手提刀的人影，手上挂一处轻伤（第四稿，见闻簿 main1 的 notes 读它）。
  * 三场打都分打赢、打输、逃开，各接一张不同的卡：kp_X_hou（赢）、kp_X_hou_lose、kp_X_hou_flee（不渡路另有 kp_bu_hou，是没有打的两条小路）。
  * 文件末尾「旧序章」那三段（p_night、p_after1、p_death）和 heiyi、heiyi2 是旧版序章（抓药、夜袭、江伯之死）：
  * 新开局不再走到；只留给停在旧序章中途的存档接着玩（id 只增不删，tests/ids.test.ts）。
@@ -19,22 +20,15 @@ import type { ContentPack, Effect, FoeDef, ItemDef, QuestDef, StoryCard, StoryDe
 /** 第一夜过去，三日后的夜里：时辰拨到三更，下起大雨 */
 const THREE_DAYS: Effect[] = [{ type: 'time', add: 3 * 1440 }, { type: 'time', until: 23 * 60 + 30 }, { type: 'weather', value: '大雨' }];
 
-/** 三条路合到一处的第二夜前半（来的船、江伯取剑）。下半夜按路分：见 REVEAL_* */
-const NIGHT2: StoryCard[] = [
+/** 三条路合到一处的第二夜前半（来的船、江伯取剑），一张卡。下半夜按路分：见 REVEAL_* */
+const NIGHT2: StoryCard =
   { tag: '序章 · 第二夜', title: '旧债上门',
     paras: [
-      '三日后，下起雨来。',
-      '那一夜渡口的事，到底传了出去。三更时分，江上来了几条没点灯的船。',
-      '船外有人笑了一声，笑声尖细，不男不女：「江老管家，二十年不见，倒做起渔翁来了。」'
+      '三日后，下起雨来。那一夜渡口的事，到底传了出去。三更时分，江上来了几条没点灯的船。',
+      '船外有人笑了一声，笑声尖细，不男不女：「江老管家，二十年不见，倒做起渔翁来了。」',
+      '江伯从船底摸出一个长条布包，一层一层解开，是一柄旧剑。他握住剑柄，手便不抖了。你这才想起，江伯的咳嗽，今晚一声也没有。'
     ],
-    choices: [{ label: '屏住呼吸' }] },
-  { tag: '序章 · 第二夜', title: '布包里的剑',
-    paras: [
-      '江伯从船底摸出一个长条布包，一层一层解开，是一柄旧剑。他握住剑柄，手便不抖了。',
-      '你这才想起，江伯的咳嗽，今晚一声也没有。'
-    ],
-    choices: [{ label: '看向船外' }] }
-];
+    choices: [{ label: '看向船外' }] };
 
 /** 第二夜下半：第一夜的选择，这一夜见分晓 */
 const REVEAL_DU: StoryCard = { tag: '序章 · 第二夜', title: '芦苇丛里的人',
@@ -62,32 +56,48 @@ const REVEAL_BU: StoryCard = { tag: '序章 · 第二夜', title: '血染的腰�
   ],
   choices: [{ label: '继续' }] };
 
-/** 江伯走进雨里，三条路都一样 */
+/** 第二夜的时辰：拨到天亮前，雨停了转阴（听他的、回头都走这一步） */
+const DAWN_BREAK: Effect[] = [{ type: 'time', set: 5 * 60 + 40 }, { type: 'weather', value: '阴' }];
+
+/**
+ * 江伯走进雨里，三条路都一样。第四稿在这里加一个决定：听他的走，或者回头（docs/kaipian.md 第四稿）。
+ * 回头看见雨里一个人左手提刀、收刀时拇指先扣刀镡（「左手」那条线的第一个线头，旗标 kp_hui，见闻簿 main1 的 notes 读它；
+ * 登船时 feedReset 会清掉动态，所以记在见闻簿的心事底下，不记动态）；
+ * 代价是手上挂一处轻伤：登船那张卡（landing）按 kp_hui 落伤，落在 cure 之后，进扬州时还没好
+ */
 const RAIN: StoryCard = { tag: '序章 · 第二夜', title: '走进雨里',
   paras: [
     '江伯把剑提在手里，没有回头。他只用竹篙在你脚下的小舢板上轻轻一点，那小船便悄无声息地滑进了芦苇深处。',
     '他自己抬脚跨过船舷，走进了雨里。雨幕在他身前分开，又在他身后合拢，像你十六岁那夜在江边见过的一样。',
     '芦苇叶子刮着你的脸。你听见兵刃相击，一声，两声，然后是一片火光，映红了半条江。',
-    '你攥着竹篙，篙头在水里抖个不停。'
+    '舢板还在往芦苇深处滑。你攥着竹篙，篙头在水里抖个不停。'
   ],
-  choices: [{ label: '等到天亮', do: [{ type: 'time', set: 5 * 60 + 40 }, { type: 'weather', value: '阴' }] }] };
+  choices: [
+    { label: '听他的，走', do: DAWN_BREAK },
+    { label: '回头', sub: '看清那一眼　手上要见血', do: [{ type: 'flag', flag: 'kp_hui' }, ...DAWN_BREAK], result: '你在芦苇间扭过身去。火光将熄未熄，雨幕那头晃出一个人影：左手提刀，一刀撩罢，收刀的时候，拇指先扣上了刀镡。\n你还想再看，舢板撞上了芦根。你伸手去扶，掌心在断茬上划开一道口子，火辣辣地疼。再抬头，火光已经灭了，江上只剩雨声。' }
+  ] };
 
-/** 天亮以后：焦船、斗笠、油布、玉佩 */
-const DAWN: StoryCard[] = [
-  { tag: '序章 · 天明', title: '焦船',
-    paras: [
-      '天亮时，雨停了。渡口那条船只剩一副焦黑的骨架。',
-      '江伯不在船上，不在岸上，也不在江里。你沿着江滩找到日头偏西，只在芦苇丛里拾到他那顶旧斗笠。'
-    ],
-    choices: [{ label: '把斗笠捡起来', do: [{ type: 'time', until: 17 * 60 + 30 }, { type: 'item', id: 'kp_douli', delta: 1 }, { type: 'wear', id: 'kp_douli' }, { type: 'toast', text: '得到 江伯的斗笠' }] }] },
-  { tag: '序章 · 天明', title: '油布',
-    paras: [
-      '船底的布包还在，剑没了，包里夹着一页油布，画着一个持剑的小人，墨迹被水洇了大半。',
-      '你贴身还揣着半块玉佩，是第一夜江伯塞给你的，只说了一句：「贴身收着。」',
-      '你把斗笠戴在头上，大了一圈。'
-    ],
-    choices: [{ label: '收好油布', do: [{ type: 'item', id: 'scroll', delta: 1 }, { type: 'toast', text: '得到 断水残页' }] }] }
-];
+/**
+ * 天明：焦船、斗笠、油布、玉佩，一张卡（原来是两张）。斗笠和油布只给一件（item 的 max: 1）：
+ * 第三稿存下的旧断点停在「油布」那一张的（斗笠已经在身上），接回这一张也不会多给（engine/kaipian.ts 的 legacyIndex）。
+ * 「再坐一会儿」也在这张卡上：回到这一张，不再重复去路的话
+ */
+const dawn = (idx: number): StoryCard => ({ tag: '序章 · 天明', title: '焦船',
+  paras: [
+    '天亮时，雨停了。渡口那条船只剩一副焦黑的骨架。',
+    '江伯不在船上，不在岸上，也不在江里。你沿着江滩找到日头偏西，只在芦苇丛里拾到他那顶旧斗笠。',
+    '船底的布包还在，剑没了，包里夹着一页油布，画着一个持剑的小人，墨迹被水洇了大半。你贴身还揣着半块玉佩，是第一夜江伯塞给你的，只说了一句：「贴身收着。」'
+  ],
+  choices: [
+    // max: 1：旧断点接回这一张时，斗笠、油布已经给过的，不会多给一件
+    { label: '戴上斗笠，收好油布', do: [
+      { type: 'time', until: 17 * 60 + 30 },
+      { type: 'item', id: 'kp_douli', delta: 1, max: 1 }, { type: 'wear', id: 'kp_douli' }, { type: 'toast', text: '得到 江伯的斗笠' },
+      { type: 'item', id: 'scroll', delta: 1, max: 1 }, { type: 'toast', text: '得到 断水残页' }
+    ] },
+    { label: '在焦船边再坐一会儿', if: { notFlag: 'kp_zuo' }, next: idx, do: [{ type: 'flag', flag: 'kp_zuo' }],
+      result: '你在焦船边坐了很久。你想起他补网时总哼的那支调子，哼了两句，哼不下去了。江风吹过，灰烬里还有一点余温，竟有一点他身上的烟火气。' }
+  ] });
 
 /** 一场打的三种收场 */
 type Ending = 'win' | 'lose' | 'flee';
@@ -180,33 +190,41 @@ const MSG_BU: Record<Ending | 'stay', StoryCard> = Object.fromEntries(([
 ] as const).map(([k, note]) => [k, { tag: '序章 · 天明', title: '去路', paras: MSG_BU_HEAD,
   choices: [{ label: '记下了', do: [{ type: 'rel', npc: 'kp_wei', value: '素不相识', note }] }] } satisfies StoryCard])) as Record<Ending | 'stay', StoryCard>;
 
-/** 登船：序章了结，题字「第一回 · 扬州」。idx 是这张卡在整段剧情里的序号，「再坐一会儿」回到这里 */
-const finalCard = (idx: number): StoryCard => ({ tag: '序章 · 天明', title: '登船',
-  paras: [
-    '码头上，一条去扬州的客船正要起锚。',
-    '焦黑的船骨还泡在浅水里。江上起了雾，又散了，来来往往的船，没有一条是江伯的。'
-  ],
-  choices: [
-    { label: '登船 · 去扬州', next: -1, do: [
-      { type: 'quest', id: 'prologue', stage: 3 }, { type: 'chapter', value: 1 }, { type: 'shenfen', id: 'youxia' },
-      { type: 'flag', flag: 'kp_xin' },
-      { type: 'move', to: 'hu' }, { type: 'time', set: 9 * 60 + 20 }, { type: 'weather', value: '微雨' },
-      { type: 'heal', hpAtLeast: 0.8, mp: 'full' }, { type: 'cure' },
-      { type: 'rel', npc: 'liu', value: '素不相识' },
-      { type: 'feedReset' },
-      { type: 'feed', tag: '传闻', text: '城南的威远镖局正在招募镖师。' },
-      { type: 'feed', tag: '传闻', text: '黑风寨劫了漕帮三船盐货，漕帮放出悬赏。' },
-      { type: 'feed', tag: '主线', text: '江伯不知所踪，只留下一顶斗笠。去扬州大明寺，找了尘大师。' },
-      { type: 'quest', id: 'main1', stage: 0 }, { type: 'track', id: 'main1' }
-    ] },
-    { label: '在焦船边再坐一会儿', if: { notFlag: 'kp_zuo' }, next: idx, do: [{ type: 'flag', flag: 'kp_zuo' }],
-      result: '你在焦船边坐了很久。你想起他补网时总哼的那支调子，哼了两句，哼不下去了。斗笠压在眉上，江风吹过，竟有一点他身上的烟火气。' }
-  ] });
+/** 登船：序章了结，题字「第一回 · 扬州」 */
+const BOARD: Effect[] = [
+  { type: 'quest', id: 'prologue', stage: 3 }, { type: 'chapter', value: 1 }, { type: 'shenfen', id: 'youxia' },
+  { type: 'flag', flag: 'kp_xin' },
+  { type: 'move', to: 'hu' }, { type: 'time', set: 9 * 60 + 20 }, { type: 'weather', value: '微雨' },
+  { type: 'heal', hpAtLeast: 0.8, mp: 'full' }, { type: 'cure' },
+  { type: 'rel', npc: 'liu', value: '素不相识' },
+  { type: 'feedReset' },
+  { type: 'feed', tag: '传闻', text: '城南的威远镖局正在招募镖师。' },
+  { type: 'feed', tag: '传闻', text: '黑风寨劫了漕帮三船盐货，漕帮放出悬赏。' },
+  { type: 'feed', tag: '主线', text: '江伯不知所踪，只留下一顶斗笠。去扬州大明寺，找了尘大师。' },
+  { type: 'quest', id: 'main1', stage: 0 }, { type: 'track', id: 'main1' }
+];
 
-/** 第一夜过后的事（打完那一场，或没有打）→ 第二夜 → 天亮，合成一整段 */
+/**
+ * 去路 + 登船，一张卡（原来是两张）。天亮传话的人按路各不相同（MSG_*），记的人情在登船时一并记下：
+ * 旧断点停在原来「去路」或「登船」的，都接回这一张，关系和旗标是设成某值，重做一遍不多给东西。
+ * 回头看过雨里那一眼的（kp_hui），登船时手上添一处轻伤：落在 cure 之后，进扬州时还没好（过一日自己好）
+ */
+function landing(msg: StoryCard): StoryCard {
+  const told = msg.choices[0].do ?? [];
+  return { tag: '序章 · 天明', title: '去路',
+    paras: [
+      ...msg.paras,
+      '码头上，一条去扬州的客船正要起锚。焦黑的船骨还泡在浅水里。江上起了雾，又散了，来来往往的船，没有一条是江伯的。'
+    ],
+    choices: [
+      { label: '登船 · 去扬州', next: -1, do: [...told, ...BOARD, { type: 'wound', zone: 'hand', if: { flag: 'kp_hui' } }] }
+    ] };
+}
+
+/** 第一夜过后的事（打完那一场，或没有打）→ 第二夜 → 天亮，合成一整段：第二夜起共五张卡（旧债上门、路上的人、走进雨里、天明、去路） */
 function hou(id: string, after: StoryCard[], reveal: StoryCard, msg: StoryCard): StoryDef {
-  const cards = [...after, ...NIGHT2, reveal, RAIN, ...DAWN, msg];
-  cards.push(finalCard(cards.length));
+  const cards = [...after, NIGHT2, reveal, RAIN];
+  cards.push(dawn(cards.length), landing(msg));
   return { id, endChapter: { small: '第一回', big: '扬州' }, cards };
 }
 

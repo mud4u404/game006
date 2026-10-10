@@ -55,7 +55,12 @@ describe('世事写得对', () => {
       }
       // 不插手能走到的：从起头顺着 next 走
       const auto = new Set<string>();
-      for (let k: string | undefined = d.first; k && d.steps[k] && !auto.has(k); k = d.steps[k].next?.to) auto.add(k);
+      for (let k: string | undefined = d.first; k && d.steps[k] && !auto.has(k); k = d.steps[k].next?.to) {
+        auto.add(k);
+        // 岔路（next.alt）：世界的种子抽中了，也是自己走到的
+        const alt = d.steps[k].next?.alt?.to;
+        if (alt) auto.add(alt);
+      }
       const by = pushed.get(d.id) ?? new Set<string>();
       for (const [k, st] of Object.entries(d.steps)) {
         const ws = `${w} 的「${k}」`;
@@ -79,7 +84,9 @@ describe('世事写得对', () => {
       const endings = Object.keys(d.steps).filter(k => !d.steps[k].next);
       const left = endings.filter(k => auto.has(k));
       const mine = endings.filter(k => !auto.has(k));
-      if (left.length !== 1) errs.push(`${w}：没人管时要有一个结局（现在 ${left.length} 个）`);
+      // 没人管时的结局：一个（有岔路的，是岔路各通往一个，都算）
+      const forks = Object.values(d.steps).filter(x => x.next?.alt).length;
+      if (left.length < 1 || left.length > 1 + forks) errs.push(`${w}：没人管时要有一个结局（现在 ${left.length} 个）`);
       if (mine.length < 2) errs.push(`${w}：插手的结局至少两个（帮这边、帮那边、报官……），现在 ${mine.length} 个`);
       for (const k of endings) if (!read.get(d.id)?.has(k)) errs.push(`${w} 的结局「${k}」：没有任何地方读（地点描写、人物的话、传闻的条件写上 { shi: { id: '${d.id}', at: ['${k}'] } }），玩家看不出世界变了`);
     }
@@ -187,7 +194,8 @@ describe('世事的引擎', () => {
     dating('yaopu', '药铺掌柜');
     expect(knownShi().length).toBe(1);
     expect(dating('yaopu', '药铺掌柜'), '一个人一天只问一回').toContain('改日');
-    for (const who of ['xiaoer', 'shuoshu', 'bs2_hu', 'bj_yazi']) dating(who, who);
+    // 渡口的船夫、管事也问一问：卫衡寻褚七那件事，是渡口一带的人先知道（第四稿）
+    for (const who of ['xiaoer', 'shuoshu', 'bs2_hu', 'bj_yazi', 'chuanfu', 'guanshi']) dating(who, who);
     expect(knownShi().map(r => r.id).sort()).toEqual([...going].sort());
     // 后来又走了一步，见闻簿上还是旧消息，打听一下才知道
     advanceDays(S, 4);
