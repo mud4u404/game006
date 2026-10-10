@@ -110,10 +110,10 @@ const leadText = (l: Lead): string => (l.gig ? `去${l.toName}，找点零工做
 
 /** 卡住、要等的时候，能帮上忙的一件事 */
 function helpOf(wait: boolean, ls: Lead[]): Pick<YaoJin, 'text' | 'to' | 'toName' | 'tab' | 'tag'> {
-  if (!wait && S.chapter > 0 && (S.lilian ?? 0) > 0) return { tag: '帮得上', text: `去闭关，把历练 ${S.lilian} 化成功夫`, tab: 'wugong' };
+  if (!wait && S.chapter > 0 && (S.lilian ?? 0) > 0) return { tag: '不妨', text: '寻个清净处闭关，把这几日见的打的化开', tab: 'wugong' };
   const l = ls[0];
   if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName };
-  return { tag: '帮得上', text: '打开地图，四处走走打听', tab: 'ditu' };
+  return { tag: '不妨', text: '打开地图，四处走走打听', tab: 'ditu' };
 }
 
 export function yaoJin(): YaoJin {
@@ -193,12 +193,12 @@ export function retreatPreview(days: number): RetreatPreview {
   return { days, used: plan.used, gain: top ? [skillName(top[0]), top[1]] : undefined, power0, power1: p1, grow };
 }
 
-/** 闭关按钮上的预估：「闭关一日：寒江剑法熟练 +9，战力约 +1」 */
+/** 闭关按钮上的预估：正文「闭关一日，约有长进」，数字放进小字「（寒江剑法熟练 +9，战力 +1）」 */
 export function retreatLabel(days: number, name: string): string {
   const p = retreatPreview(days);
   if (!p.gain) return `闭关${name}`;
   const d = p.power1 - p.power0;
-  return `闭关${name}：${p.gain[0]}熟练 +${p.gain[1]}，${d > 0 ? `战力约 +${d}` : '战力暂不见涨'}`;
+  return `闭关${name}，${d > 0 ? '约有长进' : '一时不见长进'}<small>（${p.gain[0]}熟练 +${p.gain[1]}${d > 0 ? `，战力 +${d}` : ''}）</small>`;
 }
 
 /** 够闭关一日的历练：提示「可去闭关」 */
@@ -213,21 +213,21 @@ export function strongPaths(): StrongPath[] {
   // 闭关
   const block = retreatBlock(S);
   const zhu = zhuOf(S);
-  const lodge = zhu === 'inn' ? `住店一日 ${LODGING.inn} 文` : zhu === 'home' ? '回师门住，不花钱' : '露宿不花钱，打坐参悟打八折';
+  const lodge = zhu === 'inn' ? `住店一日 ${LODGING.inn} 文` : zhu === 'home' ? '回师门住，不花钱' : '露宿不费钱，只是风露侵人，参悟要慢上几分';
   out.push({
-    name: '闭关', say: block ?? `${retreatLabel(1, '一日')}。历练 ${S.lilian ?? 0}，一日最多消化 ${RETREAT[1].cap}。`,
+    name: '闭关', say: block ?? `寻个清净处闭关，把这几日见的打的化开。<small>历练 ${S.lilian ?? 0}，一日最多化 ${RETREAT[1].cap}</small>`,
     cost: `搭上一日光阴；${lodge}`, go: block ? undefined : { act: 'retreat:1', label: '闭关一日' }
   });
-  // 学艺：拿历练换新武功
+  // 学艺：把历练化成新武功
   out.push({
-    name: '学艺', say: '拜师、请教、读秘籍，拿历练换一门新武功；有的要先有前置，有的要银两、贡献。',
+    name: '学艺', say: '向人请教、拜师、读秘籍，把平日的历练化成新招；有的要先有根基，有的要银两，有的要师门点头。',
     cost: `历练 ${S.lilian ?? 0} 可用，学成了历练要扣`
   });
   // 切磋：此处有、或最近的有人可切磋的
   const sp = sparNear();
   if (sp) out.push({
-    name: '切磋', say: `${sp.here ? `此处的${sp.name}` : `${sp.at}的${sp.name}`}肯指点。点到为止，打赢涨熟练，打输不伤命。`,
-    cost: sp.here ? '一场切磋的工夫；熟练每日有额度' : `路上约${sp.min}分钟；熟练每日有额度`,
+    name: '切磋', say: `${sp.here ? `此处的${sp.name}` : `${sp.at}的${sp.name}`}肯指点几招。点到为止，输赢都不伤和气。`,
+    cost: sp.here ? '一场切磋的工夫；赢了熟练有长，每日有额度' : `路上约${sp.min}分钟；赢了熟练有长，每日有额度`,
     go: sp.here ? undefined : { act: `travel:${sp.to}`, label: `去${sp.at}` }
   });
   // 门派练功
@@ -235,7 +235,7 @@ export function strongPaths(): StrongPath[] {
   if (S.sect && home) {
     const nx = sectNav();
     out.push({
-      name: '门派练功', say: `回${S.sect.school}：${nx?.who ? `${nx.who.name}管升${nx.next ?? ''}的事` : '向师长请益'}，替师门出力攒贡献，换本门的武功。`,
+      name: '门派练功', say: `回${S.sect.school}：${nx?.who ? `${nx.who.name}管升${nx.next ?? ''}的事` : '向师长请益'}，替师门办差，日子久了，师长自会传你本门武功。`,
       cost: '替师门办差，路上与办差的工夫',
       go: home.to === S.loc ? undefined : { act: `travel:${home.to}`, label: `回${home.name}` }
     });

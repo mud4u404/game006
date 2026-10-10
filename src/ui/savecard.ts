@@ -5,7 +5,7 @@
  */
 import { tupoClear } from '../engine/tupo';
 import { S, setState } from '../core/state';
-import { exportCode, importCode, listBackups, rawBackup, replaceSave, summary } from '../core/save';
+import { exportCode, importCodeAny, listBackups, rawBackup, replaceSave, summary } from '../core/save';
 import type { GameState } from '../core/state';
 import { $ } from '../core/util';
 import { closeSheet, openSheet, registerHandlers, render, toast } from './shell';
@@ -39,15 +39,17 @@ registerHandlers({
   },
   saveImport: () => {
     openSheet(`${head('存档码', '导入存档')}
-      <p class="muted">把存档码整段粘贴到下面，以 JHYY: 开头。</p>
+      <p class="muted">把存档码整段粘贴到下面，以 JHYY: 或 z1: 开头。</p>
       <textarea class="codebox" id="saveCodeIn" placeholder="JHYY:……"></textarea>
       <p class="muted" id="saveImportErr" hidden></p>
       <div class="btnrow"><button class="btn ghost" data-act="sheetClose">算了</button><button class="btn" data-act="saveImportGo">读取</button></div>`);
   },
   saveImportGo: () => {
     const el = $<HTMLTextAreaElement>('#saveCodeIn'), err = $('#saveImportErr');
-    try { confirmReplace(importCode(el?.value ?? ''), '存档码里是'); }
-    catch (e) { if (err) { err.hidden = false; err.textContent = (e as Error).message; } }
+    importCodeAny(el?.value ?? '').then(
+      st => confirmReplace(st, '存档码里是'),
+      e => { if (err) { err.hidden = false; err.textContent = (e as Error).message; } }
+    );
   },
   saveBackups: () => {
     const list = listBackups();
