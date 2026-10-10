@@ -18,7 +18,8 @@ export function allowedSection(body) {
   return (end < 0 ? rest : rest.slice(0, end)).join('\n');
 }
 
-const FULL = /(?<![A-Za-z0-9_./-])(?:src\/content\/packs|docs)\/[A-Za-z0-9_.-]+\.(?:ts|md)/g;
+// docs 下可以有子目录（如 docs/zhishiku/x.md，调研笔记）；内容包不分子目录
+const FULL = /(?<![A-Za-z0-9_./-])(?:src\/content\/packs\/|docs\/(?:[A-Za-z0-9_-]+\/)*)[A-Za-z0-9_.-]+\.(?:ts|md)/g;
 // 裸名：前面不是路径字符，例如 `zhaoshi.ts`；写成路径的（src/engine/x.ts）不算裸名
 const BARE = /(?<![A-Za-z0-9_./-])[A-Za-z0-9_-][A-Za-z0-9_.-]*\.(?:ts|md)(?![A-Za-z0-9_])/g;
 

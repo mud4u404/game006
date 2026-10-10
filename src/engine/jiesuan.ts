@@ -9,7 +9,7 @@ import type { AfterOpt, Effect, FightResult, FoeDef, PrepDef } from '../content/
 import type { Duel, DuelRes, Wounds, Zone } from './duel';
 import type { TellDom } from './duel';
 import { newOutcome, run, test, type Outcome } from './dsl';
-import { MP_FLOOR } from './combat';
+import { MP_FLOOR } from './beidong';
 import { fightLilian } from './lilian';
 import { tierName } from './person';
 import { ZONES, capWounds, isHeavy, markLight, woundCap } from './shang';

@@ -504,7 +504,7 @@ const STORIES: StoryDef[] = [
         '卫衡站在码头上，没有动。江伯也没有动。他们都在看你。'
       ],
       choices: [
-        { label: '下水救他', sub: '体魄 +1', do: [{ type: 'attr', key: '体魄', delta: 1 }, { type: 'flag', flag: 'kp_jiu' }, { type: 'rel', npc: 'kp_chu', value: '相谈甚欢', note: '水里捞上来的命' }, { type: 'story', id: 'kp_bu_hou' }],
+        { label: '下水救他', sub: '体魄 +1', do: [{ type: 'attr', key: '体魄', delta: 1 }, { type: 'flag', flag: 'kp_jiu' }, { type: 'flag', flag: 'kp_qiantan' }, { type: 'rel', npc: 'kp_chu', value: '相谈甚欢', note: '水里捞上来的命' }, { type: 'story', id: 'kp_bu_hou' }],
           result: '你把竹篙一抛，跃进江里。江水冷得像刀。你记得这一带江心有一道浅滩，脚下一探，果然踩实了。你抓住他的衣领，一寸一寸把他拖上滩。他吐出一口江水，趴在泥里看了你很久，什么话也没说，爬起来钻进了芦苇。' },
         { label: '沿着江堤追他', next: 2 },
         { label: '留在船上，陪着江伯', do: [{ type: 'story', id: 'kp_bu_hou' }],

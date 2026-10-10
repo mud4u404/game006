@@ -8,7 +8,7 @@
  * - 走到写了 news 的一步，生一条传闻（engine/chuanwen.ts）：在场的、牵涉的、那一带的枢纽先知道，以后人传人。
  *   打听、盘问、说书人的打赏都在 engine/chuanwen.ts，这里只转一手旧名字。
  */
-import { S, pushFeed, type ShiState } from '../core/state';
+import { S, markSeen, pushFeed, type ShiState } from '../core/state';
 import { absMin } from '../core/time';
 import { SHI, room, shiById } from '../content';
 import type { ShiDef, ShiStep } from '../content/types';
@@ -33,7 +33,7 @@ export const isEnding = (d: ShiDef, step: string): boolean => !d.steps[step]?.ne
 export function learnShi(id: string): boolean {
   const st = shiOf(id);
   if (!st || st.seen === st.at) return false;
-  st.seen = st.at;
+  markSeen(st, st.at);
   return true;
 }
 
@@ -45,6 +45,7 @@ function goStep(d: ShiDef, to: string, at: number, heard: HeardItem[], hand = fa
   const prev = shiOf(d.id);
   const st: ShiState = { at: to, since: at };
   if (prev?.seen !== undefined) st.seen = prev.seen;
+  if (prev?.prev !== undefined) st.prev = prev.prev;
   if (prev?.done) st.done = prev.done;
   if (prev?.hand) st.hand = true;
   (S.shi ||= {})[d.id] = st;
@@ -54,10 +55,10 @@ function goStep(d: ShiDef, to: string, at: number, heard: HeardItem[], hand = fa
   const here = room(S.loc);
   if (step.news && here.region === d.region) {
     heard.push({ text: step.news, ev: d.id, ph: to });
-    st.seen = to;
+    markSeen(st, to);
     if (rid && !(S.heard ||= []).includes(rid)) S.heard.push(rid);
   }
-  if (step.where === S.loc) st.seen = to;
+  if (step.where === S.loc) markSeen(st, to);
 }
 
 /**
@@ -88,23 +89,58 @@ export function tickShiFull(): HeardItem[] {
       if (room(S.loc).region !== d.region) { st.since = now; continue; }
       const step = d.steps[st.at];
       heard.push({ text: step.news ?? step.now, ev: d.id, ph: st.at });
-      st.seen = st.at;
+      markSeen(st, st.at);
       st.since = now;
     }
     for (let guard = 0; guard < 50; guard++) {
       st = shiOf(d.id)!;
       const nx = d.steps[st.at]?.next;
-      if (!nx || now - st.since < nx.days * DAY) break;
-      // 到了日子：有岔路的，世界的种子抽一回（同一个种子，抽出来的一样）
-      const to = nx.alt && worldRng() < nx.alt.p ? nx.alt.to : nx.to;
-      let at = st.since + Math.round(nx.days * DAY);
+      if (!nx) break;
+      const due = dueAt(st.since, nx);
+      if (now < due) break;
+      const to = pickNext(d, st, nx, now - due);
+      let at = due;
       // 预告的窗口：补了半个江湖日以上才走到这一步（下线静修、一口气歇了几日），日子从玩家回来这一刻起算（docs/sheji-001-003.md 第 003 项）
-      if (d.steps[to].window && now - at >= DAY / 2) at = now;
+      // 或者补过了头：预告和结局挤进同一次 tick，预告也只剩一瞬，同样从玩家回来这一刻起算
+      const nxTo = d.steps[to].next;
+      if (d.steps[to].window && (now - at >= DAY / 2 || (nxTo && now >= dueAt(at, nxTo)))) at = now;
       goStep(d, to, at, heard);
     }
   }
   heard.forEach(n => pushFeed('传闻', n.text));
   return heard;
+}
+
+/**
+ * 这一步到哪一刻走：从 since 起过 days 日；写了 clock 的，再往后取到第一个这个钟点
+ * （absMin 的一天从零点起，所以分钟数对一天取余就是钟点）
+ */
+export function dueAt(since: number, nx: NonNullable<ShiStep['next']>): number {
+  const t = since + Math.round(nx.days * DAY);
+  if (nx.clock === undefined) return t;
+  return t + ((nx.clock * 60 - (t % DAY) + DAY) % DAY);
+}
+
+/** 这件世事离下一步还有几个钟头（还没起头、这一步没有下一步的，没有答案） */
+export function shiLeftHours(id: string, s = S): number | undefined {
+  const st = s.shi?.[id];
+  const nx = st && shiById(id)?.steps[st.at]?.next;
+  return st && nx ? (dueAt(st.since, nx) - absMin(s)) / 60 : undefined;
+}
+
+/** 亲眼看着：到了日子，玩家还在这一步的 where 那里，隔着不过三个钟头（歇在原地也算） */
+const LOOK_MIN = 180;
+
+/**
+ * 到了日子往哪一步走：玩家事先安排过的（route）头一个条件成立的；没有，世界的种子抽一回岔路（alt）；
+ * 都没有走 to。然后看玩家在不在场：在的，换成 here 里写的那一步
+ */
+function pickNext(d: ShiDef, st: ShiState, nx: NonNullable<ShiStep['next']>, late: number): string {
+  const via = nx.route?.find(r => test(r.if));
+  let to = via ? via.to : nx.alt && worldRng() < nx.alt.p ? nx.alt.to : nx.to;
+  const where = d.steps[st.at].where;
+  if (nx.here?.[to] && where && S.loc === where && late <= LOOK_MIN) to = nx.here[to];
+  return to;
 }
 
 /** 玩家插手：把事情推到 to 这一步（还没起头的也从这一步起），玩家自然知道 */
@@ -113,7 +149,7 @@ export function moveShi(id: string, to: string): void {
   if (!d?.steps[to]) return;
   const heard: HeardItem[] = [];
   goStep(d, to, absMin(S), heard, true);
-  shiOf(id)!.seen = to;
+  markSeen(shiOf(id)!, to);
   shiOf(id)!.hand = true;
   heard.forEach(n => pushFeed('传闻', n.text));
 }
@@ -122,7 +158,7 @@ export function moveShi(id: string, to: string): void {
 export function seeShi(loc: string): void {
   for (const d of SHI) {
     const st = shiOf(d.id);
-    if (st && d.steps[st.at]?.where === loc) st.seen = st.at;
+    if (st && d.steps[st.at]?.where === loc) markSeen(st, st.at);
   }
 }
 
@@ -136,6 +172,8 @@ export interface ShiRow {
   missed: boolean;
   /** 隔几日还会再来（ShiDef.again） */
   again?: number;
+  /** 玩家上一回知道的那一步写的什么（和眼下知道的不是同一步才有）：见闻簿留前一步的一行 */
+  before?: string;
   /** 第几回（头一回为 1） */
   round: number;
 }
@@ -144,6 +182,7 @@ export function knownShi(): ShiRow[] {
     const st = shiOf(d.id);
     if (!st || st.seen === undefined || !d.steps[st.seen]) return [];
     const ended = isEnding(d, st.seen);
-    return [{ id: d.id, name: d.name, region: d.region, now: d.steps[st.seen].now, stale: st.seen !== st.at, ended, missed: ended && !st.hand, again: d.again, round: (st.done ?? 0) + 1 }];
+    const before = st.prev !== undefined && st.prev !== st.seen ? d.steps[st.prev]?.now : undefined;
+    return [{ id: d.id, name: d.name, region: d.region, now: d.steps[st.seen].now, ...(before ? { before } : {}), stale: st.seen !== st.at, ended, missed: ended && !st.hand, again: d.again, round: (st.done ?? 0) + 1 }];
   });
 }

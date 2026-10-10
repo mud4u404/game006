@@ -75,8 +75,12 @@ export interface Cond {
   pastSect?: { school: string; how?: LeaveHow };
   /** 本门的门派贡献不少于（替师门办差攒下的，见 docs/menpai.md 第七节第八条）。升地位的考校用它 */
   gongxian?: number;
-  /** 世事（engine/shishi.ts）眼下在这几步之一（at）；不在这几步（not，还没起头也算不在） */
-  shi?: { id: string; at?: string[]; not?: string[] };
+  /**
+   * 世事（engine/shishi.ts）眼下在这几步之一（at）；不在这几步（not，还没起头也算不在）；
+   * age：走到这一步已经过了几个钟头（人物的话随日子换：刚了结的、过了几日的，各说各的）；
+   * left：离这一步走向下一步还有几个钟头（对面那一夜只在结算前的两三个钟头里算「今夜」；这一步没有下一步的，条件不成立）
+   */
+  shi?: { id: string; at?: string[]; not?: string[]; age?: Range; left?: Range };
   /** 世界状态（engine/shijie.ts，docs/huo-shijie.md 3.2）：码头归谁、一处的治安和物价、一股势力的实力和对你的账、一个人眼下的处境 */
   w?: WorldCond;
   any?: Cond[];
@@ -112,7 +116,9 @@ export type WorldEffect =
   /** 一股势力对你的账：恩为正、怨为负 */
   | { type: 'w'; op: 'you'; fac: string; delta: number }
   /** 地方的痕迹：写进地点描写底下的一句。k 是种类，同一处同一种只留最新的一条；每处最多两行 */
-  | { type: 'w'; op: 'mark'; place: string; k: string; text: string; days: number };
+  | { type: 'w'; op: 'mark'; place: string; k: string; text: string; days: number; hour?: { from: number; to: number };
+      /** 只在这件世事离下一步不足几个钟头时看得见（engine/shishi.ts 的 shiLeftHours；和 hour 同时写，两个都满足才显示） */
+      left?: { id: string; below: number } };
 
 /** 效果：按顺序执行 */
 export type Effect =
@@ -337,8 +343,8 @@ export interface NpcLife {
    */
   voice: { lead: string[]; idle: Branch[] };
   /**
-   * 以下四项见 docs/sheji-021-026.md（021 诉求与底线、026 所知与来处）。引擎暂不读：第一版只由内容按旗标、关系分支，
-   * 在交谈里把相应的话写出来，保证玩家碰得到；日后引擎接上（wantOf、refuseOf、打听），内容不必重写。
+   * 以下各项见 docs/sheji-021-026.md。want、refuse、has 接入人物规则与行动协议；
+   * knows 的打听入口留给 026，现有交谈仍按旗标、关系分支说话。
    * 想要的：按处境挑第一条成立的（和分支一样，最后一条不带条件）
    */
   want?: { k: string; text: string; if?: Cond }[];
@@ -346,6 +352,8 @@ export interface NpcLife {
   fear?: string;
   /** 底线：什么情况下他不肯做某件事，原因原样给玩家看 */
   refuse?: { verb: Verb | '*'; if?: Cond; why: string }[];
+  /** 开局持有：silver 是银钱，其他键是物品 id；配置后按实际持有结算。 */
+  has?: Record<string, number>;
   /** 本来知道的（不靠听传闻）：secret 的，关系到相谈甚欢以上才说 */
   knows?: { k: string; text: string; if?: Cond; secret?: true }[];
 }
@@ -820,9 +828,13 @@ export interface ShiStep {
   /**
    * 没人插手时，过几天自己走到哪一步（半天写 0.5）；不写的是结局。
    * alt：到了日子，世界的种子抽一回，p（零到一）的几率改走 alt 这一步而不走 to（同一个种子，抽出来的一样）。
-   * 两个去处都算「自己走到」的结局
+   * 两个去处都算「自己走到」的结局。
+   * clock：日子到了以后，再往后取到第一个这个钟点才走（对面那一夜写二十三，当夜就结算，不拖到次日上午）。
+   * route：到了日子，玩家事先安排过的（条件成立的头一条）改走那一步，不再抽岔路。
+   * here：到了日子，玩家就在这一步的 where 那里（亲眼看着），去处换成这里写的那一步（键是原本要去的）；
+   * 玩家不在，才走原本的。
    */
-  next?: { days: number; to: string; alt?: { to: string; p: number } };
+  next?: { days: number; to: string; alt?: { to: string; p: number }; clock?: number; route?: { if: Cond; to: string }[]; here?: Record<string, string> };
   /**
    * 预告的窗口（docs/sheji-001-003.md 第 003 项「离线」）：走到这一步时，若已经过了半个江湖日才补上来
    * （下线静修、一口气歇了好几日），这一步从玩家回来那一刻起算，next 的日子留给玩家来得及赶到
