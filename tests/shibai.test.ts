@@ -232,7 +232,7 @@ describe('输了写明为什么、下回怎么补', () => {
       expect(n.kind).toBe('tier');
       expect(n.why).toMatch(/高出你(两档|一档半|两档半)/);
       expect(n.mend).toMatch(/练到第.+重再来领教/);
-      expect(n.mend).toContain('换一门克他刚路的功夫');
+      expect(n.mend).toContain('换一门柔路的功夫克他');
     }
   });
 
