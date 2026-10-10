@@ -1,0 +1,26 @@
+name: fankui-label
+
+# 巫师模式的一键反馈：链接里带了 labels=反馈，但手机上提交时 GitHub 会丢掉这个参数。
+# 标题以「【反馈】」开头、还没有「反馈」标签的 Issue，自动补上。
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  label:
+    if: startsWith(github.event.issue.title, '【反馈】')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      N: ${{ github.event.issue.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      - run: |
+          gh label create 反馈 --repo "$REPO" --color d93f0b 2>/dev/null || true
+          if gh issue view "$N" --repo "$REPO" --json labels --jq '.labels[].name' | grep -qx '反馈'; then
+            echo "已有反馈标签"
+          else
+            gh issue edit "$N" --repo "$REPO" --add-label 反馈
+          fi
