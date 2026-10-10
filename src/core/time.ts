@@ -60,6 +60,14 @@ export function advanceMin(c: Clock, m: number): void {
   while (c.min >= 1440) { c.min -= 1440; advanceDays(c, 1); }
 }
 
+/** 干一件活耗时的说法：60 分钟是半个时辰，120 分钟一个时辰，180 分钟一个半时辰；按半个时辰一档取整 */
+export function spanLabel(m: number): string {
+  const h = Math.max(1, Math.round(m / 60)); // 以半个时辰（六十分钟）为一档
+  const sc = Math.floor(h / 2);
+  if (h % 2) return sc ? `${sc === 2 ? '两' : cn(sc)}个半时辰` : '半个时辰';
+  return `${sc === 2 ? '两' : cn(sc)}个时辰`;
+}
+
 /** 赶路耗时的说法：10 分钟以内「片刻」，否则按刻计 */
 export function minLabel(m: number): string {
   if (m <= 10) return '片刻';

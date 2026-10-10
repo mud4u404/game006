@@ -488,19 +488,20 @@ describe('话有来处：传播的规律', () => {
   it('走样只升不降：同一人同一条的档不变；新学会的档不低于讲的人的档', () => {
     S.flags.boss = true;
     tickShi();
-    let prev: Record<string, Map<string, number>> = {};
+    let prev: Record<string, Map<string, [number, number]>> = {};
     let learned = 0;
     for (let i = 0; i < 25; i++) {
       advanceDays(S, 1); tickWorld(); tickShi();
-      const cur: Record<string, Map<string, number>> = {};
-      for (const [id, p] of Object.entries(S.w.ppl)) cur[id] = new Map((p.know ?? []).map(k => [k[0], k[1]]));
+      const cur: Record<string, Map<string, [number, number]>> = {};
+      for (const [id, p] of Object.entries(S.w.ppl)) cur[id] = new Map((p.know ?? []).map(k => [k[0], [k[1], k[2]]]));
       for (const [id, p] of Object.entries(S.w.ppl)) {
         for (const k of p.know ?? []) {
           const before = prev[id]?.get(k[0]);
-          if (before !== undefined) expect(k[1], `${id} 的 ${k[0]}`).toBe(before);
+          // 同一日期记下的才是「还记着的那一条」；忘了以后隔日又听来的（日期换了），算新学会的，不比旧档
+          if (before !== undefined && before[1] === k[2]) expect(k[1], `${id} 的 ${k[0]}`).toBe(before[0]);
           else if (k[3]) {
             learned++;
-            const sp = cur[k[3]]?.get(k[0]) ?? prev[k[3]]?.get(k[0]);
+            const sp = (cur[k[3]]?.get(k[0]) ?? prev[k[3]]?.get(k[0]))?.[0];
             expect(sp, `${id} 从 ${k[3]} 那里听说 ${k[0]}，讲的人却不知道`).not.toBeUndefined();
             expect(k[1]).toBeGreaterThanOrEqual(sp!);
           }

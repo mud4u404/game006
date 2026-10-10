@@ -88,6 +88,8 @@ export interface GameState {
   /** 手上的差事：哪一件、约期（江湖日）；办完的差事上回是哪一日办完的 */
   job: { id: string; due: number } | null;
   jobLog: Record<string, number>;
+  /** 一个江湖日只做一回的营生（零工、讨赏钱）：做的是哪一件 → 哪一日做的（dayNo）。效果 today 写、条件 doneToday 读；过了日子的自动清掉 */
+  dayLog?: Record<string, number>;
   /** 人情备注：为什么记得这个人，例如「湖畔切磋，不打不相识」 */
   relNote?: Record<string, string>;
   /** 历练：江湖上攒下的见识与实战，闭关时化为武功进境（engine/lilian.ts） */
