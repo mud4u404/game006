@@ -32,7 +32,7 @@
 ### 1.3 牵连与反应
 
 - `RELATIONX = 某派 ±百分比`：本派变动时，其他派系按比例联动。**敌对是互为镜像的两行**：甲派 +1%，乙派 −1%。也有只联动一部分的松散关系。
-- `REACTIONX = 档名；谁；用什么；参数`：例如「对 EVIL 档的来客，凡掩码匹配的 NPC 挂上 Aggressive 行为，台词『Die Evil Scum!』」。**NPC 对不同档位的人换一副脸，是查表，不是每个 NPC 写死**。
+- `REACTIONX = 档名；谁；用什么；参数`：例如「对 EVIL 档的来客，凡掩码匹配的 NPC 挂上 Aggressive 行为，动手时喊一句骂人的话」。**NPC 对不同档位的人换一副脸，是查表，不是每个 NPC 写死**。
 
 ## 二、商店与物价（CoffeeShops.java、StdShopKeeper.java）
 
