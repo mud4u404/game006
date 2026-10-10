@@ -5,7 +5,7 @@ import { npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, ve
 import { IC } from '../icons';
 import { FEED_TONE } from '../widgets';
 import { questNav, yueNow } from '../../engine/daohang';
-import { arrivalHot, jueseKa, visitsOf, yaoJin, type YaoJin } from '../../engine/jiemian';
+import { arrivalHot, sparWhy, jueseKa, visitsOf, yaoJin, type YaoJin } from '../../engine/jiemian';
 import { kanren } from '../../engine/zhaoshi';
 import { recordDiao } from '../../engine/zhanli';
 import { eyesOn } from '../../engine/yan';
@@ -160,11 +160,13 @@ function detail(id: string, hot?: YaoJin['hot']): string {
 const verbBtn = (id: string, hotVerb?: Verb) => (v: Verb): string => {
   const price = verbPrice(id, v);
   const p = verbPlan(id, v);
-  const poor = !p.ok;
+  // 切磋：和推荐同一套判定（sparWilling）；不肯的置灰，写缘故，不让人点了才知道「今天没空陪你玩」
+  const spar = v === '切磋' && p.ok ? sparWhy(id) : null;
+  const poor = !p.ok || !!spar;
   // 能挣钱的（揭榜的赏钱、零工的工钱）：报酬和耗时写在底下，点之前就知道
   const gain = price === null ? verbGain(id, v) : null;
   const specificWhy = poor && p.why && (p.why === refuseOf(id, v) || p.why === '他手里没有');
-  const sub = specificWhy ? `${p.why}${price !== null ? ` · ${cn(price)}文` : ''}`
+  const sub = spar ? spar : specificWhy ? `${p.why}${price !== null ? ` · ${cn(price)}文` : ''}`
     : price !== null ? `${poor && S.silver < price ? '囊中不足，要' : ''}${cn(price)}文` : poor ? p.why : gain;
   return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}${hotVerb === v ? ' hot' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;
 };

@@ -85,6 +85,8 @@ interface Fight {
   hurt?: Partial<Wounds>;
   /** 气血见底提醒过了 */
   lowWarned?: boolean;
+  /** 内力提醒说过几级：1 渐少，2 将尽 */
+  mpWarned?: 1 | 2;
   /** 「会使虚招」提醒过了 */
   feintWarned?: boolean;
   /** 开打前掂的斤两（赢面）：打赢了按它给落的伤封顶（engine/shang.ts） */
@@ -803,7 +805,8 @@ function updMom(): void {
   // （engine/duel.ts 的构造），不入流打三流也显示「势均力敌」，十二合败了才知道。
   // 开打以后还看实时的势，那是这一合的攻守，不是开打前的估量。
   const 开打前 = C!.d.round === 0 && C!.odds !== undefined;
-  const m = Math.round(开打前 ? C!.odds! * 100 : C!.d.mom);
+  // 开打以后把内力算进去：内力见底，应对只能硬吃，势条往对手那边偏（最多让出二成）
+  const m = Math.max(5, Math.round(开打前 ? C!.odds! * 100 : C!.d.mom - 20 * C!.d.mpShort()));
   $('#mMe')!.textContent = `你 ${m}%`;
   $('#mOp')!.textContent = `${100 - m}% 对手`;
   $('#mSt')!.textContent = '攻守之势 · ' + (m >= 75 ? '你压制对手' : m >= 56 ? '你占上风' : m > 44 ? '势均力敌' : m > 25 ? '对手占优' : '你被压制');
@@ -821,6 +824,12 @@ function updPlayer(): void {
   if (low && !c.lowWarned && !d.over) {
     c.lowWarned = true;
     bubble('sys', '你气血见底了。攻守之势再好，挨上一记重的也撑不住——该吃药，或者走。');
+  }
+  // 内力提早提醒：护体、反击都耗内力，见底了只能硬吃，切磋也一样判负
+  $('#pBars')!.classList.toggle('mplow', d.mpThin() && !d.over);
+  if (!d.over && d.round > 0) {
+    if (d.mpOut() && c.mpWarned !== 2) { c.mpWarned = 2; bubble('sys', '内力将尽，再耗下去要输。护体、反击都用不出来了，只能硬吃——先调息，少出手，等内力回上来。'); }
+    else if (d.mpThin() && !d.mpOut() && !c.mpWarned) { c.mpWarned = 1; bubble('sys', '内力渐少了。硬接、抢攻都耗内力，再这样耗下去要输——该调息了，少用耗内力的招。'); }
   }
 }
 
