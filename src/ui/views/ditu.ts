@@ -88,6 +88,25 @@ export function viewDitu(): string {
 }
 
 
+/**
+ * 点「去」之前，路上的账写在按钮旁边：约几刻 · 费用 X 文；船钱比身上的银两多，就把原因写明
+ * （见闻簿、眼下要紧、有约、也可以、地图卡共用这一句）。就在此处、去不了返回空
+ */
+export function tripNote(to: string): string {
+  if (!to || to === S.loc) return '';
+  const c = tripCost(to);
+  if (!c) return '';
+  const base = `约${minLabel(c.min)}` + (c.fee ? ` · 费用 ${cn(c.fee)} 文` : '');
+  return c.fee > S.silver ? `${base}（身上只有 ${cn(S.silver)} 文，不够）` : base;
+}
+
+/** 这趟路要先过一张卡说清船钱：有船钱要付（点「去」之前必须看到钱数） */
+export const tripNeedsAsk = (to: string): boolean => {
+  if (!to || to === S.loc) return false;
+  const c = tripCost(to);
+  return !!c && c.fee > 0;
+};
+
 /** 地图上点一处弹出的说明：有什么人、什么事、要走多久、花多少钱；再放一个「去」，点了直接赶路（explore.ts 的 travelAsk） */
 export function mapSheet(id: string): string {
   const b = roomBrief(id);
@@ -104,6 +123,6 @@ export function mapSheet(id: string): string {
   return `<div class="r-h">${tag}<h2>${b.name}</h2></div>
     <p class="muted">${b.area}</p>
     <div class="news mbrief">${rows}</div>
-    ${short ? '<p class="muted">身上的钱不够，剩下的要替船家、码头干活抵，路上多耗一个时辰。</p>' : ''}${warn ? `<p class="muted chufa">${warn}</p>` : ''}
+    ${short && c ? `<p class="muted tripshort">船钱要 ${cn(c.fee)} 文，你只有 ${cn(S.silver)} 文，到了怕回不来；真去的话，钱不够的要替船家、码头干活抵，路上多耗一个时辰。</p>` : ''}${warn ? `<p class="muted chufa">${warn}</p>` : ''}
     <div class="acts">${c ? `<button class="btn" data-act="travelGo:${id}">去</button>` : ''}<button class="btn ghost" data-act="sheetClose">${c ? '再看看' : '知道了'}</button></div>`;
 }

@@ -20,7 +20,7 @@ import { TRAVEL_BUSY, afterOutcome, closeSheet, hooks, missedToast, openSheet, r
 import { openQuestbook, trackQuest } from './views/questbook';
 import { kpBiguanTip } from '../engine/kaipian';
 import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
-import { mapSheet, setMapRegion } from './views/ditu';
+import { mapSheet, setMapRegion, tripNeedsAsk } from './views/ditu';
 import { powerNow, yaoJin } from '../engine/jiemian';
 import { showTitle } from './story';
 import { eyeLine } from './views/jianghu';
@@ -30,6 +30,17 @@ import { takeTopic } from '../engine/yingmian';
 let traveling = false;
 /** 赶路途中点了「停下」：走完这一段就停 */
 let stopAsked = false;
+/** 先过一张卡再走的那趟路，到了要做的事（眼下要紧：到了把人和动作高亮） */
+let pendingArrive: (() => void) | undefined;
+
+/**
+ * 所有「去」的入口共用：要付船钱的路，先弹出说明（约几刻、船钱多少、钱不够的怕回不来），点了「去」才走；
+ * 不花钱的路直接走。travelGo 接着走
+ */
+function goOrAsk(to: string, onArrive?: () => void): void {
+  if (tripNeedsAsk(to)) { pendingArrive = onArrive; openSheet(mapSheet(to), true); return; }
+  travelTo(to, onArrive);
+}
 
 /** 过了约期还在线的：赶路、做事以后就算失约，不必等到下一次闭关（机器玩家摸底时发现） */
 function lateYue(): void {
@@ -200,9 +211,10 @@ registerHandlers({
   travelAsk: v => {
     if (!v) return;
     // 地图上点一处：先看那里有什么人、什么事、要走多久、花多少钱，再点「去」直接赶路（ui/views/ditu.ts 的 mapSheet）
+    pendingArrive = undefined;
     openSheet(mapSheet(v), true);
   },
-  travelGo: v => { closeSheet(); travelTo(v); },
+  travelGo: v => { closeSheet(); const f = pendingArrive; pendingArrive = undefined; travelTo(v, f); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
   sel: v => { S.sel = v; S.reply = null; render(); },
   do: v => doAct(v as Verb),
@@ -213,12 +225,12 @@ registerHandlers({
     S.sel = t.id; S.reply = null;
     doAct(t.verb);
   },
-  travel: v => travelTo(v),
+  travel: v => goOrAsk(v),
   travelStop: () => { if (traveling && !stopAsked) { stopAsked = true; toast('走完这一段就停下'); } },
   quest: () => {
     // 卡住的也照去：差的那一步多半就在那儿办（缘故卡上已经写着）。到了地方，把要找的人选中、动作高亮（engine/jiemian.ts），不再只弹一句「就在此处」
     const q = S.track ? questNav(S.track) : null;
-    if (q?.to && q.to !== S.loc) travelTo(q.to, focusQuest);
+    if (q?.to && q.to !== S.loc) goOrAsk(q.to, focusQuest);
     else if (q?.to) focusQuest();
     else toast(q && q.state !== '能做' ? q.why : '眼下没有要去的地方');
   },
@@ -243,10 +255,10 @@ registerHandlers({
     if (!to) { toast('眼下没有要去的地方'); return; }
     if (to === S.loc) { toast('就在此处'); return; }
     closeSheet();
-    travelTo(to);
+    goOrAsk(to);
   },
   // 见闻簿里差事的「去」：赶到交差的地方
-  jgo: v => { if (!v || v === S.loc) return; closeSheet(); travelTo(v); },
+  jgo: v => { if (!v || v === S.loc) return; closeSheet(); goOrAsk(v); },
   retreat: v => retreat(Number(v)),
   // 歇过半夜会误了今日的约：先问一句，照样能歇
   xiejiaoAsk: v => {

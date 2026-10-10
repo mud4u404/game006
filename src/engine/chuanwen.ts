@@ -508,6 +508,32 @@ const REACT: { if: Cond; text: string; reg?: string }[] = [
   { if: { shenfen: 'biaoshi' }, text: '吃镖局这碗饭的，路上要小心。有什么消息，我替你留意着。' }
 ];
 
+/**
+ * 没有新料可说时的一个动作，按身份分几种（10-10 试玩：佩刀汉子和青衫书生第二回打听，是同一句关心话）。
+ * 一句都不替他编：他只是不再多说。同一天里别人说过的那个动作，下一个人换一个
+ */
+export const SHRUG: Record<Gang, string[]> = {
+  sengdao: ['合十垂目，不再多说。', '低头拨着念珠，没有再开口。', '摇摇头，只念了一声佛号。'],
+  guanchai: ['摆摆手，示意没什么可说的了。', '把簿子一合，不再多说。', '板着脸摇了摇头。'],
+  shanghu: ['摇摇头，低头拨起了算盘。', '摊摊手，没什么可说的了。', '笑了笑，转身去招呼别的客人。'],
+  jianghu: ['冷哼一声，不再多说。', '摇摇头，把脸别向一边。', '耸了耸肩，没有再开口。'],
+  shijing: ['摇摇头，不再多说。', '摆摆手，没什么可说的了。', '只笑了笑，没有再开口。']
+};
+const SHRUGGED = '动作:';
+function shrugFor(npcId: string): string {
+  const pool = SHRUG[gangOf(npcId)], today = dayNo(S), asked = S.asked ?? {};
+  let h = today;
+  for (let i = 0; i < npcId.length; i++) h = (h * 31 + npcId.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < pool.length; i++) {
+    const t = pool[(h + i) % pool.length];
+    if (asked[SHRUGGED + t] !== today) return t;
+  }
+  return pool[h % pool.length];
+}
+const REACTED = '反应:';
+/** 这句反应今天已经对别人说过了 */
+const reactSaid = (t: string): boolean => (S.asked ?? {})[REACTED + t] === dayNo(S);
+
 /** 他对你的这句反应：交情深的另说一句；只说和他同一带的事 */
 function reactFor(npcId: string): string | null {
   const rel = S.rel[npcId] ?? '素不相识';
@@ -531,10 +557,14 @@ function askLogOf(npcId: string, create: boolean): { d: number; u: string[] } | 
 }
 
 /** 下一句他还有什么可说的（不动记录）：自己的旧话在前，对你的反应在后；没有了为空 */
-function nextLine(npcId: string, log: { u: string[] }): { key: string; kind: 'idle' | 'react'; text: string } | null {
+function nextLine(npcId: string, log: { u: string[] }): { key: string; kind: 'idle' | 'react'; text: string; shrug?: boolean } | null {
   const idle = idleLines(lifeOf(npcId)).find(l => !log.u.includes(l.key));
   if (idle) return { ...idle, kind: 'idle' };
-  if (!log.u.includes('r')) { const t = reactFor(npcId); if (t) return { key: 'r', kind: 'react', text: t }; }
+  if (!log.u.includes('r')) {
+    const t = reactFor(npcId);
+    // 同一句关心话今天已对别人说过：不再照抄，这个人只是不再多说（按身份换动作）
+    if (t) return reactSaid(t) ? { key: 'r', kind: 'react', text: shrugFor(npcId), shrug: true } : { key: 'r', kind: 'react', text: t };
+  }
   return null;
 }
 
@@ -562,6 +592,8 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
       const log = askLogOf(npcId, true)!, nx = nextLine(npcId, log);
       if (!nx) return { text: `${who}今日已被你问过了，没有新话可说。`, src: 'again' };
       log.u.push(nx.key);
+      if (nx.kind === 'react') (S.asked ||= {})[(nx.shrug ? SHRUGGED : REACTED) + nx.text] = today;
+      if (nx.shrug) return { text: `${who}${nx.text}`, src: 'react' };
       return { text: `${who}${leadPick(life?.voice.lead ?? DATING_LEAD[gangOf(npcId)], npcId, log.u.length)}${life ? '，道：' : '：'}「${inner(nx.text)}」`, src: nx.kind };
     }
     asked[npcId] = today;

@@ -16,6 +16,7 @@ import { verbChufa } from '../../engine/chufa';
 import { refuseOf, wantOf } from '../../engine/shijie';
 import { test, textVars } from '../../engine/dsl';
 import { greetNow } from '../../engine/yingmian';
+import { tripNote } from './ditu';
 
 const VERB_CLS: Record<string, string> = { 偷窃: 'danger', 动手: 'strong', 切磋: 'spar', 推门: 'strong' };
 
@@ -37,7 +38,7 @@ export function viewJianghu(): string {
   // 点了就赶去约定的地方
   const yueBar = !y || y.due - dayNo(S) > 3 ? '' : S.loc === y.at
     ? `<div class="card quest"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">就在此处</span></div>`
-    : `<button class="card quest" data-act="travel:${y.at}"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">约${minLabel(travelMin(pathMin(S.loc, y.at)))}</span>${IC.chev}</button>`;
+    : `<button class="card quest" data-act="travel:${y.at}"><span class="tag warn">有约</span><span class="qt">${yueText(S, y)}</span><span class="qd">${tripNote(y.at) || '约' + minLabel(travelMin(pathMin(S.loc, y.at)))}</span>${IC.chev}</button>`;
   return `
   ${jueseHTML()}
   ${yaoJinHTML(yj)}
@@ -78,18 +79,18 @@ function jueseHTML(): string {
 function yaoJinHTML(yj: YaoJin): string {
   const other = yj.to ? `travel:${yj.to}` : yj.tab ? `tab:${yj.tab}` : '';
   const act = yj.main || other;
-  const sub = yj.here ? '就在此处' : yj.to ? `约${minLabel(travelMin(pathMin(S.loc, yj.to)))}` : '';
+  const sub = yj.here ? '就在此处' : yj.to ? tripNote(yj.to) || `约${minLabel(travelMin(pathMin(S.loc, yj.to)))}` : '';
   const body = `<span class="tag ${yj.main ? 'info' : 'accent'}">${yj.tag}</span><span class="qt"><small class="qk">眼下要紧</small>${yj.text}${yj.why ? `<small class="qs">${yj.why}</small>` : ''}</span>${sub ? `<span class="qd">${sub}</span>` : ''}${act ? IC.chev : ''}`;
   const main = act ? `<button class="card quest yj" data-act="${yj.main ? 'quest' : other}">${body}</button>` : `<div class="card quest yj">${body}</div>`;
   const book = `<button class="qb-btn" data-act="questbook" aria-label="见闻" title="见闻">${IC.quest}</button>`;
-  const also = yj.also.length ? `<div class="also"><small>也可以</small>${yj.also.map(a => `<button class="lead" data-act="travel:${a.to}"><span class="lt">${a.text}</span><span class="ld">约${minLabel(a.min)}</span>${IC.chev}</button>`).join('')}</div>` : '';
+  const also = yj.also.length ? `<div class="also"><small>也可以</small>${yj.also.map(a => `<button class="lead" data-act="travel:${a.to}"><span class="lt">${a.text}</span><span class="ld">${tripNote(a.to) || '约' + minLabel(a.min)}</span>${IC.chev}</button>`).join('')}</div>` : '';
   return `<div class="quest-row">${main}${book}</div>${also}`;
 }
 
 /** 去处缩成一行：主线要去的那一处，加「打开地图」；其余去处都到地图上点 */
 function goHTML(questTo?: string): string {
   const to = questTo && questTo !== S.loc ? questTo : '';
-  const target = to ? `<button class="exit solo" data-act="travel:${to}"><span class="dir">往</span><span class="en"><b>${room(to).name}</b><small>${minLabel(travelMin(pathMin(S.loc, to)))}</small></span><span class="tag info">主线</span></button>` : '';
+  const target = to ? `<button class="exit solo" data-act="travel:${to}"><span class="dir">往</span><span class="en"><b>${room(to).name}</b><small>${tripNote(to) || minLabel(travelMin(pathMin(S.loc, to)))}</small></span><span class="tag info">主线</span></button>` : '';
   return `<section class="go"><h2>去处</h2><div class="goline">${target}<button class="exit${target ? '' : ' solo'} mapbtn" data-act="tab:ditu"><span class="dir">图</span><span class="en"><b>打开地图</b><small>其余去处在地图上点</small></span></button></div></section>`;
 }
 
