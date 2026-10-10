@@ -523,7 +523,8 @@ function load(force) {
 }
 document.getElementById('refresh').addEventListener('click', function () { load(true); });
 // 页面开着时每五分钟自动看一次；切走时不刷
-setInterval(function () { if (!document.hidden) load(false); }, TTL);
+// 预先算好的数据读起来不限流：页面开着时每分钟看一次
+setInterval(function () { if (!document.hidden) load(false); }, 60 * 1000);
 document.addEventListener('visibilitychange', function () { if (!document.hidden) load(false); });
 load(false);
 </script>
