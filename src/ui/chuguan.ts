@@ -42,7 +42,7 @@ export function chuguanHTML(r: RestReport, head: string, title: string, stop?: s
       : S.gongli >= gongliCeiling(S) - 1e-6 ? `<span class="tag warn">功力已到这一重内功的顶（${gongliText(S.gongli)}），要再深，先把内功往上练一重</span>` : '',
     healTxt ? `<span class="tag">${healTxt}</span>` : '',
     r.zouhuo ? `<span class="tag danger">走火${liang(r.zouhuo)}次，功力损了</span>` : '',
-    r.lodging === 'home' ? `<span class="tag">住在师门，不花钱</span>`
+    r.lodging === 'home' ? `<span class="tag">住在师门，打坐多悟一成，不花钱</span>`
       : r.lodging === 'lusu' ? `<span class="tag warn">露宿${cn(r.lusuDays)}夜，不费钱，只是风露侵人，睡不安稳，参悟慢了几分</span>`
       : !r.lusuDays ? `<span class="tag">住店 −${r.cost} 文</span>`
       : `<span class="tag warn">${r.cost ? `住店 −${r.cost} 文，` : ''}钱不够，露宿了${cn(r.lusuDays)}夜，睡不安稳，风露侵人，参悟慢了几分</span>`

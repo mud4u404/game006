@@ -13,6 +13,7 @@ import { MP_FLOOR } from './beidong';
 import { fightLilian } from './lilian';
 import { tierName } from './person';
 import { ZONES, capWounds, isHeavy, markLight, woundCap } from './shang';
+import { murenCopy, settleMuren } from './zhudi';
 
 /** 谁克这一路：与 engine/wuxue.ts 的 BEATS 反过来（柔克刚、刚克阴、阴克阳、阳克柔），中正没有 */
 const COUNTER: Partial<Record<string, string>> = { 刚: '柔', 阴: '刚', 阳: '阴', 柔: '阳' };
@@ -64,6 +65,10 @@ export interface Settled {
 export function settle(f: FoeDef, res: DuelRes, prep: PrepDef[], pick?: AfterOpt): Settled {
   const r = resultOf(f, res);
   if (!r) return { ll: 0, out: newOutcome(), effects: [] };
+  if (murenCopy(f)) {
+    const done = settleMuren(f, res);
+    return { r, ll: 0, out: done.out, effects: done.ok ? [...done.cost, ...done.gain] : [] };
+  }
   // 剧本战是被人救下的，只算输
   const ll = fightLilian(S, f, f.script ? 'lose' : res);
   const extra = res === 'win' ? prep.flatMap(p => p.win ?? []) : [];

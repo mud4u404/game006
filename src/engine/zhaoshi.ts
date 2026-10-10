@@ -16,6 +16,7 @@ import { activeOuter, counterBonus, reachBonus, slotSkill, weaponReady, wielded 
 export { personOf } from './ren';
 import { test } from './dsl';
 import { passivesOf, type Passives } from './beidong';
+import { murenCopy } from './zhudi';
 
 /** 绝招按钮最多几个 */
 export const MAX_PERFORMS = 3;
@@ -46,7 +47,7 @@ export function fightKit(s: GameState): FightKit {
 }
 
 /** 对手这个「人」：档次、路数 */
-export const foePerson = (f: FoeDef): Person => standard(f.rank, f.build ?? 'even', f.name);
+export const foePerson = (f: FoeDef): Person => murenCopy(f)?.person ?? standard(f.rank, f.build ?? 'even', f.name);
 
 /** 生效的备战：条件成立的都算，可以叠加 */
 export const activePrep = (f: FoeDef): PrepDef[] => (f.prep ?? []).filter(p => test(p.if));
@@ -80,10 +81,12 @@ export function heroSpec(s: GameState, kit: FightKit, f: FoeDef): HeroSpec {
 export function foeSpec(f: FoeDef, prep: PrepDef[]): FoeSpec {
   const mul = (k: 'atk' | 'big'): number => prep.reduce((m, p) => m * (p[k] ?? 1), 1);
   const atk = mul('atk'), big = mul('big');
+  const copy = murenCopy(f);
   return {
     person: foePerson(f), name: f.name, tells: f.tells.map(t => t.dom), firstTell: f.firstTell,
     spar: f.spar, rounds: f.rounds, script: f.script, phase2: !!f.phase2, weak: f.weak,
-    atkMul: atk !== 1 ? atk : undefined, bigMul: big !== 1 ? big : undefined
+    atkMul: atk !== 1 ? atk : undefined, bigMul: big !== 1 ? big : undefined,
+    ...(copy ? { hp: copy.hp, hpMax: copy.hpMax, sparFloor: Math.round(Math.min(copy.hpMax * 0.3, copy.hp * 0.5)) } : {})
   };
 }
 

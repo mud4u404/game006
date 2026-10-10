@@ -240,6 +240,10 @@ export interface RoomDef {
   fare?: number;
   /** 地方的活气（engine/shijie.ts）：只给有事的地方写。别的内容包的地点，用 ContentPack.roomLife 补，不必改别人的文件 */
   life?: RoomLife;
+  /** 本门练功场；门外的人看得见器械，练桩、打木人时由行动协议拒绝。 */
+  lianzhuang?: string;
+  /** 桩功所需的基本功；省略时用当前搭配的内功作为根基。 */
+  lianzhuangBase?: SkillId;
 }
 
 /** 势力：帮会、官府、商号、寺观、绿林、门派。一城三到六股（docs/huo-shijie.md 3.2） */

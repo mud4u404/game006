@@ -11,6 +11,7 @@ import type { AfterDef, AfterOpt, Effect, FoeDef, PrepDef, SkillDef, TellDef } f
 import { textVars } from '../engine/dsl';
 import { act as settleAction, fightAfterReq, fightCheckpoint } from '../engine/xingdong';
 import { gainProf } from '../engine/growth';
+import { murenCopy } from '../engine/zhudi';
 import { Duel, JCY_MAX, ZONE_NAME, type DuelRes, type Ev, type Opt, type RespKey, type Wounds } from '../engine/duel';
 import { RESP_ACT, cheng, chengN, judgeText } from '../engine/formulas';
 import { respSkill } from '../engine/wuxue';
@@ -96,8 +97,8 @@ export const inFight = (): boolean => !!C;
 
 /* ---------- 开打 ---------- */
 
-export function startFight(fid: string, lead?: string): void {
-  const f = foeById(fid);
+export function startFight(fid: string | FoeDef, lead?: string): void {
+  const f = typeof fid === 'string' ? foeById(fid) : fid;
   if (C || !f) return;
   const prep = activePrep(f);
   const kit = fightKit(S);
@@ -108,7 +109,7 @@ export function startFight(fid: string, lead?: string): void {
   C = {
     f, d, kit, started: `${absMin(S)}:${nowMs()}`, used: new Set(), prep, allyDealt: prep.filter(p => p.ally).map(() => 0), wounds: {}, recent: [],
     chargeT: 0, ui: null, openPart: null, busy: false, paused: false, lock: 0, big: [], T: {}, odds,
-    learn: 0.5 ** foeRepeats(S, f.id)
+    learn: murenCopy(f) ? 0 : 0.5 ** foeRepeats(S, f.id)
   };
   const L = $('#fightLayer')!;
   L.innerHTML = fightHTML(C);
@@ -634,7 +635,7 @@ function useSkill(k: string): void {
       const p = pick(PARTS), evs = C.d.ult(), e = evs.find(x => x.k === 'ult');
       bubble('me crit', fmt(u.u.text, { foe: C.f.name, part: p }));
       if (e && e.k === 'ult') { bubble('foe', `${C.f.name}踉跄后退，${H(p + '受了重创')}！`, e.dmg, 'out'); mark(p); sayFx(e.fx); }
-      gainProf(u.def.id, Math.round(20 * C.learn));
+      if (C.learn > 0) gainProf(u.def.id, Math.round(20 * C.learn));
       act(evs.filter(x => x.k !== 'ult'));
       if (C && !C.d.over && !C.d.waiting && !C.openPart) next(1100);
     });
@@ -686,7 +687,7 @@ function usePerform(i: number): void {
     else if (x.hits) bubble('foe', `${c.f.name}拼着衣衫被划破，堪堪避过这一招。`);
     sayFx(e.fx);
   }
-  if (c.kit.outer) gainProf(c.kit.outer.id, Math.round(3 * c.learn));
+  if (c.kit.outer && c.learn > 0) gainProf(c.kit.outer.id, Math.round(3 * c.learn));
   act(evs.filter(y => y.k !== 'perform'));
 }
 

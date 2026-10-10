@@ -1,5 +1,6 @@
 import { S } from '../../core/state';
 import { REGIONS, ROOMS, room } from '../../content';
+import { SCHOOL_STYLE } from '../../content/skills';
 import { questNav, sectHome } from '../../engine/daohang';
 import { busyRooms, roomBrief, wentSet } from '../../engine/jiemian';
 import { tripCost } from '../../engine/world';
@@ -11,6 +12,7 @@ import { DOT_Y, layoutRegion, type MapNode } from '../maplayout';
 /** 正在看的地区；不设时看所在的地区。走到别的地区时自动回到所在地区 */
 let viewing: string | null = null;
 let viewedFrom = '';
+let viewedArea = '';
 export function setMapRegion(r: string): void { viewing = r; viewedFrom = room(S.loc).region; }
 
 /** 有地点的地区，按 order 排 */
@@ -19,16 +21,22 @@ const regionsWithRooms = (): string[] => Object.keys(REGIONS).filter(r => ROOMS.
 
 /** 地图：上方切换地区；地区里的地点按出口连线；通往别的地区的出口列在下面 */
 export function viewDitu(): string {
-  const here = room(S.loc).region;
+  const current = room(S.loc), here = current.region;
   if (viewedFrom !== here) viewing = null;
+  if (viewedArea && viewedArea !== current.area) { viewing = null; viewedArea = ''; }
   const region = viewing ?? here;
-  const rooms = ROOMS.filter(r => r.region === region);
+  const local = ROOMS.filter(r => r.region === here && r.area === current.area);
+  // 同一地点下已有三处场景时，进门就看这一处的小图，出门自动恢复地区图。
+  const small = local.length >= 3 && (local.some(r => r.lianzhuang) || Object.keys(SCHOOL_STYLE).some(s => current.area.includes(s)));
+  if (small) viewedArea = current.area;
+  const rooms = small ? local : ROOMS.filter(r => r.region === region);
   // 记挂着的心事眼下该去的地方（engine/daohang.ts：找的人在哪就标哪）；做不成的不标
   const nav = S.track ? questNav(S.track) : null;
   const q = nav && nav.state !== '未竟' && nav.state !== '了结' ? nav.to : undefined;
   // 摆地图（ui/maplayout.ts）：街边的去处收进那条街，压在一起的地名推开、不出框
   const w = Math.max(240, ((typeof document !== 'undefined' && document.getElementById('main')?.clientWidth) || 390) - 32);
-  const lay = layoutRegion(rooms, w, q);
+  // 小图的场景各自占一点，不按叶子出口收进正堂；真实出口仍用下面的 rooms 画线。
+  const lay = layoutRegion(small ? rooms.map(r => ({ ...r, exits: [] })) : rooms, w, q);
   const pos = new Map(lay.nodes.map(n => [n.id, n]));
   const hubOf = new Map(lay.nodes.flatMap(n => n.leaves.map(l => [l, n.id] as const)));
   const shownAs = (id: string): string => hubOf.get(id) ?? id;
@@ -86,15 +94,15 @@ export function viewDitu(): string {
   // 快捷：回师门、去记挂着的事、赴约（都是现成的数据，点了先看耗时再走）
   const chips: { label: string; to: string; name: string }[] = [];
   const home = sectHome();
-  if (home && home.to !== S.loc) chips.push({ label: '回师门', to: home.to, name: home.name });
-  if (nav && q && q !== S.loc) chips.push({ label: '记挂的事', to: q, name: room(q).name });
+  if (home && home.to !== S.loc && (!small || rooms.some(r => r.id === home.to))) chips.push({ label: '回师门', to: home.to, name: home.name });
+  if (nav && q && q !== S.loc && (!small || rooms.some(r => r.id === q))) chips.push({ label: '记挂的事', to: q, name: room(q).name });
   const yue = S.yue.find(y => y.at && y.at !== S.loc && ROOMS.some(r => r.id === y.at));
-  if (yue?.at) chips.push({ label: '有约', to: yue.at, name: room(yue.at).name });
+  if (yue?.at && (!small || rooms.some(r => r.id === yue.at))) chips.push({ label: '有约', to: yue.at, name: room(yue.at).name });
   const quick = chips.length ? `<div class="mchips" aria-label="快捷">${chips.map(c => `<button data-act="travelAsk:${c.to}"><small>${c.label}</small><b>${c.name}</b></button>`).join('')}</div>` : '';
   const tabs = regionsWithRooms();
   const info = REGIONS[region];
-  return `${quick}${tabs.length > 1 ? `<nav class="mtabs" aria-label="地区">${tabs.map(t => `<button class="${t === region ? 'on' : ''}" data-act="mapRegion:${t}" aria-pressed="${t === region}">${REGIONS[t].name}${t === here ? '<i></i>' : ''}</button>`).join('')}</nav>` : ''}
-    <section class="map" style="height:${lay.h}px" aria-label="${info?.name || ''}地图">
+  return `${small ? `<div class="sec-h"><h2>${current.area}</h2></div>` : ''}${quick}${!small && tabs.length > 1 ? `<nav class="mtabs" aria-label="地区">${tabs.map(t => `<button class="${t === region ? 'on' : ''}" data-act="mapRegion:${t}" aria-pressed="${t === region}">${REGIONS[t].name}${t === here ? '<i></i>' : ''}</button>`).join('')}</nav>` : ''}
+    <section class="map" style="height:${lay.h}px" aria-label="${small ? current.area : info?.name || ''}地图">
       <svg class="map-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines.join('')}</svg>
       ${nodes}</section>
     ${hubs}
@@ -103,7 +111,7 @@ export function viewDitu(): string {
       <div class="lg"><span><i class="pt here"></i>你在这里</span><span><i class="pt zhu"></i>主线目标</span><span><i class="pt busy"></i>有事</span><span><i class="pt went"></i>去过</span><span><i class="pt"></i>没去过</span>
       <span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" class="land"/></svg>陆路</span><span><svg width="22" height="6" aria-hidden="true"><line x1="0" y1="3" x2="22" y2="3" class="wet"/></svg>水路</span></div>
       <p class="muted mhint">点地名，看那里有什么人、什么事、要走多久，再点「去」赶路。</p></details>
-    ${info ? `<section class="card"><p class="muted">${info.note}</p></section>` : ''}`;
+    ${!small && info ? `<section class="card"><p class="muted">${info.note}</p></section>` : ''}`;
 }
 
 
