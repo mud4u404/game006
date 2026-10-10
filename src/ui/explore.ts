@@ -220,7 +220,13 @@ registerHandlers({
   },
   travelGo: v => { closeSheet(); travelTo(v); },
   tab: v => { S.tab = v as Tab; setConfirmRestart(false); render(); $('#main')!.scrollTop = 0; },
-  sel: v => { S.sel = v; S.reply = null; render(); },
+  // 点人：重画后页面不能回到顶上或停在原处看不见动作（#603）。先记下滚动位置，画完还原，再让这个人的动作区落进视口
+  sel: v => {
+    const m = $('#main'), top = m?.scrollTop ?? 0;
+    S.sel = v; S.reply = null; render();
+    if (m) m.scrollTop = top;
+    $('.detail')?.scrollIntoView({ block: 'nearest' });
+  },
   do: v => doAct(v as Verb),
   // 迎面的话头：选中开口的人，做对应的动作（engine/yingmian.ts）
   greet: () => {
