@@ -82,3 +82,7 @@
 ```
 
 它会自己：等任务 → 做 → 自检 → 推送 → 看 CI → 回到等任务。负责人不用转述。Codex 走云端：负责人把 Issue 链接发给它，一次一件。
+
+## 八、开发看板（负责人手机上看进度、任务量、每个 AI 的工作量）
+
+地址：https://mud4u404.github.io/game006/kanban/ 。页面是 `public/kanban/index.html`（纯静态，直接调 GitHub 公开接口，结果缓存五分钟，不连云）；进度数据在同目录的 `public/kanban/jindu.json`，维护者照 `docs/renwu-100.md` 的一百项改每项的 `status`（`done`、`doing`、`todo`）和 `note`，再改 `milestone.remaining` 与 `updated`，合进 main 后部署完就刷新。看板不放进游戏入口。
