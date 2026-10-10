@@ -1,7 +1,7 @@
 import { S, fullName } from '../../core/state';
 import { dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
-import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPoor, verbPrice, verbsOf } from '../../engine/world';
+import { hopMin, npcName, openExits, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
 import { FEED_TONE, mb } from '../widgets';
 import { tierNow } from '../../engine/ren';
@@ -117,10 +117,11 @@ function detail(id: string): string {
 /** 动作按钮：要花钱的，价钱写在底下；钱不够的灰着，写明差在哪（试玩第三轮：买卖不再点了才知道价钱） */
 const verbBtn = (id: string) => (v: Verb): string => {
   const price = verbPrice(id, v);
-  const poor = price !== null && S.silver < price && verbPoor(id, v);
+  const p = verbPlan(id, v);
+  const poor = !p.ok;
   // 能挣钱的（揭榜的赏钱、零工的工钱）：报酬和耗时写在底下，点之前就知道
   const gain = price === null ? verbGain(id, v) : null;
-  const sub = price !== null ? `${poor ? '囊中不足，要' : ''}${cn(price)}文` : gain;
+  const sub = price !== null ? `${poor && S.silver < price ? '囊中不足，要' : ''}${cn(price)}文` : poor ? p.why : gain;
   return `<button class="act ${VERB_CLS[v] || ''}${sub ? ' priced' : ''}" data-act="do:${v}"${poor ? ' disabled' : ''}>${v}${sub ? `<small>${sub}</small>` : ''}</button>`;
 };
 
