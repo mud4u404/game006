@@ -1,16 +1,13 @@
 /**
  * 交通预告与实付一致（Issue #271，docs/renwu-100.md 第 016 项、docs/sheji-001-003.md 第 003 项）。
  *
- * 地图点地名先给玩家看的是 tripCost（engine/world.ts，里头用 pathMin、travelMin、tollOf）：
+ * 地图点地名先给玩家看的是 tripCost（engine/world.ts，里头用 pathTo、travelMin、tollOf）：
  * 路上约几分钟、经过几处、船钱和过路钱共几文；钱不够时提示要替船家、码头干活抵。
  * 真走一趟照 ui/explore.ts 的 travelTo：每步加 travelMin(hopMin) 的时辰、落位、payFare 付船钱；
  * 钱不够的，payFare 里替船家撑篙抵账，多耗一个时辰，不扣钱。
  * 码头的主人用世界效果改（engine/shijie.ts 的 runWorld，op: 'owner'），过路钱跟着主人走。
  *
- * 现状（Issue #271 核实）：**银钱**预告与实付在全部可达路线上一致；**耗时**对不上——
- * tripCost 把总分钟乘身法系数后取整一次，实走是每段各自取整再相加，多段路实走比预告
- * 多出一两分钟。按 Issue 规矩不改游戏代码：对不上的路线标 it.fails，明细在 PR 正文；
- * 哪天引擎改成一致了，it.fails 会变红，把它换回 it 即可。
+ * 银钱和耗时分两组断言（#285）：一头坏了别把另一头的回归也盖住。
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ROOMS } from '../src/content';
@@ -27,6 +24,10 @@ const TWELVE = [
   'jc_yz_yiguan', 'jc_yz_kezhan',    // 济生堂、广陵客栈
   'bs2_longwang', 'daming'           // 龙王庙、大明寺
 ];
+
+/** 十二地两两之间可达的有序对（起点、终点） */
+const PAIRS: [string, string][] = [];
+for (const a of TWELVE) for (const b of TWELVE) if (a !== b) PAIRS.push([a, b]);
 
 /**
  * 照 ui/explore.ts 的 travelTo 一段一段走：每步加时辰、落位、payFare 付船钱（不进门、不遇事）。
@@ -48,23 +49,6 @@ function walk(from: string, to: string): { mins: number; paid: number; poled: nu
   return { mins, paid, poled };
 }
 
-/** 模块加载时先探一遍全部路线：每对路线的预告（分钟、钱）与实走（分钟、钱）。探测只是采样，每个测试都会重置状态 */
-setNowMs(() => 1_000_000_000_000);
-setState(skipToYangzhou());
-S.lastEnc = Infinity;
-const PAIRS: { a: string; b: string; pred: number; fee: number; walkM: number }[] = [];
-for (const a of TWELVE) {
-  for (const b of TWELVE) {
-    if (a === b) continue;
-    S.loc = a; S.silver = 1_000_000;
-    const c = tripCost(b);
-    if (!c) continue; // 能到的才算（地图连通由 ditu 测试管）
-    const r = walk(a, b);
-    PAIRS.push({ a, b, pred: c.min, fee: c.fee, walkM: r.mins });
-  }
-}
-const MISMATCHED = PAIRS.filter(p => p.pred !== p.walkM);
-
 beforeEach(() => {
   setNowMs(() => 1_000_000_000_000);
   setState(skipToYangzhou());
@@ -79,30 +63,34 @@ describe('十二地的 id 都在地图上', () => {
   }
 });
 
-describe('十二地两两之间：预告与实付一致（钱带得够）', () => {
-  for (const p of PAIRS) {
-    const mismatch = p.pred !== p.walkM;
-    const label = `${p.a} → ${p.b}` + (mismatch ? `（预告 ${p.pred} 分钟，实走 ${p.walkM} 分钟）` : '');
-    const t = mismatch ? it.fails : it;
-    t(label, () => {
-      S.loc = p.a;
+describe('十二地两两之间：银钱预告与实付一致（钱带得够）', () => {
+  for (const [a, b] of PAIRS) {
+    it(`${a} → ${b}`, () => {
+      S.loc = a;
       S.silver = 1_000_000;
-      const c = tripCost(p.b)!;
-      expect(c.min, '预告的分钟数要稳定').toBe(p.pred);
+      const c = tripCost(b);
+      if (!c) return; // 能到的才算（地图连通由 ditu 测试管）
       const silver0 = S.silver;
-      const r = walk(p.a, p.b);
+      const r = walk(a, b);
       expect(r.paid, `实付 ${r.paid} 文，预告 ${c.fee} 文`).toBe(c.fee);
       expect(silver0 - S.silver, '钱包里扣掉的数').toBe(c.fee);
       expect(r.poled, '钱带够了不该撑篙抵账').toBe(0);
-      // 预告对总程一次取整，实走每段取整，多段路实走多出一两分钟。对不上的，就让它在这儿抛：
-      // it.fails 把它标成预期失败，哪天引擎改成一致了，这里不再抛，it.fails 反而会红，提醒换回 it
-      expect(r.mins, `实际耗时 ${r.mins} 分钟，预告 ${c.min} 分钟`).toBe(c.min);
     });
   }
-  it('耗时对不上的都是实走多于预告（每段取整只会向上漂）', () => {
-    expect(MISMATCHED.length, '对不上的路线数').toBeGreaterThan(0);
-    for (const p of MISMATCHED) expect(p.walkM, `${p.a} → ${p.b}`).toBeGreaterThan(p.pred);
-  });
+});
+
+describe('十二地两两之间：耗时预告与实走一致（钱带得够）', () => {
+  for (const [a, b] of PAIRS) {
+    it(`${a} → ${b}`, () => {
+      S.loc = a;
+      S.silver = 1_000_000;
+      const c = tripCost(b);
+      if (!c) return; // 能到的才算
+      const r = walk(a, b);
+      // tripCost 按段累加 travelMin(hopMin)，和实走同一种算法（#285）
+      expect(r.mins, `实走 ${r.mins} 分钟，预告 ${c.min} 分钟`).toBe(c.min);
+    });
+  }
 });
 
 describe('码头换了主人，船钱的预告与实付跟着变', () => {
