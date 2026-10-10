@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { branchIssue, deps, pickWork, type GhItem } from '../scripts/relay.mjs';
 
 const issue = (number: number, labels: string[], body = ''): GhItem => ({ number, title: `任务 ${number}`, body, labels: labels.map(name => ({ name })) });
-const pr = (number: number, title: string): GhItem => ({ number, title, labels: [], pull_request: {} });
+const pr = (number: number, title: string, labels: string[] = []): GhItem => ({ number, title, labels: labels.map(name => ({ name })), pull_request: {} });
 
 describe('接力：挑下一个任务', () => {
   it('编号最小的先做', () => {
@@ -52,5 +52,15 @@ describe('接力：挑下一个任务', () => {
     expect(pickWork(items, [], 'qoder')?.number).toBe(22);
     expect(pickWork([issue(21, ['内容', '给:trae'])])).toBeNull();
     expect(pickWork([issue(21, ['内容', '给:trae'])], [], 'qoder')).toBeNull();
+  });
+
+  it('退回要改的 PR 先给原作者：带「要改」和「给:作者」，排在新任务前面；别人、不报名字的领不到', () => {
+    const items = [issue(21, ['内容', '给:zcode']), pr(40, '[#20] 师门差事', ['要改', '给:zcode'])];
+    expect(pickWork(items, [], 'zcode')?.number).toBe(40);
+    expect(pickWork(items, [], 'trae')).toBeNull();
+    expect(pickWork(items)).toBeNull();
+    expect(pickWork([pr(40, '[#20] 师门差事', ['要改'])], [], 'zcode')).toBeNull();
+    expect(pickWork([issue(21, ['内容', '给:zcode']), pr(40, '[#20] 师门差事', ['给:zcode'])], [], 'zcode')?.number).toBe(21);
+    expect(pickWork([pr(40, '[#20] 师门差事', ['要改', '给:zcode', '暂缓'])], [], 'zcode')).toBeNull();
   });
 });
