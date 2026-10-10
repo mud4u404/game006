@@ -79,6 +79,23 @@ const AUDIT = () => {
   }
   return bad;
 };
+/**
+ * 剧情卡的选项区钉在屏幕底部（app.css 的 .story-l>.choices）：文字比一屏长时，第一个选项不用滚动就在眼前、没被盖住。
+ * 返回这张卡是不是「长卡」（文字要滚才读得完），好确认检查没有落空
+ */
+const choiceInView = async label => {
+  await p.waitForSelector('#storyLayer:not([hidden]) [data-act^="stPick:"], #storyLayer:not([hidden]) [data-act="stNext"]');
+  await p.waitForTimeout(450);
+  const r = await p.evaluate(() => {
+    const box = document.querySelector('#storyLayer .story-l');
+    box.scrollTop = 0;
+    const el = box.querySelector('[data-act^="stPick:"], [data-act="stNext"]');
+    const b = el.getBoundingClientRect(), t = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return { long: box.scrollHeight > box.clientHeight + 4, inView: b.top >= 0 && b.bottom <= innerHeight, hit: !!t && el.contains(t), top: Math.round(b.top), bottom: Math.round(b.bottom), vh: innerHeight };
+  });
+  if (!r.inView || !r.hit) throw new Error(`点不动（${label}）：剧情卡的第一个选项要滚动才看得到或被盖住（${r.top}～${r.bottom}，屏高 ${r.vh}）`);
+  return r.long;
+};
 const audit = async label => {
   const bad = await p.evaluate(AUDIT);
   if (bad.length) throw new Error(`点不动（${label}）：${bad.join('；')}`);
@@ -99,7 +116,10 @@ await snap('02-name');
 await p.fill('#nameIn', '听雨');
 await click('[data-act="stPick:0"]');                 // 就叫这个名字
 // 第一夜（docs/kaipian.md）：四张「继续」，到「渡不渡」，选「渡」
-for (let i = 0; i < 4; i++) await click('[data-act="stPick:0"]');
+let longCards = 0;
+for (let i = 0; i < 4; i++) { if (await choiceInView('第一夜第' + (i + 1) + '张')) longCards++; await click('[data-act="stPick:0"]'); }
+if (await choiceInView('渡不渡')) longCards++;
+log('第一夜里文字长过一屏的卡：', longCards, '张，选项都钉在底部、不滚动就点得到');
 await audit('渡不渡');
 await snap('03-dubudu');
 log('渡不渡', (await p.textContent('#storyLayer h2')).trim());

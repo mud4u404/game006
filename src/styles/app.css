@@ -429,11 +429,14 @@ svg{display:block}
 .t-btn.ghost{background:transparent;color:var(--night-fg);box-shadow:inset 0 0 0 1px var(--night-line)}
 .t-link{min-height:44px;font-size:13px;color:var(--night-muted);text-decoration:underline;text-underline-offset:3px}
 .t-warn{font-size:13px;color:var(--night-muted);text-align:center}
-.story-l{position:absolute;inset:0;background:var(--bg);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:16px;padding:28px 20px 24px}
+.story-l{position:absolute;inset:0;background:var(--bg);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:16px;padding:28px 20px 0;scroll-padding-bottom:120px}
 .story-l>*{flex-shrink:0}
 .story-l>*{animation:fin .35s ease-out both}
 /* 选项不做淡入：淡入的那一下看不清却点得着，连点的第二下就落在下一张卡的选项上 */
 .story-l>.choices{animation:none}
+/* 文字比一屏长时，选项区（「继续」和各选项）钉在屏幕底部，文字在上面滚：不用先滚到底才找得到按钮。
+   短卡文字不满一屏，margin-top:auto 本来就把它顶在底部，不受影响。底色同背景，顶上一条淡分隔，留出 iOS 底部安全区（docs/diandong-shencha.md） */
+.story-l>.choices{position:sticky;bottom:0;z-index:2;margin-left:-20px;margin-right:-20px;padding:12px 20px calc(16px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line)}
 .story-l .tag{align-self:flex-start}
 .story-l h2{font-family:var(--f-serif);font-size:26px;font-weight:900;line-height:1.35;text-wrap:balance}
 .sp{font-family:var(--f-serif);font-weight:600;font-size:16.5px;line-height:2;text-indent:2em}
