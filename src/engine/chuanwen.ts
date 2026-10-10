@@ -480,10 +480,22 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
     const idle = pickBranch(life.voice.idle)?.text;
     if (idle) return { text: `${open()}「${idle}」`, src: 'idle' };
   }
-  const line = hearsay();
-  if (line) return { text: `${open()}「${inner(line)}」`, src: 'old' };
+  const line = hearsay({ skip: saidToday() });
+  if (line) {
+    (S.asked ||= {})[SAID + line] = dayNo(S);
+    return { text: `${open()}「${inner(line)}」`, src: 'old' };
+  }
   // 没得说也要按身份开口：从前这里写死了「想了想」，僧人官差商人都一个腔调（Issue #263）
-  return { text: `${who}${worldPick(DATING_LEAD[gangOf(npcId)])}：「这几日太平得很，没听说什么。」`, src: 'none' };
+  // 这一句不取世界随机：开口的样子只是句面上的动作，worldRng 是给传闻和世事用的。
+  // 多抽一次不要紧，一多抽就等于伸手推了世事的骰子（tests/zoubian 走遍江湖那一条会跟着偏）。
+  return { text: `${who}${plainPick(DATING_LEAD[gangOf(npcId)], npcId)}：「这几日太平得很，没听说什么。」`, src: 'none' };
+}
+
+/** 不动世界种子的挑法：同一个人同一天总挑到同一个，隔天换一个 */
+function plainPick<T>(arr: T[], id: string): T {
+  let h = dayNo(S);
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return arr[h % arr.length];
 }
 
 /** 盘问：捕快亮出腰牌，谁都得答话（docs/lizu.md：六扇门的特权）。不像打听那样一天一回，也不看交情 */
@@ -497,23 +509,23 @@ export function panwen(npcId: string, who: string = npcName(npcId)): string {
 
 /**
  * 江湖上的话：玩家所在地区传开的、你还不知道的、最耸动的一条（原样）。说书人的打赏、效果 news、没写声口的人的打听都用它。
- * 同一日同一条老话只给一个人说（Issue #263）：说过的记进 S.asked，今日再问别人的时候换一条；
- * 换不出来了返回空，ask() 就说「这几日太平得很」那句。
  * 返回那句话，没得说为空（不再从传闻池里随手抽）
+ *
+ * opt.skip 是给「打听」用的（Issue #263）：今日已经有人说过的老话别再拿给下一个人，说过的记在 S.asked。
+ * 只在 ask() 里传，别的调用一律不传 —— 说书人的打赏和效果 news 那两句兼着把见闻簿上那件事往前推一步
+ * （tellYou → learnShi），在那里换一句说，就等于替玩家改世事的进度。所以这一层不替它们做主。
  */
-export function hearsay(): string | null {
+export function hearsay(opt: { skip?: ReadonlySet<string> } = {}): string | null {
   const w = worldOf(), today = dayNo(S), region = room(S.loc).region, heard = new Set(S.heard ?? []);
-  const said = saidToday();
   let best: { r: RumorInst; text: string; s: number } | null = null;
   for (const r of Object.values(w.rumor)) {
     if (r.far || regionOf(r) !== region || youKnow(r, S, heard)) continue;
     const text = rumorText(r, 0);
-    if (text === null || said.has(text)) continue;
+    if (text === null || opt.skip?.has(text)) continue;
     const s = r.juice - 0.03 * (today - r.day);
     if (!best || s > best.s) best = { r, text, s };
   }
   if (!best) return null;
-  (S.asked ||= {})[SAID + best.text] = today;
   tellYou(best.r, best.text);
   return best.text;
 }

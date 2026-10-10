@@ -43,7 +43,17 @@ describe('开口的样子按身份分组', () => {
       expect(DATING_LEAD.shijing, `第 ${i} 次用了市井的动作：${lead}`).not.toContain(lead);
       expect(DATING_LEAD.sengdao, `第 ${i} 次的动作不在僧道组：${lead}`).toContain(lead);
     }
-    expect(seen.size).toBeGreaterThan(1);
+    // 没得说时那句按人按日定：一天里同一个人开口的动作不跳（这句不抽世界随机，见 plainPick）
+    expect(seen.size).toBe(1);
+  });
+  it('同一个人隔天再问，开口的动作换一个', () => {
+    const first = leadOf('liaochen');
+    let changed = false;
+    for (let d = 1; d <= 30 && !changed; d++) {
+      S.day += 1;
+      changed = leadOf('liaochen') !== first;
+    }
+    expect(changed, `一个月里都是「${first}」`).toBe(true);
   });
   it('同一组里没有两句一样的动作', () => {
     for (const [g, list] of Object.entries(DATING_LEAD)) expect(new Set(list).size, g).toBe(list.length);
@@ -81,24 +91,52 @@ describe('同一日同一条老话只给一个人说', () => {
   it('三条换完了就说「这几日太平得很」，不把同一条又说一遍', () => {
     fresh([['ss_matou', 'qi'], ['ss_matou', 'duizhi'], ['ss_zei', 'qi']]);
     forgetAll();
-    const a = hearsay();
-    const b = hearsay();
-    const c = hearsay();
-    expect([a, b, c].every(Boolean)).toBe(true);
-    expect(new Set([a, b, c]).size).toBe(3);
-    expect(hearsay()).toBeNull();
+    const said = VOICELESS.map(id => ask(id, { force: true }));
+    for (const r of said) expect(r.src, `${r.text}`).toBe('old');
+    expect(new Set(said.map(r => r.text.replace(/^.*「|」$/g, ''))).size).toBe(3);
+    // 扬州只有三条传闻可听，问完第四个人就说没得说了
     const last = ask('qichi', { force: true });
     expect(last.src).toBe('none');
     expect(last.text).toContain('这几日太平得很');
   });
 
+  it('去重只管打听：说书人的打赏、效果 news 那条路仍照旧拿最耸动的一条', () => {
+    fresh([['ss_matou', 'qi'], ['ss_matou', 'duizhi'], ['ss_zei', 'qi']]);
+    forgetAll();
+    // 打听说过的，记在 S.asked 的「旧话:」前缀键下
+    ask('qichi', { force: true });
+    const saidKeys = Object.keys(S.asked ?? {}).filter(k => k.startsWith('旧话:'));
+    expect(saidKeys.length).toBe(1);
+    expect(saidKeys[0]).not.toBe('qichi');
+    // hearsay 本身不替这一路做主：把见闻清掉，三条老话它照样一条不落地发得出去
+    S.heard = [];
+    const all = [hearsay(), hearsay(), hearsay()];
+    expect(all.every(Boolean)).toBe(true);
+    expect(new Set(all).size).toBe(3);
+  });
+
+  it('「旧话:」的键跟着 ask 那套按日清理一起走，不跨日留到明天', () => {
+    fresh([['ss_matou', 'qi'], ['ss_matou', 'duizhi'], ['ss_zei', 'qi']]);
+    forgetAll();
+    (S.asked ??= {})['旧话:隔天的老账'] = 0;
+    expect(S.asked!['旧话:隔天的老账']).toBe(0);
+    // 不用 force：清理就走玩家平时那条路
+    ask('qichi');
+    expect(Object.keys(S.asked ?? {})).not.toContain('旧话:隔天的老账');
+  });
+
   it('隔天再说，昨儿说过的老话又能拿回来', () => {
     fresh([['ss_matou', 'qi'], ['ss_matou', 'duizhi'], ['ss_zei', 'qi']]);
     forgetAll();
-    const a = hearsay();
+    const a = ask('qichi', { force: true });
+    expect(a.src).toBe('old');
     S.day += 1;
+    // 听过就不再说（S.heard 不按日清），这里要验的是「旧话:」那把按日清的键没把老话压住
     S.heard = [];
-    expect(hearsay()).toBe(a);
+    forgetAll();
+    const b = ask('qichi', { force: true });
+    expect(b.src).toBe('old');
+    expect(b.text.replace(/^.*「|」$/g, '')).toBe(a.text.replace(/^.*「|」$/g, ''));
   });
 });
 
