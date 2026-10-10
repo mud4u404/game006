@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   # 维护者分支推送：github-pages 环境默认只许 main 部署，所以不在这里部署，
-  # 而是在 main 上启动一次这份工作流（用 GITHUB_TOKEN 启动 workflow_dispatch 是允许的，ci.yml 的 automerge 也这么做）
+  # 而是在 main 上启动一次这份工作流（用 GITHUB_TOKEN 启动 workflow_dispatch 是允许的，automerge.yml 也这么做）
   relay:
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest

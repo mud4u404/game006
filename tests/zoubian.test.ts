@@ -98,7 +98,7 @@ function fight(fid: string, depth: number): void {
   const f = foeById(fid);
   if (!f) { err(`对手「${fid}」不存在`); return; }
   // 开打前掂斤两（engine/shang.ts）：打赢了比自己弱的，落的伤封顶。机器玩家少掂几回，省时间
-  const odds = f.spar || f.script ? undefined : kanren(S, f, 8).p;
+  const odds = f.spar || f.script ? undefined : kanren(S, f, 8, true).p;
   brace(f);
   const prep = activePrep(f);
   const d = new Duel(heroSpec(S, fightKit(S), f), foeSpec(f, prep), { rng, allies: alliesOf(prep) });

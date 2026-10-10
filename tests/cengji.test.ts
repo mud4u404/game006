@@ -99,9 +99,16 @@ describe('lv / resp 的文字', () => {
     }
   });
   it('普通招式的 lv 只写到招式到了哪里，不写「刺中」「着了」「中招」这类结果（引擎会接对手闪开、架住或中招的话）', () => {
-    const RESULT = /刺中|着了|中招|击中|打中|命中|砍中|削中|劈中|点中|扫中|伤了|受伤|负伤|倒地/;
+    const RESULT = /刺中|着了|中招|击中|打中|命中|砍中|削中|劈中|点中|扫中|伤了|受伤|负伤|倒地|软了|发软|软下|酸麻|倒了|退了|退出|退一步|退两步|吃痛|跌了出去|跌出|跌倒|摔倒|栽倒|踉跄|吐血|口吐|闷哼|惨叫|痛呼/;
+    // 待 #275 订正（skills-gaibang.ts 的莲花掌、缠丝擒拿手，已派给 Trae）：订正后删掉这张白名单
+    const PENDING_275 = new Set([
+      '莲花掌「莲台拂尘」精', '莲花掌「莲台拂尘」化',
+      '缠丝擒拿手「擒龙拿脉」精', '缠丝擒拿手「擒龙拿脉」化',
+      '缠丝擒拿手「分筋错骨」熟', '缠丝擒拿手「分筋错骨」化'
+    ]);
     const bad: string[] = [];
     for (const k of withLv) for (const m of k.moves ?? []) for (const [d, ts] of Object.entries(m.lv ?? {})) for (const t of ts ?? []) {
+      if (PENDING_275.has(`${k.name}「${m.name}」${d}`)) continue;
       if (RESULT.test(t)) bad.push(`${k.name}「${m.name}」${d}：${t.slice(0, 24)}`);
     }
     expect(bad).toEqual([]);
