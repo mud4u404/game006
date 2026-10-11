@@ -11,7 +11,7 @@ import { storyById, NPCS, REALMS, REALM_NEED, foeById, npc, room, skillById } fr
 import type { Verb } from '../content/types';
 import { RETREAT, retreatPlan } from './lilian';
 import { LODGING, restDays, restEff, retreatBlock, skillName, zhuOf } from './shiguang';
-import { type Lead, jobStep, leadsNear, questNav, sectHome, sectNav, yueNow } from './daohang';
+import { type Lead, jobStep, leadWait, leadsNear, questNav, sectHome, sectNav, yueNow } from './daohang';
 import { kpPos } from './kaipian';
 import { pickBranch, test } from './dsl';
 import { profMul } from './gengu';
@@ -247,7 +247,9 @@ export function yaoJin(): YaoJin {
   // 没有主线可走：近处的差事、零工
   const l = ls[0];
   if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName, here: false, also: alsoOf(l) };
-  return { tag: '走走', text: '打开地图，四处走走看看', tab: 'ditu', here: false, also: [] };
+  // 想接差事但派差的人此刻不在：写他什么时候在哪儿，不推「去」
+  const wait = leadWait();
+  return { tag: '走走', text: wait ? `${wait}，先四处走走看看` : '打开地图，四处走走看看', tab: 'ditu', here: false, also: [] };
 }
 
 /* ---------- 地点说明 ---------- */

@@ -8,7 +8,7 @@
  * 纯函数，只读 S；作息用指定钟点查询，不改时钟。见闻簿、江湖页横幅、地图都读它。
  */
 import { S, pushFeed } from '../core/state';
-import { dayNo } from '../core/time';
+import { dayNo, shichen } from '../core/time';
 import { JOBS, NPCS, ROOMS, itemById, jobById, questById, room, skillById } from '../content';
 import { SECT_RANKS } from '../content/skills';
 import type { Branch, Cond, Effect, QuestGate, QuestStage, SectRank, Verb } from '../content/types';
@@ -271,6 +271,29 @@ export function leadsNear(n = 3): Lead[] {
   const jobs = out.sort((a, b) => a.min - b.min).slice(0, n);
   const gig = gigLead();
   return gig ? [...jobs, gig] : jobs;
+}
+
+
+/**
+ * 眼下没有人可找时的一句话：有差事可接，但派差的人此刻不在，就写「某人某时辰起在某处」（用 engine/world.ts 的作息），不推「去」。
+ * 往后两个时辰一档，找到他头一回现身的时辰；一整天都不在的不写。
+ */
+export function leadWait(): string | null {
+  if (S.job || S.chapter === 0) return null;
+  let best: { min: number; text: string } | null = null;
+  for (const j of JOBS) {
+    if (!jobOpen(S, j.id)) continue;
+    const g = giverOf(j.id);
+    if (!g || whoNav(g.npc).now) continue;
+    for (let k = 1; k <= 12; k++) {
+      const t = (S.min + k * 120) % 1440;
+      const at = whereAt(g.npc, t);
+      if (!at) continue;
+      if (!best || k * 120 < best.min) best = { min: k * 120, text: `${npcName(g.npc)}${shichen(t)}后在${room(at).name}` };
+      break;
+    }
+  }
+  return best?.text ?? null;
 }
 
 
