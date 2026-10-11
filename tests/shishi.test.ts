@@ -4,16 +4,17 @@
  * 二、作息不挡路：开店的、约人的、派差事的，不能到了时辰就不见了。
  * 三、引擎：到了日子自己往下走、人在这一带才听得到、打听一天一回、插手、读档。
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { S, setState, skipToYangzhou } from '../src/core/state';
-import { advanceDays, advanceMin, setNowMs } from '../src/core/time';
+import { absMin, advanceDays, advanceMin, setNowMs } from '../src/core/time';
 import { ENCOUNTERS, EYES, FOES, ITEMS, JOBS, NEWS, NPCS, QUESTS, REGIONS, ROOMS, SHI, STORIES, npc, shiById } from '../src/content';
-import type { Cond } from '../src/content/types';
+import type { Cond, ShiDef } from '../src/content/types';
 import { run, test as cond } from '../src/engine/dsl';
+import * as dsl from '../src/engine/dsl';
 import { act, enter, roomNpcs, verbsOf } from '../src/engine/world';
 import { dating, knownShi, tickShi } from '../src/engine/shishi';
 import { jingxiu } from '../src/engine/shiguang';
-import { migrate } from '../src/core/save';
+import { migrate, readSave, useStore, writeSave, type SaveStore } from '../src/core/save';
 import { NEWS_MAX_LEN } from './style-rules';
 
 const report = (errs: string[]): void => { expect(errs, '\n' + errs.join('\n')).toEqual([]); };
@@ -48,21 +49,27 @@ describe('世事写得对', () => {
       ids.add(d.id);
       if (!REGIONS[d.region]) errs.push(`${w}：地区「${d.region}」不存在`);
       if (!d.steps[d.first]) errs.push(`${w}：起头的「${d.first}」这一步没写`);
+      if (d.firstAlt && !d.steps[d.firstAlt]) errs.push(`${w}：再来的「${d.firstAlt}」这一步没写`);
+      if (typeof d.again === 'object' && (!Number.isInteger(d.again.min) || !Number.isInteger(d.again.max) || d.again.min < 1 || d.again.max < d.again.min)) errs.push(`${w}：again 的 min/max 要是递增的正整数闭区间`);
       if (d.place) {
         const r = ROOMS.find(x => x.id === d.place);
         if (!r) errs.push(`${w}：place 指向不存在的地点「${d.place}」`);
         else if (r.region !== d.region) errs.push(`${w}：place「${d.place}」不在这件事的地区里`);
       }
-      // 不插手能走到的：从起头顺着 next 走
-      const auto = new Set<string>();
-      for (let k: string | undefined = d.first; k && d.steps[k] && !auto.has(k); k = d.steps[k].next?.to) {
-        auto.add(k);
-        // 岔路（next.alt）：世界的种子抽中了，也是自己走到的
-        const alt = d.steps[k].next?.alt?.to;
-        if (alt) auto.add(alt);
-      }
-      // 玩家在场亲眼看着（next.here，键是原本要去的）：自己走到的结局换成在场的说法，也是自己走到的
-      for (const k of [...auto]) for (const [from, to] of Object.entries(d.steps[k].next?.here ?? {})) if (auto.has(from)) auto.add(to);
+      // 首回和再来的开场分别验收，不能用第二条链补掉首回没有结局的问题。
+      const starts = [d.first, ...(d.again !== undefined && d.firstAlt ? [d.firstAlt] : [])];
+      const autoByStart = starts.map(first => {
+        const auto = new Set<string>();
+        for (let k: string | undefined = first; k && d.steps[k] && !auto.has(k); k = d.steps[k].next?.to) {
+          auto.add(k);
+          const alt = d.steps[k].next?.alt?.to;
+          if (alt) auto.add(alt);
+        }
+        // 在场的说法也是自己走到的结局。
+        for (const k of [...auto]) for (const [from, to] of Object.entries(d.steps[k].next?.here ?? {})) if (auto.has(from)) auto.add(to);
+        return auto;
+      });
+      const auto = new Set(autoByStart.flatMap(chain => [...chain]));
       // 玩家事先安排的（next.route：写个旗标，到日子改走那一步）：走得到，但不算「没人管时」的结局
       const routed = new Set<string>();
       for (const st of Object.values(d.steps)) for (const r of st.next?.route ?? []) {
@@ -93,14 +100,16 @@ describe('世事写得对', () => {
         for (const id of Object.keys(st.self ?? {})) if (!npc(id)) errs.push(`${ws}：self 里的「${id}」不是真有的人`);
         if (!auto.has(k) && !by.has(k)) errs.push(`${ws}：走不到。不在 next 的链上，也没有哪个选择用 { type: 'shi', id: '${d.id}', to: '${k}' } 推到这一步`);
         // 自己走到的那几步，玩家得有办法知道：传开的话，或者在哪儿看得见
-        if (auto.has(k) && k !== d.first && !st.news && !st.where) errs.push(`${ws}：世界自己走到这一步，要写 news（传开的话）或 where（在哪儿看得见）`);
+        if (auto.has(k) && !starts.includes(k) && !st.news && !st.where) errs.push(`${ws}：世界自己走到这一步，要写 news（传开的话）或 where（在哪儿看得见）`);
       }
       const endings = Object.keys(d.steps).filter(k => !d.steps[k].next);
-      const left = endings.filter(k => auto.has(k));
       const mine = endings.filter(k => !auto.has(k));
       // 没人管时的结局：一个（有岔路的，是岔路各通往一个，都算）
       const forks = Object.values(d.steps).reduce((n, x) => n + (x.next?.alt ? 1 : 0) + Object.keys(x.next?.here ?? {}).filter(k => k === x.next?.to || k === x.next?.alt?.to).length, 0);
-      if (left.length < 1 || left.length > 1 + forks) errs.push(`${w}：没人管时要有一个结局（现在 ${left.length} 个）`);
+      autoByStart.forEach((chain, i) => {
+        const left = endings.filter(k => chain.has(k));
+        if (left.length < 1 || left.length > 1 + forks) errs.push(`${w} 从「${starts[i]}」起：没人管时要有一个结局（现在 ${left.length} 个）`);
+      });
       if (mine.length < 2) errs.push(`${w}：插手的结局至少两个（帮这边、帮那边、报官……），现在 ${mine.length} 个`);
       for (const k of endings) if (!read.get(d.id)?.has(k)) errs.push(`${w} 的结局「${k}」：没有任何地方读（地点描写、人物的话、传闻的条件写上 { shi: { id: '${d.id}', at: ['${k}'] } }），玩家看不出世界变了`);
     }
@@ -342,5 +351,167 @@ describe('世事的引擎', () => {
     const m = migrate(raw);
     expect(m.shi?.ss_zei).toBeUndefined();
     expect(m.shi?.gone).toBeUndefined();
+  });
+});
+
+/** 借用已注册的 id，临时替换步骤；不向正式内容或存档格式添加测试入口。 */
+describe('世事再来：真了结、冷却、第二开场', () => {
+  let d: ShiDef, original: ShiDef, all: ShiDef[];
+  beforeEach(() => {
+    setNowMs(() => 1_000_000_000_000);
+    setState(skipToYangzhou());
+    S.loc = 'cheng'; S.min = 10 * 60;
+    d = shiById('ss_zei')!;
+    original = structuredClone(d);
+    Object.assign(d, {
+      first: 'qi', firstAlt: 'zaiqi', start: undefined, again: { min: 2, max: 4 },
+      steps: {
+        qi: { now: '首回有人报失。', news: '街坊头一回来报失。', next: { days: 1, to: 'end' },
+          do: [{ type: 'silver', delta: 11 }, { type: 'flag', flag: 'test_again_once' }] },
+        zaiqi: { now: '旧案了结，街坊又来找你。', news: '旧案之后，街坊又碰上了事。', next: { days: 1, to: 'end' },
+          do: [{ type: 'flag', flag: 'test_again_returned' }] },
+        end: { now: '这一回已经了结。', news: '街坊这一回的事了结了。' }
+      }
+    } satisfies Partial<ShiDef>);
+    all = SHI.splice(0, SHI.length, d);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks(); useStore(null);
+    for (const key of Object.keys(d)) delete (d as unknown as Record<string, unknown>)[key];
+    Object.assign(d, original);
+    SHI.splice(0, SHI.length, ...all);
+    setNowMs(() => Date.now());
+  });
+  const finish = (): number => {
+    tickShi();
+    expect(S.shi?.ss_zei?.at).toBe('qi');
+    advanceDays(S, 1); tickShi();
+    expect(S.shi?.ss_zei?.at).toBe('end');
+    expect(S.shi?.ss_zei?.done).toBeUndefined();
+    return S.shi!.ss_zei.since;
+  };
+
+  it('真实终局过冷却才再来，见闻与传闻换开场，首回奖励和永久旗标不重置', () => {
+    d.again = { min: 2, max: 2 };
+    const silver = S.silver;
+    tickShi();
+    const first = knownShi()[0].now;
+    advanceDays(S, 1); tickShi();
+    advanceMin(S, 2 * 1440 - 1); tickShi();
+    expect(S.shi!.ss_zei.at).toBe('end');
+    advanceMin(S, 1);
+    const news = tickShi();
+    expect(S.shi!.ss_zei).toMatchObject({ at: 'zaiqi', done: 1, seen: 'zaiqi' });
+    expect(knownShi()[0].now).toBe(d.steps.zaiqi.now);
+    expect(knownShi()[0].now).not.toBe(first);
+    expect(news).toContain(d.steps.zaiqi.news);
+    expect(S.silver).toBe(silver + 11);
+    expect(S.flags.test_again_once).toBe(true);
+    expect(S.flags.test_again_returned).toBe(true);
+    for (let i = 0; i < 20; i++) expect(tickShi()).toEqual([]);
+    expect(S.silver).toBe(silver + 11);
+  });
+
+  it('旧数字 90 仍恰好九十日；省略 firstAlt 时仍从原开场再来', () => {
+    d.again = 90; delete d.firstAlt;
+    const ended = finish();
+    advanceMin(S, 90 * 1440 - 1); tickShi();
+    expect(S.shi!.ss_zei.at).toBe('end');
+    advanceMin(S, 1); tickShi();
+    expect(S.shi!.ss_zei).toMatchObject({ at: 'qi', since: ended + 90 * 1440, done: 1 });
+  });
+
+  it('区间两端都能抽到，每个种子的实际重开都在闭区间内，不消费世界随机流', () => {
+    const waits = new Set<number>();
+    for (let seed = 0; seed < 48; seed++) {
+      setState(skipToYangzhou()); S.loc = 'cheng'; S.min = 10 * 60; S.w.seed = seed;
+      const rn = S.w.rn, ended = finish();
+      let elapsed = 0;
+      while (S.shi!.ss_zei.at === 'end' && elapsed < 5) {
+        // 每日多次刷新不能重新抽冷却。
+        for (let i = 0; i < 5; i++) tickShi();
+        advanceDays(S, 1); elapsed++; tickShi();
+      }
+      expect(elapsed).toBeGreaterThanOrEqual(2); expect(elapsed).toBeLessThanOrEqual(4);
+      expect(S.shi!.ss_zei).toMatchObject({ at: 'zaiqi', done: 1, since: ended + elapsed * 1440 });
+      expect(S.w.rn).toBe(rn);
+      waits.add(elapsed);
+    }
+    expect([...waits].sort()).toEqual([2, 3, 4]);
+  });
+
+  it('反复真实存读档不改抽签或重开时刻，进入第三回也保留轮次', () => {
+    const data = new Map<string, string>();
+    const store: SaveStore = {
+      getItem: k => data.get(k) ?? null, setItem: (k, v) => { data.set(k, v); },
+      removeItem: k => { data.delete(k); }, key: i => [...data.keys()][i] ?? null,
+      get length() { return data.size; }
+    };
+    useStore(store);
+    const ended = finish(), checkpoint = structuredClone(S);
+    const play = (reload: boolean): number[] => {
+      setState(structuredClone(checkpoint));
+      const openings: number[] = [];
+      while (openings.length < 2 && absMin(S) - ended < 12 * 1440) {
+        if (reload) {
+          writeSave(S);
+          const saved = readSave();
+          expect(saved.broken).toBe(false); expect(saved.state).not.toBeNull();
+          setState(saved.state!);
+        }
+        const before = S.shi!.ss_zei.done ?? 0;
+        for (let i = 0; i < 3; i++) tickShi();
+        if ((S.shi!.ss_zei.done ?? 0) > before) openings.push(S.shi!.ss_zei.since);
+        if (openings.length < 2) advanceMin(S, 60);
+      }
+      expect(openings).toHaveLength(2);
+      expect(S.shi!.ss_zei).toMatchObject({ at: 'zaiqi', done: 2 });
+      expect(S.w.rn).toBe(checkpoint.w.rn);
+      expect(S.silver).toBe(checkpoint.silver);
+      return openings;
+    };
+    expect(play(true)).toEqual(play(false));
+  });
+
+  it('第二、第三回执行开场效果之前已写好真实轮次', () => {
+    d.again = { min: 2, max: 2 };
+    const observed: number[] = [], originalRun = dsl.run;
+    vi.spyOn(dsl, 'run').mockImplementation(effects => {
+      if (effects === d.steps.zaiqi.do) observed.push(S.shi!.ss_zei.done!);
+      return originalRun(effects);
+    });
+    finish(); advanceDays(S, 2); tickShi();
+    advanceDays(S, 1); tickShi();
+    expect(S.shi!.ss_zei.at).toBe('end');
+    advanceDays(S, 2); tickShi();
+    expect(observed).toEqual([1, 2]);
+  });
+
+  it('第二回在外地尚未听说，依然等玩家回来才往下走', () => {
+    d.again = 2;
+    finish(); S.loc = 'gz_town';
+    advanceDays(S, 2); tickShi();
+    expect(S.shi!.ss_zei).toMatchObject({ at: 'zaiqi', done: 1 });
+    expect(S.shi!.ss_zei.seen).toBeUndefined();
+    expect(knownShi()).toEqual([]);
+    advanceDays(S, 20); tickShi();
+    expect(S.shi!.ss_zei.at).toBe('zaiqi');
+    S.loc = 'cheng'; tickShi();
+    expect(S.shi!.ss_zei.seen).toBe('zaiqi');
+    advanceMin(S, 1440 - 1); tickShi();
+    expect(S.shi!.ss_zei.at).toBe('zaiqi');
+    advanceMin(S, 1); tickShi();
+    expect(S.shi!.ss_zei).toMatchObject({ at: 'end', done: 1 });
+  });
+
+  it('再来仍要满足原起头条件，暂不满足时保留终局与抽签基准', () => {
+    d.again = 2; d.start = { flag: 'test_again_allowed' };
+    S.flags.test_again_allowed = true;
+    const ended = finish();
+    S.flags.test_again_allowed = false;
+    advanceDays(S, 2); tickShi();
+    expect(S.shi!.ss_zei).toMatchObject({ at: 'end', since: ended });
+    S.flags.test_again_allowed = true; tickShi();
+    expect(S.shi!.ss_zei).toMatchObject({ at: 'zaiqi', done: 1, since: ended + 2 * 1440 });
   });
 });

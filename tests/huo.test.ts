@@ -128,6 +128,41 @@ describe('码头的主人是真的', () => {
     expect(marksOf('dukou').length).toBe(1);
     expect(roomDesc('dukou').endsWith(marksOf('dukou')[0])).toBe(true);
   });
+
+  it('码头真走到西舵终局，第二开场不重扣黑风寨实力，也不清掉主人和首回旗标', () => {
+    const d = shiById('ss_matou')!, original = { ...d };
+    const all = SHI.splice(0, SHI.length, d);
+    try {
+      d.again = { min: 2, max: 2 }; d.firstAlt = 'test_return';
+      d.steps = { ...d.steps, test_return: {
+        now: '码头旧争已了，两舵又为新来的船顶上了。',
+        news: '码头又有新船到，两舵旧人重碰面。', next: { days: 2, to: 'duizhi' }
+      } };
+      S.flags.boss = true;
+      const power = S.w.fac.hei.power;
+      tickShi();
+      expect(S.w.fac.hei.power).toBe(power - 27);
+      const firstNews = d.steps.qi.news;
+      for (const days of [2, 3, 2]) { advanceDays(S, days); tickShi(); }
+      expect(S.shi!.ss_matou.at).toBe('xiduo');
+      expect(ownerOf('dukou')).toBe('xi');
+      advanceDays(S, 2);
+      const news = tickShi();
+      expect(S.shi!.ss_matou).toMatchObject({ at: 'test_return', done: 1 });
+      expect(news).toContain(d.steps.test_return.news);
+      expect(news).not.toContain(firstNews);
+      expect(S.w.fac.hei.power).toBe(power - 27);
+      expect(ownerOf('dukou')).toBe('xi');
+      expect(S.w.fac.xi.holds).toEqual(['dukou']);
+      expect(S.flags.boss).toBe(true);
+      for (let i = 0; i < 10; i++) tickShi();
+      expect(S.w.fac.hei.power).toBe(power - 27);
+    } finally {
+      delete d.again; delete d.firstAlt;
+      Object.assign(d, original);
+      SHI.splice(0, SHI.length, ...all);
+    }
+  });
 });
 
 describe('慢变：tickWorld 跨过一个江湖日跑一次', () => {
