@@ -14,7 +14,7 @@ const NEW = { quest: { id: 'prologue', atLeast: 3 }, flag: 'kp_xin' };
 const NPCS: NpcDef[] = [
   {
     id: 'gz_fd1', name: '殷长根', ini: '殷', tone: 'gray', brief: '在柳树下补网',
-    look: '六十来岁的渔家，赤着脚，裤腿卷到膝盖上。右手食指短了半截——年轻时叫网绳勒掉的。梭子磨得只剩半截，他用得比新的还顺手。',
+    look: '六十来岁的渔家，赤着脚，裤腿卷到膝盖上。右手虎口一道网绳勒的旧疤——年轻时叫网绳勒掉的。梭子磨得只剩半截，他用得比新的还顺手。',
     // 早潮退了趁湿补网；日头上来网线发脆，他就收了网回家
     at: { room: 'gz_fen', if: { hour: { from: 6, to: 11 } } },
     verbs: ['交谈', '观察'],
