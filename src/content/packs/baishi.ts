@@ -80,6 +80,7 @@ const GB_JOIN: Effect[] = [
 ];
 
 const LSM_JOIN: Effect[] = [
+  { type: 'quest', id: 'bs2_lsm_jujian', stage: 1 },
   { type: 'sect', school: '六扇门', rank: '记名' },
   // 身份：捕快（engine/shenfen.ts）。腰牌能盘问人人；海捕文书上的人犯见 packs/liushanmen.ts
   { type: 'shenfen', id: 'bukuai' },
@@ -92,6 +93,7 @@ const LSM_JOIN: Effect[] = [
 ];
 
 const JW_JOIN: Effect[] = [
+  { type: 'quest', id: 'bs2_jw_huaya', stage: 1 },
   { type: 'sect', school: '军伍', rank: '记名' },
   { type: 'flag', flag: 'bs2_jw_in' },
   // 安家银进了营才发（审查 C08、D07：原来募兵画个押就白拿三两）
@@ -132,29 +134,37 @@ const NPCS: NpcDef[] = [
       学长拳: [
         { if: { canLearn: 'jh_taizu', silver: 100 },
           text: '卢馆主收下钱，脱了短褂，从起手式教起：冲拳、劈拳、撩阴、贯耳，一招一式，教了足足两个时辰。「太祖长拳，天下最寻常的拳。寻常的拳打得不寻常，才是功夫。」（银两 −100 文）',
-          do: [{ type: 'silver', delta: -100 }, { type: 'time', add: 240 }, { type: 'learn', skill: 'jh_taizu', prof: 60 }] },
-        { if: { canLearn: 'jh_taizu' }, text: '「学费一百文，一文不赊。」卢馆主摆摆手，「武馆也要吃饭。」' },
+          do: [{ type: 'quest', id: 'bs2_wg_xuefei', stage: 1 }, { type: 'silver', delta: -100 }, { type: 'time', add: 240 }, { type: 'learn', skill: 'jh_taizu', prof: 60 }] },
+        { if: { canLearn: 'jh_taizu' },
+          text: '卢馆主摆摆手：「学费一百文，一文不赊。武馆也要吃饭。运河渡口扛包、望江楼帮厨，一日也挣得几十文，凑够了再来。」',
+          do: [{ type: 'quest', id: 'bs2_wg_xuefei', stage: 0 }] },
         { text: '卢馆主看了你一眼：「你身上的规矩，比我这武馆大。」他没再多说。' }
       ],
       学谭腿: [
         { if: { canLearn: 'jh_tantui', silver: 100 },
           text: '卢馆主叫你扶着木桩，一条腿一条腿地踢：「十二路谭腿，踢的是下三路。踢够一万脚，碗口粗的木桩也踢得断。」你踢到天色变了，两条腿像灌了铅。（银两 −100 文）',
-          do: [{ type: 'silver', delta: -100 }, { type: 'time', add: 240 }, { type: 'learn', skill: 'jh_tantui', prof: 60 }] },
-        { if: { canLearn: 'jh_tantui' }, text: '「学费一百文。」卢馆主头也不回，「钱凑够了再来。」' },
+          do: [{ type: 'quest', id: 'bs2_wg_xuefei', stage: 1 }, { type: 'silver', delta: -100 }, { type: 'time', add: 240 }, { type: 'learn', skill: 'jh_tantui', prof: 60 }] },
+        { if: { canLearn: 'jh_tantui' },
+          text: '卢馆主头也不回：「谭腿的学费是一百文，钱凑够了再来。渡口的盐包、望江楼的灶上，哪处都缺人手。」',
+          do: [{ type: 'quest', id: 'bs2_wg_xuefei', stage: 0 }] },
         { text: '卢馆主看了你一眼：「你身上的规矩，比我这武馆大。」他没再多说。' }
       ],
       学刀法: [
         { if: { canLearn: 'jh_wuhu', silver: 300 },
           text: '卢馆主从刀枪架上抽了口朴刀，一路一路演给你看：「五虎断门刀，断的是人的活路。」刀风扫得院里的落叶打旋。「刀得自己备，架上的朴刀六百文一口。没刀在手，这路刀法你只能比划。」（银两 −300 文）',
-          do: [{ type: 'silver', delta: -300 }, { type: 'time', add: 240 }, { type: 'learn', skill: 'jh_wuhu', prof: 60 }] },
-        { if: { canLearn: 'jh_wuhu' }, text: '「刀法三百文。」卢馆主道，「刀比拳金贵，刀伤人也比拳狠。」' },
+          do: [{ type: 'quest', id: 'bs2_wg_xuefei', stage: 1 }, { type: 'silver', delta: -300 }, { type: 'time', add: 240 }, { type: 'learn', skill: 'jh_wuhu', prof: 60 }] },
+        { if: { canLearn: 'jh_wuhu' },
+          text: '卢馆主道：「刀法三百文，刀比拳金贵，刀伤人也比拳狠。钱不凑手，先去运河渡口扛几日盐包。」',
+          do: [{ type: 'quest', id: 'bs2_wg_xuefei', stage: 0 }] },
         { text: '卢馆主看了你一眼：「你身上的规矩，比我这武馆大。」他没再多说。' }
       ],
       学形意: [
         { if: { canLearn: 'jh_xingyi', realm: { skill: 'jh_taizu', atLeast: 1 }, silver: 500 },
           text: '卢馆主关了院门，这才拉开架子：劈、崩、钻、炮、横，五行拳一拳一拳打给你看。「形意拳不教生手。你的长拳有了底子，我才肯教。」他教了整整三个时辰，末了说：「半步崩拳打天下——那半步，得你自己走。」（银两 −500 文）',
-          do: [{ type: 'silver', delta: -500 }, { type: 'time', add: 360 }, { type: 'learn', skill: 'jh_xingyi', prof: 60 }] },
-        { if: { canLearn: 'jh_xingyi', realm: { skill: 'jh_taizu', atLeast: 1 } }, text: '卢馆主点点头：「底子够了。形意拳五百文，少一文不教。」' },
+          do: [{ type: 'quest', id: 'bs2_wg_xuefei', stage: 1 }, { type: 'silver', delta: -500 }, { type: 'time', add: 360 }, { type: 'learn', skill: 'jh_xingyi', prof: 60 }] },
+        { if: { canLearn: 'jh_xingyi', realm: { skill: 'jh_taizu', atLeast: 1 } },
+          text: '卢馆主点点头：「底子够了。形意拳五百文，少一文不教。钱不凑手，去渡口扛几日盐包，或者到望江楼帮厨。」',
+          do: [{ type: 'quest', id: 'bs2_wg_xuefei', stage: 0 }] },
         { if: { canLearn: 'jh_xingyi' }, text: '卢馆主摇头：「形意拳不教生手。先把太祖长拳练到略有小成，让我看看你的底子。」' },
         { text: '卢馆主看了你一眼：「你身上的规矩，比我这武馆大。」他没再多说。' }
       ]
@@ -383,15 +393,20 @@ const NPCS: NpcDef[] = [
         { if: { eming: 10 }, text: '秦教头连眼皮都没抬：「恶名在外的人，穿不得这身皂衣。」' },
         { if: { noSect: true, quest: { id: 'side_caoshangfei', atLeast: 3 }, flag: 'csf_surrender' },
           text: '秦教头放下铁尺，打量你半晌：「劝得动草上飞自首的，就是你？拿人不靠刀，这才是六扇门要的人。」他站起身，「周捕头举荐你。规矩不能破，接我三十招。」',
-          do: [{ type: 'fight', foe: 'bs2_lsm_kao' }] },
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 1 }, { type: 'fight', foe: 'bs2_lsm_kao' }] },
         { if: { noSect: true, quest: { id: 'side_caoshangfei', atLeast: 3 }, flag: 'csf_caught' },
           text: '秦教头放下铁尺：「草上飞是你押回来的。周捕头说，你下手有分寸，没要他的命。」他站起身，「周捕头举荐的人，我也得亲手试过。接我三十招。」',
-          do: [{ type: 'fight', foe: 'bs2_lsm_kao' }] },
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 1 }, { type: 'fight', foe: 'bs2_lsm_kao' }] },
         { if: { noSect: true, xia: 30, rel: { npc: 'fuya_zhou', is: ['相谈甚欢', '知交'] } },
           text: '秦教头看了你一眼：「周捕头提过你，说扬州城里行侠仗义的后生，你算一个。」他抽出铁尺，「行侠是一回事，拿人是另一回事。接我三十招。」',
-          do: [{ type: 'fight', foe: 'bs2_lsm_kao' }] },
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 1 }, { type: 'fight', foe: 'bs2_lsm_kao' }] },
+        // 侠名在外，周捕头把你名字递上去（和华山申伯求信「侠义二十五也算熟」一路）：不必先有交情
+        { if: { noSect: true, xia: 30 },
+          text: '秦教头上下打量了你一眼，抽出铁尺横在胸前：「扬州城里替人出头的事，一件件都传到府衙来了。周捕头把你的名字抄在举荐的单子上。名声是名声，拿人是拿人，接我三十招。」',
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 1 }, { type: 'fight', foe: 'bs2_lsm_kao' }] },
         { if: { noSect: true },
-          text: '秦教头摇摇头：「六扇门不是募兵处，不收毛遂自荐的。」他朝公案那边努努嘴，「周捕头手上压着案子。替他办成一件，叫他举荐你，再来说话。」' },
+          text: '秦教头摇摇头，朝公案那边努努嘴：「六扇门不是募兵处，不收毛遂自荐的。周捕头白日都在堂上压着案子，替他办成一件，叫他举荐你，再来说话。」',
+          do: [{ type: 'quest', id: 'bs2_lsm_jujian', stage: 0 }] },
         { text: '秦教头瞥了你一眼：「你身上挂着别家的名分。六扇门的人，只有一个主子。」' }
       ],
       请教: [
@@ -452,7 +467,8 @@ const NPCS: NpcDef[] = [
       观察: [{ text: '他左手少了两根指头，握白蜡杆却握得极稳。帐前几个新兵站桩，腿一抖，他一杆子抽过去，抽完又亲手把人扶正。' }],
       投军: [
         { if: { noSect: true, notFlag: 'jw_mingce' },
-          text: '韩什长摇头：「先去冯校尉那里画押。名字不上册子，我教你的就是私传军中的功夫，要掉脑袋的。」' },
+          text: '韩什长摇头：「先去冯校尉那里画押，他白日都在帐前点着名册。名字不上册子，我教你的就是私传军中的功夫，要掉脑袋的。」',
+          do: [{ type: 'quest', id: 'bs2_jw_huaya', stage: 0 }] },
         { if: { noSect: true, attr: { key: '体魄', atLeast: 25 } },
           text: '韩什长指了指帐前那对石锁：「扛起来，绕驿亭三圈。」你把两百来斤的石锁扛上肩，绕了三圈，气都没怎么喘。韩什长眯起眼：「好底子。从今天起，你是边军的记名兵。」',
           do: JW_JOIN },
@@ -600,7 +616,7 @@ const ITEMS: ItemDef[] = [
   { id: 'bs2_pudao', name: '朴刀', kind: '装备', price: 600, desc: '武馆刀枪架上的朴刀，刀身宽厚，刀口开过，磨得雪亮。', equip: { slot: '兵器', weapon: '刀', reach: '短' } }
 ];
 
-/* ---------- 任务：丐帮的入门考验 ---------- */
+/* ---------- 任务：入门考验，和被拒之后的门路 ---------- */
 
 const QUESTS: QuestDef[] = [
   { id: KAO_GB, name: '丐帮 · 讨一顿饭', stages: [
@@ -612,6 +628,25 @@ const QUESTS: QuestDef[] = [
         { if: { noSect: true }, text: '了断别家的名分' }
       ] },
     { title: '丐帮 · 讨一顿饭 · 完' }
+  ] },
+  // 入门被拒之后开的三件心事（Issue #314）：被拒时说清人在哪、什么时辰、钱去哪挣；补齐条件、举荐到手（或交了学费、画了押）就了结
+  { id: 'bs2_lsm_jujian', name: '六扇门 · 举荐', stages: [
+    { title: '周捕头举荐，秦教头才收你', to: 'yz_fuya', who: 'fuya_zhou',
+      hint: '秦教头说了：周捕头白日都在府衙前堂压着案子，替他办成一件，他肯开口举荐，六扇门才收你。你行侠的名声若传进衙门，周捕头也肯把你的名字递上去。',
+      need: [{ if: { any: [{ flag: 'csf_surrender' }, { flag: 'csf_caught' }, { rel: { npc: 'fuya_zhou', is: ['相谈甚欢', '知交'] } }, { xia: 30 }] },
+        text: '周捕头肯替你在秦教头面前开口' }] },
+    { title: '六扇门 · 举荐 · 完' }
+  ] },
+  { id: 'bs2_jw_huaya', name: '边军 · 画押', stages: [
+    { title: '名字先要上册子', to: 'yz_mubing', who: 'gd_feng',
+      hint: '韩什长说了：名字不上册子，军中的功夫不敢外传。冯校尉白日都在募兵帐前点名册，先去画了押，韩什长才敢教你。' },
+    { title: '边军 · 画押 · 完' }
+  ] },
+  { id: 'bs2_wg_xuefei', name: '广陵武馆 · 学费', stages: [
+    { title: '凑够学费', to: 'dukou',
+      hint: '卢馆主一文不赊。运河渡口扛包、望江楼帮厨，一日挣得几十文，凑够了再去武馆。',
+      need: [{ if: { silver: 100 }, text: '学费还没凑够' }] },
+    { title: '广陵武馆 · 学费 · 完' }
   ] }
 ];
 
