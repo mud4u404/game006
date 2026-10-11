@@ -11,7 +11,7 @@ import { storyById, NPCS, REALMS, REALM_NEED, ROOMS, foeById, npc, room, skillBy
 import type { Verb } from '../content/types';
 import { RETREAT, retreatPlan } from './lilian';
 import { LODGING, restDays, restEff, retreatBlock, skillName, zhuOf } from './shiguang';
-import { type Lead, jobStep, leadsNear, questNav, sectHome, sectNav, yueNow } from './daohang';
+import { type Lead, jobStep, leadWait, leadsNear, questNav, sectHome, sectNav, yueNow } from './daohang';
 import { kpPos } from './kaipian';
 import { pickBranch, test } from './dsl';
 import { profMul } from './gengu';
@@ -230,7 +230,7 @@ export function yaoJin(): YaoJin {
   const jy0 = S.job ? S.yue.find(y => y.id === 'job_' + S.job!.id) : undefined;
   const jn0 = jy0 ? yueNow(jy0) : null;
   const jobAlso: Also[] = jy0 && jn0 ? [{ text: jn0.step ? `${jn0.go}（${jy0.text}）` : `去${jn0.toName}，交差：${jy0.text}`, to: jn0.to, toName: jn0.toName, min: jn0.to === S.loc ? 0 : travelMin(pathMin(S.loc, jn0.to)) }] : [];
-  const alsoOf = (skip?: Lead): Also[] => [...jobAlso, ...ls.filter(l => l !== skip && l.min <= NEAR).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }))].slice(0, 1);
+  const alsoOf = (skip?: Lead): Also[] => [...jobAlso, ...[...ls].sort((a, b) => +!!b.gig - +!!a.gig).filter(l => l !== skip && l.min <= NEAR).map(l => ({ text: leadText(l), to: l.to, toName: l.toName, min: l.min }))].slice(0, 1);
   // 主线要找的人明显打不过：先去变强，主线放到「也可以」第一行，说明缘故
   const weak = nav && nav.state === '能做' ? tooStrong(nav) : null;
   if (nav && weak) {
@@ -263,7 +263,9 @@ export function yaoJin(): YaoJin {
   // 没有主线可走：近处的差事、零工
   const l = ls[0];
   if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName, here: false, also: alsoOf(l) };
-  return { ...wander(), here: false, also: [] };
+  // 想接差事但派差的人此刻不在：写他什么时候在哪儿，不推「去」；再给一件眼下能做的事（不指地图，负责人 #617）
+  const wait = leadWait(), w = wander();
+  return { ...w, text: wait ? `${wait}；眼下不妨${w.text}` : w.text, here: false, also: [] };
 }
 
 /* ---------- 地点说明 ---------- */
