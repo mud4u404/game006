@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { exportCode } from '../src/core/save';
+import { exportCode, exportCodeZ, leanState, importCodeAny, migrate } from '../src/core/save';
+const RAW = import.meta.glob<string>(['./fixtures/v5-midgame.json', '../src/ui/shell.ts'], { query: '?raw', import: 'default', eager: true });
 import { newGame, S, setState } from '../src/core/state';
 import { addSilver, clearClicks, clickLabel, feedbackUrl, recentClicks, recordClick, setWushi, teleport, URL_MAX, verTap, wushiOn, type FeedbackInfo } from '../src/core/wushi';
 import { wushiToolsHTML } from '../src/ui/views/wushi-tools';
@@ -69,6 +70,22 @@ describe('巫师模式', () => {
     setState(newGame());
     const r = feedbackUrl('x', info(), exportCode(S));
     expect(new URL(r.url).searchParams.get('labels')).toBe('反馈');
+  });
+
+  it('中期存档（反馈 #617：存档码空了）：压缩后放不进的，精简后放得进，读回来还是那个人', async () => {
+    const mid = migrate(JSON.parse(RAW['./fixtures/v5-midgame.json']));
+    const text = '这里点了没反应，我是在东关街想去渡口的时候发现的，怎么都点不动';
+    const full = await exportCodeZ(mid), lean = await exportCodeZ(leanState(mid));
+    expect(lean.length).toBeLessThan(full.length);
+    const r = feedbackUrl(text, info(), [full, lean]);
+    expect(r.withCode, `完整码 ${full.length}，精简码 ${lean.length}`).toBe(true);
+    expect(r.url.length).toBeLessThanOrEqual(URL_MAX);
+    expect(new URL(r.url).searchParams.get('body')).not.toContain('存档码已复制');
+    const back = await importCodeAny(new URL(r.url).searchParams.get('body')!.split('```\n')[1].split('\n')[0]);
+    expect(back.loc).toBe(mid.loc);
+    expect(back.silver).toBe(mid.silver);
+    expect(back.flags).toEqual(mid.flags);
+    expect(back.w.day).toBe(mid.w.day);
   });
 
   it('链接和正文不含令牌（只是打开链接，不调接口）', () => {
