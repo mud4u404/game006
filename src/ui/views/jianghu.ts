@@ -3,6 +3,7 @@ import { absMin, dayNo, minLabel } from '../../core/time';
 import { foeById, npc, room } from '../../content';
 import { npcName, pathMin, roomDesc, roomNpcs, roomObjs, travelMin, verbGain, verbPlan, verbPrice, verbsOf } from '../../engine/world';
 import { IC } from '../icons';
+import { dedupeFeed } from '../../engine/chuanwen';
 import { FEED_TONE } from '../widgets';
 import { questNav, yueNow } from '../../engine/daohang';
 import { arrivalHot, sparWhy, jueseKa, visitsOf, yaoJin, type YaoJin } from '../../engine/jiemian';
@@ -33,7 +34,7 @@ export function viewJianghu(): string {
   // 眼下要紧：永远只有一件，写成动宾句；点了先赶路，到了把人和动作高亮（engine/jiemian.ts）
   const nav = S.track ? questNav(S.track) : null;
   const q = nav && (nav.state === '能做' || nav.state === '要等' || nav.state === '卡住') ? nav : null;
-  const feed = S.feed.slice(0, 2).map(e =>
+  const feed = dedupeFeed(S.feed).slice(0, 2).map(e =>
     `<div class="fr${Date.now() - e.n < 2000 ? ' new' : ''}"><span class="tag ${FEED_TONE[e.t] || ''}">${e.t}</span><span>${e.x}</span></div>`).join('');
   // 约：三日之内的，挂在任务下面提个醒（engine/shiguang.ts）
   const y = nextYue(S);
