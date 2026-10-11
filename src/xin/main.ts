@@ -15,9 +15,8 @@ let raf = 0, previous = 0, roundLeft = ROUND_MS, roundDuration = ROUND_MS, promp
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 const field = (id: string, label: string, value: number, min: number, max: number): string => `<label for="${id}">${label}<input id="${id}" type="number" min="${min}" max="${max}" step="1" value="${value}" inputmode="numeric"></label>`;
 const fighterFields = (prefix: string, f: Fighter): string => `<div class="fields attrs">${attributes.map(([key, label]) => field(`${prefix}-${key}`, label, f.attrs[key], 10, 30)).join('')}</div><p class="field-note">先天四项共八十点；改一项时，其余项随之匀配。</p><div class="fields">${field(`${prefix}-level`, '拳法等级', f.level, 0, 300)}${field(`${prefix}-inner`, '内力修为', f.inner, 0, 300)}${field(`${prefix}-experience`, '实战经验', f.experience, 0, 300)}${field(`${prefix}-energy`, '开场内力 %', f.energy, 0, 100)}</div>`;
-app.innerHTML = `<header class="masthead"><span class="seal">拳</span><div><p class="eyebrow">江湖夜雨 · 练武场</p><h1>这一拳，练前练后</h1></div><span class="tag">手感原型</span></header>
-<section id="arena" class="arena" aria-label="练武场">
-  <div class="arena-head"><div><p class="eyebrow">沙地 · 木桩 · 点到为止</p><h2>先走一趟拳</h2></div><button id="pause" class="quiet" disabled>暂停</button></div>
+app.innerHTML = `<section id="arena" class="arena" aria-label="练武场">
+  <div class="arena-head"><div><p class="eyebrow">江湖夜雨 · 练武场 · 点到为止</p><h2>这一拳，练前练后</h2></div><div class="head-buttons"><button id="lab-open" class="quiet">换对手</button><button id="pause" class="quiet" disabled>暂停</button></div></div>
   <div class="fighters"><div class="fighter"><div><strong>你</strong><span id="hero-realm"></span></div><div class="bar hp"><i id="hero-hp-bar"></i></div><small id="hero-hp"></small><div class="bar mp"><i id="hero-mp-bar"></i></div><small id="hero-mp"></small></div><span class="versus">对</span><div class="fighter"><div><strong id="foe-name">镖师</strong><span id="foe-realm"></span></div><div class="bar hp"><i id="foe-hp-bar"></i></div><small id="foe-hp"></small><small id="foe-mp"></small></div></div>
   <div class="round-line"><span id="phase">试探</span><span id="round">尚未交手</span><span id="manner">相持</span><span id="rage">劲势 30%</span><button id="latest" class="text-button">看最新一合 ↓</button></div>
   <div id="log" class="log" role="log" aria-label="交手记录" tabindex="0"><p class="intro">练过的拳会自己使出来。重招逼来时，以你已有的本事应对；练熟后还可主动使招，劲势积满便能使出绝招。</p></div>
@@ -25,12 +24,13 @@ app.innerHTML = `<header class="masthead"><span class="seal">拳</span><div><p c
   <section class="actions" aria-label="交手操作"><div class="action-head"><strong id="prompt-title">准备交手</strong><span id="countdown"></span></div><p id="prompt-text">默认与你功夫相近的镖师交手，再回头试试地痞与高手。</p><div class="timer"><i id="timer-fill"></i></div><div id="options" class="options" hidden></div><div id="skills" class="skills" hidden></div><div id="idle-actions" class="idle-actions"><button id="start" class="primary">与镖师交手</button><button id="charge" disabled>按住蓄势</button><button id="yield" class="quiet" disabled>认输</button></div><small id="action-note">平时自动交锋，每一合约一息半。</small></section>
 <div class="ult-layer" id="cinema" hidden aria-live="polite"><small id="cinema-label"></small><div class="ult-w"><div class="ult-word" id="cinema-word"></div><span class="ult-seal" id="cinema-seal"></span></div><span class="ult-slash"></span><p id="cinema-text"></p></div>
 </section>
+<div id="lab" class="lab-panel" hidden role="dialog" aria-label="试验台"><div class="lab-top"><strong>试验台</strong><button id="lab-close" class="quiet">收起，回场上</button></div>
 <section class="setup card"><div class="section-head"><h2>换个对手，再打一回</h2><button id="reset" class="text-button">恢复原样</button></div><div id="foe-picker" class="foe-picker">${foes.map((f, i) => `<button data-foe="${i}" aria-pressed="${i === selected}">${f.name}<small>${['不会武 · 只会乱打', '一门拳 · 有来有回', '真高手 · 一招压制'][i]}</small></button>`).join('')}</div>
 <details id="settings"><summary>调整你与对手的底子 <span id="settings-summary"></span></summary><fieldset id="config"><legend>你的底子</legend>${fighterFields('hero', hero)}<h3 id="foe-settings-title">镖师的底子</h3><div id="foe-fields">${fighterFields('foe', foes[selected])}</div><div class="seed-field">${field('seed', '同场种子', 1011, 0, 4294967295)}<small>重打沿用同一场种子；换一个数，换一场交锋。</small></div></fieldset></details>
 <div class="moves"><h3>入门拳 · 招式随火候渐开</h3><div id="moves"></div></div><details class="rules"><summary>查看这次试验的尺度</summary><p>结算沿用旧版 Duel / Person，主动招式、蓄势、状态与伤势均由旧内核处理。境界暂按拳法六成、内力修为二成半、实战经验一成半合成；这些比例供试手感，不是新游戏定案。先天四项仍分别影响拳劲、气血、闪避和应对时间。</p><p id="odds"></p><p>平时按住蓄势，松手后储下拳劲，最长一息半；耗四点内力。蓄势时自动出手照常，但防守松开，挨打会中断且更重。切到后台会暂停，回来可继续。</p><p>这里不写存档、账号、地图或剧情。输后的养伤只作战报说明，本原型不推进日子。</p></details></section>
 <section class="card"><div class="section-head"><h2>同一门拳，三次对照</h2><button id="compare" class="secondary">一键对比</button></div><p class="subtle">初学二十、小成八十、大成一百八十。只变拳法等级，底子、内力、经验、对手与种子都相同。</p><div id="comparison" class="comparison"><p class="subtle">对着同一个人，看看昔日吃力的拳怎样使得从容。</p></div></section>
 <section class="card"><div class="section-head"><h2>把偶然多走几遍</h2><button id="simulate" class="secondary">每档一千场</button></div><label class="policy" for="policy">模拟怎样应对 <select id="policy"><option value="manual">一息内应对，抓破绽，招式就绪即用</option><option value="idle">完全不点，超时凭本能</option></select></label><p class="subtle">实战与模拟用同一套规则。用时含等待选择，扣除暂停；模拟不能代替手机手感。</p><div id="simulation" aria-live="polite"><p class="subtle">按当前三档对手的底子，各打一千场。</p></div></section>
-<footer>待维护者试玩，再交负责人验证境界差与节奏。</footer>`;
+<footer>待维护者试玩，再交负责人验证境界差与节奏。</footer></div>`;
 
 function seed(): number { const n = Number($<HTMLInputElement>('seed').value); return Number.isFinite(n) ? Math.max(0, Math.min(4294967295, Math.round(n))) : 1011; }
 function active(): boolean { return !!battle && (!battle.result || cinemaLeft > 0); }
@@ -43,6 +43,7 @@ function updateLocks(): void {
   $('foe-picker').querySelectorAll<HTMLButtonElement>('button').forEach(b => { b.disabled = lock; });
   $<HTMLButtonElement>('start').disabled = lock;
   $<HTMLButtonElement>('pause').disabled = !active();
+  $<HTMLButtonElement>('lab-open').disabled = lock;
 }
 function updatePreview(): void {
   $('foe-picker').querySelectorAll<HTMLButtonElement>('button').forEach((button, i) => { button.querySelector('small')!.textContent = `拳法 ${foes[i].level} · 内力 ${foes[i].inner}`; });
@@ -172,7 +173,7 @@ function start(): void {
   battle = new Battle(hero, foes[selected], seed()); paused = false; logged = 0; promptSpent = 0; roundDuration = battle.nextRoundMs; roundLeft = roundDuration; chargeStart = 0; cinemaLeft = 0; cinemaImpact = false; $('cinema').hidden = true;
   $('log').replaceChildren(); $('result').hidden = true;
   refresh(); previous = performance.now(); raf = requestAnimationFrame(frame);
-  $('arena').scrollIntoView({ block: 'start', behavior: 'instant' });
+  $('lab').hidden = true;
 }
 function pause(): void {
   if (!active()) return;
@@ -184,6 +185,8 @@ function pause(): void {
   renderActions();
 }
 $('start').addEventListener('click', start);
+$('lab-open').addEventListener('click', () => { if (!active() && !busy) $('lab').hidden = false; });
+$('lab-close').addEventListener('click', () => { $('lab').hidden = true; });
 $('pause').addEventListener('click', pause);
 $('yield').addEventListener('click', () => { if (!active() || paused || cinemaLeft) return; const dt = Math.max(0, performance.now() - previous); battle!.elapsed += battle!.prompt ? promptSpent + dt : roundDuration - roundLeft + dt; battle!.yield(); cancelAnimationFrame(raf); refresh(); });
 $('options').addEventListener('click', e => { const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-choice]'); if (b && !b.disabled) respond(b.dataset.choice as Choice); });

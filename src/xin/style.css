@@ -773,3 +773,12 @@ body:has(.ult-layer.full:not([hidden])) #pause { position:fixed; right:18px; top
 .action-head { margin-bottom:5px; }
 .timer { margin-bottom:6px; }
 @media(max-width:430px) { .actions { padding-top:7px; padding-bottom:7px; } }
+
+/* 手机一屏（负责人 10-11：「首先你得确保它手机端一屏显示」）：场上占满一屏，调底子、对照、模拟收进试验台 */
+#app { padding:0; }
+.arena { height:100svh; height:100dvh; min-height:0; border:0; scroll-margin-top:0; }
+.head-buttons { display:flex; gap:8px; }
+.lab-panel { position:fixed; inset:0; z-index:50; overflow:auto; overscroll-behavior:contain; background:#171f1c; padding:0 14px 24px; }
+.lab-panel[hidden] { display:none; }
+.lab-top { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; padding:10px 0; background:#171f1c; border-bottom:1px solid var(--line); margin-bottom:12px; }
+@media(min-width:741px) { #app { padding:20px 14px 24px; } .arena { height:min(780px,calc(100svh - 40px)); border:1px solid var(--line); } }
