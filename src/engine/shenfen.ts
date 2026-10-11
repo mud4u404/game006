@@ -72,3 +72,29 @@ export function jobOpen(s: Pick<GameState, 'shenfen' | 'job' | 'jobLog' | 'year'
   const last = s.jobLog[id];
   return last === undefined || dayNo(s) - last >= (j.again ?? 3);
 }
+
+/** 收场记录最多留多少条（存档码长度） */
+export const JOB_END_MAX = 20;
+
+type JobClock = Pick<GameState, 'shenfen' | 'job' | 'jobLog' | 'year' | 'month' | 'day' | 'sect'>;
+
+/** 这件差事几日后能重接：0 眼下就能；正数是还要等几日；null 是再也接不了（身份或门派已经对不上） */
+export function jobRetryIn(s: JobClock, id: string): number | null {
+  const j = jobById(id);
+  if (!j) return null;
+  if (j.sect ? s.sect?.school !== j.sect : s.shenfen.id !== j.shenfen || s.shenfen.standing < 1) return null;
+  const last = s.jobLog[id];
+  return last === undefined ? 0 : Math.max(0, (j.again ?? 3) - (dayNo(s) - last));
+}
+
+/** 见闻簿「了结的事」里的一句话：先用差事自己写的收场，没写用通用说法；办砸、误期、放弃后面接上能不能重接 */
+export function jobEndText(s: JobClock, rec: { id: string; how: '办成' | '办砸' | '放弃' | '误期' }): string {
+  const j = jobById(rec.id);
+  const title = j?.title ?? rec.id;
+  const own = j?.end?.[rec.how];
+  const base = own ?? { 办成: `「${title}」办成了，交了差。`, 办砸: `「${title}」办砸了。`, 放弃: `「${title}」你撂下不管了。`, 误期: `「${title}」误了期限，没能交差。` }[rec.how];
+  if (rec.how === '办成') return base;
+  const n = jobRetryIn(s, rec.id);
+  const tail = n === null ? '这件差事你再也接不得了。' : n === 0 ? '眼下就能重接。' : `${n}日后能重接。`;
+  return base + tail;
+}

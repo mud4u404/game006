@@ -25,6 +25,11 @@ export type Tab = 'jianghu' | 'renwu' | 'wugong' | 'xingnang' | 'ditu';
 /** 纸娃娃六个装备位在存档里的键：兵器、冠、衣、靴、佩、饰 */
 export type GearKey = 'weapon' | 'head' | 'body' | 'feet' | 'waist' | 'ring';
 
+/** 差事怎么收的场 */
+export type JobEndHow = '办成' | '办砸' | '放弃' | '误期';
+/** 一条差事收场记录：哪件、怎么收的、第几个江湖日 */
+export interface JobEnd { id: string; how: JobEndHow; day: number }
+
 export interface GameState {
   /** 范围：个人；写入口：core/save.ts */
   v: 5;
@@ -118,6 +123,8 @@ export interface GameState {
   job: { id: string; due: number } | null;
   /** 范围：个人；写入口：engine/xingdong.ts */
   jobLog: Record<string, number>;
+  /** 差事的收场记录（办成、办砸、放弃、误期各一条，最近二十条；旧档可缺省）；范围：个人；写入口：engine/dsl.ts 的 closeJob */
+  jobEnd?: JobEnd[];
   /** 行动结算记录：只留最近三百条，旧档从空记录继续；范围：个人；写入口：engine/xingdong.ts（事件记录） */
   log: EventRec[];
   /** 已裁掉事件的结算凭据，只留 key、不丢防重事实；旧档可缺省；范围：个人；写入口：engine/xingdong.ts、core/save.ts（裁剪归档） */
@@ -229,6 +236,7 @@ export const FIELD_OWNER = Object.freeze({
   zhu: { scope: '个人', writer: 'engine/xingdong.ts' },
   job: { scope: '个人', writer: 'engine/xingdong.ts' },
   jobLog: { scope: '个人', writer: 'engine/xingdong.ts' },
+  jobEnd: { scope: '个人', writer: 'engine/xingdong.ts' },
   log: { scope: '个人', writer: 'engine/xingdong.ts（事件记录）' },
   settledKeys: { scope: '个人', writer: 'engine/xingdong.ts、core/save.ts（裁剪归档）' },
   storyAt: { scope: '个人', writer: 'engine/xingdong.ts' },

@@ -17,7 +17,7 @@ import { act, enter, hopMin, roomNpcs, verbsOf, pathTo, payFare, roadText, trave
 import { act as settleAction, effectReq } from '../engine/xingdong';
 import { markEncounter, rollEncounter } from '../engine/encounter';
 import { TRAVEL_BUSY, afterOutcome, closeSheet, hooks, missedToast, openSheet, registerHandlers, render, renderBar, toast } from './shell';
-import { openQuestbook, trackQuest } from './views/questbook';
+import { openQuestbook, quitJob, trackQuest } from './views/questbook';
 import { kpBiguanTip } from '../engine/kaipian';
 import { sectLeaveSheet, setConfirmRestart } from './views/renwu';
 import { mapSheet, setMapRegion, tripNeedsAsk } from './views/ditu';
@@ -303,6 +303,7 @@ registerHandlers({
   },
   // 见闻簿里差事的「去」：赶到交差的地方
   jgo: v => { if (!v || v === S.loc) return; closeSheet(); goOrAsk(v); },
+  jquit: v => { if (v && quitJob(v)) { openQuestbook(); render(); } },
   retreat: v => retreat(Number(v)),
   // 歇过半夜会误了今日的约：先问一句，照样能歇
   xiejiaoAsk: v => {

@@ -2,7 +2,7 @@
  * 内容数据里的条件（Cond）与效果（Effect）在这里统一解释执行。
  * 开打和开剧情这两种需要界面配合的效果不在这里处理，而是记在 Outcome 里交给调用方。
  */
-import { S, fullName, pushFeed, type GameState } from '../core/state';
+import { S, fullName, pushFeed, type GameState, type JobEndHow } from '../core/state';
 import { emit } from '../core/bus';
 import { absMin, advanceMin, dayNo } from '../core/time';
 import { liang } from '../core/util';
@@ -14,7 +14,7 @@ import { barredFrom, canLearn, leaveWord, pastSectsOf } from './shicheng';
 import { growAttr } from './gengu';
 import { houtianOf, syncGear } from './ren';
 import { keyOfSlot } from './zhuangbei';
-import { SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
+import { JOB_END_MAX, SHENFEN, gongxianOf, jobGongxian, jobOpen, jobPay } from './shenfen';
 import { learnShi, moveShi, shiLeftHours } from './shishi';
 import { hearsay, inner } from './chuanwen';
 import { addLilian, questDone } from './lilian';
@@ -185,6 +185,13 @@ function addGongxian(school: string, d: number): void {
   g[school] = Math.max(0, (g[school] ?? 0) + d);
 }
 
+/** 差事收场：记一条结局，只留最近 JOB_END_MAX 条 */
+function closeJob(id: string, how: JobEndHow): void {
+  const list = (S.jobEnd ??= []);
+  list.push({ id, how, day: dayNo(S) });
+  if (list.length > JOB_END_MAX) list.splice(0, list.length - JOB_END_MAX);
+}
+
 function dismiss(why: string): void {
   const sf = SHENFEN[S.shenfen.id];
   if (!sf) return;
@@ -193,6 +200,7 @@ function dismiss(why: string): void {
   if (sf.sect && S.sect?.school === sf.sect) { (S.pastSects ??= []).push({ school: sf.sect, how: '逐出' }); delete S.sect; lines.push(`你被逐出了${sf.sect}。`); }
   pushFeed('江湖', lines.join(''));
   S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) };
+  if (S.job) closeJob(S.job.id, '放弃');
   S.job = null;
 }
 
@@ -287,7 +295,7 @@ export function runStep(effects: Effect[] | undefined, out: Outcome = newOutcome
           if (e.how === '辞别' && S.gongxian) delete S.gongxian[school];
           if (e.how === '叛门') S.eming += 3;
           // 身份连着这个门派的（捕快之于六扇门），离了门派，身份也就没了
-          if (SHENFEN[S.shenfen.id]?.sect === school) { pushFeed('江湖', `你离了${school}，不再是${SHENFEN[S.shenfen.id].name}。`); S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) }; S.job = null; }
+          if (SHENFEN[S.shenfen.id]?.sect === school) { pushFeed('江湖', `你离了${school}，不再是${SHENFEN[S.shenfen.id].name}。`); S.shenfen = { id: 'youxia', standing: 1, since: dayNo(S) }; if (S.job) closeJob(S.job.id, '放弃'); S.job = null; }
         }
         break;
       case 'attr': growAttr(S, e.key, e.delta, S.chapter === 0 ? '少年往事' : '江湖经历'); break;
@@ -392,6 +400,7 @@ export function runStep(effects: Effect[] | undefined, out: Outcome = newOutcome
         if (!j || S.job?.id !== e.id) break;
         S.job = null;
         S.jobLog[j.id] = dayNo(S);
+        closeJob(j.id, '办成');
         S.yue = S.yue.filter(y => y.id !== 'job_' + j.id);
         delete S.flags.jobWarn;
         // 师门差事给门派贡献，不给钱；身份的差事给钱
@@ -410,8 +419,11 @@ export function runStep(effects: Effect[] | undefined, out: Outcome = newOutcome
       }
       case 'jobFail': {
         const j = jobById(e.id);
+        // 手上这件差事过了约期才收场的是误期；路上打输了之类是办砸
+        const late = S.job?.id === e.id && dayNo(S) > S.job.due;
         if (S.job?.id === e.id) S.job = null;
         S.jobLog[e.id] = dayNo(S);
+        closeJob(e.id, late ? '误期' : '办砸');
         S.yue = S.yue.filter(y => y.id !== 'job_' + e.id);
         pushFeed('江湖', `差事办砸了：${j?.title ?? e.id}。`);
         // 师门差事误了，扣贡献（这件差事本该给的那么多）；身份的差事误了，降地位
@@ -421,6 +433,16 @@ export function runStep(effects: Effect[] | undefined, out: Outcome = newOutcome
           S.flags.jobWarn = true;
           pushFeed('江湖', '东家记了你一过：再误一回，就不用你了。');
         } else run([{ type: 'standing', delta: -1 }]);
+        break;
+      }
+      case 'jobQuit': {
+        const j = jobById(e.id);
+        if (!j || S.job?.id !== e.id) break;
+        S.job = null;
+        S.jobLog[j.id] = dayNo(S);
+        closeJob(j.id, '放弃');
+        S.yue = S.yue.filter(y => y.id !== 'job_' + j.id);
+        pushFeed('江湖', `撂下了差事：${j.title}。`);
         break;
       }
       // 世界状态（engine/shijie.ts）：换主人、势力和地方的数、人的处境、地方的痕迹

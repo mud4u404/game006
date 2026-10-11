@@ -4,9 +4,11 @@ import type { JobDef } from '../../content/types';
 import { knownShi, type ShiRow } from '../../engine/shishi';
 import { minLabel } from '../../core/time';
 import { cn } from '../../core/util';
+import { jobEndText } from '../../engine/shenfen';
 import { yueText } from '../../engine/shiguang';
 import { questNav, sectNav, whoNav, yueNow, type NavState, type QuestNav } from '../../engine/daohang';
 import { test } from '../../engine/dsl';
+import { act as settleAction, effectReq } from '../../engine/xingdong';
 import { hoursAt, stageText } from '../../engine/world';
 import { IC } from '../icons';
 import { tripNote } from './ditu';
@@ -161,7 +163,7 @@ export function questbookSheetHtml(): string {
   const shi = knownShi();
   const shiOpen = shi.filter(r => !r.ended), shiDone = shi.filter(r => r.ended);
   const head = `<div class="qb-h"><h2>见闻</h2><button class="qb-close" data-act="sheetClose" aria-label="关闭">×</button></div>`;
-  if (!navs.length && !shi.length && !S.job && !S.sect) {
+  if (!navs.length && !shi.length && !S.job && !S.sect && !S.jobEnd?.length) {
     return `<div class="qb-wrap">${head}<p class="qb-empty">江湖寂寥，暂无要事。四处走走，找人打听打听。</p></div>`;
   }
 
@@ -187,9 +189,18 @@ export function questbookSheetHtml(): string {
           ${jwLine}
           <small class="qb-to">误了期，${missText(job)}。</small>
         </div>
-        <div class="qb-acts">${jn!.step ? '' : `<button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${jn!.to}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button>${jobHere ? '' : `<small class="qb-to">${tripNote(jn!.to)}</small>`}`}</div>
+        <div class="qb-acts">${jn!.step ? '' : `<button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${jn!.to}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button>${jobHere ? '' : `<small class="qb-to">${tripNote(jn!.to)}</small>`}`}<button class="qb-act" data-act="jquit:${job.id}">放下这件差事</button></div>
       </div>${jobXianHtml(job)}` : '';
   const failHtml = failed.length ? `<h3 class="qb-sec">未竟 · ${failed.length}</h3>${failed.map(n => questRow(n, trackId)).join('')}` : '';
+  const ends = (S.jobEnd ?? []).slice().reverse();
+  const endHtml = ends.length ? `<h3 class="qb-sec">了结的事 · ${ends.length}</h3>${ends.map(r => `
+      <div class="qb-row ${r.how === '办成' ? 'done' : ''}">
+        <div class="qb-info">
+          <b>${jobById(r.id)?.title ?? r.id}</b>
+          <span class="qb-stage">${r.how} · 第${r.day}日</span>
+          <p>${jobEndText(S, r)}</p>
+        </div>
+      </div>`).join('')}` : '';
   const doneN = finished.length + shiDone.length;
   const doneHtml = `<h3 class="qb-sec${doneN ? '' : ' muted'}">了结的 · ${doneN}</h3>${shiDone.map(shiRow).join('')}${finished.map(n => questRow(n, trackId)).join('')}`;
 
@@ -201,6 +212,7 @@ export function questbookSheetHtml(): string {
       ${shiHtml}
       ${failHtml}
       ${doneHtml}
+      ${endHtml}
     </div>`;
 }
 
@@ -214,6 +226,13 @@ export function trackQuest(id: string): void {
   S.track = S.track === id ? '' : id;
   closeSheet();
   render();
+}
+
+/** 放下手上的差事（见闻簿的「放下这件差事」）：走已有的 jobQuit 效果，记进「了结的事」（放弃）；放下了返回 true */
+export function quitJob(id: string): boolean {
+  if (S.job?.id !== id) return false;
+  // 走行动协议（tests/xingdong.test.ts：界面不直接调用 run）
+  return settleAction(effectReq('放下差事', id, [{ type: 'jobQuit', id }])).ok;
 }
 
 /** 差事误了期会怎样：照实写（审查 D12：游侠的差事卡写「地位降一级」，实际降不了） */
