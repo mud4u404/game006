@@ -310,6 +310,14 @@ export class Duel {
   private foeIn(): number { return 1 + (this.foeSt.break?.v ?? 0) / 100; }
   /** 自己挨打的倍数：护体 */
   private meIn(): number { return 1 - Math.min(50, this.guardNow()) / 100; }
+  /** 应对一招最少要耗的内力（硬接 0.15 的上限）：低于它，护体、反击都用不出来，只能硬吃 */
+  mpNeed(): number { return 0.15 * this.mpMax; }
+  /** 内力将尽：不够一次硬接 */
+  mpOut(): boolean { return this.mp < this.mpNeed(); }
+  /** 内力渐少：不到两次硬接 */
+  mpThin(): boolean { return this.mp < this.mpNeed() * 2; }
+  /** 内力短缺对攻守之势的拖累，0（够用）到 1（见底）：内力不足三次硬接起算 */
+  mpShort(): number { return clamp(1 - this.mp / (this.mpNeed() * 3), 0, 1); }
   /** 内力见底（低于一成五），搭配给的被动失效 */
   passiveOn(): boolean { return this.mp >= this.mpMax * MP_FLOOR; }
   /** 眼下的护体：被动加绝招给的 */

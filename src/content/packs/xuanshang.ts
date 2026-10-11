@@ -293,7 +293,7 @@ const XIONGFAN: FoeDef = {
             ],
             later: '郝屠户自己去了府衙自首。街上的人都说，这个杀猪的，走的时候有骨气。' },
           { label: '放他走', sub: '恶名 +2 · 不得领赏',
-            say: '你收了剑：「走吧。你身上背的人命，你自己掂量。」郝屠户朝你磕了个头，消失在了巷口。',
+            say: '你收了兵刃：「走吧。你身上背的人命，你自己掂量。」郝屠户朝你磕了个头，消失在了巷口。',
             do: [
               { type: 'flag', flag: 'xsb_xiong_gone' }, { type: 'flag', flag: 'xsb_xiong_done' },
               { type: 'eming', delta: 2 },
