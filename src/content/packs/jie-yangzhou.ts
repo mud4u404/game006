@@ -366,7 +366,7 @@ const pack: ContentPack = {
     { if: { flag: 'jy_fei_let' }, text: '汪家货栈夜里丢了一包湖丝，飞贼没抓着，掌柜的说要换锁。', who: ['wang', '更夫', '盐商', '掌柜'] },
     { if: { flag: 'jy_fei_shout' }, text: '汪家货栈夜里进了飞贼，有人喊跑了贼，汪老爷赏了二十文——街坊都说汪家大方。', who: ['wang', '更夫', '盐商', '小二'], about: 'you' },
     // 第 15 条：阎爷的回话按四种下场分写；jy_yan_note 只表示「听过回话」，不带具体是哪一种
-    { if: { flag: 'jy_sun_chuan' }, text: '东关街的份子钱，阎爷给一位公子免了——那把剑，他记下了。', who: ['货郎', '脚夫', '赌客'], about: 'you' },
+    { if: { flag: 'jy_sun_chuan' }, text: '东关街的份子钱，阎爷给一位公子免了——那一手，他记下了。', who: ['货郎', '脚夫', '赌客'], about: 'you' },
     { if: { flag: 'jy_sun_jian' }, text: '阎爷留了话：东关街那一户的份子钱免了，往后走船走桥，自家仔细。', who: ['货郎', '脚夫', '赌客'], about: 'you' },
     { if: { flag: 'jy_sun_guan' }, text: '东关街的份子钱照旧在收，只换了个名目，叫「船脚」。', who: ['货郎', '脚夫', '小二'] },
     { if: { flag: 'jy_sun_sha' }, text: '东关街有人捡到一块木牌，墨写的「偿」字，说是盐号送出去的。', who: ['货郎', '脚夫', '衙役'] },
