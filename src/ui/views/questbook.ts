@@ -7,7 +7,8 @@ import { cn } from '../../core/util';
 import { jobEndText } from '../../engine/shenfen';
 import { yueText } from '../../engine/shiguang';
 import { questNav, sectNav, whoNav, yueNow, type NavState, type QuestNav } from '../../engine/daohang';
-import { run, test } from '../../engine/dsl';
+import { test } from '../../engine/dsl';
+import { act as settleAction, effectReq } from '../../engine/xingdong';
 import { hoursAt, stageText } from '../../engine/world';
 import { IC } from '../icons';
 import { tripNote } from './ditu';
@@ -230,8 +231,8 @@ export function trackQuest(id: string): void {
 /** 放下手上的差事（见闻簿的「放下这件差事」）：走已有的 jobQuit 效果，记进「了结的事」（放弃）；放下了返回 true */
 export function quitJob(id: string): boolean {
   if (S.job?.id !== id) return false;
-  run([{ type: 'jobQuit', id }]);
-  return true;
+  // 走行动协议（tests/xingdong.test.ts：界面不直接调用 run）
+  return settleAction(effectReq('放下差事', id, [{ type: 'jobQuit', id }])).ok;
 }
 
 /** 差事误了期会怎样：照实写（审查 D12：游侠的差事卡写「地位降一级」，实际降不了） */
