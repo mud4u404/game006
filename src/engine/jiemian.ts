@@ -7,7 +7,7 @@
  * 战力、评语、闭关、导航都是现成的（engine/zhanli.ts、lilian.ts、daohang.ts），这里只拼，不另造公式。
  */
 import { S } from '../core/state';
-import { storyById, NPCS, REALMS, REALM_NEED, foeById, npc, room, skillById } from '../content';
+import { storyById, NPCS, REALMS, REALM_NEED, ROOMS, foeById, npc, room, skillById } from '../content';
 import type { Verb } from '../content/types';
 import { RETREAT, retreatPlan } from './lilian';
 import { LODGING, restDays, restEff, retreatBlock, skillName, zhuOf } from './shiguang';
@@ -170,12 +170,28 @@ export function tooStrong(nav: { who?: { id: string; name: string }; id: string;
 /** 差事、零工写成动宾句 */
 const leadText = (l: Lead): string => (l.gig ? `去${l.toName}，找点零工做` : `去${l.toName}，接差事「${l.text}」`);
 
+/**
+ * 没有要紧事时，给一件具体能做的事，不再写「打开地图」（负责人 #617：去处和地图是重复的入口）：
+ * 近处有榜文的，去看榜；没有就去路最近、不花钱、有人的地方转转；已经在榜前，就看榜。实在没处可去，只写一句话、不带按钮
+ */
+function wander(): Pick<YaoJin, 'tag' | 'text' | 'to' | 'toName' | 'here' | 'hot'> {
+  const boardIn = (id: string): string | undefined => roomNpcs(id).find(x => npc(x)?.obj && /榜/.test(npc(x)!.name));
+  const here = boardIn(S.loc);
+  if (here) return { tag: '不妨', text: `看看${npcName(here)}上写了什么`, here: true, hot: { npc: here } };
+  const near = ROOMS.filter(r => r.id !== S.loc).flatMap(r => { const c = tripCost(r.id); return c && c.fee === 0 ? [{ r, min: c.min }] : []; }).sort((a, b) => a.min - b.min);
+  const board = near.find(x => boardIn(x.r.id));
+  if (board) return { tag: '不妨', text: `去${board.r.name}看榜`, to: board.r.id, toName: board.r.name, here: false };
+  const folk = near.find(x => roomNpcs(x.r.id).length > 0);
+  if (folk) return { tag: '不妨', text: `去${folk.r.name}，看看有什么人`, to: folk.r.id, toName: folk.r.name, here: false };
+  return { tag: '走走', text: '找人打听打听', here: false };
+}
+
 /** 卡住、要等的时候，能帮上忙的一件事 */
 function helpOf(wait: boolean, ls: Lead[]): Pick<YaoJin, 'text' | 'to' | 'toName' | 'tab' | 'tag'> {
   if (!wait && S.chapter > 0 && (S.lilian ?? 0) > 0) return { tag: '不妨', text: '寻个清净处闭关，把这几日见的打的化开', tab: 'wugong' };
   const l = ls[0];
   if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName };
-  return { tag: '不妨', text: '打开地图，四处走走打听', tab: 'ditu' };
+  return wander();
 }
 
 /** 闭关此刻真能长进：闭关一日或七日预估，战力能涨（熟练够进一重）才算；住处挡着、历练化不动都不算 */
@@ -200,7 +216,7 @@ function strongHelp(ls: Lead[]): Pick<YaoJin, 'text' | 'to' | 'toName' | 'tab' |
   if (sp) return { tag: '先变强', text: sp.here ? `找${sp.name}切磋，练练手` : `去${sp.at}，找${sp.name}切磋`, to: sp.to, toName: sp.at, here: sp.here, hot: sp.here ? { npc: sp.id, verb: '切磋' } : undefined };
   const l = ls[0];
   if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName };
-  return { tag: '先变强', text: '打开地图，四处走走打听，多攒些历练', tab: 'ditu' };
+  return { ...wander(), tag: '先变强' };
 }
 
 export function yaoJin(): YaoJin {
@@ -247,9 +263,9 @@ export function yaoJin(): YaoJin {
   // 没有主线可走：近处的差事、零工
   const l = ls[0];
   if (l) return { tag: l.gig ? '零工' : '差事', text: leadText(l), to: l.to, toName: l.toName, here: false, also: alsoOf(l) };
-  // 想接差事但派差的人此刻不在：写他什么时候在哪儿，不推「去」
-  const wait = leadWait();
-  return { tag: '走走', text: wait ? `${wait}，先四处走走看看` : '打开地图，四处走走看看', tab: 'ditu', here: false, also: [] };
+  // 想接差事但派差的人此刻不在：写他什么时候在哪儿，不推「去」；再给一件眼下能做的事（不指地图，负责人 #617）
+  const wait = leadWait(), w = wander();
+  return { ...w, text: wait ? `${wait}；眼下不妨${w.text}` : w.text, here: false, also: [] };
 }
 
 /* ---------- 地点说明 ---------- */

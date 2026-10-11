@@ -664,14 +664,24 @@ html.preview #app{height:calc(100% - var(--pv-h))}
 .avab.hot .ava{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--info)}
 .avab.hot .nm{color:var(--info);font-weight:700}
 .act.hot{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--info);font-weight:700}
-/* 去处缩成一行 */
-.goline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.goline .exit.solo{grid-column:auto}
-.goline .exit.solo:only-child{grid-column:1 / -1}
-.mapbtn .dir{background:var(--info-soft);color:var(--info)}
 /* 地图点地名的说明 */
 .mbrief div{align-items:flex-start}
 .mbrief .tag{flex-shrink:0;margin-top:3px}
+.mbrief .mcell{min-width:0;flex:1}
+/* 卡片上「去」放最上面、占大头；「此处」的人和动作 */
+.mgo{grid-template-columns:2fr 1fr;margin:4px 0 8px}
+.mclose{grid-template-columns:1fr}
+.mgo .btn{height:52px}
+.mgo .btn{display:flex;align-items:center;justify-content:center;padding:0}
+.mgo .btn.go{font-size:20px}
+.mbrief .mfolk{display:block;padding:2px 0 8px}
+.mfolk b{display:block;font-size:14px}
+.mfolk .mvs{color:var(--muted);font-size:12px}
+.mbrief .mverbs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:4px}
+.mact{height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.15;font-size:13px}
+.mact small{font-size:10px;font-weight:400;opacity:.8}
+/* 地图页顶上的眼下要紧 */
+.quest.mtop{margin-bottom:8px}
 /* 变强的路 */
 .acts.col{grid-template-columns:1fr}
 .acts.col .act{height:auto;min-height:44px;padding:8px 12px;line-height:1.4;text-align:left}

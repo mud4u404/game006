@@ -15,13 +15,16 @@ const ALIAS = { step5: 'workbuddy' };
 const raw = ((fi >= 0 ? args[fi + 1] : process.env.WORK_FOR) ?? '').toLowerCase();
 const me = ALIAS[raw] ?? raw;
 if (ALIAS[raw]) console.log(`「${raw}」已改名为「${me}」，按 ${me} 领任务。以后请用 --for ${me}`);
-// 从头开始阶段（负责人 10-11，docs/congtou.md）：只给 codex 和 claude 派活，其余暂停
-const ACTIVE = ['codex', 'claude'];
+// 从头开始阶段（负责人 10-11，docs/congtou.md）：
+// 新版（带「从头」标签）只派给 codex、claude；旧版接着打磨，只派给 trae、qoder、minimax、codebuddy（不带「从头」、不带「暂缓」的）。其余暂停
+const NEW_TEAM = ['codex', 'claude'];
+const OLD_TEAM = ['trae', 'qoder', 'minimax', 'codebuddy'];
+const ACTIVE = [...NEW_TEAM, ...OLD_TEAM];
 const mi = args.indexOf('--max-minutes');
 const maxMin = mi >= 0 ? Number(args[mi + 1]) || 0 : 0;
 // 暂停的不能马上退出：自动模式会立刻再调一次，空转花额度。照常「等」，等待期间不花 token
 if (!ACTIVE.includes(me)) {
-  console.log('从头开始阶段，暂停派活：只有 Codex 和 Claude 在做。请停下自动模式，详见 docs/congtou.md');
+  console.log('从头开始阶段，暂停派活：新版只有 Codex、Claude，旧版只有 Trae、Qoder、minimax、CodeBuddy。请停下自动模式，详见 docs/congtou.md');
   if (once) process.exit(0);
   if (maxMin) setTimeout(() => { console.log('暂时没有可做的任务'); process.exit(0); }, maxMin * 60000);
   setInterval(() => {}, 1 << 30);
@@ -80,8 +83,9 @@ const start = Date.now();
 let fails = 0;
 for (;;) {
   try {
-    // 从头开始阶段只领带「从头」标签的；旧任务一律不派
-    const fresh = (await openItems()).filter(i => (i.labels ?? []).some(l => l.name === '从头'));
+    // 新版的人只领带「从头」的；旧版的人只领不带「从头」的
+    const isNew = i => (i.labels ?? []).some(l => l.name === '从头');
+    const fresh = (await openItems()).filter(i => (NEW_TEAM.includes(me) ? isNew(i) : !isNew(i)));
     const w = me && fresh.length ? pickWork(fresh, remoteBranches(), me) : null;
     fails = 0;
     if (w) {

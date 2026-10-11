@@ -1,6 +1,9 @@
 # 给 AI 协作者的说明
 
-> **从头开始阶段（负责人 10-11）**：除 Codex 外的协作者全部暂停领活，请停下自动模式。Codex 只领带「从头」标签的 Issue。详见 `docs/congtou.md`。
+> **从头开始阶段（负责人 10-11）**：仓库里同时有两条线。
+> - **新版**（`xin/`、`src/xin/`、`docs/xin/`，Issue 带「从头」标签）：只由 Codex 和维护者做。
+> - **旧版接着打磨**（负责人 10-11 安排）：**Trae、Qoder、minimax、CodeBuddy** 照常进自动模式领活，`wait-for-work.mjs` 只派给你们旧版的任务（不带「从头」、不带「暂缓」）。只做 Issue 里写好规格的修订，不开新系统、不加新地方；**不碰** `xin/`、`src/xin/`、`docs/xin/`、`tests/xin/`。
+> - 其余工具（zcode、autoclaw、WorkBuddy）暂停。详见 `docs/congtou.md`。
 
 本文件写给参与本项目的 AI 协作者，例如 Trae、Codex、Cursor、Gemini。不管用哪个工具，规则都一样。**动手之前，先完整读完本文件，再读任务里指定的文档。**
 
