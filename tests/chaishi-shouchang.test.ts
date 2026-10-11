@@ -6,7 +6,7 @@ import { run } from '../src/engine/dsl';
 import { JOB_END_MAX, jobEndText } from '../src/engine/shenfen';
 import { checkYue } from '../src/engine/shiguang';
 import { act } from '../src/engine/world';
-import { questbookSheetHtml } from '../src/ui/views/questbook';
+import { questbookSheetHtml, quitJob } from '../src/ui/views/questbook';
 
 const job = jobById('xsb_xunren')!;
 const originalEnd = job.end;
@@ -66,5 +66,17 @@ describe('差事有收场（#631）', () => {
     expect(S.jobEnd).toHaveLength(JOB_END_MAX);
     delete S.jobEnd;
     expect(() => questbookSheetHtml()).not.toThrow();
+  });
+
+  it('见闻簿里手上的差事有「放下这件差事」，放下后记进「了结的事」（放弃）', () => {
+    act('xsb_zhuren', '揭寻人');
+    expect(S.job?.id).toBe(job.id);
+    expect(questbookSheetHtml()).toContain(`data-act="jquit:${job.id}"`);
+    quitJob(job.id);
+    expect(S.job).toBeNull();
+    expect(S.jobEnd!.at(-1)).toMatchObject({ id: job.id, how: '放弃' });
+    const html = questbookSheetHtml();
+    expect(html).toContain('了结的事 · 1');
+    expect(html).not.toContain('jquit:');
   });
 });

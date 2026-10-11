@@ -7,7 +7,7 @@ import { cn } from '../../core/util';
 import { jobEndText } from '../../engine/shenfen';
 import { yueText } from '../../engine/shiguang';
 import { questNav, sectNav, whoNav, yueNow, type NavState, type QuestNav } from '../../engine/daohang';
-import { test } from '../../engine/dsl';
+import { run, test } from '../../engine/dsl';
 import { hoursAt, stageText } from '../../engine/world';
 import { IC } from '../icons';
 import { tripNote } from './ditu';
@@ -188,7 +188,7 @@ export function questbookSheetHtml(): string {
           ${jwLine}
           <small class="qb-to">误了期，${missText(job)}。</small>
         </div>
-        <div class="qb-acts">${jn!.step ? '' : `<button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${jn!.to}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button>${jobHere ? '' : `<small class="qb-to">${tripNote(jn!.to)}</small>`}`}</div>
+        <div class="qb-acts">${jn!.step ? '' : `<button class="qb-go${jobHere ? ' dim' : ''}" data-act="jgo:${jn!.to}"${jobHere ? ' disabled' : ''}>${jobHere ? '就在此处' : '去'}${IC.chev}</button>${jobHere ? '' : `<small class="qb-to">${tripNote(jn!.to)}</small>`}`}<button class="qb-act" data-act="jquit:${job.id}">放下这件差事</button></div>
       </div>${jobXianHtml(job)}` : '';
   const failHtml = failed.length ? `<h3 class="qb-sec">未竟 · ${failed.length}</h3>${failed.map(n => questRow(n, trackId)).join('')}` : '';
   const ends = (S.jobEnd ?? []).slice().reverse();
@@ -225,6 +225,13 @@ export function trackQuest(id: string): void {
   S.track = S.track === id ? '' : id;
   closeSheet();
   render();
+}
+
+/** 放下手上的差事（见闻簿的「放下这件差事」）：走已有的 jobQuit 效果，记进「了结的事」（放弃）；放下了返回 true */
+export function quitJob(id: string): boolean {
+  if (S.job?.id !== id) return false;
+  run([{ type: 'jobQuit', id }]);
+  return true;
 }
 
 /** 差事误了期会怎样：照实写（审查 D12：游侠的差事卡写「地位降一级」，实际降不了） */
