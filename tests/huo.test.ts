@@ -599,6 +599,9 @@ describe('话有来处：打听', () => {
     S.rel.xiaoer = '相谈甚欢';
     const r = rid('ss_matou', 'huobing', 0.8);
     learn(S.w, 'xiaoer', r, 1, dayNo(S), 'shuoshu');
+    // 说书人此刻在场才指名；不在场写「听人说」（传闻不转圈）
+    S.loc = 'cheng_tavern'; S.min = 20 * 60;
+    expect(roomNpcs('cheng_tavern', S.min)).toContain('shuoshu');
     const a = ask('xiaoer');
     expect(a.from).toBe('shuoshu');
     expect(a.text).toContain('（听说书人说的）');

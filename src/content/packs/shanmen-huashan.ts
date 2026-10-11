@@ -109,7 +109,7 @@ const NPCS: NpcDef[] = [
       ],
       领考: [
         { if: { hour: { from: 20, to: 5 } },
-          text: '先生把廊下的剑摘都没摘：「天黑了。剑收了鞘，人也该收工。明儿一早，日头上柴门，你来。」' },
+          text: '先生把廊下的剑摘都没摘：「天黑了。剑收了鞘，人也该收工。明早，日头上柴门，你来。」' },
         // Issue #173 第 12 条：这一场对话里（约考、让哑叔领去磨剑）说的是「我那口剑钝了」，
         // 这里却抽出来「霜一样的光」，前后打架。改成与「钝」一致：出鞘时先见的是多年没开的锋。
         { text: '先生从廊下摘下那口连鞘的剑，抽出一尺。刃上一层暗黄，映着天光才泛出一点白：「来。三十招——剑上无眼，点到为止。」', do: [{ type: 'fight', foe: 'smhs_kao' }] }
@@ -152,7 +152,7 @@ const NPCS: NpcDef[] = [
         { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }], xia: 15 },
           text: '先生点了点头：「剑走齐了，人也护过了，差事簿上替庐里办的还空着。去讨一件，办扎实了再来。」' },
         { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }], gongxian: 100 },
-          text: '先生叫你在院里走一趟华山剑法，走完了，他把手里的鸡食瓢往盆里一磕：「剑倒是齐了。你那口剑还没替人出过鞘，下山去，渡口总有不平事。」' },
+          text: '先生叫你在院里走一趟华山剑法，走完了，他把手里的鸡食瓢往盆里一磕：「剑倒是齐了。你的兵刃还没替人出过鞘，下山去，渡口总有不平事。」' },
         { if: { sect: HS, realm: { skill: 'eh_huashan', atLeast: 1 }, any: [{ realm: { skill: 'eh_huashanxinfa', atLeast: 1 } }] },
           text: '先生点了点头：「剑和气都上了手。」他朝山下抬了抬下巴：「出几回剑，庐里再办几件差。柴门给你留着。」' },
         { if: { sect: HS, xia: 15 },
@@ -298,7 +298,7 @@ const KUAIJIAN: FoeDef = {
   lose: '他的剑尖停在你的衣襟前，一寸，收了。他把剑收回鞘里。先生在廊下没动，差事簿上，这一趟是空的。',
   results: {
     win: { tag: '会剑 · 胜', title: '剑庐的匾保住了', button: '回去交差',
-      story: '先生在廊下点了一句：「你那一剑，收得比他早半寸。」哑叔把柴堆上的斧头拿开——他方才一直攥着。',
+      story: '先生在廊下点了一句：「你那一手，收得比他早半寸。」哑叔把柴堆上的斧头拿开——他方才一直攥着。',
       do: [{ type: 'jobDone', id: 'smhs_job_ke' }] },
     lose: { tag: '会剑', title: '技差一筹', button: '抱拳认负',
       story: '先生没有出来。老魏把柴担挑走了，走前扔下一句：「他还在山下客栈住着。」',

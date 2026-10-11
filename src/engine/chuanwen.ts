@@ -12,9 +12,9 @@
  *
  * 注意：本文件和 engine/shijie.ts、core/state.ts 互相引用，顶层只放字面量常量，别的模块的东西只在函数里用。
  */
-import { S, markSeen, pushFeed, type GameState } from '../core/state';
+import { S, markSeen, pushFeed, type FeedEntry, type GameState } from '../core/state';
 import { dayNo } from '../core/time';
-import { FACTIONS, NEWS, NPCS, REGIONS, ROOMS, npc, room, shiById } from '../content';
+import { FACTIONS, NEWS, NPCS, REGIONS, ROOMS, jobById, npc, room, shiById } from '../content';
 import type { Branch, Cond, NewsDef, NpcLife, ShiDef, ShiStep } from '../content/types';
 import { test } from './dsl';
 import { mulberry32, seedOf } from './rng';
@@ -235,6 +235,78 @@ export function youKnow(r: RumorInst, s: GameState = S, heard?: Set<string>): bo
   const st = s.shi?.[r.ev], d = shiById(r.ev);
   if (!st || st.seen === undefined || !d) return false;
   return stepRank(d, st.seen) >= stepRank(d, r.ph);
+}
+
+/* ---------- 意思相同 ---------- */
+
+/** 具名的东西：人名、地点名、势力名、地区名。两句话说的是同一件事，至少得点着同一个名字 */
+let nameTab: string[] | undefined;
+function names(): string[] {
+  if (!nameTab) {
+    const set = new Set<string>();
+    for (const n of NPCS) if (n.name.length >= 2) set.add(n.name);
+    for (const r of ROOMS) if (r.name.length >= 3) set.add(r.name);
+    for (const f of FACTIONS) if (f.name.length >= 3) set.add(f.name);
+    for (const def of Object.values(REGIONS)) if (def.name.length >= 2) set.add(def.name);
+    nameTab = [...set];
+  }
+  return nameTab;
+}
+const PUNCT = /[，。、！？：；「」『』（）—…\s]/g;
+/** 两句话共有的字，有多少比例落在共有的连续片段（两字以上）里；贪心取最长片段，取一段划掉一段 */
+function overlap(a: string, b: string): number {
+  let x = a.replace(PUNCT, ''), y = b.replace(PUNCT, '');
+  const total = Math.min(x.length, y.length);
+  if (!total) return 0;
+  let got = 0;
+  for (;;) {
+    let best = 0, bi = 0, bj = 0;
+    for (let i = 0; i < x.length; i++) for (let j = 0; j < y.length; j++) {
+      let k = 0;
+      while (i + k < x.length && j + k < y.length && x[i + k] === y[j + k]) k++;
+      if (k > best) { best = k; bi = i; bj = j; }
+    }
+    if (best < 2) break;
+    got += best;
+    x = x.slice(0, bi) + '\u0001' + x.slice(bi + best);
+    y = y.slice(0, bj) + '\u0002' + y.slice(bj + best);
+  }
+  return got / total;
+}
+const simMemo = new Map<string, boolean>();
+/** 两句传闻说的是不是一回事：点着的名字完全相同（至少一个），且大半个句子是重合的。「有人想拜某某的门」这种句式一样、名字不同的，不算 */
+export function sameMeaning(a: string, b: string): boolean {
+  if (a === b) return true;
+  const key = a < b ? a + '\u0000' + b : b + '\u0000' + a;
+  const hit = simMemo.get(key);
+  if (hit !== undefined) return hit;
+  const na = names().filter(n => a.includes(n)), nb = names().filter(n => b.includes(n));
+  const res = na.length > 0 && na.length === nb.length && na.every(n => nb.includes(n)) && overlap(a, b) >= 0.4;
+  simMemo.set(key, res);
+  return res;
+}
+/** 两条传闻是不是同一回事：同一条、同一件世事的同一步、或者说法几乎一样 */
+export function sameTopic(a: RumorInst, b: RumorInst): boolean {
+  if (a.id === b.id) return true;
+  if (!isNews(a) && !isNews(b)) return a.ev === b.ev && a.ph === b.ph;
+  const ta = rumorText(a, 0), tb = rumorText(b, 0);
+  return ta !== null && tb !== null && sameMeaning(ta, tb);
+}
+/** 玩家近来听过的传闻里，有没有和它是一回事的 */
+function heardSame(r: RumorInst, w: WorldState, heard: ReadonlySet<string>): boolean {
+  for (const id of heard) { const o = w.rumor[id]; if (o && o.id !== r.id && sameTopic(r, o)) return true; }
+  return false;
+}
+const DUP_TAG = '（几处都在传）';
+/** 传闻栏去重：意思相同的传闻只留最新的一条，标「几处都在传」。别的栏目原样 */
+export function dedupeFeed(feed: readonly FeedEntry[]): FeedEntry[] {
+  const out: FeedEntry[] = [];
+  for (const e of feed) {
+    const dup = e.t === '传闻' ? out.find(o => o.t === '传闻' && sameMeaning(o.x.split(DUP_TAG).join(''), e.x)) : undefined;
+    if (!dup) { out.push({ ...e }); continue; }
+    if (!dup.x.endsWith(DUP_TAG)) dup.x += DUP_TAG;
+  }
+  return out;
 }
 
 /* ---------- 学 ---------- */
@@ -465,17 +537,62 @@ function willTell(r: RumorInst, npcId: string): boolean {
 /** 他会跟你说的那一条：你还不知道的，按耸动、离他近、牵涉他的帮、新鲜排；外地事往后放 */
 function pickFor(npcId: string, force: boolean): { r: RumorInst; k: Know; text: string } | null {
   const w = worldOf(), today = dayNo(S), heard = new Set(S.heard ?? []);
-  const home = roomsOf(npcId), fac = lifeOf(npcId)?.faction;
+  const home = roomsOf(npcId), fac = lifeOf(npcId)?.faction, mine = errandTerms();
   let best: { r: RumorInst; k: Know; text: string; s: number } | null = null;
   for (const k of knowsOf(w, npcId)) {
     const r = w.rumor[k[0]];
-    if (!r || youKnow(r, S, heard) || (!force && !willTell(r, npcId))) continue;
+    // 听过的、说法几乎一样的，都不再原样讲第二遍
+    if (!r || youKnow(r, S, heard) || heardSame(r, w, heard) || (!force && !willTell(r, npcId))) continue;
     const text = rumorText(r, k[1], npcId);
     if (text === null) continue;
-    const s = r.juice + (home.includes(r.place) ? 0.4 : 0) + (fac && r.subj.includes(fac) ? 0.4 : 0) - 0.03 * (today - r.day) - (farFor(r, npcId) ? 0.3 : 0);
+    // 手头有差事：和差事里的人、地方沾边的排最前，没有沾边的才说别的
+    let rel = 0;
+    if (mine.size) { const plain = rumorText(r, 0) ?? ''; for (const [t, wt] of mine) if (text.includes(t) || plain.includes(t)) rel += wt; }
+    rel = 2 * Math.min(rel, 3);
+    const s = rel + r.juice + (home.includes(r.place) ? 0.4 : 0) + (fac && r.subj.includes(fac) ? 0.4 : 0) - 0.03 * (today - r.day) - (farFor(r, npcId) ? 0.3 : 0);
     if (!best || s > best.s) best = { r, k, text, s };
   }
   return best;
+}
+
+/** 玩家手头差事牵涉的人名、地名（人名分量重，地名轻）：差事的交差人、交差处、线头里的人和地方，以及差事名、线头文字里点着的人名地名 */
+function errandTerms(): Map<string, number> {
+  const out = new Map<string, number>();
+  const j = S.job ? jobById(S.job.id) : undefined;
+  if (!j) return out;
+  const add = (n: string | undefined, wt: number): void => { if (n && n.length >= 2 && !SELF_TERMS.has(n)) out.set(n, Math.max(out.get(n) ?? 0, wt)); };
+  add(npc(j.npc)?.name, 1); add(room(j.at)?.name, 0.5);
+  for (const x of j.xian ?? []) { add(npc(x.npc)?.name, 1); if (x.at) add(room(x.at)?.name, 0.5); }
+  const blob = [j.title, ...(j.xian ?? []).map(x => x.text)].join('');
+  const people = new Set(NPCS.map(n => n.name));
+  for (const n of names()) if (blob.includes(n)) add(n, people.has(n) ? 1 : 0.5);
+  return out;
+}
+/** 差事里点着的这些词太泛，不当线索 */
+const SELF_TERMS = new Set<string>(['掌柜', '书办']);
+
+/** 这个人有话、但玩家都听过了（或意思一样的听过了）：他会说「这事你已经听说了」 */
+function onlyHeard(npcId: string): boolean {
+  const w = worldOf(), heard = new Set(S.heard ?? []);
+  return knowsOf(w, npcId).some(k => {
+    const r = w.rumor[k[0]];
+    return !!r && rumorText(r, k[1], npcId) !== null && willTell(r, npcId) && (youKnow(r, S, heard) || heardSame(r, w, heard));
+  });
+}
+/** 都听过了的说法，按身份写 */
+export const ALREADY: Record<Gang, string> = {
+  sengdao: '这事施主已经听说了，贫僧没有新的可讲。',
+  guanchai: '这事你已经听说了，我这儿没有更多。',
+  shanghu: '这事你已经听说了，我这儿没有别的消息。',
+  jianghu: '这事你已经听说了，我知道的就这些。',
+  shijing: '这事你已经听说了，我就知道这么多。'
+};
+
+/** 「听某某说的」：某某此刻不在场，或者就是刚跟你打过照面的人，就写成「听人说」，不指名转圈 */
+function fromNote(from: string | undefined, npcId: string): string {
+  if (!from) return '';
+  const here = from !== npcId && roomNpcs(S.loc).includes(from);
+  return here ? `（听${npcName(from)}说的）` : '（听人说的）';
 }
 
 export interface AskResult {
@@ -637,7 +754,7 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
   if (got) {
     tellYou(got.r, got.text);
     const from = got.k[3];
-    return { text: `${open()}「${inner(got.text)}」${from ? `（听${npcName(from)}说的）` : ''}`, src: 'know', rumor: got.r.id, far: farFor(got.r, npcId), from };
+    return { text: `${open()}「${inner(got.text)}」${fromNote(from, npcId)}`, src: 'know', rumor: got.r.id, far: farFor(got.r, npcId), from };
   }
   if (life) {
     const idle = idleLines(life)[0];
@@ -648,6 +765,8 @@ export function ask(npcId: string, opt: { force?: boolean; who?: string } = {}):
     (S.asked ||= {})[SAID + line] = dayNo(S);
     return { text: `${open()}「${inner(line)}」`, src: 'old' };
   }
+  // 他有话，可都是你听过的：不再原样讲第二遍，按身份说一句「已经听说了」
+  if (!opt.force && onlyHeard(npcId)) return { text: `${who}${plainPick(DATING_LEAD[gangOf(npcId)], npcId)}：「${ALREADY[gangOf(npcId)]}」`, src: 'none' };
   // 没得说也要按身份开口：从前这里写死了「想了想」，僧人官差商人都一个腔调（Issue #263）
   // 这一句不取世界随机：开口的样子只是句面上的动作，worldRng 是给传闻和世事用的。
   // 多抽一次不要紧，一多抽就等于伸手推了世事的骰子（tests/zoubian 走遍江湖那一条会跟着偏）。
@@ -682,7 +801,7 @@ export function hearsay(opt: { skip?: ReadonlySet<string> } = {}): string | null
   const w = worldOf(), today = dayNo(S), region = room(S.loc).region, heard = new Set(S.heard ?? []);
   let best: { r: RumorInst; text: string; s: number } | null = null;
   for (const r of Object.values(w.rumor)) {
-    if (r.far || regionOf(r) !== region || youKnow(r, S, heard)) continue;
+    if (r.far || regionOf(r) !== region || youKnow(r, S, heard) || heardSame(r, w, heard)) continue;
     const text = rumorText(r, 0);
     if (text === null || opt.skip?.has(text)) continue;
     const s = r.juice - 0.03 * (today - r.day);
@@ -733,10 +852,11 @@ export function dibao(s: GameState, fromDay: number, heard: HeardItem[]): DibaoI
     }
   }
   // 同一句话、同一条传闻只写一回
-  const seen = new Set<string>();
+  const seen = new Set<string>(), seenTexts: string[] = [];
   const once = (x: { raw: string; r?: RumorInst }): boolean => {
     const keys = [x.raw, ...(x.r ? [x.r.id] : [])];
-    if (keys.some(k => seen.has(k))) return false;
+    if (keys.some(k => seen.has(k)) || seenTexts.some(t => sameMeaning(t, x.raw))) return false;
+    seenTexts.push(x.raw);
     keys.forEach(k => seen.add(k));
     return true;
   };

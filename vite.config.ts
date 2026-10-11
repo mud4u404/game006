@@ -11,7 +11,7 @@ export default defineConfig({
     outDir: 'dist',
     target: 'es2020',
     rollupOptions: {
-      input: { main: 'index.html', lab: 'lab.html' }
+      input: { main: 'index.html', lab: 'lab.html', xin: 'xin/index.html' }
     }
   }
 });

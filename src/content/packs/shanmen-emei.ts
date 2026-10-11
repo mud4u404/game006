@@ -105,7 +105,7 @@ const NPCS: NpcDef[] = [
       ],
       领考: [
         { if: { hour: { from: 20, to: 5 } },
-          text: '师太睁开眼：「天黑了。庵门要下闩。明儿日头上庵门，再来。」她重新闭上眼。' },
+          text: '师太睁开眼：「天黑了。庵门要下闩。明早日头上庵门，再来。」她重新闭上眼。' },
         { text: '师太把拂尘从膝上拿起来，走到院中，尘丝垂着纹丝不动：「来。三十招——拂尘无眼，你只管全力。」', do: [{ type: 'fight', foe: 'smem_kao' }] }
       ],
       请教: [
@@ -278,7 +278,7 @@ const DIPI: FoeDef = {
 const NPCS_EXTRA: NpcDef[] = [
   {
     id: 'smem_dipi_ren', name: '拦路的地痞', ini: '地', tone: 'red', brief: '在山道上拦香客',
-    look: '歪戴帽子的瘦高条，木棒横在山道中央，见了香客就伸手要「香火钱」。',
+    look: '颧骨高耸的黑脸汉子，木棒横在山道中央，见了香客就伸手要「香火钱」。',
     at: { room: 'smem_guanyin', if: { job: 'smem_job_xiang' } },
     verbs: ['交谈', '动手'],
     actions: {
